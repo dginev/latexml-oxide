@@ -62,7 +62,7 @@ reservation by about half without changing memory use, speed or output:</p>
 </div><h4 id="output-logging-and-safety"><a class="doc-anchor" href="#output-logging-and-safety">§</a>Output, logging and safety</h4><div class="table"><table><thead><tr><th>Variable</th><th>Values</th><th>Default</th><th>Effect</th></tr></thead><tbody>
 <tr><td><code>LATEXML_TELEMETRY_OUT</code></td><td>file</td><td>none</td><td><code>latexml_oxide</code> only. Append one JSON line of timings and counts per conversion; the same as <code>--telemetry-out</code>.</td></tr>
 <tr><td><code>LATEXML_SOURCE_MAP</code></td><td>presence</td><td>off</td><td><code>latexml_oxide</code> only. The same as <code>--source-map</code>: <code>data-sourcepos</code> attributes in the output.</td></tr>
-<tr><td><code>LATEXML_DISABLE_SHELL_ESCAPE</code></td><td>presence</td><td>allowed</td><td>Rhai bindings may not run external commands (builds with runtime bindings).</td></tr>
+<tr><td><code>LATEXML_DISABLE_SHELL_ESCAPE</code></td><td>presence</td><td>allowed</td><td>Rhai bindings may not run external commands (builds with runtime bindings). <code>cortex_worker</code> loads no runtime binding at all, so it needs no such setting.</td></tr>
 <tr><td><code>SOURCE_DATE_EPOCH</code></td><td>Unix seconds</td><td>the clock</td><td>Fixes <code>\today</code>, <code>\time</code> and the log banner’s time (UTC), and the member times of <code>--format=zip</code>/EPUB output, for reproducible builds.</td></tr>
 <tr><td><code>NO_COLOR</code></td><td>presence</td><td>colour on a terminal</td><td>No colour codes on stderr.</td></tr>
 <tr><td><code>TMPDIR</code> (<code>TMP</code>/<code>TEMP</code> on Windows)</td><td>directory</td><td>the system default</td><td>Scratch files and temporary caches.</td></tr>
@@ -101,7 +101,8 @@ document their variables in their headers.</p>
 <tr><td><code>LATEXML_RSS_CAP_BYTES</code></td><td><code>--child-mem-limit-mb</code> − 256 MiB, else (<code>--child-mem-limit-mb=0</code>) <code>--max-rss-mb</code></td><td>The per-child memory fuse.</td></tr>
 </tbody></table>
 </div>
-<p>These replace any value of the same name in the worker’s own environment. The worker itself reads:</p>
+<p>These replace any value of the same name in the worker’s own environment. The worker loads no runtime <code>.rhai</code>
+binding in any build, nor do the children it spawns (each re-executes its <code>main</code>). The worker itself reads:</p>
 <div class="table"><table><thead><tr><th>Variable</th><th>Values</th><th>Default</th><th>Effect</th></tr></thead><tbody>
 <tr><td><code>CORTEX_WORKER_THROTTLE_SECS</code></td><td>seconds</td><td>60</td><td>How long an idle worker sleeps before asking the dispatcher for work again.</td></tr>
 <tr><td><code>CORTEX_WORKER_IO_TIMEOUT_SECS</code></td><td>seconds &gt; 0</td><td>120</td><td>How long a worker waits on a dead or wedged dispatcher before giving up that exchange.</td></tr>
