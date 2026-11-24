@@ -1,0 +1,16 @@
+% witness: CLI option audit 2026-11-24 (cliaudit A.tsv/B.tsv): --documentid, --nonumbersections, --format,
+%          --stylesheet, --splitat/--splitnaming, --navigationtoc, --sourcedirectory
+% oracle:  pdflatex 0 errors: "1 Introduction", "2 Results", "see Section 2 and Equation (1)"
+% engines: Perl 0.8.8 latexmlc same host (each option's behaviour in perfect_kernel_batchcliwire.rs)
+% expect:  each option as Perl's latexmlc applies it (Common/Config.pm, LaTeXML.pm convert_post)
+% status:  RED (ca1ac456629) -> GREEN (CLIWIRE)
+\documentclass{article}
+\begin{document}
+\section{Introduction}\label{sec:intro}
+Intro text, see Section~\ref{sec:results} and Equation~(\ref{eq:one}).
+\begin{equation}\label{eq:one}
+a+b=c
+\end{equation}
+\section{Results}\label{sec:results}
+Results text, back to Section~\ref{sec:intro}.
+\end{document}

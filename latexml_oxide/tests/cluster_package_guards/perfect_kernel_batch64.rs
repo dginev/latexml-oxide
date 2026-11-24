@@ -547,6 +547,7 @@ fn post_in(xml: &str, stylesheet: &str, source_directory: Option<&str>) -> Strin
     unicodemath: false,
     url_style: latexml_post::crossref::UrlStyle::File,
     navigationtoc: None,
+    is_html: None,
     schemadocs: false,
     split: false,
     split_xpath: None,

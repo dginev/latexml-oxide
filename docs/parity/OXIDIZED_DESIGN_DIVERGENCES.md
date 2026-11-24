@@ -24175,3 +24175,58 @@ empty_box_beside_an_operator_is_a_phantom_word_joiner, absent_operand_leaves_no_
 2306.10612, 1612.06544. A/B over 301 papers with continuation cells: 1,919 formulas in 257 papers changed, each a sign
 turned binary; errors, fatals and warnings unchanged. The `\left.` exception then returned 63 of them in 17 papers to
 unary (the base's reading), every one a sign opening a `\left.`'s list.
+
+### 1158. The CLI's options are wired as latexmlc applies them; a bad option value is a usage error (CLIWIRE)
+
+`latexml_oxide`'s options follow Perl's `Common/Config.pm` and `LaTeXML.pm convert_post`, each checked against
+latexmlc 0.8.8 on the same host (CLI audit 2026-11-24):
+
+- `--documentid` reaches State before the pools load (`Config::documentid` → `CoreOptions::documentid`, Core.pm L48),
+  so Base_Schema defines `\thedocument@ID` from it (Base_Schema.pool.ltxml:52): the root carries the id and every id
+  is prefixed by it. It used to be assigned after the session was prepared and had no effect. The `\begin{document}`
+  constructor reads the expanded id tokens (Perl `ToString($props{id})`), so latexml.sty's `\lxDocumentID` names the
+  root as well. A joined supplement gets no document id.
+- `--format=html` is html5 (Config.pm L436); `--format=xhtml` runs `LaTeXML-xhtml.xsl` (Config.pm L543), not
+  `LaTeXML-all-xhtml.xsl`, and is serialized as XML.
+- The pages are serialized as HTML when the format is `html*` (Perl `is_html`, Config.pm L436; Writer.pm L47), never
+  by the stylesheet's name: `--stylesheet=my-html.xsl --dest=x.xml` keeps its XML, `--stylesheet=my.xsl
+  --dest=x.html` is serialized as HTML and gets the SVG processor. The library callers that name only a built-in sheet
+  keep the name test (`PostOptions::is_html` `None`).
+- An explicit `--token-limit` is kept as given, as `LATEXML_TOKEN_LIMIT` is (`gullet::fix_token_limit`); before, the
+  source-size scaling raised any lower value back. latexml.sty's `tokenlimit=` is still scaled (ar5iv.sty passes
+  `tokenlimit=999999999`, 20 times below the scaled default).
+- `--verbose`/`--quiet` count (Config.pm L53-54), and the parallel page render's workers log at the parent's
+  verbosity: their records reach the log whole, and the console shows them through the parent's gate
+  (`render_workers::stderr_share`).
+- `--splitat` takes a prefix of `part, chapter, section, subsection, subsubsection`, the shallowest (`_checkOptionValue`,
+  Config.pm L604-609, whose hash order leaves `sub` to chance), and is checked only when splitting; another element
+  name still splits there, with a Warning naming `--splitpath`. `--splitnaming` takes a prefix of `id, idrelative,
+  label, labelrelative`. `--navigationtoc` is lowercased, `none` asks for none (Config.pm L472-480). An unknown
+  `--splitnaming` or `--navigationtoc` is a usage error (exit 2): Perl croaks but converts on (KNOWN_PERL_ERRORS
+  #1331).
+- `--keepXMath` (Perl's spelling) and `--nohackplane1` parse; `--sourcedirectory` is made absolute, so a relative one
+  never leaks into the output paths. The unused `NAVIGATIONTOC` XSLT parameter is no longer passed (no stylesheet
+  reads it; Perl passes none).
+- `cortex_worker`: `--input`/`--output` require `--standalone` (without it the worker joined the dispatcher on
+  localhost), and `--profile` is `ar5iv` or `generic`.
+
+**Guards**: `perfect_kernel_batchcliwire` (repros `tools/perfect_kernel/repros/cli-options/`), the binaries' unit tests
+`verbose_and_quiet_are_counted` and `cli_tests::standalone_files_and_the_profile_are_checked`.
+
+### 1159. `latexml_oxide` defaults to a 60-second timeout and no timestamp (Perl: 600 s, the conversion's time) (CLIWIRE)
+
+`--timeout` defaults to 60 s (Perl Config.pm L384: 600 s); the watchdog and the cooperative timeout both ride it, and
+`--timeout=0` lifts it. `--timestamp` is unset by default, so the page carries no "Generated on" date (Perl
+LaTeXML.pm L571: the local time, or `SOURCE_DATE_EPOCH` in UTC): output is reproducible without a variable;
+`--timestamp=<text>` prints one, `--timestamp=0` none, as Perl.
+
+### 1160. `--nonumbersections` unnumbers the sections, as Perl documents it (Perl's code: references show titles only) (CLIWIRE)
+
+Perl documents `--nonumbersections` as dropping "section numbers in titles, crossrefs" (Config.pm L838-840,
+L1163-1166); its code only switches CrossRef's `ref_show` to `title` (CrossRef.pm L34; the title half, L29, is
+commented out, and L33 doubts the option), so the headings keep their numbers and a reference to an equation reads
+"1 Introduction" (CrossRef.pm L686-695 falls back to the section's title). Ours follows the documentation: the CLI
+assigns the core's `no_number_sections` (as book.cls's `\frontmatter` does), so the headings are unnumbered and a
+reference shows its target's title. KNOWN_PERL_ERRORS #1330; to be asked of Bruce Miller (DG 2026-11-24).
+
+**Guard**: `perfect_kernel_batchcliwire::nonumbersections_unnumbers_the_sections`.
