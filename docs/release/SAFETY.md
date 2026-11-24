@@ -237,9 +237,9 @@ Its `main` therefore calls `converter::forbid_runtime_bindings()` first: every b
 chain the process installs (each conversion's session, a streaming restart's, the
 post-only bibliography's) then has neither `.rhai` tier, and a `<pkg>.sty.rhai`
 shipped in a source resolves as in a build without the feature (the raw `.sty` if
-there is one, else `Warning:missing_file`). It also sets
-`LATEXML_DISABLE_SHELL_ESCAPE=1` for itself and the children it spawns. Guard
-`cortex_worker_untrusted_bindings` (run with `--features cortex`).
+there is one, else `Warning:missing_file`). The children it spawns re-execute its
+`main`, so the switch holds there too. Guards `cortex_worker_untrusted_bindings` (run
+with `--features cortex`) and `forbid_runtime_bindings` (the switch, run by CI).
 
 **Reachable without a flag.** `converter.rs::rhai_dispatch` is *first* in the
 binding chain and runs on every package/class request, resolving `<pkg>.sty.rhai`
@@ -272,7 +272,7 @@ a Rhai error. Because a `.rhai` beside an untrusted source **auto-loads** (the
 "Reachable without a flag" note above), a bundled binding could otherwise run
 arbitrary commands: **any untrusted-input deployment that ships `--features
 runtime-bindings` MUST set `LATEXML_DISABLE_SHELL_ESCAPE`, or build without the
-feature.** (`cortex_worker` sets the variable and forbids runtime bindings at start, of its own accord, above.) The command runs to completion (no artificial per-call timeout, like
+feature.** (`cortex_worker` forbids runtime bindings at start, of its own accord, above, so no binding of its runs a command.) The command runs to completion (no artificial per-call timeout, like
 `system()`); the overall conversion wall-time is the outer bound.
 
 ---

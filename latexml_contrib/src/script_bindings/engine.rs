@@ -981,8 +981,8 @@ pub(super) fn make_engine() -> Engine {
       // via `LATEXML_DISABLE_SHELL_ESCAPE` — the opt-out an untrusted-input
       // deployment sets, since a `.rhai` beside the source auto-loads
       // (converter.rs `rhai_dispatch`) and could otherwise shell out.
-      // `cortex_worker` loads no runtime binding at all and sets it too, for
-      // itself and its children. See SAFETY.md.
+      // `cortex_worker` loads no runtime binding at all (it calls
+      // `converter::forbid_runtime_bindings` first). See SAFETY.md.
       if std::env::var_os("LATEXML_DISABLE_SHELL_ESCAPE").is_some() {
         return Err(rhai_err(format!(
           "Command '{}': external commands from bindings are disabled \

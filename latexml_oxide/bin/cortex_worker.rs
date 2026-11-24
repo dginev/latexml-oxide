@@ -1821,14 +1821,8 @@ fn custom_alloc_error_hook(layout: Layout) {
 
 fn main() -> Result<(), Box<dyn Error>> {
   // The worker converts untrusted arXiv sources: a `<pkg>.sty.rhai` shipped in one never loads, in any build
-  // (SAFETY.md, "Runtime bindings"), and a binding's `Command(..).output()` is refused here and in every child.
+  // (SAFETY.md, "Runtime bindings"). Every child it spawns re-executes this `main`, so the switch holds there too.
   latexml::converter::forbid_runtime_bindings();
-  // SAFETY: the first statement touching the environment, before any thread of ours exists (the conversion thread,
-  // the kpathsea prewarm and the harness's children are spawned below; a jemalloc build's purge threads read no
-  // environment), so no `getenv` runs concurrently.
-  unsafe {
-    std::env::set_var("LATEXML_DISABLE_SHELL_ESCAPE", "1");
-  }
   set_alloc_error_hook(custom_alloc_error_hook);
   // Capture panic location + full backtrace for every panic (the conversion
   // catch_unwind only sees the bare payload otherwise). Process-wide, so it also
