@@ -262,18 +262,15 @@ fn mtextstyle_post_test() {
 fn alignrows_operand_slot_keeps_relop_infix() {
   // Issue #312: an `align` continuation row (`& = RHS`, whose LHS is inherited
   // from the row above) parses as `Apply(=, absent, RHS)`. Presentation MathML
-  // must keep an operand slot for that `absent`, because MathML infers an
-  // `<mo>`'s form from its POSITION — first child of its `<mrow>` ⇒ prefix —
-  // and the form selects the operator-dictionary spacing. Suppressing the slot
-  // (Task #264) made `<mo>=</mo>` the first child, so every continuation row
-  // lost its infix spacing and the `=` column stopped lining up.
+  // must keep an operand slot for that `absent`: MathJax spaces an operator by
+  // the TeX class of the atom before it. Suppressing the slot (Task #264) made
+  // `<mo>=</mo>` the first child of its `<mrow>`, so every continuation row lost
+  // the space before its `=` and the `=` column stopped lining up.
   //
-  // Asserted STRUCTURALLY rather than by diffing a Perl golden: our placeholder
-  // is `<m:mphantom/>` where Perl's is `<m:mi/>` (see presentation.rs — an
-  // empty `<m:mi>` is banned by a debug_assert in document.rs), and a diff budget
-  // cannot separate "different placeholder" from "no placeholder" — omitting it
-  // scores FEWER diff lines (5) than emitting ours (10), so any budget that
-  // passes the correct output also passes the regression.
+  // Issue 991: the slot must be an atom, too — an EMPTY `mphantom` has no class in
+  // MathJax, the same as no slot — so it is `<m:mphantom>` around a U+2060 `<m:mi>`, an
+  // Ord. Perl's slot is an empty `<m:mi/>` (presentation.rs `invisible_operand`), so this
+  // asserts the slot, not a Perl golden diff.
   let input = std::fs::read_to_string(format!("{DIR}/alignrows.xml")).expect("read alignrows.xml");
   let doc = PostDocument::new_from_string(&input, PostDocumentOptions::default())
     .expect("parse alignrows.xml");
@@ -285,23 +282,25 @@ fn alignrows_operand_slot_keeps_relop_infix() {
     .expect("post-processing failed");
   let actual = results[0].to_xml_string();
 
-  // The fixture has three continuation rows (`&=`, `&=`, `&\leq`), so three
-  // relational operators must carry a preceding operand slot.
-  let slots = actual.matches("<m:mphantom/><m:mo").count()
-    + actual.matches("<m:mphantom></m:mphantom><m:mo").count();
-  assert!(
-    slots >= 3,
-    "expected >=3 continuation-row operand slots before a relational <m:mo>,      found {slots} — the `absent` placeholder was dropped, so the relop renders      with PREFIX spacing (issue #312):\n{actual}"
+  // Each of the fixture's five `absent` tokens (its `&=`, `&=`, `&\leq` continuation
+  // rows) is a slot before a relational operator.
+  let slots = actual
+    .matches("<m:mphantom><m:mi>\u{2060}</m:mi></m:mphantom><m:mo")
+    .count();
+  assert_eq!(
+    slots, 5,
+    "expected 5 continuation-row operand slots, a phantom U+2060 identifier, before a \
+     relational <m:mo> (issues #312, 991):\n{actual}"
   );
 
-  // And no relational operator may open its own <m:mrow> (the prefix-form
-  // signature the bug produced).
+  // And no relational operator may open its own <m:mrow> (the signature the
+  // bug produced).
   for op in ["=", "\u{2264}"] {
     let bad = format!("<m:mrow><m:mo>{op}</m:mo>");
     assert!(
       !actual.contains(&bad),
-      "a relational <m:mo>{op}</m:mo> is the FIRST child of its <m:mrow>, so \
-       MathML infers prefix form and drops the infix spacing (issue #312)"
+      "a relational <m:mo>{op}</m:mo> is the FIRST child of its <m:mrow>, with no \
+       atom before it to be spaced against (issue #312)"
     );
   }
 }

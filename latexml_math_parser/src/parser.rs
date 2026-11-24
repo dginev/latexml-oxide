@@ -2226,6 +2226,31 @@ impl MathParser {
       let expectations = lexemes
         .iter()
         .any(|lexeme| lexeme.starts_with("EXPECTATION:"));
+      // Does it open with a sign read as continuing the cell before it, which a prefix retry (below) may read again —
+      // one that takes no operand after it (the sign's other readings: an item, a decorated or compound operator)?
+      let cell_sign = lexemes
+        .first()
+        .is_some_and(|lexeme| lexeme.starts_with("CELLADDOP:"))
+        && lexemes.get(1).is_none_or(|next| {
+          matches!(
+            next.split(':').next(),
+            Some(
+              "PUNCT"
+                | "PERIOD"
+                | "RELOP"
+                | "METARELOP"
+                | "ARROW"
+                | "CLOSE"
+                | "ADDOP"
+                | "MULOP"
+                | "BINOP"
+                | "MODIFIER"
+                | "MODIFIEROP"
+                | "start_POSTSUBSCRIPT"
+                | "start_POSTSUPERSCRIPT"
+            )
+          )
+        });
       // Skip the full grammar parse for a pathologically huge formula —
       // Marpa's Earley recognizer would exhaust memory and `abort()`
       // (uncatchable). Fall through to the kludge parser instead (the
@@ -2273,7 +2298,7 @@ impl MathParser {
           // rescue, so keep this attempt's expected failure out of the log —
           // and keep the lexemes, which the retry needs. Balanced formulae (the
           // overwhelming majority) hand theirs over and pay no copy.
-          let retryable = Self::fence_imbalance(&lexemes).is_some() || expectations;
+          let retryable = Self::fence_imbalance(&lexemes).is_some() || expectations || cell_sign;
           self.suppress_unparsed_warning = retryable;
           let attempt = if retryable {
             lexemes.clone()
@@ -2312,8 +2337,8 @@ impl MathParser {
         if Self::balance_null_delimiters(&mut lexemes, &mut nodes, mathnode, document)? {
           null_delimiters = true;
           unbalanced = lexed;
-          self.suppress_unparsed_warning = expectations;
-          let attempt = if expectations {
+          self.suppress_unparsed_warning = expectations || cell_sign;
+          let attempt = if expectations || cell_sign {
             lexemes.clone()
           } else {
             std::mem::take(&mut lexemes)
@@ -2327,6 +2352,32 @@ impl MathParser {
             other => other,
           };
         }
+      }
+      // A cell whose sign takes no operand and that no stream parses as a continuation (`CELLADDOP`,
+      // `util::continues_the_cell_before`) is parsed again with the prefix sign it was lexed as: `&+\quad\text{c.c.}`,
+      // the sign a list's item (cond-mat/0505096). A sign before an operand has no other reading to retry.
+      if matches!(parse_outcome, Ok(None) | Err(_)) && cell_sign && !too_big {
+        let mut attempt = if expectations {
+          lexemes.clone()
+        } else {
+          std::mem::take(&mut lexemes)
+        };
+        // (after the fence retry's null delimiter, when one was supplied)
+        if let Some(sign) = attempt
+          .iter_mut()
+          .find(|lexeme| lexeme.starts_with("CELLADDOP:"))
+        {
+          *sign = sign.replacen("CELLADDOP:", "ADDOP:", 1);
+        }
+        self.suppress_unparsed_warning = expectations;
+        let out = self.parse_lexemes(attempt, &nodes, document);
+        self.suppress_unparsed_warning = false;
+        parse_outcome = match out {
+          Err(e) if matches!(e.target, latexml_core::common::error::ErrorTarget::Timeout) => {
+            return Err(e);
+          },
+          other => other,
+        };
       }
       // A formula with an expectation or probability no typed stream parses — one before a big operator in a
       // trig function's argument or after a closed nest, `\sin\mathbb{E}\sum_i X_i`, `\nabla\log\mathbb{E}\sum_i X_i`,
@@ -2660,12 +2711,13 @@ impl MathParser {
     if self.suppress_unparsed_warning || !self.reports_failures() {
       return;
     }
-    if warn_formula_once(input.trim()) {
+    let shown = shown_lexemes(input.trim());
+    if warn_formula_once(&shown) {
       log_math_warn!(
         "unparsed_math",
-        token_type_footprint(input.trim()),
+        token_type_footprint(&shown),
         "Unparsed math: no parse spans all input tokens for: {}",
-        input.trim()
+        shown
       );
     }
   }
@@ -3286,7 +3338,8 @@ impl MathParser {
     };
     if let Some(category) = diagnostic_category {
       // Warn once per DISTINCT formula per conversion (OXIDIZED_DESIGN_DIVERGENCES #1132; Perl
-      // warns for each): keyed on the exact token stream, true only at its first sighting.
+      // warns for each): keyed on the token stream it shows, true only at its first sighting.
+      let shown = shown_lexemes(input.trim());
       let message = format!(
         "Ambiguous math: {} enumerated ({} semantic, {} pruned, {} deduped→{} unique{}) in {:?} for: {}",
         ok_trees + pruned_trees + deduped,
@@ -3298,12 +3351,12 @@ impl MathParser {
           .map(|outcome| format!("; ASF second chance: {outcome}"))
           .unwrap_or_default(),
         start.elapsed(),
-        input.trim()
+        shown
       );
       if category == "unparsed_math" && self.defer_unparsed_warning {
-        self.deferred_unparsed_warning = Some((input.trim().to_owned(), message));
-      } else if warn_formula_once(input.trim()) {
-        log_math_warn!(category, token_type_footprint(input.trim()), message);
+        self.deferred_unparsed_warning = Some((shown.into_owned(), message));
+      } else if warn_formula_once(&shown) {
+        log_math_warn!(category, token_type_footprint(&shown), message);
       }
     }
     // Diagnostic: report parse counts when LATEXML_PARSE_AUDIT is set.
@@ -4025,6 +4078,16 @@ fn warn_formula_once(formula: &str) -> bool {
   WARNED_FORMULAS.with_borrow_mut(|seen| seen.insert(hasher.finish()))
 }
 
+/// A formula's token stream as a diagnostic shows it, and the key of its once-only warning: a continuation cell's sign
+/// as the ADDOP it is (`util::continues_the_cell_before`), so two formulas that show alike warn once (1612.08225).
+fn shown_lexemes(tokens: &str) -> Cow<'_, str> {
+  if tokens.contains("CELLADDOP:") {
+    Cow::Owned(tokens.replace("CELLADDOP:", "ADDOP:"))
+  } else {
+    Cow::Borrowed(tokens)
+  }
+}
+
 /// Structural footprint of a formula's token stream — the `what` field of the `ambiguous_math` /
 /// `unparsed_math` math-parser diagnostics. Joins the token *types* (the segment before the first
 /// `:` of each `TYPE:value:position` triple) with `_`, bounded to fit CorTeX's `what` column, and
@@ -4044,7 +4107,8 @@ fn token_type_footprint(tokens: &str) -> String {
   let mut out = String::new();
   let mut truncated = false;
   for token in tokens.split_whitespace() {
-    // (an EXPECTATION keys as the OPFUNCTION it is, `semantics::lexeme_category`: stable CorTeX buckets)
+    // (an EXPECTATION keys as the OPFUNCTION it is, `semantics::lexeme_category`: stable CorTeX buckets; a
+    // continuation cell's sign comes as the ADDOP it is, `shown_lexemes`)
     let ty = lexeme_category(token.split(':').next().unwrap_or(token));
     // First type always lands (a lone >budget type is backstopped by CorTeX's 200-char cap); every
     // subsequent one must fit the budget WITH its separator, else we stop and mark `_cntd`.

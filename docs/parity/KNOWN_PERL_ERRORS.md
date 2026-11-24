@@ -22636,6 +22636,24 @@ pdflatex: 5.71527pt; Perl (same host): 22.86108pt. Latent in Perl's own bindings
 an xy-pic node or a numprint phantom holding one is too wide. Fixed in Rust (OXIDIZED_DESIGN_DIVERGENCES #1152). Guard
 `perfect_kernel_batchregtaila::mathchoice_sizes_only_its_style_branch`.
 
+## 1322. Perl's amsmath templates drop the empty Ord before a right-hand alignment cell
+
+amsmath.sty sets `$\displaystyle{{}##}$` for the right cell of each `{align}`/`{alignat}`/`{flalign}` pair
+(amsmath.sty:2347-2354), of `{aligned}`/`{alignedat}` (:1483-1486) and `{split}` (:2424-2425), and every `{multline}`
+line (:2580); amsmath.sty.ltxml:221, :461, :588 have `\displaystyle` alone. A sign opening such a cell is binary in
+TeX and a prefix in Perl. Minimal trigger:
+
+```tex
+\documentclass{article}\usepackage{amsmath}
+\begin{document}\begin{align} a &= b \\ &+ c \end{align}\end{document}
+```
+
+pdflatex sets "+c" with \medmuskip on both sides of the `+`; Perl 0.8.8 (same host) reads `plus(c)` and emits
+`<mrow><mo>+</mo><mi>c</mi></mrow>`, which MathJax and Chrome set tight. Fixed in Rust (OXIDIZED_DESIGN_DIVERGENCES
+#1151): the bindings mark the columns and the parser reads the sign binary where the cell continues the one before it;
+guard
+`perfect_kernel_batchfix991::continuation_sign_after_amsmath_s_empty_ord_is_binary`.
+
 ## 1323. Perl keeps the braces of a braced file name
 
 latex_constructs.pool.ltxml:4233 `\lx@latex@input` (`Input(Expand($_[1]))`) and :4246-4252 `\include` (`ToString($path)`)

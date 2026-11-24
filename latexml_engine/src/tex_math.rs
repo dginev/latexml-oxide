@@ -1244,9 +1244,11 @@ LoadDefinitions!({
   // at the token level, and a `}` met where the delimiter belongs is put back unconsumed (1207.4709's END-peek, which
   // the `\big` reader keeps). OXIDIZED_DESIGN #530. Guards `perfect_kernel_batch65d::*`;
   // `perfect_kernel_batch56::let_at_left_left_does_not_loop`.
+  // (its null delimiter's hint says it is a `\left`'s: a sign after it is the first atom of the list, unary in TeX,
+  // where a bare `\big.`'s hint is an Ord box's; `latexml_math_parser::util::filter_hints`, 2003.06694)
   DefConstructor!("\\left DelimiterToken",
     "?#char(?#inmath(<ltx:XMTok role='#role' name='#name' ?#meaning(meaning='#meaning') stretchy='#stretchy' ?#role_side(role_side='#role_side')>#char</ltx:XMTok>)(#char))\
-      (?#hint(?#inmath(<ltx:XMHint/>)())(#1))",
+      (?#hint(?#inmath(<ltx:XMHint _left_delimiter='true'/>)())(#1))",
     after_digest => sub[whatsit] {
       decorate_delimiter(whatsit, DelimiterSide::Left)?;
       unread(Tokens::new(vec![T_CS!("\\lx@hidden@bgroup"), T_CS!("\\lx@math@left@group")]));
@@ -1299,7 +1301,7 @@ LoadDefinitions!({
   // `\@left`/`\@right` undefined. Guard: `perfect_kernel_batch56::let_at_left_left_does_not_loop`.
   DefConstructor!("\\lx@delim@left DelimiterToken",
     "?#char(?#inmath(<ltx:XMTok role='#role' name='#name' ?#meaning(meaning='#meaning') stretchy='#stretchy' ?#role_side(role_side='#role_side')>#char</ltx:XMTok>)(#char))\
-      (?#hint(?#inmath(<ltx:XMHint/>)())(#1))",
+      (?#hint(?#inmath(<ltx:XMHint _left_delimiter='true'/>)())(#1))",
     after_digest => sub[whatsit] {
       decorate_delimiter(whatsit, DelimiterSide::Left)?;
       Ok(Vec::new())

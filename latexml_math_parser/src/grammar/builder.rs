@@ -49,6 +49,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
   token!(dotsi_id = "ID:dotsi");
   token!(dotso_id = "ID:dotso");
   token!(addop_t ~ "ADDOP");
+  // A sign opening an alignment cell that continues the one before it (`util::continues_the_cell_before`, issue 991)
+  token!(cell_addop ~ "CELLADDOP");
   token!(mulop_t ~ "MULOP");
   token!(relop_t ~ "RELOP");
   token!(elideop ~ "ELIDEOP");
@@ -367,6 +369,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         // `tight_term` left those with no derivation (RUST-ONLY; golden
         // tests/parse/bigop_operands.tex#signed_term_is_a_whole_term).
         | addop term => prefix_apply
+        // A sign opening an alignment cell after amsmath's empty Ord (`\displaystyle{{}##}`, issue 991): binary, its
+        // left operand absent — a sum the cell before it began (`util::continues_the_cell_before`)
+        | cell_addop term => continuation_sign_apply
         // A trailing sign, `0+`, `a^2+` (a factor is an expression: one rule, 57bi)
         | expression addop => postfix_apply
         // Perl MathGrammar L236: addExpressionModifier: MODIFIEROP Expression

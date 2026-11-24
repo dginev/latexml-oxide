@@ -3746,27 +3746,27 @@ mod aligned_mtable_columnspacing_zero {
   const MTABLES: [&str; 4] = [
     "<mtable columnspacing=\"5pt\" displaystyle=\"true\"><mtr><mtd class=\"ltx_align_right\" \
      columnalign=\"right\"><mrow><msup><mi>y</mi><mo>\u{2032}</mo></msup><mo>+</mo><mi>y</mi></mrow></mtd>\
-     <mtd class=\"ltx_align_left\" columnalign=\"left\"><mrow><mphantom></mphantom><mo>=</mo><mrow><mi>sin</mi>\
+     <mtd class=\"ltx_align_left\" columnalign=\"left\"><mrow><mphantom><mi>\u{2060}</mi></mphantom><mo>=</mo><mrow><mi>sin</mi>\
      <mo>\u{2061}</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></mrow></mtd></mtr><mtr>\
      <mtd class=\"ltx_align_right\" columnalign=\"right\"><mrow><mi>y</mi><mo>\u{2061}</mo><mrow><mo>(</mo>\
      <mn>0</mn><mo>)</mo></mrow></mrow></mtd><mtd class=\"ltx_align_left\" columnalign=\"left\"><mrow>\
-     <mphantom></mphantom><mo>=</mo><mn>1</mn></mrow></mtd></mtr></mtable>",
+     <mphantom><mi>\u{2060}</mi></mphantom><mo>=</mo><mn>1</mn></mrow></mtd></mtr></mtable>",
     "<mtable columnspacing=\"0pt\" displaystyle=\"true\"><mtr><mtd class=\"ltx_align_right\" \
      columnalign=\"right\"><mrow><mi>y</mi><mo>\u{2061}</mo><mrow><mo stretchy=\"false\">(</mo><mi>x</mi>\
      <mo stretchy=\"false\">)</mo></mrow></mrow></mtd><mtd class=\"ltx_align_left\" columnalign=\"left\"><mrow>\
-     <mphantom></mphantom><mo>=</mo><mrow><msub><mi>C</mi><mn>1</mn></msub><mo>\u{2062}</mo><mi>y</mi>\
+     <mphantom><mi>\u{2060}</mi></mphantom><mo>=</mo><mrow><msub><mi>C</mi><mn>1</mn></msub><mo>\u{2062}</mo><mi>y</mi>\
      <mo>\u{2062}</mo><mrow><mo stretchy=\"false\">(</mo><mi>x</mi><mo stretchy=\"false\">)</mo></mrow></mrow>\
      </mrow></mtd></mtr><mtr><mtd class=\"ltx_align_right\" columnalign=\"right\"><mrow><mi>g</mi>\
      <mo>\u{2061}</mo><mrow><mo stretchy=\"false\">(</mo><mi>x</mi><mo stretchy=\"false\">)</mo></mrow></mrow>\
-     </mtd><mtd class=\"ltx_align_left\" columnalign=\"left\"><mrow><mphantom></mphantom><mo>=</mo><mrow>\
+     </mtd><mtd class=\"ltx_align_left\" columnalign=\"left\"><mrow><mphantom><mi>\u{2060}</mi></mphantom><mo>=</mo><mrow>\
      <msub><mi>C</mi><mn>1</mn></msub><mo>\u{2062}</mo><msub><mi>y</mi><mn>1</mn></msub></mrow></mrow></mtd>\
      </mtr></mtable>",
     "<mtable columnspacing=\"5pt\" displaystyle=\"true\" rowspacing=\"10.0pt\"><mtr><mtd><mi>a</mi></mtd>\
      <mtd><mi>b</mi></mtd></mtr><mtr><mtd><mi>c</mi></mtd><mtd><mi>d</mi></mtd></mtr></mtable>",
     "<mtable columnspacing=\"0pt\" displaystyle=\"true\" rowspacing=\"6.0pt\"><mtr><mtd class=\"ltx_align_right\" \
-     columnalign=\"right\"><mi>p</mi></mtd><mtd class=\"ltx_align_left\" columnalign=\"left\"><mrow><mphantom>\
+     columnalign=\"right\"><mi>p</mi></mtd><mtd class=\"ltx_align_left\" columnalign=\"left\"><mrow><mphantom><mi>\u{2060}</mi>\
      </mphantom><mo>=</mo><mi>q</mi></mrow></mtd></mtr><mtr><mtd class=\"ltx_align_right\" columnalign=\"right\">\
-     <mi>r</mi></mtd><mtd class=\"ltx_align_left\" columnalign=\"left\"><mrow><mphantom></mphantom><mo>=</mo>\
+     <mi>r</mi></mtd><mtd class=\"ltx_align_left\" columnalign=\"left\"><mrow><mphantom><mi>\u{2060}</mi></mphantom><mo>=</mo>\
      <mi>s</mi></mrow></mtd></mtr></mtable>",
   ];
 

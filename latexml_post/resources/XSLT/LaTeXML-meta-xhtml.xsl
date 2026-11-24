@@ -309,7 +309,7 @@
                           [not(key('f:glyph-elsewhere',substring-after($by_mark,'&#x9;')))]"/>
     <xsl:variable name="glyph">
       <xsl:choose>
-        <xsl:when test="ltx:tags/ltx:tag[not(@role)]"><xsl:value-of select="ltx:tags/ltx:tag[not(@role)]"/></xsl:when>
+        <xsl:when test="ltx:tags/ltx:tag[not(@role)]"><xsl:value-of select="f:plain-text(ltx:tags/ltx:tag[not(@role)])"/></xsl:when>
         <xsl:otherwise><xsl:value-of select="@mark"/></xsl:otherwise>
       </xsl:choose>
     </xsl:variable>
@@ -584,7 +584,7 @@
       <xsl:attribute name="class">ltx_note_mark<xsl:if test="$glyph"> ltx_mark_generated</xsl:if></xsl:attribute>
       <xsl:choose>
         <xsl:when test="$glyph"><xsl:value-of select="$glyph"/></xsl:when>
-        <xsl:when test="ltx:tags/ltx:tag[not(@role)]"><xsl:value-of select="ltx:tags/ltx:tag[not(@role)]"/></xsl:when>
+        <xsl:when test="ltx:tags/ltx:tag[not(@role)]"><xsl:value-of select="f:plain-text(ltx:tags/ltx:tag[not(@role)])"/></xsl:when>
         <xsl:when test="@mark"><xsl:value-of select="@mark"/></xsl:when>
         <xsl:otherwise>&#x2020;</xsl:otherwise>
       </xsl:choose>

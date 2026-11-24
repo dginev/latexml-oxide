@@ -69,7 +69,7 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (585 items on 2026-11-23 on `int/towards_v0_8_1`: 581 open, weight 1133, 60 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (595 items on 2026-11-23 on `int/towards_v0_8_1`: 591 open, weight 1153, 60 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; id — task; weight — easy 1, medium 3, hard 5):
 
 
   - ODR1 — OD #973's pgfmath residuals (moved from OD by the 2026-11-14 rationalization): string operands, units after array primaries, grouping, out-of-bounds indexing (repro `graphics-tikz/pgfmath_string_and_units_in_arithmetic_red`; every case's pgf-vs-ours values: OPEN_ROWS ODR1); 3
@@ -1453,6 +1453,40 @@ Rules that keep this file honest and mergeable:
   - ISSUE80 — issue #80: space XMHints as elided arguments (math, parked); 3
   - ISSUE47 — issue #47: accurate LaTeX linting (feature, long-term; with issue 92's diagnostics); 5
   - YTABMATRIX — (RAWDEFR root cause, 2026-11-23) ytableau's `\ydiagram` inside a pgf matrix cell (`tikzcd`, `\matrix[matrix of math nodes]`) closes `svg:g` while the `\vtop` capture block is still open (ytableau.sty:190-206 `\vtop{\iffalse}\fi` … `\iffalse{\fi}` around an inner `\halign`): `\begin{tikzcd} \ydiagram{1} & B \end{tikzcd}` gives 2 Errors on rc2, pdflatex clean; a plain node, a tabular cell, `\vcenter` are clean. Witness 1502.07025 (123 × `svg:g isn't allowed in <ltx:equation>`). Start from `pgfsys_latexml_def.rs`'s matrix cell build; 3
+  - EMPTYBOXSPACE — (issue 991 review, pre-existing) an author space after an empty box that stays an empty `<m:mrow>`
+    is lost: `$\mbox{}\,x$` (beside an invisible times) has no space where TeX sets the thin space, as the spacing walk
+    skips an empty row's `_rpadding`. Beside a visible operator (`$\mbox{}\,=b$`, `$\mbox{}\,-b$`) the box is the
+    absent operand's placeholder and keeps it (OD #1150). Also `$\mbox{}\,\mbox{}=b$` parses as an invisible times and
+    the `\,` is lost; 1
+  - BOXTEXTSPACELIKE — (issue 991 review, pre-existing) a box holding only space is a whitespace `<m:mtext>` and
+    loses its width: `$\mbox{\hspace{1cm}}=b$` is `<m:mtext>&#xA0;</m:mtext>`, the 1cm gone. The operator after it
+    keeps its spacing (MathJax 3.2.2 gives `mtext` the ordinary-atom class, `MmlNodes/mtext.js:35`; Chrome 158 sets
+    `=`/`+` infix after a whitespace `mtext`). `$\mbox{ }=b$` stays an NBSP `mtext` while `$\mbox{ }+b$` becomes the
+    placeholder; 1
+  - TEXTPHANTOM — (issue 991 review, pre-existing) `$\text{\phantom{XX}}=b$` is `<m:mtext class="ltx_phantom">XX</m:mtext>`,
+    which renders a visible "XX" where TeX leaves blank space; 1
+  - EMPTYGROUPUNARY — (issue 991 review, pre-existing; math parked) `${}-b$` drops the `{}` and makes the `−` unary (no
+    space); TeX's empty group is an Ord atom, so the `−` is a binary operator with \medmuskip on each side; 3
+  - CONTSIGNEDGE (after issue 991, synthetic) — the continuation-sign reading's edges: `&\left.{} + j\right)`,
+    `&\left.\right. + c` and `&\left.\big. + c\right)` read unary where TeX sets the sign binary (`{}` leaves no node; an
+    Inner atom; a `\big.` box after the fence); a left cell ending in prose counts as an operand (`f &= x &\text{if }&
+    -1<x<0` reads `(absent − 1) < x < 0`); `B ={} & -C` may count as an empty left cell (suspected); the
+    expectation-respelling retry may still see `CELLADDOP` (suspected); a leading `\quad`/`\hskip` before `\left.+`
+    loses its lspace in the unary reading (2505.11002, 2012.13407; the row-edge rule); `&\left. + c \right|` warns
+    (pre-existing). OD #1151 "Not covered"; 3
+  - NOTEMARKXMATH — a note mark taken from a formula tag reads the XMath tokens and the MathML text together:
+    2509.25166's marks read "∗ † ∗†"; `\renewcommand\thefootnote{\ensuremath{=1}}` gives "= 1 =1"; Perl's `note-mark`
+    template does the same (shared); 3
+  - TEXTOPCHROME — Chrome sets `\text{x}+\text{y}` tight (`\frac{\text{TP}}{\text{TP}+\text{FP}}`): Chrome 158 gives
+    `<mtext>x</mtext><mo>+</mo><mtext>y</mtext>` 0px each side, 3.55px when either neighbour is not an `mtext`; MathJax
+    3.2.2 spaces it. Only a sibling that is not space-like fixes it; the Math WG is narrowing `mtext` space-likeness.
+    Measure reach first; 3
+  - EMPTYBOXSTYLE — (issue 991 review, pre-existing) `$\textcolor{red}{\mbox{}}=b$` loses its colour `mstyle`;
+    `$\colorbox{red}{}=b$` loses TeX's 6pt red box and its `tex=` reads `\hbox{\pagecolor{red}}`; `$\fbox{}=b$` is 0 wide
+    where TeX's is 2\fboxsep + 2\fboxrule ≈ 6.8pt; 3
+  - CELLLEADSPACE — a leading `&\quad g` with no operator after it still loses its `\quad`: an author space is applied
+    only between two row neighbours (`presentation.rs` `adjust_pair`); 1
+  - CELLLONESIGN — an amsmath cell that is only a sign (`&+ \\`) takes no grammar parse and stays a bare `<mo>`; 1
 ---
 
 ## Silent-loss inventory — blocks the 98 % claim (user 2026-10-18)

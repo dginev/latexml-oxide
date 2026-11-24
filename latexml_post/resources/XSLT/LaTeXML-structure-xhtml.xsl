@@ -613,9 +613,9 @@
       <div class="flex-grid">
       <div class="col-25">
         <h1 class="author-name">
-          <xsl:value-of select="ltx:contact[@role='firstname']" />
+          <xsl:value-of select="f:plain-text(ltx:contact[@role='firstname'])" />
           <xsl:text> </xsl:text>
-          <xsl:value-of select="ltx:contact[@role='familyname']" />
+          <xsl:value-of select="f:plain-text(ltx:contact[@role='familyname'])" />
         </h1>
         <xsl:if test="ltx:contact[@role='position']">
           <h3 class="author-title">
@@ -907,13 +907,13 @@
   <xsl:template name="contact-address">
     <xsl:choose>
       <xsl:when test="* and not(*[not(self::ltx:text[contains(@font,'typewriter')])])">
-        <xsl:value-of select="normalize-space(.)"/>
+        <xsl:value-of select="normalize-space(f:plain-text(.))"/>
       </xsl:when>
       <xsl:when test="text()[normalize-space()]">
         <xsl:value-of select="normalize-space(text()[normalize-space()][1])"/>
       </xsl:when>
       <xsl:otherwise>
-        <xsl:value-of select="normalize-space((.//text()[normalize-space()])[1])"/>
+        <xsl:value-of select="normalize-space(f:plain-text((.//text()[normalize-space(f:plain-text(.))])[1]))"/>
       </xsl:otherwise>
     </xsl:choose>
   </xsl:template>
