@@ -45,6 +45,17 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
 
 ### 0.8.0-rc3
 
+  - **natbib reads an apalike label `[Author, Year]` as author and year.** A numbers-mode label such as
+    `\bibitem[LIGO Scientific Collaboration, 2019]{x}` was split at the wrong comma: the year read "LIGO Scientific
+    Collaboration" and the label text spilled into the entry, printing ",," in citations (2,312 times in a 267-paper
+    A/B; 123 papers changed, all for the better). It now splits at the first ", ", as natbib's `\NAT@apalk` does, and
+    `\citename` does the same; the `(year)` split ignores a `(` inside braces. OXIDIZED_DESIGN_DIVERGENCES #1161,
+    KNOWN_PERL_ERRORS #1332; witness 2605.02429; residuals in row R NATBIBRES.
+  - **`\backmatter` closes the open part and chapter.** In book, amsbook, svmult and svmono the back matter belongs to no
+    part (book.cls:292-299), so the bibliography and index no longer nest in the last `ltx:part`: a split book's
+    Bibliography/Index buttons appear on every page and `bib.html`'s title no longer ends "‣ Part II …". A/B on 73
+    papers: words, Errors, Fatals and Warnings identical; 30 changed, each only by the back matter leaving the last
+    part. Witness 0710.2405; residuals in row R BACKMATTERRAW, AMSBACKNAME.
   - **`-q` hides Info and Warnings on stderr, never Errors.** `-q` and `-qq` now show only the `Error:`/`Fatal:`
     records (with their continuation lines), the final verdict and the notes about output not produced ("Log not
     written") on stderr; Warnings, the split render's forwarded Warnings, the format build's progress and notes such

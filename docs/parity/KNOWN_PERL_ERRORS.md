@@ -22511,7 +22511,7 @@ OXIDIZED_DESIGN_DIVERGENCES #1158). To be offered upstream.
 
 book.cls.ltxml:121 `DefPrimitive('\backmatter', undef)` (amsbook.cls.ltxml:56 alike; svmult.cls.ltxml inherits it) closes
 nothing, so the back-matter chapters, the bibliography (`BACKMATTER_ELEMENT` `ltx:chapter`,
-latex_constructs.pool.ltxml:3938-3947 `adjustBackmatterElement`) and the index are inserted inside the open
+latex_constructs.pool.ltxml:3935-3947 `adjustBackmatterElement`) and the index are inserted inside the open
 `ltx:part`. In TeX `\backmatter` (book.cls:292-299) belongs to no part: the running heads leave the part, and the
 contents list the back-matter chapters after it. Minimal trigger:
 
