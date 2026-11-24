@@ -170,7 +170,7 @@ zip = { version = "9.7.0", default-features = false, features = ["deflate-flate2
 indexmap = "=2.14.2"
 tempfile = "3"
 log = "0.4"
-libxml = "0.3.24"
+libxml = "0.3.26"
 regex = { version = "1.7.1", default-features = false, features = ["std", "perf", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script"] }  # DEP-10
 glob = { version = "0.3", optional = true }
 roxmltree = { version = "0.21", optional = true }

@@ -45,6 +45,12 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
 
 ### After 0.8.0-rc2
 
+  - **rust-libxml 0.3.26** (from 0.3.24; both releases 2026-11-23): a wrapper of a node libxml2 freed reads as a null
+    node instead of pointing into freed memory, linking calls refuse a link that would double-free or loop, a
+    document's drop neutralises its wrappers, and strings with a NUL byte, over-long text and namespaces of another
+    document return errors instead of panicking or truncating. No C code changed (the vendored-native audit lists
+    both versions).
+
   - **A class whose `\@maketitle` takes an argument no longer leaves a group open or prints a stray letter.** The
     title-page deposit read its closing brace as that argument, so `\end{document}` warned of open groups, and the
     replay of the class's `\maketitle` printed the argument as text (iaus.cls's "n"; ~1,665 arXiv papers, 0801.1806).
