@@ -24165,4 +24165,5 @@ empty_box_beside_an_operator_is_a_phantom_word_joiner, absent_operand_leaves_no_
 `alignment/split`, `ams/amsdisplay`, `ams/mathtools`, `structure/amsarticle`, `math/split_fence`,
 `parse/continuation_row_with_its_own_side`, `parse/integrals_and_differentials`. Witnesses: 1308.2969, 2512.12866,
 2306.10612, 1612.06544. A/B over 301 papers with continuation cells: 1,919 formulas in 257 papers changed, each a sign
-turned binary; errors, fatals and warnings unchanged.
+turned binary; errors, fatals and warnings unchanged. The `\left.` exception then returned 63 of them in 17 papers to
+unary (the base's reading), every one a sign opening a `\left.`'s list.
