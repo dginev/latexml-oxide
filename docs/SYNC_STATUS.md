@@ -1050,7 +1050,11 @@ Rules that keep this file honest and mergeable:
     outermost `svg:g` close; the 11 COLLAPSIBLE keys as a bitmask read once per node; a post-order pass whose hoisted
     leading and trailing runs move in O(1) while the masks allow, materialized in the DOM once. Verify the premise that
     nothing between an inner and the outermost close reads the closed groups (`record_svg_ids` at the `svg:svg` close,
-    the `svg:foreignObject` cleanup at :1400). Bar: byte-identical output on every pgf/TikZ witness, plus the
+    the `svg:foreignObject` cleanup at :1400). A hazard is confirmed in the code: `\lxSVG@closescope`
+    (`pgfsys_latexml_def.rs:1528-1532`) closes `svg:g`s until one carries `_scopebegin`, and Step 5 (`tex_box.rs:647`)
+    copies `_`-prefixed attributes (`_scopebegin` too) from a merged single child onto the group as it closes. A
+    deferred collapse would move where that loop stops, so collapse at once when the closing group's single child carries
+    `_scopebegin`, or keep the loop's check on the unmerged child. Bar: byte-identical output on every pgf/TikZ witness, plus the
     instructions:u gain on 2605.19500 and a heavy-picture population; 3
 
 ---
