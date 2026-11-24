@@ -27,3 +27,21 @@ fn braced_file_name_group_is_read_without_its_braces() {
     "<p xml:id=\"p1.1\">One.\nTwo.\n yes Three.</p>",
   );
 }
+
+/// ams-internals/amsgen_rifm: amsgen.sty:49's `\RIfM@` (Perl's binding spells it `\RifM@`, KNOWN_PERL_ERRORS #1324),
+/// which a document's `\QED` box calls (1701.06055: 101 errors and a Fatal). Red (INT081G): 5 errors.
+#[test]
+fn amsgen_defines_rifm() {
+  let (log, xml) = convert_with(
+    include_str!("../../../tools/perfect_kernel/repros/ams-internals/amsgen_rifm_1701_06055.tex"),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_element(
+    &xml,
+    "p",
+    &[],
+    "<p xml:id=\"p1.1\">t <Math mode=\"inline\" tex=\"m\" text=\"m\" xml:id=\"p1.m1\"><XMath xml:id=\"p1.m1.1\"><XMTok \
+     font=\"italic\" role=\"UNKNOWN\">m</XMTok></XMath></Math></p>",
+  );
+}

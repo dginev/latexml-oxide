@@ -1,0 +1,16 @@
+% mechanism: amsgen.sty:49 `\def\RIfM@{\relax\ifmmode}`, the AMS math test every amsmath user may call; Perl's binding
+%   (amsgen.sty.ltxml:35) and ours defined `\RifM@` instead, so `\RIfM@` was undefined and its `\else`/`\fi` stray
+% witness: 1701.06055 (`\def\BOXSYMBOL{\RIfM@\bgroup\else$\bgroup\aftergroup$\fi…}`, its proofs' `\QED`: 101 errors and
+%   a Fatal)
+% oracle:  pdflatex 0 `!`; "t m"
+% engines: rust INT081G 5 errors; perl 5 errors
+% expect:  0 errors, 0 warnings; <p>t <Math>m</Math></p>
+% status:  RED (INT081G) -> GREEN (REGTAILB)
+\documentclass{article}
+\usepackage{amsmath}
+\makeatletter
+\def\X{\RIfM@ m\else t\fi}
+\makeatother
+\begin{document}
+\X\ $\X$
+\end{document}

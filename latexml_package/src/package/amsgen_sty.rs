@@ -22,7 +22,11 @@ LoadDefinitions!({
 
   DefMacro!("\\FN@", "\\futurelet\\@let@token");
   DefMacro!("\\DN@", "\\def\\next@");
+  // amsgen.sty:49 `\def\RIfM@{\relax\ifmmode}`; Perl's `\RifM@` (amsgen.sty.ltxml:35) misspells it and stays for code
+  // written against Perl. Without it, theorem.sty or a document calling `\RIfM@` erred undefined (1701.06055).
+  // KNOWN_PERL_ERRORS #1324.
   DefMacro!("\\RifM@", "\\relax\\ifmmode");
+  DefMacro!("\\RIfM@", "\\relax\\ifmmode");
   DefMacro!("\\setboxz@h", "\\setbox\\z@\\hbox");
   DefMacro!("\\wdz@", "\\wd\\z@");
   DefMacro!("\\boxz@", "\\box\\z@");

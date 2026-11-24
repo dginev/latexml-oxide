@@ -22637,3 +22637,19 @@ silent "No file {./x}.tex." (the chapter dropped) and one `missing_file`. Fixed 
 `gullet::expand_as_file_name`, read by `\input`, `\include`, `\includeonly`, `\IfFileExists`, `\InputIfFileExists` and
 catchfile. Witnesses 2406.05605, 2408.05715, 2309.07288; guard
 `perfect_kernel_batchregtailb::braced_file_name_group_is_read_without_its_braces`.
+
+## 1324. Perl's amsgen defines `\RifM@` for `\RIfM@`
+
+amsgen.sty.ltxml:35 `DefMacroI('\RifM@', undef, '\relax\ifmmode')` misspells amsgen.sty:49 `\def\RIfM@{\relax\ifmmode}`,
+so a document or package calling the AMS math test finds it undefined and its `\else`/`\fi` stray. Minimal trigger:
+
+```tex
+\documentclass{article}
+\usepackage{amsmath}
+\makeatletter\def\X{\RIfM@ m\else t\fi}\makeatother
+\begin{document}\X\ $\X$\end{document}
+```
+
+pdflatex prints "t m"; Perl 0.8.8 (same host): 5 errors (`\RIfM@` undefined, two stray `\else`, two stray `\fi`).
+Fixed in Rust: amsgen_sty.rs defines both names. Witness 1701.06055 (its `\QED` box: 101 errors and a Fatal); guard
+`perfect_kernel_batchregtailb::amsgen_defines_rifm`.
