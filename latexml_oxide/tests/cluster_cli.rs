@@ -4597,8 +4597,9 @@ mod debug_feature_scope {
       front_counts[0], front_counts[1],
       "FRONT lines without and with --verbose"
     );
-    // `--quiet`: the feature's lines reach the log only (Perl `_printlines`: STDERR needs `$VERBOSITY >= 0`); the
-    // undeclared-feature report is a plain STDERR print, so it stays.
+    // `--quiet`: the feature's lines reach the log only (Perl `_printlines`: STDERR needs `$VERBOSITY >= 0`), as does
+    // "Log written to" (an Info note); nothing errs, so no Error prints, but the verdict does, last (OD #1158). The
+    // undeclared-feature report is a plain STDERR print (`CheckDebuggable`, Common/Error.pm L489-490), so it stays.
     let output = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
       .args([
         "--quiet",
@@ -4619,9 +4620,10 @@ mod debug_feature_scope {
       !stderr.contains("FRONT "),
       "--quiet: no feature line on STDERR:\n{stderr}"
     );
-    assert!(
-      stderr.ends_with(&format!("Log written to q.log\n{UNDECLARED}{KNOWN}")),
-      "--quiet: the log line, then the undeclared-feature report end STDERR:\n{stderr}"
+    assert_eq!(
+      stderr,
+      format!("{UNDECLARED}{KNOWN}Conversion complete: No obvious problems\n"),
+      "--quiet: the undeclared-feature report and the verdict alone on STDERR"
     );
     assert!(
       log.contains("Debug:frontmatter FRONT "),
