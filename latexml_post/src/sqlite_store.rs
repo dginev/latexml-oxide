@@ -9,7 +9,7 @@
 //! deadlock). Writers take one `IMMEDIATE` transaction per allocation ([`SqliteStore::immediate`]), so processes
 //! sharing the file serialize on it. A store is opened lazily by its owner and never kept in a static (a forked process
 //! must not inherit the connection). Failure policy, opening, reading or writing: a Warning, then the rest of the run in
-//! memory ([`SqliteStore::fell_back`]), from a copy of what the file held when it can still be read.
+//! memory ([`SqliteStore::fell_back`]), from a copy of what the file held when it gives it at once and the copy works.
 
 use std::path::{Path, PathBuf};
 
@@ -135,24 +135,14 @@ impl SqliteStore {
   pub fn fell_back(&self) -> bool { self.fell_back }
 
   /// Run `f` in one `IMMEDIATE` transaction, committed when it succeeds. A file that fails is reported (Warning) and
-  /// replaced by memory (`fall_back`), where `f` runs again: `f` is told whether the store runs in memory in
-  /// place of its file ([`Self::fell_back`]), and defers its own side effects (a Warning) until the call returns. A
-  /// transaction that fails in memory is reported (Error) and gives `None`.
+  /// replaced by memory (`fall_back`), where `f` runs again: `f` is told whether the store runs in memory in place of
+  /// its file ([`Self::fell_back`]), and defers its own side effects (a Warning) until the call returns. A transaction
+  /// that fails in a fresh store in memory is reported (Error) and gives `None`.
   pub fn immediate<T>(
     &mut self,
     mut f: impl FnMut(&Transaction, bool) -> rusqlite::Result<T>,
   ) -> Option<T> {
-    let mut attempt = |store: &mut Self| Self::run(&mut store.conn, store.fell_back, &mut f);
-    match attempt(self) {
-      Ok(value) => Some(value),
-      Err(e) => {
-        if self.fall_back(&e) {
-          Self::ok(attempt(self))
-        } else {
-          Self::ok(Err(e))
-        }
-      },
-    }
+    self.attempt(|conn, fell_back| Self::run(conn, fell_back, &mut f))
   }
 
   fn run<T>(
@@ -168,16 +158,60 @@ impl SqliteStore {
 
   /// A read outside any transaction, under [`Self::immediate`]'s failure policy.
   pub fn read<T>(&mut self, f: impl Fn(&Connection) -> rusqlite::Result<T>) -> Option<T> {
-    match f(&self.conn) {
-      Ok(value) => Some(value),
-      Err(e) => {
-        if self.fall_back(&e) {
-          Self::ok(f(&self.conn))
-        } else {
-          Self::ok(Err(e))
-        }
-      },
+    self.attempt(|conn, _| f(conn))
+  }
+
+  /// `f` on the store; when it fails on the file, the store goes to memory (one Warning) and `f` runs there: on a copy
+  /// of the file's entries (this run's among them) when the file gives them at once, else, or when `f` fails on the
+  /// copy (a broken file copies as it is), on an empty store.
+  fn attempt<T>(
+    &mut self,
+    mut f: impl FnMut(&mut Connection, bool) -> rusqlite::Result<T>,
+  ) -> Option<T> {
+    let e = match f(&mut self.conn, self.fell_back) {
+      Ok(value) => return Some(value),
+      Err(e) => e,
+    };
+    let Some(file) = self.file.take() else {
+      return Self::ok(Err(e));
+    };
+    self.fell_back = true;
+    let mut result = None;
+    if let Some(copy) = self.copy() {
+      self.conn = copy;
+      result = f(&mut self.conn, true).ok();
     }
+    let kept = result.is_some();
+    Warn!(
+      "I/O",
+      "cache",
+      "The cache {} failed ({}); this run's further entries are kept in memory only{}",
+      file.display(),
+      e,
+      if kept {
+        ""
+      } else {
+        ", and its earlier ones are lost"
+      }
+    );
+    if kept {
+      return result;
+    }
+    self.conn = Self::in_memory(self.schema);
+    Self::ok(f(&mut self.conn, true))
+  }
+
+  /// A copy in memory of the file's entries, when the file gives them at once: the connection, left right after, waits
+  /// on no lock (a busy source would be retried for ever by `Backup::run_to_completion`), and one step copies the
+  /// whole file or nothing.
+  fn copy(&self) -> Option<Connection> {
+    self.conn.busy_timeout(std::time::Duration::ZERO).ok()?;
+    let mut copy = Connection::open_in_memory().ok()?;
+    let done = matches!(
+      rusqlite::backup::Backup::new(&self.conn, &mut copy).map(|backup| backup.step(-1)),
+      Ok(Ok(rusqlite::backup::StepResult::Done))
+    );
+    done.then_some(copy)
   }
 
   /// A store in memory reports its failure (Error), a bug in its caller's statements.
@@ -192,36 +226,6 @@ impl SqliteStore {
         );
       })
       .ok()
-  }
-
-  /// After `e` on the file: a Warning, then the store in memory, holding a copy of the file's entries (this run's
-  /// among them) when it can still be read, else none. Whether there was a file to leave.
-  fn fall_back(&mut self, e: &rusqlite::Error) -> bool {
-    let Some(file) = self.file.take() else {
-      return false;
-    };
-    let mut copy = Connection::open_in_memory().expect("an in-memory SQLite database");
-    let copied = rusqlite::backup::Backup::new(&self.conn, &mut copy)
-      .and_then(|backup| backup.run_to_completion(1024, std::time::Duration::ZERO, None));
-    Warn!(
-      "I/O",
-      "cache",
-      "The cache {} failed ({}); this run's further entries are kept in memory only{}",
-      file.display(),
-      e,
-      if copied.is_ok() {
-        ""
-      } else {
-        ", and its earlier ones are lost"
-      }
-    );
-    self.conn = if copied.is_ok() {
-      copy
-    } else {
-      Self::in_memory(self.schema)
-    };
-    self.fell_back = true;
-    true
   }
 }
 
@@ -366,6 +370,55 @@ mod tests {
         .collect();
       assert_eq!(outcomes, vec!["FILE"; 16]);
     }
+  }
+
+  /// A file another process holds locked against readers (a `DELETE` journal under `BEGIN EXCLUSIVE` with a pending
+  /// write) past the 10 s lock wait: the store's transaction falls back to memory once that wait is over, with no copy
+  /// of the file's entries (round 7 copied with `run_to_completion`, which retries a busy source for ever), one
+  /// Warning, and the earlier entries lost.
+  #[test]
+  fn a_file_locked_against_readers_falls_back_without_its_entries() {
+    use latexml_core::common::error::{LogStatus, get_status};
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("c.db");
+    let mut store = SqliteStore::open(Some(&file), SCHEMA, 1);
+    store.immediate(|tx, _| tx.execute("INSERT INTO t(v) VALUES (7)", []));
+    store
+      .conn
+      .pragma_update(None, "journal_mode", "DELETE")
+      .unwrap();
+    let holder = Connection::open(&file).unwrap();
+    holder
+      .execute_batch("BEGIN EXCLUSIVE; INSERT INTO t(v) VALUES (9);")
+      .unwrap();
+    let (send, receive) = std::sync::mpsc::channel();
+    let start = std::time::Instant::now();
+    let worker = std::thread::spawn(move || {
+      let warnings = get_status(LogStatus::Warning);
+      let inserted = store.immediate(|tx, _| tx.execute("INSERT INTO t(v) VALUES (1)", []));
+      let kept = store.read(|conn| {
+        conn
+          .prepare("SELECT v FROM t ORDER BY v")?
+          .query_map([], |row| row.get::<_, i64>(0))?
+          .collect::<rusqlite::Result<Vec<_>>>()
+      });
+      let counts = (
+        get_status(LogStatus::Warning) - warnings,
+        get_status(LogStatus::Error),
+      );
+      send
+        .send((inserted, kept, counts, store.file().is_none()))
+        .unwrap();
+    });
+    let outcome = receive.recv_timeout(std::time::Duration::from_secs(25));
+    let took = start.elapsed();
+    holder.execute_batch("COMMIT").unwrap();
+    worker.join().unwrap();
+    assert_eq!(
+      outcome.expect("the store fell back within 25 s"),
+      (Some(1), Some(vec![1]), (1, 0), true)
+    );
+    assert!(took < std::time::Duration::from_secs(16), "{took:?}");
   }
 
   /// A transaction that fails on the file (here a read-only file) runs again in memory, and is told so: a caller

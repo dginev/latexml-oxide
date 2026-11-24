@@ -24251,8 +24251,9 @@ cache is written only by Perl; a stored `_source_` is read only when its file na
 is a relative path to a regular file (a link followed to one), an absolute path, a device or a FIFO (whose read would
 not end) reported once the same way;
 (10) a store that cannot be used, at opening, in a read or in a transaction (the file locked past the 10 s timeout,
-read-only, corrupt), is reported (`I/O:cache`) and the rest of the run is in memory, from a copy of the file's entries
-(SQLite's backup; none when the file cannot be read), where Perl's tie is Fatal (Post.pm L1537-1546); a statement
+read-only, corrupt), is reported (`I/O:cache`, once) and the rest of the run is in memory, from a copy of the file's
+entries (SQLite's backup in one step that waits on no lock; none when the file is locked against readers, or when the
+statement fails on the copy too, as on a broken file, the Warning then saying the earlier entries are lost), where Perl's tie is Fatal (Post.pm L1537-1546); a statement
 that fails in memory is an Error (`internal:cache`) and stores nothing; the transaction runs again there, its Warnings
 emitted once it returns, and, told it is in memory, skips a generated name or a stem whose file
 in the destination holds other bytes than the image writes (a copy: its source's; a render: the graphics cache's entry
@@ -24278,7 +24279,7 @@ batchfix995_linked_destination_writes_nothing_outside_the_site_directory, batchf
 batchfix995_a_corrupt_cache_entry_decides_no_file, batchfix995_a_read_only_cache_overwrites_no_image,
 batchfix995_a_locked_cache_waits_less_than_the_conversion, batchfix995_a_planted_source_is_never_read_for_ever,
 batchfix995_a_rerun_beside_an_unusable_cache_is_idempotent, batchfix995_nocache_writes_no_cache_and_names_the_split_book,
-batchfix995_another_documents_file_is_never_shared}`
+batchfix995_another_documents_file_is_never_shared, batchfix995_a_broken_cache_file_is_a_warning}`
 (`tools/perfect_kernel/repros/loader/image_subimport_sitedirectory.tex`,
 `tools/perfect_kernel/repros/loader/image_copy_through_linked_destination.tex`,
 `tools/perfect_kernel/repros/loader/image_names_two_documents_one_folder.tex`,
@@ -24294,7 +24295,8 @@ batchfix995_another_documents_file_is_never_shared}`
 a_shared_file_is_left_when_its_owner_changes, another_documents_file_is_never_shared, a_planted_name_is_ignored,
 a_store_in_memory_skips_files_on_disk, concurrent_tables_on_one_file_never_share_a_name}`,
 `sqlite_store::tests::{another_version_is_left_alone, simultaneous_opens_of_a_new_file_all_use_it,
-a_failed_transaction_runs_again_told_it_is_in_memory, a_failure_in_memory_gives_nothing}`,
+a_failed_transaction_runs_again_told_it_is_in_memory, a_failure_in_memory_gives_nothing,
+a_file_locked_against_readers_falls_back_without_its_entries}`,
 `graphics::tests::process_coalesces_only_matching_conversion_options` (two widths, one file), `pack::tests` (the side files),
 `pathname::tests::is_contained_is_underneath_only`.
 

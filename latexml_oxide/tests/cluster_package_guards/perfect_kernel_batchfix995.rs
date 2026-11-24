@@ -1062,6 +1062,20 @@ fn batchfix995_a_locked_cache_waits_less_than_the_conversion() {
   });
 }
 
+/// A cache file of our schema version whose table is gone (a broken file SQLite's backup copies as it is): the run
+/// goes on in memory with one cache Warning and no Error (round 7: the copy failed too, `Error:internal:cache`), and
+/// `b.html` still gets names of its own. `SqliteStore::fall_back`.
+#[test]
+fn batchfix995_a_broken_cache_file_is_a_warning() {
+  unusable_cache(|cache| {
+    rusqlite::Connection::open(cache)
+      .unwrap()
+      .execute_batch("DROP TABLE kv;")
+      .unwrap();
+    Some(Box::new(|| {}))
+  });
+}
+
 /// A planted `_source_` that is a device, or a path out of the destination: the conversion ends promptly (round 4
 /// hashed `/dev/zero` for ever), reports the device once, and writes nothing out of the folder; a planted entry of
 /// an image's own is reported once. The files are said to be owned by images of this run with the same bytes
