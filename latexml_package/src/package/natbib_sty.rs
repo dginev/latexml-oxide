@@ -1519,10 +1519,21 @@ LoadDefinitions!({
         year = a2;
         bare = false;
       } else if cs == T_CS!("\\citename") {
+        // natbib.sty:1029 `\citename#1#2(@)(@)\@nil#3{\expandafter\NAT@apalk#1#2, \@nil{#3}}`: the name and the rest
+        // are split at their first `, ` as an apalike label (`\citename{Jones et al., }1990` is "Jones et al." and
+        // "1990"); Perl kept the name's `, ` in the authors (KNOWN_PERL_ERRORS #1332).
         tokens.remove(0);
         let (a1, rest) = nat_peel_arg(tokens);
-        authors = a1;
-        year = Some(Tokens::new(rest));
+        let mut whole = a1.clone().map(Tokens::unlist).unwrap_or_default();
+        whole.extend(rest.iter().copied());
+        let (apa_authors, apa_year) = nat_apalk(&whole);
+        if apa_year.is_empty() {
+          authors = a1;
+          year = Some(Tokens::new(rest));
+        } else {
+          authors = Some(Tokens::new(apa_authors));
+          year = Some(Tokens::new(apa_year));
+        }
         bare = false;
       }
     }
@@ -1548,9 +1559,12 @@ LoadDefinitions!({
       let mut rest_idx = 0;
       let mut found_paren = false;
 
-      // Find the opening paren
+      // The `(` and `)` that delimit the year, outside braces as TeX matches `\NAT@bare#1(#2)` (Perl took any:
+      // `[{Group (EBCTCG)} et~al., 2011]` had the year "EBCTCG", 2605.20003).
+      let mut level = 0i32;
       for (i, t) in exp_tokens.iter().enumerate() {
-        if *t == T_OTHER!("(") {
+        nat_brace_level(&mut level, t);
+        if level == 0 && *t == T_OTHER!("(") {
           rest_idx = i + 1;
           found_paren = true;
           break;
@@ -1559,21 +1573,26 @@ LoadDefinitions!({
       }
 
       if found_paren {
-        // Read until closing paren
         for (i, t) in exp_tokens[rest_idx..].iter().enumerate() {
-          if *t == T_OTHER!(")") {
+          nat_brace_level(&mut level, t);
+          if level == 0 && *t == T_OTHER!(")") {
             rest_idx = rest_idx + i + 1;
             break;
           }
           year_toks.push(*t);
         }
-      } else if matches!(cite_style().as_str(), "numbers" | "super")
-        && !author_toks.is_empty()
-        && !author_toks
-          .windows(2)
-          .any(|pair| pair[0] == T_OTHER!(",") && pair[1].get_catcode() == Catcode::SPACE)
+      } else if let (apa_authors, apa_year) = nat_apalk(&author_toks)
+        && !apa_year.is_empty()
       {
-        // A label with no `(year)` and no `, ` is natbib's number itself (natbib.sty:811-817: `\NAT@bare` hands it
+        // natbib.sty:811-813 hands a label with no `(year)` to `\NAT@apalk#1, #2, #3\@nil` (:1005-1012): an apalike
+        // `\bibitem[Maes, 1995a]` is author "Maes" and year "1995a", cited "(Maes, 1995a)" and "Maes (1995a)". Perl
+        // took the trailing digits as the year, leaving "Maes, " (KNOWN_PERL_ERRORS #1332): "(Maes,, 1995)".
+        // Witness 2505.11584; guard `natbib_apalike::natbib_apalike_label_splits_at_comma`.
+        author_toks = apa_authors;
+        year_toks = apa_year;
+        rest_idx = exp_tokens.len();
+      } else if matches!(cite_style().as_str(), "numbers" | "super") && !author_toks.is_empty() {
+        // A label with no `(year)` and no `, <year>` is natbib's number itself (natbib.sty:811-817: `\NAT@bare` hands it
         // to `\NAT@apalk` (:1005-1012), which writes it as the number when no `, <year>` follows): numbers mode prints
         // `\bibitem[Knu84]{k}` as "[Knu84]", in the list and at a citation, where the entry counter printed "[5]".
         // Its author-year split is Perl's (natbib.sty.ltxml:576-581), kept in the author-year modes. Guard
@@ -1583,7 +1602,9 @@ LoadDefinitions!({
         number = Some(Tokens::new(std::mem::take(&mut author_toks)));
         rest_idx = exp_tokens.len();
       } else {
-        // No paren — try splitting digits from end
+        // No paren and no `, <year>` — Perl's split of the trailing digits (natbib.sty.ltxml:576-581). The whole label is
+        // read, so there are no full authors (as Perl; `\citet*` printed the label as them).
+        rest_idx = exp_tokens.len();
         while !author_toks.is_empty() {
           let last = author_toks.last().unwrap();
           if last.get_catcode() == Catcode::OTHER {
@@ -1829,6 +1850,66 @@ LoadDefinitions!({
 \providecommand\hyper@natlinkbreak[2]{#1}"
   );
 });
+
+/// natbib.sty:1005 `\NAT@apalk#1, #2, #3\@nil#4`, as called on a label (`\NAT@apalk<label>, , \@nil`): the text
+/// before the label's first `, ` (a comma and a space token, outside braces) and the text from there to the next. As in
+/// TeX's delimited arguments, a piece that is one whole `{…}` group loses its braces. The year is empty when the label
+/// has no `, `: natbib then writes the label as the number (`\NAT@stdbsttrue`).
+fn nat_apalk(tokens: &[Token]) -> (Vec<Token>, Vec<Token>) {
+  let mut pieces: Vec<Vec<Token>> = vec![Vec::new()];
+  let mut level = 0i32;
+  let mut i = 0;
+  while i < tokens.len() && pieces.len() < 3 {
+    let t = tokens[i];
+    nat_brace_level(&mut level, &t);
+    if level == 0
+      && t == T_OTHER!(",")
+      && tokens
+        .get(i + 1)
+        .is_some_and(|s| s.get_catcode() == Catcode::SPACE)
+    {
+      pieces.push(Vec::new());
+      i += 2;
+      continue;
+    }
+    pieces.last_mut().unwrap().push(t);
+    i += 1;
+  }
+  if pieces.len() < 2 {
+    // The label alone (natbib's `#2` is then empty), still a delimited argument.
+    return (strip_arg_braces(pieces.swap_remove(0)), Vec::new());
+  }
+  let mut pieces = pieces.into_iter().map(strip_arg_braces);
+  (pieces.next().unwrap(), pieces.next().unwrap())
+}
+
+/// The brace depth after `t`: a delimiter of a TeX parameter matches only at depth 0.
+fn nat_brace_level(level: &mut i32, t: &Token) {
+  match t.get_catcode() {
+    Catcode::BEGIN => *level += 1,
+    Catcode::END => *level -= 1,
+    _ => {},
+  }
+}
+
+/// A delimited argument that is exactly one `{…}` group is read without its braces (The TeXbook, ch. 20).
+fn strip_arg_braces(mut tokens: Vec<Token>) -> Vec<Token> {
+  if tokens.len() >= 2
+    && tokens[0].get_catcode() == Catcode::BEGIN
+    && tokens[tokens.len() - 1].get_catcode() == Catcode::END
+  {
+    let mut level = 0i32;
+    let closes_at_end = tokens.iter().enumerate().all(|(i, t)| {
+      nat_brace_level(&mut level, t);
+      level > 0 || i == tokens.len() - 1
+    });
+    if closes_at_end {
+      tokens.pop();
+      tokens.remove(0);
+    }
+  }
+  tokens
+}
 
 // Helper: peel a brace-delimited argument from a token list
 fn nat_peel_arg(mut tokens: Vec<Token>) -> (Option<Tokens>, Vec<Token>) {
