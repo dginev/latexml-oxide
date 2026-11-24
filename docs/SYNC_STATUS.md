@@ -1015,7 +1015,13 @@ Rules that keep this file honest and mergeable:
     while the converted images stay content-addressed files (with GFXHARDLINK's copy delivery; GCACHECHURN, FLEETR);
     (c) consider the format-dump cache's index (FMTCACHE-PRUNE). Schema versions with migration; one failure policy
     (a cache problem is a Warning and an in-memory fallback, never a Fatal); guards for N threads × M processes;
-    per-image cost measured (≤ +0.5 % per document); 5
+    per-image cost measured (≤ +0.5 % per document). Design decisions from the 2026-11-24 adversarial review (GEMINI.md
+    in the kit): a normalized `LaTeXML-oxide.cache` schema (`resources` + `counters` + `kv` for Perl's generic cache only, a
+    `user_version` bump with migration; retires the `|` delimiter, orphaned `.svg` claims, stale rows); for the image index no
+    SQLite lease rows (kernel `flock` per key if duplicate conversions prove worth it), read-only hits with a coarse
+    best-effort LRU touch, generation-tagged blob names against the prune race; no connection in a `static`/`thread_local!`
+    (a pool per post session, opened after any fork); the format-dump cache stays files + `flock` (no `rusqlite` in
+    `latexml_core`; recommendation, DG to confirm); one open layer shared with `ObjectDB` (with RENDERDBRO); 5
 
 ---
 
