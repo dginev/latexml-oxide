@@ -46,12 +46,14 @@ fn run_in(dir: tempfile::TempDir, args: &[&str], env: &[(&str, &str)]) -> Run {
   }
 }
 
-/// `args` over a fresh copy of the repro directory.
+/// `args` over a fresh copy of the repro.
 fn run(args: &[&str]) -> Run {
   let dir = tempfile::tempdir().expect("tempdir");
-  for name in ["sections.tex", "tokens.tex"] {
-    std::fs::copy(Path::new(DIR).join(name), dir.path().join(name)).expect("stage the repro");
-  }
+  std::fs::copy(
+    Path::new(DIR).join("sections.tex"),
+    dir.path().join("sections.tex"),
+  )
+  .expect("stage the repro");
   run_in(dir, args, &[])
 }
 
@@ -163,10 +165,22 @@ fn stylesheet_output_is_serialized_by_the_format() {
 }
 
 /// An explicit `--token-limit` is kept as given, as `LATEXML_TOKEN_LIMIT` is: the source size no longer raises a
-/// limit below its scaled one (5000 `\textbf{x}` read far more than 1000 tokens).
+/// limit below its scaled one (5000 lines of `\textbf{x}`, a source large enough to be scaled, read far more than
+/// 1000 tokens).
 #[test]
 fn token_limit_below_the_default_holds() {
-  let r = run(&["tokens.tex", "--dest=out.xml", "--token-limit=1000"]);
+  let dir = tempfile::tempdir().expect("tempdir");
+  let body = "\\textbf{x}\n".repeat(5000);
+  std::fs::write(
+    dir.path().join("tokens.tex"),
+    format!("\\documentclass{{article}}\n\\begin{{document}}\n{body}\\end{{document}}\n"),
+  )
+  .unwrap();
+  let r = run_in(
+    dir,
+    &["tokens.tex", "--dest=out.xml", "--token-limit=1000"],
+    &[],
+  );
   assert!(
     r.stderr.contains("Fatal:Timeout:TokenLimit"),
     "{}",
@@ -174,41 +188,59 @@ fn token_limit_below_the_default_holds() {
   );
 }
 
-/// `--quiet` reaches the parallel page render: the workers' Info records go to the log, not to the console
-/// (70 pages, 4 workers; a 70-page run printed 211 Info lines under `--quiet`).
+/// `--quiet` reaches the parallel page render: the workers still log their records whole (the log's `Info:` and
+/// `Warning:` lines are the default run's, 259 and 1 here), while the console shows their Warnings and no Info. The
+/// Warning is the worker's: Graphics runs in the render children, and the missing image is on page S60 (80 pages,
+/// 4 workers).
 #[test]
 fn quiet_silences_the_render_workers() {
-  let dir = tempfile::tempdir().expect("tempdir");
-  let mut tex = String::from("\\documentclass{article}\n\\begin{document}\n");
-  for i in 0..70 {
-    tex.push_str(&format!("\\section{{S{i}}}Text {i}.\n"));
+  let mut tex =
+    String::from("\\documentclass{article}\n\\usepackage{graphicx}\n\\begin{document}\n");
+  for i in 0..80 {
+    tex.push_str(&format!("\\section{{S{i}}}Text {i} $x_{i}$.\n"));
+    if i == 60 {
+      tex.push_str("\\includegraphics{nosuchpic}\n");
+    }
   }
   tex.push_str("\\end{document}\n");
-  std::fs::write(dir.path().join("many.tex"), tex).unwrap();
-  let r = run_in(
-    dir,
-    &["many.tex", "--split", "--dest=out/index.html", "--quiet"],
-    &[("LATEXML_RENDER_JOBS", "4")],
-  );
-  r.ok();
-  let log = r.file("many.latexml.log");
-  assert!(
-    log.contains("parallel page render engaged: 4 worker(s)"),
-    "{log}"
-  );
-  assert!(log.contains("Info:"), "{log}");
+  let render = |quiet: bool| {
+    let dir = tempfile::tempdir().expect("tempdir");
+    std::fs::write(dir.path().join("many.tex"), &tex).unwrap();
+    let mut args = vec!["many.tex", "--split", "--dest=out/index.html"];
+    if quiet {
+      args.push("--quiet");
+    }
+    let r = run_in(dir, &args, &[("LATEXML_RENDER_JOBS", "4")]);
+    r.ok();
+    assert!(r.path("out/S80.html").is_file());
+    let log = r.file("many.latexml.log");
+    assert!(
+      log.contains("parallel page render engaged: 4 worker(s)"),
+      "{log}"
+    );
+    let count = |text: &str, head: &str| text.lines().filter(|l| l.starts_with(head)).count();
+    let counts = (count(&log, "Info:"), count(&log, "Warning:"));
+    (r, log, counts)
+  };
+  const MISSING: &str =
+    "Warning:expected:source No graphic source found; skipping (source was 'nosuchpic')";
+  let (_, loud_log, loud) = render(false);
+  let (r, log, quiet) = render(true);
+  assert_eq!(quiet, loud, "{log}");
+  assert_eq!(warnings(&log), [MISSING]);
+  assert_eq!(warnings(&loud_log), [MISSING]);
+  assert_eq!(warnings(&r.stderr), [MISSING], "{}", r.stderr);
   let info: Vec<&str> = r
     .stderr
     .lines()
     .filter(|l| l.starts_with("Info:"))
     .collect();
   assert!(info.is_empty(), "{info:?}");
-  assert!(r.path("out/S70.html").is_file());
 }
 
 /// `--splitat` and `--splitnaming` take a prefix of their values (Config.pm `_checkOptionValue`): `sec` splits
-/// at sections, `labelrel` names the pages by label, as Perl does. An unknown naming is a usage error; `--splitat`
-/// is checked only when splitting, and a level Perl does not list still splits there, with a Warning.
+/// at sections, `labelrel` names the pages by label, as Perl does. An unknown naming is a usage error; both are
+/// checked only when splitting, and a level Perl does not list still splits there, with a Warning.
 #[test]
 fn split_options_take_a_prefix_of_their_values() {
   let pages = |r: &Run| {
@@ -248,6 +280,7 @@ fn split_options_take_a_prefix_of_their_values() {
     "sections.tex",
     "--nosplit",
     "--splitat=bogus",
+    "--splitnaming=bogus",
     "--dest=out.html",
   ]);
   assert!(warnings(&r.ok().stderr).is_empty(), "{}", r.stderr);
@@ -336,8 +369,8 @@ fn nonumbersections_unnumbers_the_sections() {
   assert_eq!(on.ok().file("out.html"), plain.ok().file("out.html"));
 }
 
-/// `--sourcedirectory` is made absolute before post uses it (Perl canonicalizes it, Config.pm L395-397): a
-/// relative and an absolute spelling find the graphic and place it alike.
+/// `--sourcedirectory` is made absolute before post uses it (ours; Perl's `pathname_canonical`, Config.pm L395-397,
+/// only collapses `.`/`..`): a relative and an absolute spelling find the graphic and place it alike.
 #[test]
 fn sourcedirectory_relative_and_absolute_agree() {
   let png = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/alignment/foo.png");

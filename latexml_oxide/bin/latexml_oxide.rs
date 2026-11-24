@@ -534,7 +534,7 @@ struct Cli {
 
   /// Naming strategy for split files: id, idrelative, label or labelrelative,
   /// or a prefix of one (default: id).
-  #[arg(long, value_name = "STRATEGY", value_parser = splitnaming_arg)]
+  #[arg(long, value_name = "STRATEGY")]
   splitnaming: Option<String>,
 
   /// XPath expression for split points (overrides --splitat)
@@ -931,6 +931,19 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   // rightmost-wins value once, up front. The rest of `real_main` reads `resolved`
   // rather than re-deciding at each site.
   let resolved = ResolvedOptions::from_cli(&cli);
+  // Perl checks `--splitnaming` only when it splits, and croaks on an unknown one (Config.pm L496-507).
+  let split_naming = match cli
+    .splitnaming
+    .as_deref()
+    .filter(|_| resolved.split_enabled)
+    .map(splitnaming_arg)
+    .transpose()
+  {
+    Ok(naming) => naming,
+    Err(message) => <Cli as clap::CommandFactory>::command()
+      .error(clap::error::ErrorKind::ValueValidation, message)
+      .exit(),
+  };
 
   // CRITICAL: must be set BEFORE `prepare_session`. `tex.rs` /
   // `latex.rs`'s LoadFormat split (plain_bootstrap → plain_dump|base
@@ -1665,8 +1678,8 @@ fn real_main() -> Result<(), Box<dyn Error>> {
         // `sourceDirectory`; when omitted, Post derives it from the source
         // filename (Post.pm:727-729). Mirror that: honour `--sourcedirectory`
         // if given, else fall back to the source file's own directory.
-        // Absolute (Perl canonicalizes it, Config.pm L395-397), so a relative value never leaks into the
-        // output paths computed from it.
+        // Made absolute, which is ours: Perl's `pathname_canonical` (Config.pm L395-397, Pathname.pm:108-130)
+        // only collapses `.`/`..`; so a relative value never leaks into the output paths computed from it.
         let source_dir = cli
           .sourcedirectory
           .as_deref()
@@ -1787,7 +1800,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
           schemadocs: cli.schemadocs,
           split: split_enabled,
           split_xpath,
-          split_naming: cli.splitnaming.as_deref(),
+          split_naming: split_naming.as_deref(),
           xslt_parameters: &cli.xslt_parameters,
           graphics_svg_threshold_kb: cli.graphics_svg_threshold_kb,
           graphicimages: resolved.graphicimages,

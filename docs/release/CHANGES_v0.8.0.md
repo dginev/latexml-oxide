@@ -49,9 +49,10 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     no effect; latexml.sty's `\lxDocumentID` now names the root too). `--format=html` is html5, and `--format=xhtml`
     writes well-formed XHTML with LaTeXML-xhtml.xsl. Output is serialized as HTML by the format, not the stylesheet's
     name: a custom `--stylesheet` writing `.xml` keeps its XML, and one writing `.html` is serialized as HTML and gets
-    the SVG step, as in Perl. `--token-limit` below the default holds instead of being raised with the source's size.
+    the SVG step, as in Perl; a stylesheet whose name contains "html" now writes XML to stdout when neither `--dest`
+    nor `--format` is given, as Perl's does. `--token-limit` below the default holds instead of being raised with the source's size.
     `--quiet` and `--verbose` reach a split run's parallel render workers, and `-v`/`-q` count when repeated.
-    `--splitat` and `--splitnaming` take a prefix (`--splitat=sec`, `--splitnaming=labelrel`); `--splitat` is checked
+    `--splitat` and `--splitnaming` take a prefix (`--splitat=sec`, `--splitnaming=labelrel`); both are checked
     only when splitting, and a level outside Perl's list still splits there with a Warning naming `--splitpath`.
     `--navigationtoc` is case-insensitive and `none` means none. An unknown `--splitnaming` or `--navigationtoc` is a
     usage error. `--keepXMath` and `--nohackplane1` parse; a relative `--sourcedirectory` no longer leaks into the

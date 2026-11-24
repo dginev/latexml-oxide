@@ -24195,17 +24195,19 @@ latexmlc 0.8.8 on the same host (CLI audit 2026-11-24):
 - An explicit `--token-limit` is kept as given, as `LATEXML_TOKEN_LIMIT` is (`gullet::fix_token_limit`); before, the
   source-size scaling raised any lower value back. latexml.sty's `tokenlimit=` is still scaled (ar5iv.sty passes
   `tokenlimit=999999999`, 20 times below the scaled default).
-- `--verbose`/`--quiet` count (Config.pm L53-54), and the parallel page render's workers log at the parent's
-  verbosity: their records reach the log whole, and the console shows them through the parent's gate
-  (`render_workers::stderr_share`).
+- `--verbose`/`--quiet` count (Config.pm L53-54), and the parallel page render's workers take the parent's
+  verbosity, logging at no less than Info: their records reach the log whole, as the serial render's do, and the
+  console shows them through the parent's gate (`render_workers::stderr_share`). A worker line that opens no record
+  (a progress note, or an unindented line of a multi-line message) is shown when its record or a note would be.
 - `--splitat` takes a prefix of `part, chapter, section, subsection, subsubsection`, the shallowest (`_checkOptionValue`,
   Config.pm L604-609, whose hash order leaves `sub` to chance), and is checked only when splitting; another element
   name still splits there, with a Warning naming `--splitpath`. `--splitnaming` takes a prefix of `id, idrelative,
-  label, labelrelative`. `--navigationtoc` is lowercased, `none` asks for none (Config.pm L472-480). An unknown
+  label, labelrelative`, and is likewise checked only when splitting (Config.pm L496-507). `--navigationtoc` is lowercased, `none` asks for none (Config.pm L472-480). An unknown
   `--splitnaming` or `--navigationtoc` is a usage error (exit 2): Perl croaks but converts on (KNOWN_PERL_ERRORS
   #1331).
 - `--keepXMath` (Perl's spelling) and `--nohackplane1` parse; `--sourcedirectory` is made absolute, so a relative one
-  never leaks into the output paths. The unused `NAVIGATIONTOC` XSLT parameter is no longer passed (no stylesheet
+  never leaks into the output paths (ours: Perl's `pathname_canonical`, Pathname.pm:108-130, only collapses
+  `.`/`..`). The unused `NAVIGATIONTOC` XSLT parameter is no longer passed (no stylesheet
   reads it; Perl passes none).
 - `cortex_worker`: `--input`/`--output` require `--standalone` (without it the worker joined the dispatcher on
   localhost), and `--profile` is `ar5iv` or `generic`.

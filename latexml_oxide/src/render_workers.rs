@@ -835,13 +835,19 @@ fn print_status_report(written: &[String], discard: bool) -> i32 {
 }
 
 /// The lines of a worker's log the parent's stderr shows: its records at the parent's verbosity (`--quiet` hides
-/// `Info`, only `--verbose` shows `Debug`), each with its continuation lines; `Error`/`Fatal` always. A line that
-/// opens no record is a progress note, an `Info`.
+/// `Info`, only `--verbose` shows `Debug`), each with its continuation lines; `Error`/`Fatal` always.
 fn stderr_share(log: &str) -> String {
-  use latexml_core::util::logger::stderr_admits;
+  stderr_share_at(log, latexml_core::util::logger::stderr_admits)
+}
+
+/// [`stderr_share`] at the verbosity `admits`. A line that opens no record is either a progress note (an `Info`)
+/// or an unindented continuation of a multi-line message, which the log cannot tell apart: it is shown when either
+/// would be, so a shown record keeps every line (a note after it may show under `--quiet`).
+fn stderr_share_at(log: &str, admits: impl Fn(log::Level) -> bool) -> String {
   use log::Level;
   let mut shown = String::with_capacity(log.len());
   let mut admitted = true;
+  let mut record_admitted = false;
   for line in log.split_inclusive('\n') {
     let level = [
       ("Error:", Level::Error),
@@ -854,10 +860,13 @@ fn stderr_share(log: &str) -> String {
     .into_iter()
     .find_map(|(head, level)| line.starts_with(head).then_some(level));
     match level {
-      Some(level) => admitted = level == Level::Error || stderr_admits(level),
-      // A record's continuation (`\tat …`, a blank line) goes with its record.
+      Some(level) => {
+        admitted = level == Level::Error || admits(level);
+        record_admitted = admitted;
+      },
+      // An indented line (`\tat …`, a blank line) goes with the line before it.
       None if line.starts_with(char::is_whitespace) => {},
-      None => admitted = stderr_admits(Level::Info),
+      None => admitted = record_admitted || admits(Level::Info),
     }
     if admitted {
       shown.push_str(line);
@@ -1089,6 +1098,19 @@ fn render_manifest_pages(m: RenderManifest) -> Result<(Vec<String>, bool), Strin
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  /// Under `--quiet` a Warning keeps its unindented continuation lines (a multi-line message); the notes after an
+  /// Info record stay hidden. The default verbosity shows every line.
+  #[test]
+  fn stderr_share_keeps_a_records_continuation_lines() {
+    let log = "note before\nInfo:a:x one\nMathML[Presentation] S1.html processing\nWarning:b:y first line\nsecond \
+               line\n\tat loc\nInfo:c:z two\n\tIn here\npost-processing\nError:d:w bad\n";
+    assert_eq!(
+      stderr_share_at(log, |level| level <= log::Level::Warn),
+      "Warning:b:y first line\nsecond line\n\tat loc\nError:d:w bad\n"
+    );
+    assert_eq!(stderr_share_at(log, |level| level <= log::Level::Info), log);
+  }
 
   #[test]
   fn child_report_parses_status_lines_and_keeps_log() {
