@@ -109,7 +109,7 @@ winnow = "1.0"
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
 # >= 1.1.6 clears RUSTSEC-2026-0486 (xattr zero-length buffer soundness fix).
-rustix = { version = "1.1.6", default-features = false, features = ["fs", "param", "process"] }
+rustix = { version = "1.1.6", default-features = false, features = ["fs", "param", "process", "use-libc-auxv"] }
 
 # `mach_host_self` (watchdog.rs `available_memory_bytes`): libc deprecated its Mach
 # APIs in favour of the `mach2` crate.

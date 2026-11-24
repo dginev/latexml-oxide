@@ -238,7 +238,9 @@ pub fn total_memory_bytes() -> Option<u64> {
     // SAFETY: `sysconf` is a pure query with no pointer arguments; a negative
     // return means "unavailable", which we map to `None` rather than trusting.
     let pages = unsafe { libc::sysconf(libc::_SC_PHYS_PAGES) };
-    // (`sysconf(_SC_PAGESIZE)`, the kernel's `AT_PAGESZ`, never 0)
+    // `sysconf(_SC_PAGESIZE)` itself: latexml_core enables rustix's `use-libc-auxv`, so `page_size` reads the libc
+    // auxiliary vector and cannot fail (the raw backend would read `/proc/self/auxv` before Linux 6.4 and panic
+    // without it).
     let page_size = rustix::param::page_size();
     if pages > 0 {
       return (pages as u64).checked_mul(page_size as u64);

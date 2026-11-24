@@ -127,8 +127,10 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     0 and the first of 1; no behaviour change). The `--server` editor mode's pipe, poll, read, write, wait and kill,
     the free-disk and page-size probes, the effective user id, the graphics cache's and the harness's `flock`, and a
     test's capture of libxslt's stderr now call `rustix` or the standard library (`File::lock`/`try_lock`) instead of
-    raw `libc`: 106 sites to 80. Guard `unsafe_sites_ratchet::unsafe_sites_only_fall` pins the count per file; the
-    ledger is [`SAFETY.md`](SAFETY.md).
+    raw `libc`: 106 sites to 80. Guard `unsafe_sites_ratchet::unsafe_sites_only_fall` pins the count of every
+    `unsafe` keyword per file (83, with two `unsafe extern "C"` blocks and an `#[unsafe(link_section)]`); the ledger
+    is [`SAFETY.md`](SAFETY.md). The page size comes from rustix with its `use-libc-auxv` feature, so it is libc's
+    `sysconf` value and cannot fail on any kernel.
 
 ### 0.8.0-rc2
 

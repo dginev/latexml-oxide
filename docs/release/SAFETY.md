@@ -81,7 +81,9 @@ see that section below.
 ## `unsafe` budget
 
 Reconciled **2026-11-24**: the workspace contains **77 `unsafe {}` blocks +
-3 `unsafe impl Send/Sync` + 0 `unsafe fn` = 80 non-comment sites** (54 `unsafe {}`
+3 `unsafe impl Send/Sync` + 0 `unsafe fn` = 80 non-comment sites**, plus 3 the ratchet also counts (it counts every
+`unsafe` keyword in code): two `unsafe extern "C"` blocks (`latexml_post/src/xslt.rs`,
+`latexml_oxide/src/util/test.rs`) and one `#[unsafe(link_section)]` (`util/test.rs`) — **83 in all** (54 `unsafe {}`
 + 3 `unsafe impl` outside test suites — including 3 `test-utils`-gated sites in
 `latexml_oxide/src/util/test.rs` — plus 23 test-only `unsafe {}` sites in
 `latexml_oxide/tests/`, `latexml_post/src/test_env.rs`, and
@@ -94,7 +96,8 @@ removes sites lowers its file's pin (the failure prints the table to paste); one
 raising a pin is an exception its commit argues.
 
 Major changes since the 2026-07-20 reconciliation (55 sites):
-- **2026-11-24 (issue #937 Phases 0 and 1, first part), 106 → 80, no behaviour change:** Unix syscalls with a safe
+- **2026-11-24 (issue #937 Phases 0 and 1, first part), 106 → 80 blocks/impls (83 counting every `unsafe` keyword),
+  no behaviour change:** Unix syscalls with a safe
   equivalent call it. `lsp_server/unix.rs` 16 → 1 (`rustix::pipe::pipe` + `OwnedFd`/`File::from` for `pipe`, `close`
   and `from_raw_fd`; `rustix::io::{read, write}`, `rustix::event::poll`, `rustix::process::{waitpid, kill_process}`,
   `rustix::fs::open` + `rustix::stdio::dup2_stdout` for the child's `/dev/null`; only `fork` stays). `watchdog.rs`
