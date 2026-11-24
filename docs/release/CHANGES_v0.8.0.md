@@ -45,6 +45,12 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
 
 ### After 0.8.0-rc2
 
+  - **rust-libxml 0.3.26** (from 0.3.24; both releases 2026-11-23): a wrapper of a node libxml2 freed reads as a null
+    node instead of pointing into freed memory, linking calls refuse a link that would double-free or loop, a
+    document's drop neutralises its wrappers, and strings with a NUL byte, over-long text and namespaces of another
+    document return errors instead of panicking or truncating. No C code changed (the vendored-native audit lists
+    both versions).
+
   - **Command-line options do what latexmlc's do.** `--documentid` names the document and prefixes its ids (it had
     no effect; latexml.sty's `\lxDocumentID` now names the root too). `--format=html` is html5, and `--format=xhtml`
     writes well-formed XHTML with LaTeXML-xhtml.xsl. Output is serialized as HTML by the format, not the stylesheet's
