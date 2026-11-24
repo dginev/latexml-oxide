@@ -30,7 +30,7 @@
 | Toolchain | nightly-msvc, `CARGO_PROFILE_RELEASE_LTO=false`, LLVM `lld-link` |
 | Binary | `target\release\latexml_oxide.exe`, built two ways for the A/B (below) |
 
-Two binaries, same commit, same dumps ([`resources/dumps`](../../resources/dumps)
+Two binaries, same commit, same dumps (`resources/dumps`, not committed;
 regenerated against TL2026 via `tools/make_formats.ps1`):
 
 * **subprocess** — plain `cargo build --release`. No linked libkpathsea, so

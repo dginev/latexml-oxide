@@ -371,6 +371,9 @@ pub struct Gullet {
   pub mouthstack:           VecDeque<MouthRuntime>,
   pub pending_comments:     VecDeque<Token>,
   pub token_limit:          Option<usize>,
+  /// The front end's `--token-limit` set [`token_limit`](Self::token_limit): the source size no longer raises it
+  /// ([`fix_token_limit`]).
+  pub token_limit_fixed:    bool,
   /// Bytes of every source file opened so far this conversion — the basis
   /// of [`scale_token_limit_to_source`].
   pub source_bytes_total:   usize,
@@ -647,6 +650,13 @@ pub fn set_token_limit(limit: Option<usize>) -> (Option<usize>, usize) {
   prev
 }
 
+/// The front end's explicit token limit (`--token-limit`): kept as given, as `LATEXML_TOKEN_LIMIT` is, where
+/// [`scale_token_limit_to_source`] would raise a limit below the source's scaled one.
+pub fn fix_token_limit(limit: Option<usize>) {
+  set_token_limit(limit);
+  gullet_mut!().token_limit_fixed = true;
+}
+
 /// Set the pushback limit (maximum pushback stack size before fatal error).
 pub fn set_pushback_limit(limit: Option<usize>) { gullet_mut!().pushback_limit = limit; }
 
@@ -788,13 +798,16 @@ fn default_token_limit() -> Option<usize> {
 /// small documents. The bytes are summed over the main source AND
 /// everything it `\input`s/`\DocInclude`s (every `Mouth::open_file`):
 /// source2e.tex is a 15 KB driver over ~40 `.dtx` files (~2 MB), so the
-/// driver-only sizing never engaged. An explicit `LATEXML_TOKEN_LIMIT`
-/// wins unchanged (including 0 = disabled).
+/// driver-only sizing never engaged. An explicit `LATEXML_TOKEN_LIMIT` or
+/// `--token-limit` ([`fix_token_limit`]) wins unchanged (including 0 = disabled).
 pub fn scale_token_limit_to_source(source_bytes: usize) {
   if std::env::var_os("LATEXML_TOKEN_LIMIT").is_some() {
     return;
   }
   let mut gullet = gullet_mut!();
+  if gullet.token_limit_fixed {
+    return;
+  }
   gullet.source_bytes_total = gullet.source_bytes_total.saturating_add(source_bytes);
   let scaled = gullet
     .source_bytes_total
@@ -828,6 +841,7 @@ pub fn initialize_gullet() {
   // reused thread-local engine must not leak its scaled token limit into
   // the next document.
   gullet.token_limit = default_token_limit();
+  gullet.token_limit_fixed = false;
   gullet.source_bytes_total = 0;
   // Fresh per-conversion progress + cycle-guard history (the engine is a
   // thread-local singleton reused across conversions in the test harness).

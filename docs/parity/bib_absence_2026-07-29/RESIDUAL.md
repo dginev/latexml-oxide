@@ -81,9 +81,9 @@ long tail, not a few big causes. The clusters worth naming:
 | class | papers | status |
 |---|---|---|
 | *no error at all* | 32 | open — the honest signal gap |
-| `unexpected:\lx@begin@alignment` | 28 | diagnosed, engine-level, `repros/f7_alignment_fenced_amp/` |
+| `unexpected:\lx@begin@alignment` | 28 | diagnosed, engine-level, [`repros/f7_alignment_fenced_amp/`](repros/f7_alignment_fenced_amp/README.md) |
 | `unexpected:\endgroup` | 8 | open |
-| `unexpected:\@end@tabular` | 7 | diagnosed to `\ce` in a `p{}` column, `repros/f8_ce_in_p_column/` |
+| `unexpected:\@end@tabular` | 7 | diagnosed to `\ce` in a `p{}` column, [`repros/f8_ce_in_p_column/`](repros/f8_ce_in_p_column/README.md) |
 | `Fatal:Stomach:Recursion` | 6 | general fatal mission |
 | `malformed:ltx:XMTok` | 6 | open |
 | `unexpected:\lx@end@inline@math` | 5 | open |

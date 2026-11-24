@@ -22471,3 +22471,37 @@ latexmlc --format=html5 --sitedirectory=sub --dest=index.html t.tex
 Perl 0.8.8 (same host) converts and writes `index.html` beside `sub/`; `--sitedirectory=../children` (a sibling) is
 Fatal ("The destination directory (.) must be within the siteDirectory"). Fixed in Rust (OXIDIZED_DESIGN_DIVERGENCES
 #1157): `pathname::is_contained` refuses `..` too; guard `pathname::tests::is_contained_is_underneath_only`.
+
+## 1330. Perl documents `--nonumbersections` as unnumbering titles and references; its code changes only the references
+
+latexmlc's help and POD say `--nonumbersections` disables "the inclusion of section numbers in titles, crossrefs"
+(Config.pm L838-840, L1163-1166). The code passes `number_sections` to CrossRef alone (LaTeXML.pm L480), which only
+switches a reference's text to the target's title (CrossRef.pm L34; L29's title half is commented out, L33 doubts
+the option). Minimal trigger:
+
+```tex
+\documentclass{article}
+\begin{document}
+\section{Introduction}\label{s}
+See \ref{e}.\begin{equation}\label{e}a=b\end{equation}
+\end{document}
+```
+
+`latexmlc --nonumbersections --dest=x.html` (0.8.8, same host): the heading keeps "1 Introduction", and the
+equation's reference reads "1 Introduction" (CrossRef.pm L686-695: the equation has no title, so the fallback climbs
+to its section's). Rust keeps the documented meaning (OXIDIZED_DESIGN_DIVERGENCES #1160); to be asked of Bruce Miller.
+
+## 1331. Perl's `LaTeXML::new` swallows its own option croaks and converts half-prepared
+
+`Config::check` croaks on a bad option value (`--navigationtoc`, `--splitnaming`, `--splitat`, `--urlstyle`, an
+unknown `--format`; Config.pm L472-480, L604-609), but `LaTeXML::new` runs it in an `eval` and only logs the message
+(LaTeXML.pm L59-63), so the conversion goes on with the options left half-completed. Minimal trigger: any document
+with
+
+```sh
+latexmlc doc.tex --navigationtoc=bogus --dest=out.html
+```
+
+exits 0 with `Status:conversion:0` and writes the raw, unstyled LaTeXML XML (no post-processing) into `out.html`;
+the croak is only in the log. Rust rejects a bad value as a usage error before converting (exit 2;
+OXIDIZED_DESIGN_DIVERGENCES #1158). To be offered upstream.

@@ -10,6 +10,10 @@ pub mod api;
 // the crate package (and docs.rs) has it; `cluster_cli::environment_doc` fails when the two differ.
 #[doc = include_str!("ENVIRONMENT.md")]
 pub mod environment {}
+// Every file a conversion writes besides its output. The text is docs/INTERMEDIATE_FILES.md, copied beside this
+// file for the crate package; `cluster_cli::intermediate_files_doc` fails when the two differ.
+#[doc = include_str!("INTERMEDIATE_FILES.md")]
+pub mod intermediate_files {}
 pub mod bib_session;
 #[cfg(feature = "test-utils")]
 pub mod conformance;

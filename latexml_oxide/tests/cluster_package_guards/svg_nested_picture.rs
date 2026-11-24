@@ -31,6 +31,7 @@ pub(crate) fn post_html(xml: &str) -> String {
     unicodemath:               false,
     url_style:                 latexml_post::crossref::UrlStyle::File,
     navigationtoc:             None,
+    is_html:                   None,
     schemadocs:                false,
     split:                     false,
     split_xpath:               None,

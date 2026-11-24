@@ -83,7 +83,12 @@ pub struct PostOptions<'a> {
   /// every non-CLI construction site (the binary threads the parsed `--urlstyle`
   /// value here).
   pub url_style:                 latexml_post::crossref::UrlStyle,
+  /// The navigation TOC style, `context` or `normal` (Perl `--navigationtoc`, lowercased and checked by the
+  /// caller; `none` is `None`, Config.pm L472-480).
   pub navigationtoc:             Option<&'a str>,
+  /// Serialize the pages as HTML (Perl `is_html`, Config.pm L436: the format is `html*`), else as XML. `None`: a
+  /// caller naming only a built-in sheet, whose name says it (`LaTeXML-html5.xsl`).
+  pub is_html:                   Option<bool>,
   pub schemadocs:                bool,
   pub split:                     bool,
   pub split_xpath:               Option<String>,
@@ -141,6 +146,7 @@ impl Default for PostOptions<'_> {
       unicodemath:               false,
       url_style:                 latexml_post::crossref::UrlStyle::File,
       navigationtoc:             None,
+      is_html:                   None,
       schemadocs:                false,
       split:                     false,
       split_xpath:               None,
@@ -252,8 +258,9 @@ impl MathFormats {
 /// sheet an `html5`/`xhtml`/`epub` job gets.
 pub fn default_stylesheet(format: Option<&str>) -> Option<&'static str> {
   match format {
-    Some("html5") => Some("embed:///LaTeXML-html5.xsl"),
-    Some("html") | Some("xhtml") => Some("embed:///LaTeXML-all-xhtml.xsl"),
+    // Config.pm L436: `html` is html5.
+    Some("html5") | Some("html") => Some("embed:///LaTeXML-html5.xsl"),
+    Some("xhtml") => Some("embed:///LaTeXML-xhtml.xsl"),
     Some("epub") | Some("epub3") => Some("embed:///LaTeXML-epub3.xsl"),
     _ => None,
   }
@@ -894,6 +901,7 @@ fn run_post_processing_inner(
     unicodemath,
     url_style,
     navigationtoc,
+    is_html,
     schemadocs,
     split,
     ref split_xpath,
@@ -1265,11 +1273,12 @@ fn run_post_processing_inner(
   // L408-420 from the destination's extension, else the format). Without it the
   // `server`/`negotiated` styles would strip the wrong suffix (the `xml` default)
   // and leave an html site's links untouched.
+  let is_html_out = is_html.unwrap_or_else(|| stylesheet.is_some_and(|s| s.contains("html")));
   let out_extension = destination
     .and_then(|d| std::path::Path::new(d).extension().and_then(|e| e.to_str()))
     .map(str::to_string)
     .unwrap_or_else(|| {
-      if stylesheet.is_some_and(|s| s.contains("html")) {
+      if is_html_out {
         "html".to_string()
       } else {
         "xml".to_string()
@@ -1290,15 +1299,15 @@ fn run_post_processing_inner(
   // Phase 3: SVG + MathML + XSLT
   let post = latexml_post::Post::new();
   let mut processors: Vec<Box<dyn Processor>> = Vec::new();
-  let is_html_out = stylesheet.is_some_and(|s| s.contains("html"));
-
   // SVG first, on the live page DOM — Perl's chain order (`LaTeXML.pm`
-  // L493-581: Graphics → SVG → MathML → XSLT; SVG only for the HTML formats,
-  // `$$opts{svg}`). The Graphics page-phase has already resolved every
+  // L493-581: Graphics → SVG → MathML → XSLT; SVG for the HTML output and the
+  // html-family sheets, where Perl's `$$opts{svg}` is on for every sheet but html4's,
+  // Config.pm L560). The Graphics page-phase has already resolved every
   // picture-nested `<ltx:graphics>` by the time this runs, so
   // `SVG::convert_foreign` wraps the resolved node and the XSLT renders it
   // (#1291's Graphics→SVG order comes for free).
-  if is_html_out {
+  let svg = is_html_out || stylesheet.is_some_and(|s| s.contains("html"));
+  if svg {
     processors.push(Box::new(latexml_post::svg::SVG::new()));
   }
 
@@ -1378,9 +1387,6 @@ fn run_post_processing_inner(
         "JAVASCRIPT".to_string(),
         format!("\"{}\"", js_effective.join("|")),
       );
-    }
-    if let Some(navtoc) = navigationtoc {
-      xslt_params.insert("NAVIGATIONTOC".to_string(), format!("\"{}\"", navtoc));
     }
     if let Some(ts) = timestamp {
       xslt_params.insert("TIMESTAMP".to_string(), format!("\"{}\"", ts));
@@ -1608,6 +1614,7 @@ fn run_post_processing_inner(
       xslt_params: manifest_xslt_params,
       default_resources,
       searchpaths: manifest_searchpaths,
+      svg,
       is_html_out,
       schemadocs,
       whatsout: whatsout.as_cli().to_string(),
@@ -1620,6 +1627,7 @@ fn run_post_processing_inner(
         .as_ref()
         .map(latexml_post::graphics::Graphics::planned_names)
         .unwrap_or_default(),
+      log_level: latexml_core::util::logger::stderr_level().to_string(),
     };
     let t_pages = audit_start("render_pages");
     let outcome = crate::render_workers::parallel_render(

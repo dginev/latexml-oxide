@@ -204,6 +204,7 @@ fn html_post_options(default_resources: bool) -> post::PostOptions<'static> {
     pmml: true,
     // Same per-format sheet the CLI uses (shared source of truth).
     stylesheet: post::default_stylesheet(Some("html5")),
+    is_html: Some(true),
     default_resources,
     // No destination to write images to; keep the raw graphics references.
     graphicimages: false,
