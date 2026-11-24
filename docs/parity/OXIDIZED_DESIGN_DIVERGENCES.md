@@ -24429,3 +24429,20 @@ since K6's figure cue); 2503.21203; counter-witness 1012.0815. **Guards**
 `perfect_kernel_batchregtailc::unclosed_pdf_switch_around_the_document_is_pdflatex` (repro
 `backend-persona/ifclassinfopdf_unclosed_around_document_2105_10205`), `converter::tests::compile_route_of_main_sources`.
 
+### 1155. A space-like box with height is a box in its word; `\hphantom` has no height (REGTAILC)
+
+**Perl behavior**: Font.pm:773 `split_words` takes every `isSpace` box as inter-word space, its width alone, so
+`\phantom`, `\vphantom` and `\mathstrut` give a list beside other material no height or depth (`\hbox{$a\phantom{l}$}`
+4.30554pt high); `\hphantom` keeps its argument's height and depth (math_common.pool.ltxml:657-677). KNOWN_PERL_ERRORS
+#1327.
+**pdflatex**: latex.ltx:15613-15617 `\finph@nt` sets `\box\tw@`, a box with the argument's height and depth
+(`\ifv@`) and width (`\ifh@`), in the list like any box: no breakpoint, its height and depth in the line's.
+**Rust behavior**: `Font::compute_boxes_size_words` (font.rs) takes an `isSpace` box as space only when it has no height
+and no depth (glue, kerns, `\hphantom`); one that has some falls to the word's boxes. `\hphantom`'s
+`hphantom_size` (math_common.rs) gives it its argument's width alone, as `vphantom_size` (#1145, KPE #433) gives
+`\vphantom` no width. The math parser still reads every phantom as space (the `isSpace` property is unchanged).
+
+**Witness** 1210.5701 (xy.tex:940 boxes an object `$\objectstyle{#1}$`; `*[o]{\phantom{s}}`'s circle had no height:
+"Dimension too large", 101 errors and TooManyErrors). **Guards**
+`perfect_kernel_batchregtailc::{phantom_keeps_its_height_among_siblings, xy_circled_phantom_object_converts}` (repros
+`math-phantom/{phantom_height_among_siblings, xy_phantom_object_circle_1210_5701}`).

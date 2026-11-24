@@ -22672,3 +22672,23 @@ pdflatex prints "Fig. 1: Text."; Perl 0.8.8 (same host): `Error:recursion:\fnum@
 `\item[\fnum@fc]` runs to the timeout); the Rust port looped to `Fatal:Timeout:Recursion`. Fixed in Rust:
 `counter::dialect::define_item_fnum` keeps the author's meaning as `\lx@author@fnum@<counter>` and the label calls it.
 Witness cond-mat9505034; guard `perfect_kernel_batchregtailb::list_label_is_the_authors_fnum`.
+
+## 1327. Perl sizes a phantom among siblings by its width alone; `\hphantom` keeps its argument's height
+
+Font.pm:773 `split_words` treats every `isSpace` box as inter-word space and counts only its width, and
+math_common.pool.ltxml:644-687 marks `\phantom`, `\vphantom` and `\hphantom` `isSpace`. A phantom beside other material
+so adds no height or depth, though latex.ltx's `\finph@nt` makes it a box with the argument's height and depth; and
+`\lx@math@hphantom`/`\lx@text@hphantom` take the argument's height and depth, which `\hphantom` drops (`\ifv@` false).
+Minimal trigger:
+
+```tex
+\documentclass{article}
+\begin{document}
+\setbox0\hbox{$a\phantom{l}$}\the\ht0\ \setbox0\hbox{x\vphantom{(} y}\the\ht0
+\end{document}
+```
+
+pdflatex prints "6.94444pt 7.5pt"; Perl 0.8.8 (same host) and the Rust port before the fix: "4.30554pt 4.30554pt".
+Fixed in Rust (OXIDIZED_DESIGN_DIVERGENCES #1155): a space-like box with height or depth is sized in its word, and
+`\hphantom` has its argument's width alone. Witness 1210.5701 (xy's `*[o]{\phantom{s}}`: "Dimension too large");
+guards `perfect_kernel_batchregtailc::{phantom_keeps_its_height_among_siblings, xy_circled_phantom_object_converts}`.

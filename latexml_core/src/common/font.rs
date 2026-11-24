@@ -2071,8 +2071,15 @@ impl Font {
           prevspace = -1.0;
         }
       }
-      // Perl L723-728: isSpace (but not isVerticalSpace) — word boundary
-      else if bx.get_property_bool("isSpace") && !bx.get_property_bool("isVerticalSpace") {
+      // Perl L723-728: isSpace (but not isVerticalSpace) — word boundary. Glue and kerns have no height or depth; a
+      // space-like box that has some (`\phantom`, `\vphantom`, `\mathstrut`: latex.ltx `\finph@nt` boxes) is a box TeX
+      // sets in the word, so it falls to the word below (Perl kept its width alone: KNOWN_PERL_ERRORS #1327; xy's
+      // `*[o]{\phantom{s}}` circle, 1210.5701).
+      else if bx.get_property_bool("isSpace")
+        && !bx.get_property_bool("isVerticalSpace")
+        && h == 0
+        && d == 0
+      {
         if wd != 0.0 || ht != 0 || dp != 0 || prevspace < 0.0 {
           words.push([prevspace, wd, ht as f64, dp as f64]);
           wd = 0.0;

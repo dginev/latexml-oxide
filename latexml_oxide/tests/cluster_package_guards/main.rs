@@ -789,7 +789,7 @@ mod perfect_kernel_batchregrehearse;
 /// accented letter in a formula, a list label that is the author's own `\fnum@<counter>`.
 mod perfect_kernel_batchregtailb;
 /// REGTAILC: a document only PDF output reads (`\begin{document}` in an open `\ifCLASSINFOpdf`/`\ifpdf` branch) is a
-/// pdflatex one.
+/// pdflatex one; a phantom among siblings keeps its height.
 mod perfect_kernel_batchregtailc;
 /// RG1: a `\par` in a text group opened mid-paragraph keeps the paragraph, as Perl's open-brace box.
 mod perfect_kernel_batchrg1;
