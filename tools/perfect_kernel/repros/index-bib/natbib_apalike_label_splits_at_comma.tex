@@ -1,0 +1,31 @@
+% witness: 2505.11584 (apalike.bst `\bibitem[Maes, 1995]{maes}`: 37 citations read "(Maes,, 1995)")
+% oracle:  pdflatex 0 errors (2 passes): "A (Maes, 1995), Maes (1995). B (Maes, 1995a), Maes (1995a). C (Smith and
+%          Jones, 2001), Smith and Jones (2001). D (Smith et al., 2001), Smith et al. (2001). E (Maes, 1995), Maes
+%          (1995). F Maes, 1995; Maes; 1995; (1995); Maes 1995. G (Smith, Jones, 2002), Smith, Jones (2002); (Maes,
+%          1996). H Maes (1995); (Maes, 1995). I (Group (EBCTCG) et al., 2011), Group (EBCTCG) et al. (2011); (Group
+%          (EBCTCG) et al., 2012), Group (EBCTCG) et al. (2012)." (natbib.sty:811-813 \NAT@bare#1(#2), :1005-1012
+%          \NAT@apalk#1, #2, #3\@nil: a label with no (year) splits at its first ", "; both match outside braces)
+% engines: Perl and rust MAIN999 "(Maes,, 1995)", "Maes, (1995)", "(Maes, 1995a, )", "Maes, 1995a " (the trailing
+%          digits taken as the year, natbib.sty.ltxml:576-581), "(Group et al., 2011, EBCTCG)" (a braced `(` taken,
+%          2605.20003); rust MAIN999 `\citet*` "Maes, 1995 (1995)"
+% expect:  0 errors, 0 warnings; the pdflatex text
+% status:  RED (MAIN999) -> GREEN (NATBIB)
+\documentclass{article}
+\usepackage{natbib}
+\begin{document}
+A \citep{maes}, \citet{maes}. B \citep{maesa}, \citet{maesa}. C \citep{sj}, \citet{sj}. D \citep{sea}, \citet{sea}.
+E \citep{paren}, \citet{paren}. F \citealp{maes}; \citeauthor{maes}; \citeyear{maes}; \citeyearpar{maes};
+\citealt{maes}. G \citep{braced}, \citet{braced}; \citep{whole}. H \citet*{maes}; \citep*{maes}. I \citep{grp},
+\citet{grp}; \citep{grpp}, \citet{grpp}.
+\begin{thebibliography}{9}
+\bibitem[Maes, 1995]{maes} P.~Maes. A title. 1995.
+\bibitem[Maes, 1995a]{maesa} P.~Maes. Another title. 1995.
+\bibitem[Smith and Jones, 2001]{sj} A.~Smith and B.~Jones. Two. 2001.
+\bibitem[Smith et~al., 2001]{sea} A.~Smith, B.~Jones and C.~Lee. Three. 2001.
+\bibitem[Maes(1995)]{paren} P.~Maes. Paren. 1995.
+\bibitem[{Smith, Jones}, 2002]{braced} A.~Smith. Braced. 2002.
+\bibitem[{Maes, 1996}]{whole} P.~Maes. Whole. 1996.
+\bibitem[{Group (EBCTCG)} et~al., 2011]{grp} Group. Trial. 2011.
+\bibitem[{Group (EBCTCG)} et~al.(2012)]{grpp} Group. Trial 2. 2012.
+\end{thebibliography}
+\end{document}

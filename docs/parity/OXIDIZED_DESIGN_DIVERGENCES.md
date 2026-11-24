@@ -24442,3 +24442,33 @@ amsbook_backmatter_closes_the_appendix_and_part}`, `cluster_xslt_split::split_na
 split_backmatter_pages_belong_to_no_part`; repros `sectioning-frontmatter/{book_backmatter_closes_the_last_part,
 book_backmatter_without_parts_closes_the_chapter, book_appendix_then_backmatter_closes_the_part,
 amsbook_backmatter_closes_the_appendix_and_part, svmono_backmatter_closes_the_last_part}`.
+
+**Witness** 1210.5701 (xy.tex:940 boxes an object `$\objectstyle{#1}$`; `*[o]{\phantom{s}}`'s circle had no height:
+"Dimension too large", 101 errors and TooManyErrors), 2503.14426 (xy, 15 errors). **Guards**
+`perfect_kernel_batchregtailc::{phantom_keeps_its_height_among_siblings, xy_circled_phantom_object_converts}` (repros
+`math-phantom/{phantom_height_among_siblings, xy_phantom_object_circle_1210_5701}`); repinned to the phantom's height:
+`cluster_schema::empty_node_foreign_object_is_sized` (quantikz's `{\phantom{H}}`), `box_primitives::tikz_align_line_padding`
+(c2/c3, pdflatex's +1.5pt), `86_tikz` `ac-drive-components.xml` (circuitikz's `\vphantom{+}-` label).
+
+### 1161. An apalike natbib label `[Author, Year]` splits at its first `, `, as `\NAT@apalk` (NATBIB)
+
+**Perl behavior**: `\lx@NAT@parselabel` (natbib.sty.ltxml:564-581) splits a label with no `(year)` at its trailing digit
+tokens: `\bibitem[Maes, 1995]` is author "Maes, " and year "1995" ("(Maes,, 1995)", "Maes, (1995)"), `[Maes, 1995a]` is
+all author; `\citename{Jones et al., }1990` keeps the name's `, ` in the author. KNOWN_PERL_ERRORS #1332.
+**pdflatex**: natbib.sty:811-813 `\NAT@bare` calls `\NAT@apalk<label>, , \@nil`, and `\NAT@apalk#1, #2, #3\@nil#4`
+(:1005-1012) takes `#1` as the author and `#2` as the year, a delimited-parameter match: the first `, ` outside braces,
+a braced piece losing its braces; an empty `#2` makes the label the number (`\NAT@stdbsttrue`). `\citename#1#2`
+(:1029) calls `\NAT@apalk#1#2, \@nil`.
+**Rust behavior**: `nat_apalk` (natbib_sty.rs) is that match; a bare label with no `(` and a nonempty `#2`, and a
+`\citename` label, take its author and year. The `(year)` split matches its `(` and `)` outside braces too, as
+`\NAT@bare#1(#2)` does (Perl took a braced `(`: `[{Group (EBCTCG)} et~al., 2011]` had the year "EBCTCG",
+2605.20003). A label with no `, <year>` keeps the earlier paths: numbers/super mode's number (#2 empty), else Perl's
+trailing-digit split. A label read whole has no full authors (as Perl; the Rust port gave the whole label, so `\citet*`
+printed "Maes, 1995 (1995)"). Names with three or more authors before the year (`[Smith, Jones, and Lee, 2001]`) split
+as natbib does: author "Smith", year "Jones".
+
+**Witness** 2505.11584 (apalike.bst: 37 citations "(Maes,, 1995)"), 2605.20003 (a braced `(`). **Guards**
+`perfect_kernel_batchnatbib::{natbib_apalike_label_splits_at_comma, natbib_citename_label_splits_at_comma}` (repros
+`index-bib/natbib_{apalike,citename}_label_splits_at_comma`); repinned: `perfect_kernel_batch70a::
+natbib_entry_constructor_is_binding_private` (author "Batselier et al.", no full authors),
+`perfect_kernel_batch56::apacite_old_bbl_keeps_its_declared_italics` (no full authors).

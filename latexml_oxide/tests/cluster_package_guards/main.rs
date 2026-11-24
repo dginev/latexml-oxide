@@ -583,6 +583,8 @@ mod perfect_kernel_batchn1;
 mod perfect_kernel_batchn2;
 mod perfect_kernel_batchn2r2;
 mod perfect_kernel_batchn2r3;
+/// NATBIB: natbib's apalike label `[Maes, 1995]` split at its first `, ` (`\NAT@apalk`), not at its trailing digits.
+mod perfect_kernel_batchnatbib;
 mod perfect_kernel_batchne1;
 mod perfect_kernel_batchne2;
 mod perfect_kernel_batchne3;

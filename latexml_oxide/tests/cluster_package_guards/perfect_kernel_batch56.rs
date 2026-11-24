@@ -12539,7 +12539,8 @@ fn apacite_bem_reads_both_forms() {
 }
 
 /// 57m: an old-format apacite `.bbl` (`\BCAY` label, `{\Bem …}` declarations, `\BBACOMMA`) keeps its
-/// whole italic journal and volume (fixture of `06_cluster_bibliography::cluster_apacite_old_bbl_format_renders`).
+/// whole italic journal and volume (fixture of `06_cluster_bibliography::cluster_apacite_old_bbl_format_renders`). The
+/// label, read whole (no `(year)`, no `, `), has no full authors, as Perl (natbib.sty.ltxml:576-581; batch NATBIB).
 #[test]
 fn apacite_old_bbl_keeps_its_declared_italics() {
   let (stderr, xml) = convert_with(
@@ -12552,7 +12553,7 @@ fn apacite_old_bbl_keeps_its_declared_italics() {
     &xml,
     "bibitem",
     &[r#"key="smith2020""#],
-    r##"<bibitem key="smith2020" xml:id="bib.bib1"><tags><tag role="number">1</tag><tag role="authors">Smith</tag><tag role="fullauthors">Smith</tag><tag role="refnum">(1)</tag><tag role="key">smith2020</tag></tags><bibblock>
+    r##"<bibitem key="smith2020" xml:id="bib.bib1"><tags><tag role="number">1</tag><tag role="authors">Smith</tag><tag role="refnum">(1)</tag><tag role="key">smith2020</tag></tags><bibblock>
 Smith, J., &amp; Doe, J. (2020). A study of things. <text font="italic">Journal of Testing</text>, <text font="italic">12</text>, 1–20.
 </bibblock></bibitem>"##,
   );

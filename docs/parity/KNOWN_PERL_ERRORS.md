@@ -22530,3 +22530,48 @@ Perl (same host, `latexmlc --nocomments`): `<part xml:id="Pt2">` holds `Ch2`, "C
 `ltx:bibliography`; split, `bib.html`'s title is "Bibliography ‣ Part II B" and only Part II's pages link it. Fixed in
 Rust (OXIDIZED_DESIGN_DIVERGENCES #1147): the bindings' `\backmatter` closes the part and chapter. Guard
 `perfect_kernel_batchbackmatter::book_backmatter_closes_the_last_part`.
+
+pdflatex: "1.2(3)", "±0.5"; Perl (same host): "1.2 p m 0.3" (only "1.2" a formula) and "p m 0.5", with a Warning
+`\mathrm should only appear in math mode` per letter. Fixed in Rust:
+`\lx@SI@column@parse` lets the `input-protect-tokens` be themselves again before reading the cell, as `\num` does
+(siunitx_sty.rs `six_protect_input_tokens`). Guard `perfect_kernel_batchregtaila::siunitx_s_cell_plus_minus_is_the_sign`
+(repro `package-bindings/siunitx_s_cell_plus_minus`).
+
+## 1327. Perl sizes a phantom among siblings by its width alone; `\hphantom` keeps its argument's height
+
+Font.pm:773 `split_words` treats every `isSpace` box as inter-word space and counts only its width, and
+math_common.pool.ltxml:644-687 marks `\phantom`, `\vphantom` and `\hphantom` `isSpace`. A phantom beside other material
+so adds no height or depth, though latex.ltx's `\finph@nt` makes it a box with the argument's height and depth; and
+`\lx@math@hphantom`/`\lx@text@hphantom` take the argument's height and depth, which `\hphantom` drops (`\ifv@` false).
+Minimal trigger:
+
+```tex
+\documentclass{article}
+\begin{document}
+\setbox0\hbox{$a\phantom{l}$}\the\ht0\ \setbox0\hbox{x\vphantom{(} y}\the\ht0
+\end{document}
+```
+
+pdflatex prints "6.94444pt 7.5pt"; Perl 0.8.8 (same host) and the Rust port before the fix: "4.30554pt 4.30554pt".
+Fixed in Rust (OXIDIZED_DESIGN_DIVERGENCES #1155): a space-like box with height or depth is sized in its word, and
+`\hphantom` has its argument's width alone. Witnesses 1210.5701 (xy's `*[o]{\phantom{s}}`: "Dimension too large"), 2503.14426;
+guards `perfect_kernel_batchregtailc::{phantom_keeps_its_height_among_siblings, xy_circled_phantom_object_converts}`.
+
+## 1332. Perl splits an apalike natbib label at its trailing digits: "(Maes,, 1995)"
+
+natbib.sty:811-813 `\NAT@bare` hands a `\bibitem` label with no `(year)` to `\NAT@apalk#1, #2, #3\@nil#4`
+(:1005-1012), which splits it at its first `, ` (comma, space; outside braces): `[Maes, 1995a]` is author "Maes" and
+year "1995a"; `\citename{Jones et al., }1990` (:1029) goes the same way. Perl's binding (natbib.sty.ltxml:576-581, its
+`#pop(@arg)` commented out) takes the label's trailing digit tokens as the year instead, so the author keeps the `, `
+and a year with a suffix stays in the author. Its `(year)` split also takes a `(` inside braces, which `\NAT@bare#1(#2)`
+does not match (`[{Group (EBCTCG)} et~al., 2011]`: year "EBCTCG"). Minimal trigger:
+
+```tex
+\documentclass{article}\usepackage{natbib}\begin{document}See \citep{maes} and \citet{maes}.
+\begin{thebibliography}{1}\bibitem[Maes, 1995]{maes} P.~Maes. A title. 1995.\end{thebibliography}\end{document}
+```
+
+pdflatex (2 passes) prints "(Maes, 1995)" and "Maes (1995)"; Perl (same host) and the Rust port before the fix
+"(Maes,, 1995)" and "Maes, (1995)"; `[Maes, 1995a]` gave "(Maes, 1995a, )". Fixed in Rust (OXIDIZED_DESIGN_DIVERGENCES
+#1161). Witnesses 2505.11584 (apalike.bst, 37 citations), 2605.20003 (a braced `(`); guards
+`perfect_kernel_batchnatbib::{natbib_apalike_label_splits_at_comma, natbib_citename_label_splits_at_comma}`.
