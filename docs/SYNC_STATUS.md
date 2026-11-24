@@ -1035,6 +1035,12 @@ Rules that keep this file honest and mergeable:
     ar5iv #269); (f) titletoc's `\printcontents` prints nothing (2310.11511; ar5iv #429). Leads from Gemini's study,
     unverified: ACL/COLM parenthetical citations rendering bare, 1908.05686 losing 36 % of its words at 0 errors, empty
     `{forest}`/`tcolorbox` figures (`/home/deyan/data/ar5iv_triage/master_open_witnesses.tsv`); 4
+  - NATBIBRES — residuals of the natbib apalike-label fix (OD #1161; review 2026-11-24). (a) An authoryear label with an
+    empty author, `\bibitem[, 1998]{l}`, prints the key as the author: "(l, 1998)" / "l (1998)", where pdflatex prints "(, 1998)" /
+    "(1998)". It is the general fallback for an entry with no authors; synthetic, with no corpus witness; RED repro first.
+    (b) A `(year)` label with no closing `)` at depth 0 repeats the year text as the full authors (`rest_idx` stays after the
+    `(`); Perl writes no full authors there. Read from the code, not probed. (c) `[{Maes}(1995)]` keeps its braces on the
+    author and year, where TeX strips them; nothing visible; 1
 
 ---
 
