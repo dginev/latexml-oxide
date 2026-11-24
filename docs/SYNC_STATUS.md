@@ -69,7 +69,7 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (567 items on 2026-11-23: 563 open, weight 1099, 60 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (568 items on 2026-11-23: 564 open, weight 1102, 60 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; id — task; weight — easy 1, medium 3, hard 5):
 
 
   - ODR1 — OD #973's pgfmath residuals (moved from OD by the 2026-11-14 rationalization): string operands, units after array primaries, grouping, out-of-bounds indexing (repro `graphics-tikz/pgfmath_string_and_units_in_arithmetic_red`; every case's pgf-vs-ours values: OPEN_ROWS ODR1); 3
@@ -1363,6 +1363,13 @@ Rules that keep this file honest and mergeable:
     which renders a visible "XX" where TeX leaves blank space; 1
   - EMPTYGROUPUNARY — (issue 991 review, pre-existing; math parked) `${}-b$` drops the `{}` and makes the `−` unary (no
     space); TeX's empty group is an Ord atom, so the `−` is a binary operator with \medmuskip on each side; 3
+  - CONTSIGNEDGE (after issue 991, synthetic) — the continuation-sign reading's edges: `&\left.{} + j\right)`,
+    `&\left.\right. + c` and `&\left.\big. + c\right)` read unary where TeX sets the sign binary (`{}` leaves no node; an
+    Inner atom; a `\big.` box after the fence); a left cell ending in prose counts as an operand (`f &= x &\text{if }&
+    -1<x<0` reads `(absent − 1) < x < 0`); `B ={} & -C` may count as an empty left cell (suspected); the
+    expectation-respelling retry may still see `CELLADDOP` (suspected); a leading `\quad`/`\hskip` before `\left.+`
+    loses its lspace in the unary reading (2505.11002, 2012.13407; the row-edge rule); `&\left. + c \right|` warns
+    (pre-existing). OD #1151 "Not covered"; 3
   - NOTEMARKXMATH — a note mark taken from a formula tag reads the XMath tokens and the MathML text together:
     2509.25166's marks read "∗ † ∗†"; `\renewcommand\thefootnote{\ensuremath{=1}}` gives "= 1 =1"; Perl's `note-mark`
     template does the same (shared); 3
