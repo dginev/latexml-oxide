@@ -365,15 +365,18 @@ pub fn write_dump(
 
   let count = early_aliases.len() + regular.len() + late_aliases.len();
   writeln!(file, "# Written: {}, Skipped: {}", count, skipped).ok();
-  eprintln!(
-    "[dump_writer] Wrote {} entries to {} ({} skipped; {} early + {} regular + {} late)",
-    count,
-    path.display(),
-    skipped,
-    early_aliases.len(),
-    regular.len(),
-    late_aliases.len(),
-  );
+  // `--quiet` hides this progress line, as it does every Info note (OXIDIZED_DESIGN_DIVERGENCES #1158).
+  if crate::util::logger::stderr_shows_info() {
+    eprintln!(
+      "[dump_writer] Wrote {} entries to {} ({} skipped; {} early + {} regular + {} late)",
+      count,
+      path.display(),
+      skipped,
+      early_aliases.len(),
+      regular.len(),
+      late_aliases.len(),
+    );
+  }
 
   Ok(count)
 }

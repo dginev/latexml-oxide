@@ -557,7 +557,8 @@ struct Cli {
   #[arg(short = 'v', long, action = clap::ArgAction::Count)]
   verbose: u8,
 
-  /// Suppress most output (repeatable; each -q undoes one -v)
+  /// Hide Info and Warnings on stderr; Errors, Fatals and the verdict still print, the log keeps everything (each -q
+  /// undoes one -v, as in Perl)
   #[arg(short = 'q', long, action = clap::ArgAction::Count)]
   quiet: u8,
 
@@ -1020,10 +1021,12 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   };
 
   // Initialize logger with verbosity level
-  // Perl Config.pm L53-54: each --verbose adds one, each --quiet takes one away.
+  // Perl Config.pm L53-54: each --verbose adds one, each --quiet takes one away. Below 0 Perl prints nothing on
+  // stderr (Common/Error.pm `_printline`: `$VERBOSITY >= 0`); ours keeps Errors, Fatals and the verdict there, the
+  // success-rate signal (DG 2026-08-02, OXIDIZED_DESIGN_DIVERGENCES #1158). The log keeps its Info floor.
   let verbosity = i32::from(cli.verbose) - i32::from(cli.quiet);
   let log_level = match verbosity {
-    v if v < 0 => log::LevelFilter::Warn,
+    v if v < 0 => log::LevelFilter::Error,
     0 => log::LevelFilter::Info,
     _ => log::LevelFilter::Debug,
   };
@@ -1396,6 +1399,23 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   // A format build (`--init`) reads no document: its dump must not depend on the working directory.
   if cli.init.is_none() {
     converter.note_main_source(&source);
+    // Held for the session (`warn_at_session_start`): raised now, they reached stderr but no log. The session's
+    // report reset logs them, or post-processing does for an XML input.
+    if max_memory == 0 {
+      // Removing the surprise of one flag silently disabling two guards: say
+      // so, out loud, when the whole memory limit is off.
+      latexml_core::common::error::warn_at_session_start(
+        "memory",
+        "unlimited",
+        String::from(
+          "--max-memory=0: memory limiting disabled entirely (cooperative guard + hard watchdog); a runaway \
+           conversion may exhaust host RAM",
+        ),
+      );
+    }
+    if let Some(warning) = splitat_warning {
+      latexml_core::common::error::warn_at_session_start("unexpected", "splitat", warning);
+    }
   }
   if (cli.init.is_some() || !xml_input)
     && let Err(e) = converter.prepare_session(&opts)
@@ -1433,7 +1453,12 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   if cli.init.is_some() {
     // Init mode: process file and dump state
     match latexml::ini_tex::dump_format(&mut converter, &source, target.as_deref()) {
-      Ok(count) => eprintln!("Format dump complete: {} entries written", count),
+      Ok(count) => {
+        // main's plain line (no fresh-line logic: the logger never saw the `[ini_tex]` lines), hidden under `-q`.
+        if latexml_core::util::logger::stderr_shows_info() {
+          eprintln!("Format dump complete: {count} entries written");
+        }
+      },
       Err(e) => {
         eprintln!("Format dump failed: {}", e);
         exit_removing(&mut archive_tempdir, 1);
@@ -1457,18 +1482,6 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     // flags and so never get here (the library test harness, the cortex_worker
     // fleet) — see `stomach::apply_memory_ceiling`.
     latexml_core::stomach::apply_memory_ceiling(max_memory);
-    if max_memory == 0 {
-      // Removing the surprise of one flag silently disabling two guards: say
-      // so, out loud, when the whole memory limit is off.
-      latexml_core::Warn!(
-        "memory",
-        "unlimited",
-        "--max-memory=0: memory limiting disabled entirely (cooperative guard + hard watchdog); a runaway conversion may exhaust host RAM"
-      );
-    }
-    if let Some(warning) = &splitat_warning {
-      latexml_core::Warn!("unexpected", "splitat", warning.clone());
-    }
     if cli.timeout > 0 {
       latexml_core::stomach::set_timeout(cli.timeout);
     }
@@ -1580,10 +1593,8 @@ fn real_main() -> Result<(), Box<dyn Error>> {
             let mut sconv = Converter::from_config(supp_opts.clone());
             sconv.note_main_source(supp);
             if sconv.prepare_session(&supp_opts).is_err() {
-              eprintln!(
-                "Warning: could not prepare a session for supplement '{}'; skipping",
-                supp
-              );
+              // Plain stderr, under `--quiet` too: it reports output that was not produced.
+              eprintln!("Warning: could not prepare a session for supplement '{supp}'; skipping");
               continue;
             }
             // A fresh session reset thread-local state — re-apply the shared
@@ -1594,10 +1605,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
             status_max = status_max.max(r.status_code);
             match r.result {
               Some(x) if !x.is_empty() => supp_xmls.push(x),
-              _ => eprintln!(
-                "Warning: supplement '{}' produced no output; skipping",
-                supp
-              ),
+              _ => eprintln!("Warning: supplement '{supp}' produced no output; skipping"),
             }
           }
           match latexml::multidoc::join_core_documents(main_xml, &supp_xmls) {
@@ -1897,7 +1905,9 @@ fn real_main() -> Result<(), Box<dyn Error>> {
             );
             post_log.push_str(&latexml_core::util::logger::flush_log());
             written?;
-            eprintln!("Output written to {}", epub_dest);
+            if latexml_core::util::logger::stderr_shows_info() {
+              eprintln!("Output written to {epub_dest}");
+            }
           }
         } else if let Some(zip_dest) = zip_dest {
           // whatsout=archive: pack the full document + resources into a ZIP.
@@ -1942,7 +1952,9 @@ fn real_main() -> Result<(), Box<dyn Error>> {
             telemetry_json: None,
             source_date_epoch,
           })?;
-          eprintln!("Output written to {}", zip_dest);
+          if latexml_core::util::logger::stderr_shows_info() {
+            eprintln!("Output written to {zip_dest}");
+          }
         } else if !(output.is_empty() && post.status_code >= 3) {
           // A post-processing Fatal leaves no output, and nothing is written (#782).
           latexml_post::writer::write_output(&output, target.as_deref())?;
@@ -1954,12 +1966,17 @@ fn real_main() -> Result<(), Box<dyn Error>> {
       }
     }
 
+    // A held warning no log took (an XML input not post-processed) reaches stderr, the status and the `--log` file.
+    latexml_core::util::logger::bind_log();
+    latexml_core::common::error::log_session_warnings();
+    post_log.push_str(&latexml_core::util::logger::flush_log());
     // --log: write conversion log to file (skip if already packed into
     // the ZIP by the archive output stage).
     if is_epub
       && let Some(ref log_path) = cli_log
       && external_log.is_none()
     {
+      // Plain stderr, under `--quiet` too: it reports output that was not produced.
       eprintln!("Log not written: '{log_path}' exists and is kept");
     }
     if let Some(ref log_path) = external_log
@@ -2006,7 +2023,9 @@ fn real_main() -> Result<(), Box<dyn Error>> {
           Some(log_path),
         )?;
       }
-      eprintln!("Log written to {}", log_path);
+      if latexml_core::util::logger::stderr_shows_info() {
+        eprintln!("Log written to {log_path}");
+      }
     }
   }
 
@@ -2036,8 +2055,12 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   // masqueraded as a successful site (131 MB witness UAT 2026-08-01:
   // truncated at Ch6, 1,572 plausible pages, silent exit 1). Also printed for
   // a non-post fatal, where repeating the verdict as the final line is cheap
-  // emphasis. Guard: 119_final_status_report.
-  if post_ran || final_status_code >= 3 {
+  // emphasis. Printed under `--quiet` too, as Errors are (OXIDIZED_DESIGN_DIVERGENCES #1158): there the
+  // core's verdict is a muted Info note, so a core run prints this one instead. Guard:
+  // 119_final_status_report.
+  let core_verdict_muted =
+    cli.init.is_none() && !xml_input && !latexml_core::util::logger::stderr_shows_info();
+  if post_ran || final_status_code >= 3 || core_verdict_muted {
     eprintln!(
       "{}",
       latexml_core::common::error::conversion_verdict(final_status_code)
@@ -2367,6 +2390,7 @@ fn fatal_before_conversion(
       eprintln!("Failed to write log '{log_path}': {e}");
     }
   }
+  // The Fatal's verdict, printed under `--quiet` too (OXIDIZED_DESIGN_DIVERGENCES #1158).
   eprintln!("{verdict}");
   eprintln!("{status}");
   exit_removing(archive_tempdir, 1)

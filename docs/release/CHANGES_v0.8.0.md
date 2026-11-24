@@ -45,6 +45,30 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
 
 ### After 0.8.0-rc2
 
+  - **`-q` hides Info and Warnings on stderr, never Errors.** `-q` and `-qq` now show only the `Error:`/`Fatal:`
+    records (with their continuation lines), the final verdict and the notes about output not produced ("Log not
+    written") on stderr; Warnings, the split render's forwarded Warnings, the format build's progress and notes such
+    as "Log written to" are hidden. Perl's `--quiet` prints nothing at all; ours keeps the
+    success-rate signal on stderr at every verbosity (OXIDIZED_DESIGN_DIVERGENCES #1158); as on main, `--init` and an
+    XML input under `--nopost` print no verdict at any verbosity. The `.latexml.log` keeps
+    everything, and the exit status and an archive's `status` are unchanged. Guards
+    `perfect_kernel_batchclihard::quiet_keeps_errors_and_the_verdict_on_stderr`, `quiet_hides_the_format_build_progress`,
+    `quiet_mode_still_reports_error_and_fatal`, `perfect_kernel_batchcliwire::quiet_silences_the_render_workers`.
+  - **The command line's own warnings reach the log.** The Warnings for `--max-memory=0` and for a `--splitat` level
+    outside Perl's list were raised after the session had begun its report and before its log was open, so they
+    reached stderr and the status but not `<name>.latexml.log` or the log packed into a `.zip`. They are now held
+    for the session, as an archive's are, and logged once: by the session in a `.tex` run, by post-processing for an
+    XML input (`--whatsin=xml`), which has no session, and into the `--log` file when that input is not
+    post-processed (`--nopost`). Guard
+    `perfect_kernel_batchclihard::early_option_warnings_reach_the_log`.
+  - **An interrupted format build is undone until its dump is published** (issue 988, after #990). The interrupt
+    handler is installed before the build writes anything, the attempt note is written and the finished dump
+    published under the lock the handler takes, so an interrupt can no longer undo ahead of the note or put the old
+    note back beside a published dump (an interrupt just after publishing leaves this build's note beside the dump,
+    which is harmless: a dump that matches its tree is never rebuilt); and the handler ends the process with
+    `_exit`, not running libxml2's destructor under the still-running build thread (#973). A process that built a format still exits with status 130 on a later SIGTERM
+    or SIGHUP rather than by the signal. OXIDIZED_DESIGN_DIVERGENCES #1148; guard
+    `format_dumps::tests::a_published_build_is_not_undone`.
   - **Security: `cortex_worker` never loads a runtime `.rhai` binding.** A worker built with `--features cortex`
     alone keeps the default `runtime-bindings`, so a `<pkg>.sty.rhai` shipped inside an arXiv source loaded on
     `\usepackage{pkg}` and its `Command(..).output()` ran any program. The worker now forbids runtime bindings
