@@ -22506,7 +22506,6 @@ exits 0 with `Status:conversion:0` and writes the raw, unstyled LaTeXML XML (no 
 the croak is only in the log. Rust rejects a bad value as a usage error before converting (exit 2;
 OXIDIZED_DESIGN_DIVERGENCES #1158). To be offered upstream.
 
-
 ## 1320. Perl nests the back matter inside the last `\part`
 
 book.cls.ltxml:121 `DefPrimitive('\backmatter', undef)` (amsbook.cls.ltxml:56 alike; svmult.cls.ltxml inherits it) closes
@@ -22530,32 +22529,6 @@ Perl (same host, `latexmlc --nocomments`): `<part xml:id="Pt2">` holds `Ch2`, "C
 `ltx:bibliography`; split, `bib.html`'s title is "Bibliography ‣ Part II B" and only Part II's pages link it. Fixed in
 Rust (OXIDIZED_DESIGN_DIVERGENCES #1147): the bindings' `\backmatter` closes the part and chapter. Guard
 `perfect_kernel_batchbackmatter::book_backmatter_closes_the_last_part`.
-
-pdflatex: "1.2(3)", "±0.5"; Perl (same host): "1.2 p m 0.3" (only "1.2" a formula) and "p m 0.5", with a Warning
-`\mathrm should only appear in math mode` per letter. Fixed in Rust:
-`\lx@SI@column@parse` lets the `input-protect-tokens` be themselves again before reading the cell, as `\num` does
-(siunitx_sty.rs `six_protect_input_tokens`). Guard `perfect_kernel_batchregtaila::siunitx_s_cell_plus_minus_is_the_sign`
-(repro `package-bindings/siunitx_s_cell_plus_minus`).
-
-## 1327. Perl sizes a phantom among siblings by its width alone; `\hphantom` keeps its argument's height
-
-Font.pm:773 `split_words` treats every `isSpace` box as inter-word space and counts only its width, and
-math_common.pool.ltxml:644-687 marks `\phantom`, `\vphantom` and `\hphantom` `isSpace`. A phantom beside other material
-so adds no height or depth, though latex.ltx's `\finph@nt` makes it a box with the argument's height and depth; and
-`\lx@math@hphantom`/`\lx@text@hphantom` take the argument's height and depth, which `\hphantom` drops (`\ifv@` false).
-Minimal trigger:
-
-```tex
-\documentclass{article}
-\begin{document}
-\setbox0\hbox{$a\phantom{l}$}\the\ht0\ \setbox0\hbox{x\vphantom{(} y}\the\ht0
-\end{document}
-```
-
-pdflatex prints "6.94444pt 7.5pt"; Perl 0.8.8 (same host) and the Rust port before the fix: "4.30554pt 4.30554pt".
-Fixed in Rust (OXIDIZED_DESIGN_DIVERGENCES #1155): a space-like box with height or depth is sized in its word, and
-`\hphantom` has its argument's width alone. Witnesses 1210.5701 (xy's `*[o]{\phantom{s}}`: "Dimension too large"), 2503.14426;
-guards `perfect_kernel_batchregtailc::{phantom_keeps_its_height_among_siblings, xy_circled_phantom_object_converts}`.
 
 ## 1332. Perl splits an apalike natbib label at its trailing digits: "(Maes,, 1995)"
 

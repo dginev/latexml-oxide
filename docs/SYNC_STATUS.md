@@ -1254,7 +1254,7 @@ Rules that keep this file honest and mergeable:
     calc error (1611.01788 thesis.tex:5400/:5434; both the Nov 17 binary and the release candidate; pdflatex is fatal
     there too, 8 errors): find the loop site (`perf record` at 20 s), then end in a bounded Error. The wall-clock Fatal
     leaves no XML and no log, so the paper's 56k words are lost — a salvage question too. rc2 2026-11-23: still the wall clock at 180 s (59 Errors before it). Deferred, decided by difficulty (DG 2026-11-23); 5
-  - BACKMATTERRAW (after BACKMATTER, fixed in 0.8.0-rc3) — memoir (its runtime binding reads memoir.cls raw) and scrbook keep their own
+  - BACKMATTERRAW (residual of BACKMATTER, which shipped in 0.8.0-rc3) — memoir (its runtime binding reads memoir.cls raw) and scrbook keep their own
     `\backmatter`, so their back matter still nests inside the last `ltx:part`; a document's `\renewcommand\backmatter`
     loses the close too (as Perl). Trigger: `\documentclass{scrbook}\begin{document}\part{A}\chapter{x}\backmatter
     \chapter{B}\end{document}`. Fix: call `\lx@begin@backmatter` from those classes' `\backmatter`; 3
