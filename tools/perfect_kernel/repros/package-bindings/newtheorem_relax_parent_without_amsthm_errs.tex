@@ -1,0 +1,12 @@
+% witness: the kernel boundary of amsthm_newtheorem_relax_names_no_counter (no amsthm)
+% oracle:  pdflatex 6 errors ("No counter '\relax ' defined", latex.ltx `\@nocounterr`; "Missing \endcsname inserted"),
+%          "Theorem 0.1"
+% engines: rust 17 errors; perl 0 errors, "Theorem 1"
+% expect:  17 errors (the kernel's `\@xnthm` has no `\ifx\relax` test)
+% status:  CONTROL; guard perfect_kernel_batchregtaild::amsthm_relax_counter_argument_names_no_counter
+\documentclass{article}
+\newtheorem{theorem}{Theorem}[\relax]
+\begin{document}
+\section{One}
+\begin{theorem}Body.\end{theorem}
+\end{document}

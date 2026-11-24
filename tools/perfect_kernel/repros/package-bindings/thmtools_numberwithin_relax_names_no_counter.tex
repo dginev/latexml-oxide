@@ -1,0 +1,17 @@
+% witness: AVT.sty:583 (2208.14960, 2309.00854, 2409.18804), thmtools over amsthm: `numberwithin=` a conditional that
+%          leaves `\relax`
+% oracle:  pdflatex 0 errors, "Remark 1.", "Theorem 1."
+% engines: rust INT081I 34 errors, "Remark 0.1", "Theorem 0.1"; perl 0 errors
+% expect:  0 errors, 0 warnings; tags "Remark 1", "Theorem 1"
+% status:  RED (INT081I) -> GREEN (REGTAILD); guard
+%          perfect_kernel_batchregtaild::amsthm_relax_counter_argument_names_no_counter
+\documentclass{article}
+\usepackage{amsthm,thmtools}
+\makeatletter\newif\ifnotes
+\declaretheorem[numberwithin=\ifnotes\@ifclassloaded{book}{chapter}\relax\else\relax\fi]{remark}\makeatother
+\declaretheorem[numberwithin=\relax]{theorem}
+\begin{document}
+\section{One}
+\begin{remark}Body.\end{remark}
+\begin{theorem}Body.\end{theorem}
+\end{document}

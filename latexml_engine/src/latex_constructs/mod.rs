@@ -4175,17 +4175,28 @@ pub fn define_new_theorem(
   // (latex.ltx `\@xnthm`: `\@addtoreset{#1}{#3}`, `\csname the#3\endcsname`), so it is read through `\csname` too:
   // digested (Perl `DigestLiteral`), `\newtheorem{x}{X}[todo_counter]` raised "Script _ can only appear in math mode"
   // where pdflatex is silent (1307.7314). Guards `perfect_kernel_batch67s::newtheorem_*`.
-  let otherthmset_str = otherthmset
-    .map(|t| ::latexml_core::gullet::expand_as_csname_text(t).map(|e| e.to_string()))
-    .transpose()?
-    .filter(|s| !s.is_empty());
+  // Under amsthm a counter argument led by `\relax` names none (amsthm.sty:94 `\@ynthm`, :114 `\@xthm`: `\ifx\relax#2
+  // \relax`): thm-kv.sty:401's `[\thmt@parent]` of AVT.sty:583's `numberwithin=\ifAVT@notes…\relax\else\relax\fi`
+  // (2208.14960, 2309.00854, 2409.18804). The kernel's `\@xnthm` errs on it ("No counter '\relax ' defined").
+  // Guard `perfect_kernel_batchregtaild::amsthm_relax_counter_argument_names_no_counter`.
+  let amsthm = package_loaded("amsthm");
+  let counter_name = |t: Tokens| -> Result<Option<String>> {
+    let name = ::latexml_core::gullet::expand_as_csname_text(t)?;
+    if amsthm
+      && name
+        .unlist_ref()
+        .first()
+        .is_some_and(|f| x_equals(f, &T_CS!("\\relax")))
+    {
+      return Ok(None);
+    }
+    Ok(Some(name.to_string()).filter(|s| !s.is_empty()))
+  };
+  let otherthmset_str = otherthmset.map(counter_name).transpose()?.flatten();
   let has_type = typ.as_ref().is_some_and(|t| !t.is_empty());
   let is_starred = flag.is_some();
 
-  let within_str = within
-    .map(|t| ::latexml_core::gullet::expand_as_csname_text(t).map(|e| e.to_string()))
-    .transpose()?
-    .filter(|s| !s.is_empty());
+  let within_str = within.map(counter_name).transpose()?.flatten();
 
   let counter = otherthmset_str
     .clone()

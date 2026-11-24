@@ -1,0 +1,19 @@
+% witness: AVT.sty:583 (2208.14960, 2309.00854, 2409.18804) `\declaretheorem[…,numberwithin=\ifAVT@notes…\relax\else
+%          \relax\fi]{theorem}`, thm-kv.sty:401 `\newtheorem{theorem}{Theorem}[\relax]`: 1891 Errors in the three
+% oracle:  pdflatex 0 errors, "Theorem 1.", "Lemma 1.", "Claim 1.1." (amsthm.sty:94/:114 `\ifx\relax#2\relax`: no counter)
+% engines: rust INT081I 17 errors (`\csname the\relax\endcsname`), "Theorem 0.1", "Lemma 1", "Claim 2"; perl 1 error,
+%          6 warnings: "Theorem 1" (pool:2901 `DigestLiteral` of `\relax` is empty), the shared `[\relax]` a counter `\relax`
+% expect:  0 errors, 0 warnings; tags "Theorem 1", "Lemma 1", "Claim 1.1"
+% status:  RED (INT081I) -> GREEN (REGTAILD); guard
+%          perfect_kernel_batchregtaild::amsthm_relax_counter_argument_names_no_counter
+\documentclass{article}
+\usepackage{amsthm}
+\newtheorem{theorem}{Theorem}[\relax]
+\newtheorem{lemma}[\relax]{Lemma}
+\newtheorem{claim}[\relax]{Claim}[section]
+\begin{document}
+\section{One}
+\begin{theorem}Body.\end{theorem}
+\begin{lemma}Body.\end{lemma}
+\begin{claim}Body.\end{claim}
+\end{document}
