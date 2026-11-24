@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["CachePolicy","ConvertResult"],"fn":["lookup","stats","store","with_cache","with_cache_dims"],"struct":["CacheHit","CachedDims","RenderKey","SourceDigest"]};
+window.SIDEBAR_ITEMS = {"enum":["CachePolicy","ConvertResult"],"fn":["cached_output","lookup","stats","store","with_cache","with_cache_dims"],"struct":["CacheHit","CachedDims","RenderKey","SourceDigest"]};

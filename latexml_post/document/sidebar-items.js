@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["LTX_NSURI"],"enum":["Conjunction","NodeData","XMBranch"],"fn":["element_children","element_children_iter","escape_xml","get_xml_id"],"struct":["PostDocument","PostDocumentOptions"]};
+window.SIDEBAR_ITEMS = {"constant":["CACHE_FILE","LTX_NSURI"],"enum":["Conjunction","NodeData","XMBranch"],"fn":["element_children","element_children_iter","escape_xml","get_xml_id","is_cache_file","kv_get","kv_put"],"struct":["DocCache","PostDocument","PostDocumentOptions"]};
