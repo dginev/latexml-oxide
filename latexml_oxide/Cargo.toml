@@ -220,6 +220,12 @@ serde = { version = "1.0.229", features = ["derive"] }
 # direct dep adds no compile cost; same minimal feature set.
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 
+# Safe Unix syscalls (issue #937): the `--server` fork/pipe/poll loop (`lsp_server/unix.rs`) and the
+# harness's claim liveness probe (`cortex_worker/exit_report.rs`). Pure Rust, already in the tree via
+# latexml_core.
+[target.'cfg(unix)'.dependencies]
+rustix = { version = "1.1.6", default-features = false, features = ["event", "fs", "pipe", "process", "std", "stdio"] }
+
 [dev-dependencies]
 # Enable `test-utils` automatically when running `cargo test` / `cargo nextest`
 # in the workspace without putting test harness code or audit binaries in the

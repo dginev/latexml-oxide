@@ -11,12 +11,12 @@ use regex::Regex;
 
 const BASE: &str = "latexml_engine/src/base_utilities";
 
-fn repo_path(path: &str) -> std::path::PathBuf {
+pub(crate) fn repo_path(path: &str) -> std::path::PathBuf {
   Path::new(env!("CARGO_MANIFEST_DIR")).join("..").join(path)
 }
 
 /// Every `.rs` file under `path` (a file: itself), repo-relative, sorted.
-fn rust_files(path: &str) -> Vec<String> {
+pub(crate) fn rust_files(path: &str) -> Vec<String> {
   let full = repo_path(path);
   if full.is_file() {
     return vec![path.to_string()];
@@ -47,9 +47,9 @@ fn code_lines(path: &str) -> Vec<String> {
 
 /// A Rust source as the compiler reads it: no comments, each literal a string or a character, a raw one too, one literal `"<n>"`
 /// in `code` ([`RustSource::literals`]'s index), so a guard's pattern reads across lines and nothing in a literal looks like code.
-struct RustSource {
-  code:     String,
-  literals: Vec<String>,
+pub(crate) struct RustSource {
+  pub(crate) code:     String,
+  pub(crate) literals: Vec<String>,
 }
 
 /// What a string's or a character's source says, its escapes read; `\` and a line's end join the lines.
@@ -92,6 +92,32 @@ fn unescape(body: &str) -> String {
 
 /// Read `text` ([`RustSource`]); what `#[cfg(test)]` holds is no code of the engine's, so it goes (a fixture spells what it likes).
 fn lex_rust(text: &str) -> RustSource {
+  let RustSource { mut code, literals } = lex_rust_with_tests(text);
+  // (the literals' text is out of the code, so a brace here is a brace)
+  while let Some(start) = code.find("#[cfg(test)]") {
+    let tail = &code[start..];
+    let ends = match (tail.find('{'), tail.find(';')) {
+      (Some(brace), semi) if semi.is_none_or(|semi| brace < semi) => {
+        let mut depth = 0usize;
+        tail[brace..]
+          .char_indices()
+          .find_map(|(n, c)| {
+            depth += usize::from(c == '{');
+            depth -= usize::from(c == '}');
+            (depth == 0).then_some(brace + n + 1)
+          })
+          .unwrap_or(tail.len())
+      },
+      (_, Some(semi)) => semi + 1,
+      _ => tail.len(),
+    };
+    code.replace_range(start..start + ends, "");
+  }
+  RustSource { code, literals }
+}
+
+/// [`lex_rust`]'s reading with what `#[cfg(test)]` holds kept: a guard over test code too (`unsafe_sites_ratchet`).
+pub(crate) fn lex_rust_with_tests(text: &str) -> RustSource {
   let chars: Vec<char> = text.chars().collect();
   let at = |i: usize| chars.get(i).copied();
   let (mut code, mut literals, mut i) = (String::new(), Vec::new(), 0);
@@ -175,26 +201,6 @@ fn lex_rust(text: &str) -> RustSource {
       i += 1;
     }
   }
-  // (the literals' text is out of the code, so a brace here is a brace)
-  while let Some(start) = code.find("#[cfg(test)]") {
-    let tail = &code[start..];
-    let ends = match (tail.find('{'), tail.find(';')) {
-      (Some(brace), semi) if semi.is_none_or(|semi| brace < semi) => {
-        let mut depth = 0usize;
-        tail[brace..]
-          .char_indices()
-          .find_map(|(n, c)| {
-            depth += usize::from(c == '{');
-            depth -= usize::from(c == '}');
-            (depth == 0).then_some(brace + n + 1)
-          })
-          .unwrap_or(tail.len())
-      },
-      (_, Some(semi)) => semi + 1,
-      _ => tail.len(),
-    };
-    code.replace_range(start..start + ends, "");
-  }
   RustSource { code, literals }
 }
 
@@ -205,7 +211,12 @@ fn read_rust(path: &str) -> RustSource {
 /// Compare the counts with their pins, a debt each: `why` when one rises, a request to lower the pin when one falls. A
 /// pin raised shows only in this file's diff, so the rule is in the message: what raises one states its reason, in the
 /// commit and in the batch's report, and the reviewer reads it.
-fn assert_debts(name: &str, pins: &[(&str, usize)], counts: &BTreeMap<String, usize>, why: &str) {
+pub(crate) fn assert_debts(
+  name: &str,
+  pins: &[(&str, usize)],
+  counts: &BTreeMap<String, usize>,
+  why: &str,
+) {
   let table: String = counts.iter().fold(String::new(), |out, (key, n)| {
     format!("{out}  (\"{key}\", {n}),\n")
   });

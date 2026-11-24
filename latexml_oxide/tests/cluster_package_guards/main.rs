@@ -124,6 +124,7 @@ mod rtoken_patchcmd;
 mod scanner_status;
 mod token_kernel_gaps;
 mod unicode_format_encoding;
+mod unsafe_sites_ratchet;
 mod vfs_file_end;
 mod xkeyval_internals;
 
