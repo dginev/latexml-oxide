@@ -65,3 +65,7 @@ libc = "0.2"
 # `pack` module tests stage resource directories in a TempDir and read
 # the produced zip back to assert membership + reproducible timestamps.
 tempfile = "3"
+
+# `xslt.rs`' test capture of libxslt's fd-2 report (`dup`/`dup2` of stderr, issue #937).
+[target.'cfg(unix)'.dev-dependencies]
+rustix = { version = "1.1.6", default-features = false, features = ["std", "stdio"] }

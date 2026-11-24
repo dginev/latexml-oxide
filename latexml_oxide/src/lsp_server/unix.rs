@@ -5,12 +5,17 @@
 use std::{
   collections::VecDeque,
   io::{Read, Write},
-  os::unix::io::FromRawFd,
+  os::fd::{BorrowedFd, OwnedFd},
 };
 
 use latexml_core::{
   BoxOps,
   common::error::{emit_error, emit_info, emit_warn},
+};
+use rustix::{
+  event::{PollFd, PollFlags},
+  io::Errno,
+  process::{Pid, Signal, WaitOptions},
 };
 use serde_json::Value;
 
@@ -26,41 +31,37 @@ enum WarmResult {
   Cancelled,
 }
 
-/// Buffered, `poll`-aware reader over a raw fd (stdin = 0). We read with
-/// `libc::read` directly rather than `std::io::Stdin` so that `poll(2)`
+/// Buffered, `poll`-aware reader over a raw fd (stdin = 0). We `read(2)`
+/// directly rather than through `std::io::Stdin` so that `poll(2)`
 /// readiness and our own user-space buffer stay consistent.
-struct FdReader {
-  fd:  i32,
+struct FdReader<'fd> {
+  fd:  BorrowedFd<'fd>,
   buf: Vec<u8>,
 }
 
-impl FdReader {
-  fn new() -> Self { Self::from_fd(0) }
+impl FdReader<'static> {
+  fn new() -> Self { FdReader::from_fd(rustix::stdio::stdin()) }
+}
 
+impl<'fd> FdReader<'fd> {
   /// Reader over an arbitrary fd — the framing logic is fd-agnostic; tests
   /// drive it over a `pipe(2)` instead of stdin.
-  fn from_fd(fd: i32) -> Self { FdReader { fd, buf: Vec::new() } }
+  fn from_fd(fd: BorrowedFd<'fd>) -> Self { FdReader { fd, buf: Vec::new() } }
 
   /// One blocking `read` into the buffer; `Ok(0)` is EOF.
   fn fill(&mut self) -> std::io::Result<usize> {
     let mut tmp = [0u8; 8192];
     loop {
-      // SAFETY: self.fd is an owned, still-open read fd (stdin=0 or a test pipe end);
-      // tmp.as_mut_ptr()/tmp.len() describe a valid, fully-initialized [u8; 8192] region,
-      // and read(2) only writes up to len bytes into it.
-      let n = unsafe { libc::read(self.fd, tmp.as_mut_ptr() as *mut libc::c_void, tmp.len()) };
-      if n < 0 {
-        let err = std::io::Error::last_os_error();
-        if err.raw_os_error() == Some(libc::EINTR) {
-          continue;
-        }
-        return Err(err);
-      }
+      let n = match rustix::io::read(self.fd, &mut tmp) {
+        Ok(n) => n,
+        Err(Errno::INTR) => continue,
+        Err(err) => return Err(err.into()),
+      };
       if n == 0 {
         return Ok(0);
       }
-      self.buf.extend_from_slice(&tmp[..n as usize]);
-      return Ok(n as usize);
+      self.buf.extend_from_slice(&tmp[..n]);
+      return Ok(n);
     }
   }
 
@@ -147,29 +148,22 @@ fn parse_content_length(header: &[u8]) -> Option<usize> {
 /// same as the Watchdog's deliberate memory-ceiling exit — both mean "ran
 /// out of memory" to `finish`). The shared `Watchdog` in the child exits
 /// `124` on timeout / `137` on the memory ceiling.
-fn reap(pid: i32) -> i32 {
-  let mut status = 0i32;
-  // SAFETY: &mut status is a valid &mut i32 the kernel writes the exit status
-  // through; pid is a child this server forked. waitpid/WIF* only read that pid
-  // and the local status word — no other memory is touched.
-  unsafe {
-    loop {
-      let rc = libc::waitpid(pid, &mut status, 0);
-      if rc < 0 {
-        if std::io::Error::last_os_error().raw_os_error() == Some(libc::EINTR) {
-          continue;
-        }
-        return -1;
-      }
-      break;
+fn reap(pid: Pid) -> i32 {
+  let status = loop {
+    match rustix::process::waitpid(Some(pid), WaitOptions::empty()) {
+      Ok(Some((_, status))) => break status,
+      // (no `WNOHANG`: the kernel reports a change, so this never comes)
+      Ok(None) => return -1,
+      Err(Errno::INTR) => continue,
+      Err(_) => return -1,
     }
-    if libc::WIFEXITED(status) {
-      libc::WEXITSTATUS(status)
-    } else if libc::WIFSIGNALED(status) {
-      128 + libc::WTERMSIG(status)
-    } else {
-      -1
-    }
+  };
+  if let Some(code) = status.exit_status() {
+    code
+  } else if let Some(signal) = status.terminating_signal() {
+    128 + signal
+  } else {
+    -1
   }
 }
 
@@ -209,17 +203,14 @@ fn is_exit(body: &str) -> bool {
 /// active concern here is stdin: a newer same-document `latexml/convert`
 /// preempts (SIGKILL) the in-flight child.
 fn wait_for_child(
-  pid: i32,
-  read_fd: i32,
+  pid: Pid,
+  read_fd: OwnedFd,
   current_root: &std::path::Path,
-  reader: &mut FdReader,
+  reader: &mut FdReader<'_>,
   pending: &mut VecDeque<String>,
 ) -> WarmResult {
   // Owns `read_fd`; closes it on every return path.
-  // SAFETY: read_fd is a freshly-created, still-open pipe read end returned by
-  // spawn_body_child and not owned by any other File; from_raw_fd takes sole
-  // ownership so the fd is closed exactly once when `pipe` drops.
-  let mut pipe = unsafe { std::fs::File::from_raw_fd(read_fd) };
+  let mut pipe = std::fs::File::from(read_fd);
 
   loop {
     // 1. Handle every COMPLETE stdin frame already buffered. We never block waiting for the rest of
@@ -244,35 +235,27 @@ fn wait_for_child(
       pending.push_back(body);
     }
 
-    // 2. Poll both fds.
+    // 2. Poll both fds (stdin, fd 0, and the pipe; no timeout).
+    let stdin = rustix::stdio::stdin();
     let mut fds = [
-      libc::pollfd {
-        fd:      0,
-        events:  libc::POLLIN,
-        revents: 0,
-      },
-      libc::pollfd {
-        fd:      read_fd,
-        events:  libc::POLLIN,
-        revents: 0,
-      },
+      PollFd::new(&stdin, PollFlags::IN),
+      PollFd::new(&pipe, PollFlags::IN),
     ];
-    // SAFETY: fds is a live [pollfd; 2] on the stack; fds.as_mut_ptr()/fds.len()
-    // describe exactly that array, and poll(2) only reads .fd/.events and writes
-    // .revents within those two elements. fd 0 and read_fd are both open.
-    let rc = unsafe { libc::poll(fds.as_mut_ptr(), fds.len() as libc::nfds_t, -1) };
-    if rc < 0 {
-      let err = std::io::Error::last_os_error();
-      if err.raw_os_error() == Some(libc::EINTR) {
-        continue;
-      }
-      // poll failed: fall back to a blocking drain of the child.
-      let mut bytes = Vec::new();
-      let _ = pipe.read_to_end(&mut bytes);
-      let code = reap(pid);
-      return finish(&bytes, code);
+    match rustix::event::poll(&mut fds, None) {
+      Ok(_) => {},
+      Err(Errno::INTR) => continue,
+      Err(_) => {
+        // poll failed: fall back to a blocking drain of the child.
+        let mut bytes = Vec::new();
+        let _ = pipe.read_to_end(&mut bytes);
+        let code = reap(pid);
+        return finish(&bytes, code);
+      },
     }
-    let pipe_ready = (fds[1].revents & (libc::POLLIN | libc::POLLHUP)) != 0;
+    let (stdin_ready, pipe_ready) = (
+      fds[0].revents().intersects(PollFlags::IN | PollFlags::HUP),
+      fds[1].revents().intersects(PollFlags::IN | PollFlags::HUP),
+    );
     if pipe_ready {
       // The child writes its whole payload in one shot at the very end, so
       // pipe-readable means the compile is essentially done — drain & reap.
@@ -281,7 +264,7 @@ fn wait_for_child(
       let code = reap(pid);
       return finish(&bytes, code);
     }
-    if (fds[0].revents & (libc::POLLIN | libc::POLLHUP)) != 0 {
+    if stdin_ready {
       // 3. One non-blocking-equivalent fill; complete frames are handled at the top of the next
       //    iteration.
       match reader.fill() {
@@ -307,28 +290,17 @@ fn wait_for_child(
 /// `graphics::run_with_timeout`): when the child dies, the kernel reaps the
 /// `setsid`-detached converter grandchildren that would otherwise be
 /// orphaned with no watcher.
-fn kill_and_reap(pid: i32) {
-  // SAFETY: pid is a child this server forked; kill(2) only delivers a signal to
-  // that pid and touches no process memory.
-  unsafe {
-    libc::kill(pid, libc::SIGTERM);
-  }
+fn kill_and_reap(pid: Pid) {
+  let _ = rustix::process::kill_process(pid, Signal::TERM);
   // Brief grace: poll for exit up to ~50 ms before escalating.
   for _ in 0..10 {
-    let mut status = 0i32;
-    // SAFETY: &mut status is a valid &mut i32 the kernel may write through; pid is
-    // a child we forked. waitpid only reads pid and writes the local status word.
-    let r = unsafe { libc::waitpid(pid, &mut status, libc::WNOHANG) };
-    if r == pid {
+    if matches!(rustix::process::waitpid(Some(pid), WaitOptions::NOHANG), Ok(Some((r, _))) if r == pid)
+    {
       return; // already reaped
     }
     std::thread::sleep(std::time::Duration::from_millis(5));
   }
-  // SAFETY: pid is a child this server forked; kill(2) only delivers SIGKILL to
-  // that pid and touches no process memory.
-  unsafe {
-    libc::kill(pid, libc::SIGKILL);
-  }
+  let _ = rustix::process::kill_process(pid, Signal::KILL);
   reap(pid);
 }
 
@@ -420,7 +392,7 @@ thread_local! {
 
 /// Fork a child that digests `body`, prepends the warm preamble's digested
 /// boxes, builds the DOM and writes `{html, log, sources}` (or `{error}`)
-/// back over a pipe. Returns `(pid, read_fd)` to the parent.
+/// back over a pipe. Returns `(pid, read end)` to the parent.
 fn spawn_body_child(
   uri: &str,
   offset_lines: usize,
@@ -428,16 +400,9 @@ fn spawn_body_child(
   warmed: &latexml_core::digested::Digested,
   timeout_secs: u64,
   max_rss_kb: u64,
-) -> Result<(i32, i32), String> {
-  let mut fds = [0i32; 2];
-  // SAFETY: fds.as_mut_ptr() points to a valid [i32; 2]; pipe(2) writes exactly
-  // two fds (read, write) into it on success and touches nothing else.
-  unsafe {
-    if libc::pipe(fds.as_mut_ptr()) < 0 {
-      return Err("pipe() failed".to_string());
-    }
-  }
-  let (read_fd, write_fd) = (fds[0], fds[1]);
+) -> Result<(Pid, OwnedFd), String> {
+  // (`pipe(2)`, no flags: neither end is close-on-exec)
+  let (read_fd, write_fd) = rustix::pipe::pipe().map_err(|_| "pipe() failed".to_string())?;
 
   // INVARIANT: no thread beyond the server-start baseline may be live at
   // fork time — an extra thread could hold the allocator (or logger) lock
@@ -466,40 +431,30 @@ fn spawn_body_child(
   // Watchdog/digest path is entered.
   let pid = unsafe { libc::fork() };
   if pid < 0 {
-    // SAFETY: read_fd and write_fd are the still-open pipe ends from the pipe(2)
-    // call above; closing each exactly once on the fork-failure path is sound.
-    unsafe {
-      libc::close(read_fd);
-      libc::close(write_fd);
-    }
+    // (both pipe ends close as they drop)
     return Err("fork() failed".to_string());
   }
 
   if pid == 0 {
     // ---- child ----
-    // SAFETY: runs in the freshly-forked single-threaded child. read_fd/write_fd
-    // are the inherited pipe ends; close/open/dup2 are async-signal-safe and only
-    // mutate this child's fd table. The c"/dev/null" literal is a valid NUL-
-    // terminated C string, and dup2/close are guarded on a successful open.
-    unsafe {
-      libc::close(read_fd);
-      // Insurance: the child inherits the parent's stdout (fd 1) — the LSP
-      // protocol stream. No engine path writes to stdout today, but a
-      // single stray `println!` would corrupt the framing for every client.
-      // Point the child's fd 1 at /dev/null; its payload goes over the
-      // pipe and its logging over stderr.
-      let devnull = libc::open(c"/dev/null".as_ptr(), libc::O_WRONLY);
-      if devnull >= 0 {
-        libc::dup2(devnull, 1);
-        libc::close(devnull);
-      }
+    // Runs in the freshly-forked single-threaded child; each call below is a
+    // plain syscall (`close`, `open`, `dup2`) on this child's fd table.
+    drop(read_fd);
+    // Insurance: the child inherits the parent's stdout (fd 1) — the LSP
+    // protocol stream. No engine path writes to stdout today, but a
+    // single stray `println!` would corrupt the framing for every client.
+    // Point the child's fd 1 at /dev/null; its payload goes over the
+    // pipe and its logging over stderr.
+    if let Ok(devnull) = rustix::fs::open(
+      c"/dev/null",
+      rustix::fs::OFlags::WRONLY,
+      rustix::fs::Mode::empty(),
+    ) {
+      let _ = rustix::stdio::dup2_stdout(&devnull);
     }
     let payload = run_body_child(uri, offset_lines, body, warmed, timeout_secs, max_rss_kb);
     let bytes = payload.to_string().into_bytes();
-    // SAFETY: write_fd is the still-open pipe write end inherited by this child and
-    // owned by nothing else here; from_raw_fd takes sole ownership so it is closed
-    // exactly once (on the explicit drop below), signalling EOF to the parent.
-    let mut file = unsafe { std::fs::File::from_raw_fd(write_fd) };
+    let mut file = std::fs::File::from(write_fd);
     let _ = file.write_all(&bytes);
     let _ = file.flush();
     drop(file); // close write end → parent sees EOF
@@ -507,12 +462,10 @@ fn spawn_body_child(
   }
 
   // ---- parent ----
-  // SAFETY: write_fd is the still-open pipe write end; the parent keeps only the
-  // read end (read_fd), so closing the write end exactly once here is sound and
-  // lets the parent observe EOF once the child's copy closes.
-  unsafe {
-    libc::close(write_fd);
-  }
+  // The parent keeps only the read end: closing the write end lets it observe
+  // EOF once the child's copy closes.
+  drop(write_fd);
+  let pid = Pid::from_raw(pid).expect("a forked child's pid is positive");
   Ok((pid, read_fd))
 }
 
@@ -970,38 +923,23 @@ fn convert_trigger(
 
 #[cfg(test)]
 mod framing_tests {
+  use std::os::fd::AsFd;
+
   use super::*;
 
   /// A `pipe(2)` pair: write fragments into `w`, read frames via FdReader on
   /// the read end. Closed on drop.
   struct PipePair {
-    r: i32,
-    w: i32,
+    r: OwnedFd,
+    w: OwnedFd,
   }
   impl PipePair {
     fn new() -> Self {
-      let mut fds = [0i32; 2];
-      // SAFETY: fds.as_mut_ptr() points to a valid [i32; 2]; pipe(2) writes exactly
-      // two fds into it on success and touches nothing else.
-      assert_eq!(unsafe { libc::pipe(fds.as_mut_ptr()) }, 0);
-      PipePair { r: fds[0], w: fds[1] }
+      let (r, w) = rustix::pipe::pipe().expect("pipe(2)");
+      PipePair { r, w }
     }
     fn write(&self, bytes: &[u8]) {
-      // SAFETY: self.w is the owned, still-open pipe write end; bytes.as_ptr()/
-      // bytes.len() describe a valid initialized region, and write(2) only reads
-      // up to len bytes from it.
-      let n = unsafe { libc::write(self.w, bytes.as_ptr() as *const libc::c_void, bytes.len()) };
-      assert_eq!(n, bytes.len() as isize);
-    }
-  }
-  impl Drop for PipePair {
-    fn drop(&mut self) {
-      // SAFETY: self.r and self.w are the two owned, still-open pipe ends created
-      // in PipePair::new; Drop runs once, so each fd is closed exactly once here.
-      unsafe {
-        libc::close(self.r);
-        libc::close(self.w);
-      }
+      assert_eq!(rustix::io::write(&self.w, bytes), Ok(bytes.len()));
     }
   }
 
@@ -1012,7 +950,7 @@ mod framing_tests {
   #[test]
   fn take_frame_handles_fragmented_input() {
     let pipe = PipePair::new();
-    let mut reader = FdReader::from_fd(pipe.r);
+    let mut reader = FdReader::from_fd(pipe.r.as_fd());
     let msg = frame(r#"{"method":"initialized"}"#);
     // Header fragment only: no frame yet.
     pipe.write(&msg[..10]);
@@ -1036,7 +974,7 @@ mod framing_tests {
   #[test]
   fn take_frame_two_frames_one_fill() {
     let pipe = PipePair::new();
-    let mut reader = FdReader::from_fd(pipe.r);
+    let mut reader = FdReader::from_fd(pipe.r.as_fd());
     let mut bytes = frame("{\"a\":1}");
     bytes.extend(frame("{\"b\":2}"));
     pipe.write(&bytes);
@@ -1049,7 +987,7 @@ mod framing_tests {
   #[test]
   fn take_frame_skips_malformed_header() {
     let pipe = PipePair::new();
-    let mut reader = FdReader::from_fd(pipe.r);
+    let mut reader = FdReader::from_fd(pipe.r.as_fd());
     let mut bytes = b"Garbage-Header: x\r\n\r\n".to_vec();
     bytes.extend(frame("{\"ok\":true}"));
     pipe.write(&bytes);
