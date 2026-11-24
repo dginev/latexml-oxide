@@ -30,7 +30,7 @@
 
 use std::{
   collections::BTreeSet,
-  fs::{self, File, OpenOptions},
+  fs::{self, File, OpenOptions, TryLockError},
   io::{self, Read, Seek, SeekFrom, Write},
   os::unix::io::AsRawFd,
   path::{Path, PathBuf},
@@ -546,18 +546,19 @@ fn cause_what(fatal: &str) -> &str {
     .unwrap_or("unknown")
 }
 
-/// Take an exclusive `flock` on `file`, blocking or not. `Ok(false)`: another process holds it.
+/// Take an exclusive `flock` on `file`, blocking or not (`File::lock`/`try_lock`: `flock(2)` with
+/// `LOCK_EX`, `| LOCK_NB`). `Ok(false)`: another process holds it.
 fn lock(file: &File, block: bool) -> io::Result<bool> {
-  let operation = libc::LOCK_EX | if block { 0 } else { libc::LOCK_NB };
-  // SAFETY: `flock(2)` on an open descriptor.
-  if unsafe { libc::flock(file.as_raw_fd(), operation) } == 0 {
-    return Ok(true);
-  }
-  let error = io::Error::last_os_error();
-  if error.raw_os_error() == Some(libc::EWOULDBLOCK) {
-    Ok(false)
+  let locked = if block {
+    file.lock().map_err(TryLockError::Error)
   } else {
-    Err(error)
+    file.try_lock()
+  };
+  match locked {
+    Ok(()) => Ok(true),
+    Err(TryLockError::WouldBlock) => Ok(false),
+    Err(TryLockError::Error(error)) if error.raw_os_error() == Some(libc::EWOULDBLOCK) => Ok(false),
+    Err(TryLockError::Error(error)) => Err(error),
   }
 }
 
@@ -727,11 +728,13 @@ impl Reporter {
       // nobody holds it and its child is gone (or, a pid reused, it is old) — a live child creates
       // it a moment before it locks it.
       if let Some(stem) = name.to_str().and_then(|n| n.strip_suffix(".claim.new")) {
-        let gone = stem_pid(stem).is_some_and(|pid| {
-          // SAFETY: `kill(pid, 0)` only checks that the process exists.
-          let alive = unsafe { libc::kill(pid as libc::pid_t, 0) } == 0;
-          !alive && io::Error::last_os_error().raw_os_error() == Some(libc::ESRCH)
-        });
+        // (`kill(pid, 0)` only checks that the process exists; a claim's pid is its child's own,
+        // positive, so `Pid::from_raw` takes every one a child wrote)
+        let gone = stem_pid(stem)
+          .and_then(|pid| rustix::process::Pid::from_raw(pid as i32))
+          .is_some_and(|pid| {
+            rustix::process::test_kill_process(pid) == Err(rustix::io::Errno::SRCH)
+          });
         let old = entry
           .metadata()
           .and_then(|m| m.modified())

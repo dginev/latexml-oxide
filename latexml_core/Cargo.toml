@@ -103,12 +103,15 @@ stacker = "0.1.24"
 winnow = "1.0"
 
 # Portable machine-memory / free-disk probing and safe Unix child signaling
-# (see `watchdog.rs`). Both crates are already in the dependency tree via other
-# workspace members, so this adds no new supply-chain surface — only a direct edge.
+# (see `watchdog.rs`; rustix's `fs`/`param` give `statvfs` and the page size without
+# `unsafe`, issue #937). Both crates are already in the dependency
+# tree via other workspace members, so this adds no new supply-chain surface — only a direct edge.
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
-# >= 1.1.6 clears RUSTSEC-2026-0486 (xattr zero-length buffer soundness fix).
-rustix = { version = "1.1.6", default-features = false, features = ["process"] }
+# >= 1.1.6 clears RUSTSEC-2026-0486 (xattr zero-length buffer soundness fix). `std` is declared, not borrowed from
+# another member's feature unification: `statvfs(&Path)` needs rustix's `Arg for &Path`, and a build of this crate
+# alone (`cargo check -p latexml_core`, the miri job) has no other member to turn it on.
+rustix = { version = "1.1.6", default-features = false, features = ["fs", "param", "process", "std", "use-libc-auxv"] }
 
 # `mach_host_self` (watchdog.rs `available_memory_bytes`): libc deprecated its Mach
 # APIs in favour of the `mach2` crate.

@@ -80,14 +80,33 @@ see that section below.
 
 ## `unsafe` budget
 
-Reconciled **2026-11-20**: the workspace contains **107 `unsafe {}` blocks +
-3 `unsafe impl Send/Sync` + 0 `unsafe fn` = 110 non-comment sites** (86 `unsafe {}`
+Reconciled **2026-11-24**: the workspace contains **77 `unsafe {}` blocks +
+3 `unsafe impl Send/Sync` + 0 `unsafe fn` = 80 non-comment sites**, plus 3 the ratchet also counts (it counts every
+`unsafe` keyword in code): two `unsafe extern "C"` blocks (`latexml_post/src/xslt.rs`,
+`latexml_oxide/src/util/test.rs`) and one `#[unsafe(link_section)]` (`util/test.rs`) — **83 in all** (54 `unsafe {}`
 + 3 `unsafe impl` outside test suites — including 3 `test-utils`-gated sites in
-`latexml_oxide/src/util/test.rs` — plus 21 test-only `unsafe {}` sites in
+`latexml_oxide/src/util/test.rs` — plus 23 test-only `unsafe {}` sites in
 `latexml_oxide/tests/`, `latexml_post/src/test_env.rs`, and
 `latexml_contrib/src/script_bindings/tests.rs`).
 
+**The count may only fall** (issue #937 Phase 0): `unsafe_sites_ratchet::unsafe_sites_only_fall`
+(`latexml_oxide/tests/cluster_package_guards/unsafe_sites_ratchet.rs`, run by CI's workspace nextest) pins the sites
+per file, read from the lexed source (comments and literals excluded, `#[cfg(test)]` code counted). A change that
+removes sites lowers its file's pin (the failure prints the table to paste); one that adds a site fails it, and
+raising a pin is an exception its commit argues.
+
 Major changes since the 2026-07-20 reconciliation (55 sites):
+- **2026-11-24 (issue #937 Phases 0 and 1, first part), 106 → 80 blocks/impls (83 counting every `unsafe` keyword),
+  no behaviour change:** Unix syscalls with a safe
+  equivalent call it. `lsp_server/unix.rs` 16 → 1 (`rustix::pipe::pipe` + `OwnedFd`/`File::from` for `pipe`, `close`
+  and `from_raw_fd`; `rustix::io::{read, write}`, `rustix::event::poll`, `rustix::process::{waitpid, kill_process}`,
+  `rustix::fs::open` + `rustix::stdio::dup2_stdout` for the child's `/dev/null`; only `fork` stays). `watchdog.rs`
+  22 → 18 (`rustix::param::page_size` ×2, `rustix::fs::statvfs`). `cortex_worker/exit_report.rs` 6 → 4
+  (`File::lock`/`try_lock` for `flock`, `rustix::process::test_kill_process` for `kill(pid, 0)`). `graphics_cache.rs`
+  2 → 1 (`File::try_lock`). `private_files.rs` 1 → 0 (`rustix::process::geteuid`). `xslt.rs` 5 → 2 (its test's
+  stderr capture: `rustix::io::dup` + `rustix::stdio::dup2_stderr`). Left for later phases: `getrusage` (rustix has
+  none), `raise` (thread-directed; `kill_process(getpid())` is process-directed), `sysconf(_SC_PHYS_PAGES)`, the
+  logger's `ftruncate`/`write` on a raw fd shared with the signal path, `setsid` in `pre_exec`, the `mmap` probe.
 - **2026-11-15 (ARENAR):** `latexml_core/src/common/arena.rs` 10 blocks → 1 (category B's eight resolves and `first_bytes`'s raw read fold into one; category C is gone).
 - **2026-11-20:** removed `unsafe impl Send/Sync for Error` (2 sites; `ErrorCategory::Generic` now bounds `Box<dyn Error + Send + Sync>` so `Error` is safely `Send + Sync`), replaced the 2 `unsafe { libc::killpg }` calls in `latexml_post/src/graphics.rs` with safe `rustix::process` helpers in `latexml_core/src/watchdog.rs` (0 new `unsafe`; `graphics.rs` 3 → 1, `watchdog.rs` unchanged at 22), and added `// SAFETY:` comments to all glibc/mimalloc heap-trim & `mallinfo2` sites (`core_interface.rs`, `post.rs`, `render_workers.rs`, `streaming_restart.rs`).
 - **New OS/runtime FFI sites added since July 2026:** `latexml_core/src/watchdog.rs` (22 sites: portable RSS/RAM/disk queries), `latexml_oxide/src/lsp_server/unix.rs` (16 sites: POSIX fork/pipe/poll worker for `--server`), `latexml_oxide/src/{core_interface,heap_trim,post,streaming_restart}.rs` (7 sites: `malloc_trim`/`mi_collect`/`mallinfo2`; the cadenced trims share `heap_trim::release_free_heap`), `latexml_oxide/bin/cortex_worker/exit_report.rs` (6 sites: async-signal-safe crash/exit reporter), `latexml_post/src/xslt.rs` (5 sites), `latexml_oxide/bin/cortex_worker.rs` (4 sites: `mmap`/`raise`/`getrusage`), `latexml_oxide/src/util/test.rs` (3 sites). Every production `unsafe` block carries a `// SAFETY:` comment at the call site.
@@ -161,13 +180,13 @@ and `latexml_oxide/src/util/test.rs`:
 | Call | Why unsafe is unavoidable |
 |---|---|
 | `std::env::set_var("LATEXML_INI_MODE", …)` (latexml_oxide.rs) | Rust 2024 marked `set_var` `unsafe` by design — pre-thread-spawn env mutation isn't race-free in general. We call it before spawning anything. |
-| `libc::getrusage(RUSAGE_CHILDREN, …)` (latexml_oxide.rs, cortex_worker.rs) | C FFI to capture child user/sys CPU time. No stable safe wrapper in stdlib. |
+| `libc::getrusage(RUSAGE_CHILDREN, …)` (latexml_oxide.rs, cortex_worker.rs) | C FFI to capture child user/sys CPU time. No stable safe wrapper in stdlib or `rustix` (1.1). |
 | `libc::signal(SIGSEGV/SIGBUS/SIGABRT, handler)`, `mem::transmute(SIG_DFL)`, `raise(sig)` (util/test.rs) | A **test-only** SIGSEGV/SIGBUS/SIGABRT trap that dumps a backtrace to a per-pid file before the signal kills the test binary. `signal(3)` is `unsafe extern "C"`; the handler-reset path transmutes `SIG_DFL` to `sighandler_t`. |
 
 None can be refactored without losing the functionality (env mutation,
 rusage capture, signal-handler debugging).
 
-### E. Subprocess process-group lifecycle + test EnvGuard in graphics (~8 sites)
+### E. Subprocess process-group lifecycle + test EnvGuard in graphics (~7 sites)
 
 `latexml_post/src/graphics.rs` + `latexml_post/src/graphics_cache.rs` —
 process-group control is needed because subprocess rasterizers (`gs`,
@@ -177,11 +196,10 @@ and a plain `Child::kill()` does not reap those.
 | Call | Why |
 |---|---|
 | `cmd.pre_exec(|| setsid(); setpgid(0,0); prctl(…))` | Runs post-`fork()`/pre-`exec()`; must be async-signal-safe. `setsid(2)` makes the child a process-group leader so the whole group is killable (signaling itself now uses safe `rustix::process` via `watchdog.rs`). |
-| `libc::flock(fd, …)` (graphics_cache.rs) | Advisory lock on an owned, open lock-file fd; operates on the fd without aliasing Rust memory. |
 | `std::env::set_var`/`remove_var` in `EnvGuard` (graphics.rs) + a test `set_var` (graphics_cache.rs) | **Test-only.** `set_var`/`remove_var` are `unsafe` in Rust 2024 (concurrent env mutation races). `EnvGuard` is used only in test setup, but the default `cargo test` harness runs a binary's tests multi-threaded and other tests read the env — so the comment documents the invariant and keeps a `FIXME` proposing `serial_test` to make it airtight. The `graphics_cache.rs` test `set_var` is `OnceLock`-serialized. |
 
 `Command::process_group` was stabilised but does not give us
-`setsid + killpg`, so the FFI path stays.
+`setsid + killpg`, so the FFI path stays. (The prune lock's `flock` is `File::try_lock` since 2026-11-24.)
 
 ### F. libxslt/libxml global config via FFI (2 sites)
 
@@ -189,23 +207,24 @@ and a plain `Child::kill()` does not reap those.
 process-global `xsltMaxDepth` recursion cap (`= 1000`, a faithful port of Perl
 `XML::LibXSLT->max_depth(1000)`) through a plain `unsafe extern "C"` static
 declaration (resolved at link time; WISDOM #56 says why not the crate's binding
-or `dlsym`), plus a read-back in a parity test.
+or `dlsym`), plus a read-back in a parity test. (That test's capture of libxslt's fd-2 report is safe `rustix`
+`dup`/`dup2_stderr` since 2026-11-24.)
 The `libxslt` crate exposes no safe setter; libxslt only READS the value (when
 building each transform context), so the single guarded write cannot race a
 transform. Hardens the post-processor against stack-overflow/OOM on
 pathologically-deep stylesheet recursion (it aborts gracefully, like Perl).
 
-### G. LSP server POSIX child-process management (16 sites)
+### G. LSP server POSIX child-process management (1 site)
 
 `latexml_oxide/src/lsp_server/unix.rs` — the **off-by-default** `--server`
 editor mode (design archived at `docs/archive/LSP_SERVER.md`) forks a worker
-child per request and drives it over a pipe with raw POSIX calls: `pipe(2)`,
-`fork(2)`, `open("/dev/null")`/`dup2`, `poll(2)`, `waitpid(2)`, `kill`/`killpg`,
-`read`/`write`, and `File::from_raw_fd` on the pipe ends. Each block is
-annotated. The invariant for the fork/child window is **single-threaded at
-fork** (asserted before `fork()`) and **async-signal-safe-only** libc calls
-between `fork()` and `exec()`/`_exit()` — no Rust heap allocation or drop glue
-in that window. Pipe-end fds are owned and closed exactly once.
+child per request and drives it over a pipe. Only `fork(2)` is `unsafe`; the
+rest is safe `rustix` (since 2026-11-24, issue #937): `pipe`, `read`/`write`,
+`poll`, `waitpid`, `kill_process`, and the child's `open("/dev/null")` +
+`dup2_stdout`, with the pipe ends `OwnedFd`s (a `File` by `File::from`), each
+closed exactly once by its drop. The invariant for the fork/child window is
+**single-threaded at fork** (asserted before `fork()`) and plain syscalls
+between `fork()` and the child's conversion.
 
 ### H. Script-bindings whatsit-pointer bridge (5 sites)
 

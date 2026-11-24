@@ -473,12 +473,11 @@ fn touch_now(p: &Path) -> std::io::Result<()> {
 /// lock is held for the lifetime of the returned handle. `None` =>
 /// another process already holds the lock; skip the prune.
 ///
-/// On Unix uses `flock(LOCK_EX | LOCK_NB)`. On Windows the lock is a
+/// On Unix uses `flock(LOCK_EX | LOCK_NB)` (`File::try_lock`). On Windows the lock is a
 /// best-effort `create_new` sentinel; multi-process correctness is
 /// still preserved because the prune itself is `ENOENT`-tolerant.
 #[cfg(unix)]
 fn acquire_prune_lock(root: &Path) -> Option<fs::File> {
-  use std::os::fd::AsRawFd;
   let lock_path = root.join(".prune.lock");
   let _ = fs::create_dir_all(root);
   let file = fs::File::options()
@@ -487,10 +486,7 @@ fn acquire_prune_lock(root: &Path) -> Option<fs::File> {
     .truncate(false)
     .open(&lock_path)
     .ok()?;
-  // SAFETY: fd is an owned, open file descriptor for the lock file; flock(2)
-  // operates on it without aliasing Rust memory.
-  let rc = unsafe { libc::flock(file.as_raw_fd(), libc::LOCK_EX | libc::LOCK_NB) };
-  if rc == 0 { Some(file) } else { None }
+  file.try_lock().is_ok().then_some(file)
 }
 
 #[cfg(not(unix))]
