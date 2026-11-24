@@ -24267,7 +24267,11 @@ stored over no file in the destination it does not own (a cache deleted, or empt
 other documents' images; the files of a `--nocache` run; an author's, converting in place), but a copy's kept path
 that is its own source (in place), where Perl's `generateResourcePathname` overwrites what the folder holds; a counter
 with no next count (`u64::MAX`, which wrapped to `x0`, or no number) is reported (`unexpected:cache`) and counted again
-from `x1`, past those files. `--nocache` (Perl's
+from `x1`, past those files. So the first conversion into a folder written without a cache (0.7.x, rc1/rc2, `--nocache`)
+names its images afresh and leaves the earlier files; converting in place, a figure whose stem the author's folder already
+holds (`fig.pdf` beside the author's `fig.png`) is named `x<N>.svg`, not `fig.svg`; and a rerun in place of an extensionless
+include (`\includegraphics{fig}`) that now finds the earlier run's `fig.svg` copies it once more under a new name (stable from
+the third run). `--nocache` (Perl's
 option, in memory from the start) skips nothing: its names restart at `x1` each run and overwrite, as Perl's do; (11) Perl's `--whatsout=math` unlinks
 `LaTeXML.cache` relative to the working directory after packing (`Util/Pack.pm` L343), which misses a cache in another
 destination directory; not ported: a math-only run keeps its cache, as every run does. The run closes the cache when post ends (checkpointed, no

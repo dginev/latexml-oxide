@@ -165,7 +165,8 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     on without it: no image is written over a file in the directory holding other bytes, and a rerun of an unchanged
     document takes its own files again (when the cache cannot be read at all, a file of another document holding the
     very same bytes can be taken as the image's own). A deleted cache, or a new one in a directory that already holds
-    images, gives no new name over a file it does not own. `--nocache` (Perl's
+    images, gives no new name over a file it does not own; the first conversion into a folder written by 0.7.x, rc1 or rc2
+    (which keep no cache) therefore names its images afresh (`x1`, …) and leaves the earlier files in place. `--nocache` (Perl's
     `nocache`) keeps no cache file: the names restart at `x1` each run, as before, still shared by the run's split
     pages. A converted (or turned, cropped) image is made once and shown by every page that uses it. A
     copy is never written through a symbolic link out of the site directory. `.zip` and EPUB outputs write no cache
