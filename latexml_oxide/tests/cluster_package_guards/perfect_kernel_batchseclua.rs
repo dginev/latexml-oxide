@@ -1,7 +1,8 @@
 //! Red/green guards for batch SECLUA: untrusted input stays in the job. Document Lua runs sandboxed (the
 //! `lua_bridge.rs` prelude: TeX's `shell_escape=f`, `openout_any=p`): a call lualatex refuses too returns lualatex's
 //! values with a Warning (batch LUAEXEC), one only the sandbox refuses is an Error; an image copy never leaves
-//! `--dest` (`graphics.rs` `copy_to_destination`, Perl `Post/Graphics.pm` L292-300).
+//! the site directory, `--dest`'s unless `--sitedirectory` names one (`graphics.rs` `kept_path`, Perl
+//! `Post/Graphics.pm` L292-300; `perfect_kernel_batchfix995`).
 //! OXIDIZED_DESIGN_DIVERGENCES #1081. The Lua guards self-skip without a host `texlua`.
 use std::{
   path::{Path, PathBuf},
@@ -342,7 +343,12 @@ fn batchseclua_image_copy_stays_in_dest() {
     .into_iter()
     .filter(|path| !path.starts_with("src/") && !path.ends_with(".css") && !path.ends_with(".js"))
     .collect();
-  assert_eq!(written, ["out/d/t.html", "out/d/x1.png"], "{log}");
+  // `LaTeXML-oxide.cache`: the destination's cache (OXIDIZED_DESIGN_DIVERGENCES #1157).
+  assert_eq!(
+    written,
+    ["out/d/LaTeXML-oxide.cache", "out/d/t.html", "out/d/x1.png"],
+    "{log}"
+  );
   let html = std::fs::read_to_string(root.path().join("out/d/t.html")).unwrap();
   assert!(html.contains("src=\"x1.png\""), "{html}");
 }

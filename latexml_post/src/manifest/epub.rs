@@ -130,7 +130,12 @@ impl EpubManifest {
           .to_string_lossy()
           .replace(std::path::MAIN_SEPARATOR, "/");
         let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
-        if ext == "xhtml" || href == "content.opf" || path.ends_with("LaTeXML.cache") {
+        // Perl `Manifest/Epub.pm` L205 skips `LaTeXML.cache`; ours and its SQLite side files likewise.
+        let cache = path
+          .file_name()
+          .and_then(|name| name.to_str())
+          .is_some_and(|name| name == "LaTeXML.cache" || crate::document::is_cache_file(name));
+        if ext == "xhtml" || href == "content.opf" || cache {
           return None;
         }
         let media_type = core_media_type(ext);

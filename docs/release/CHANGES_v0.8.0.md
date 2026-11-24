@@ -143,6 +143,36 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     parses, as Perl draws it (`<mo>(</mo><mi>a</mi>`); formula readings and Content MathML are unchanged. In a
     sample of 635 arXiv papers, 370 carried 3,625 such words (25 of 100 random papers), now none.
     OXIDIZED_DESIGN_MATH #22; guards `perfect_kernel_batchnulldelim::*`.
+  - **An image outside the main file's directory keeps its place under `--sitedirectory`, and split pages no longer
+    overwrite each other's images** (issue 995). With `\subimport*{../children/child_1}{index.tex}` and
+    `--sitedirectory=..`, each image is now linked where it is (`../children/child_1/images/A.svg`) and nothing is
+    copied, as in Perl; the option was ignored and every image copied as `x1.svg`, `x2.svg`, …, which remains the
+    default without it, so the output stays self-contained. A destination outside `--sitedirectory` is Perl's Fatal.
+    Under `--split`, every page restarted the generated names at `x1`, so a later chapter's image replaced an earlier
+    chapter's (the first chapter showed the second's figure); converted images sharing a file name on different pages
+    (`a/plot.eps`, `b/plot.eps`) likewise shared one `plot.png`. Image names now come from Perl's document cache, kept
+    in the destination directory as `LaTeXML-oxide.cache` (an SQLite database; Perl's `LaTeXML.cache` is a DB_File,
+    left untouched): every page's images are named before any page is rendered, so the parallel render of 64 pages or
+    more names them exactly as the serial one, whatever the worker count, and a page's navigation shows the other
+    pages' title images right. A name belongs to its source: an edited image keeps its name and is written again
+    under it (another page, crop or turn is another image, with a name of its own, as in Perl; another width or
+    scale is the same file, made once), a second document converted into the same directory continues the numbering
+    (it restarted at `x1` and overwrote the first document's images) and never shares a file with the first, even
+    when two images hold the same bytes, conversions started together into one new
+    directory all share its cache and never share a name, and a corrupt cache entry is ignored with a Warning instead
+    of deciding where an image is written. A cache that cannot be used (read-only, unreadable, a symbolic link, which is
+    never followed, or held by another process for more than 10 seconds) is reported with a Warning and the run goes
+    on without it: no image is written over a file in the directory holding other bytes, and a rerun of an unchanged
+    document takes its own files again (when the cache cannot be read at all, a file of another document holding the
+    very same bytes can be taken as the image's own). A deleted cache, or a new one in a directory that already holds
+    images, gives no new name over a file it does not own; the first conversion into a folder written by 0.7.x, rc1 or rc2
+    (which keep no cache) therefore names its images afresh (`x1`, …) and leaves the earlier files in place. `--nocache` (Perl's
+    `nocache`) keeps no cache file: the names restart at `x1` each run, as before, still shared by the run's split
+    pages. A converted (or turned, cropped) image is made once and shown by every page that uses it. A
+    copy is never written through a symbolic link out of the site directory. `.zip` and EPUB outputs write no cache
+    (their directory is removed once packed), and the cortex worker keeps it in memory. The parallel render's private database snapshot is now named
+    `LaTeXML-render.db`.
+    OXIDIZED_DESIGN_DIVERGENCES #1081, #1157, KNOWN_PERL_ERRORS #1329; guards `perfect_kernel_batchfix995::*`.
   - **Internal hardening: 26 fewer `unsafe` sites, and a ratchet that keeps the count from rising** (issue 937, phases
     0 and the first of 1; no behaviour change). The `--server` editor mode's pipe, poll, read, write, wait and kill,
     the free-disk and page-size probes, the effective user id, the graphics cache's and the harness's `flock`, and a

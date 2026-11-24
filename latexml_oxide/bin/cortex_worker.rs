@@ -536,6 +536,8 @@ impl LatexmlWorker {
       // cortex_worker is the canvas-bulk path — always emit the full
       // document, never the fragment / math extraction variants.
       whatsout:                  latexml_post::extract::Whatsout::Document,
+      // Every paper gets a fresh, packed directory: its cache stays in memory.
+      nocache:                   true,
     });
 
     // 6. Get log and status (Perl: status line is last line of log).

@@ -18,6 +18,8 @@
 //! listed below.
 //!
 //! - **Disable flag** (Perl: `nocache`) → env `LATEXML_GRAPHICS_CACHE_OFF`.
+//! - **Names** (Perl: `key → dest`) → the document cache, `LaTeXML-oxide.cache` in the destination directory
+//!   ([`crate::document::DocCache`], [`crate::resource_cache`]); this cache holds the converted bytes only.
 //! - **Re-use across runs** (Perl: one .cache per dest dir) → global XDG cache, shared across all
 //!   conversions on the host. This is a strict superset of the Perl behaviour: cross-paper sharing,
 //!   plus reproducible content-keying instead of path-keying.
@@ -397,6 +399,21 @@ fn lookup_digest(
   let dims = read_dims_sidecar(&dims_sidecar(&cached));
   HITS.fetch_add(1, Ordering::Relaxed);
   Some(CacheHit { dims })
+}
+
+/// The cache's entry for `(source, key)` when `policy` consults the cache and it holds one: what a conversion of the
+/// source installs (`digest`: the source's, when read already).
+pub fn cached_output(
+  policy: CachePolicy,
+  source: &str,
+  digest: Option<&SourceDigest>,
+  key: RenderKey,
+) -> Option<PathBuf> {
+  if policy == CachePolicy::Bypass || disabled() {
+    return None;
+  }
+  let cached = cache_path(&cache_root()?, &source_key(source, digest, key)?, key.ext);
+  cached.exists().then_some(cached)
 }
 
 /// Insert `dest` (and optionally its dimensions) into the cache under

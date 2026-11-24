@@ -1,0 +1,21 @@
+% mechanism: latexml_post resource_cache.rs: a name's owner is its source (path relative to the destination, the
+%   transform, the target type), not the source's bytes; the bytes only key the cache entry, so an edited image is a
+%   miss that is copied or converted again into the name its source already has (Perl Post/Graphics.pm L292-300:
+%   a simply scaled image is always copied to its kept path).
+% witness: issue 995 final review B1 (an edited figs/a.png came back as x1.png, out/figs/a.png kept the old picture;
+%          in place, the edited figure was copied into the source folder as x1.png)
+% layout:  src/p.tex (this file), src/figs/{a.png, p.eps, r.png}; cwd src/
+% oracle:  pdflatex -no-shell-escape 0 errors, with figs/p-eps-converted-to.pdf made by epstopdf beforehand
+% engines: rust=GREEN perl=GREEN (read, not run: the kept path is copied again; Perl gives a changed conversion a
+%          new xN, Post/Graphics.pm L318-319, ours keeps the name its source has)
+% expect:  --dest=out/p.html: figs/a.png, p.png, x1.png; every image edited, run again: the same three URLs holding
+%          the new pictures; --dest=p.html in src/: figs/a.png linked in place both times, no x-copy of it
+%          (base 6ce90fffade: x1.png / x2.png / x3.png after the edit, out/figs/a.png the old picture)
+% status:  GREEN
+\documentclass{article}
+\usepackage{graphicx}
+\begin{document}
+\includegraphics{figs/a.png}
+\includegraphics{figs/p.eps}
+\includegraphics[angle=90]{figs/r.png}
+\end{document}
