@@ -185,7 +185,7 @@ pub struct RenderManifest {
   /// worker renders it (issue 995).
   #[serde(default)]
   pub resource_names:            Vec<(String, String, String, Option<String>)>,
-  /// The parent's stderr verbosity (`LevelFilter` name: `WARN` under `--quiet`, `DEBUG` under `--verbose`). The
+  /// The parent's stderr verbosity (`LevelFilter` name: `ERROR` under `--quiet`, `DEBUG` under `--verbose`). The
   /// worker logs at it, never below `Info`, so its folded log is the serial render's.
   #[serde(default)]
   pub log_level:                 String,
@@ -842,7 +842,8 @@ fn print_status_report(written: &[String], discard: bool) -> i32 {
 }
 
 /// The lines of a worker's log the parent's stderr shows: its records at the parent's verbosity (`--quiet` hides
-/// `Info`, only `--verbose` shows `Debug`), each with its continuation lines; `Error`/`Fatal` always.
+/// `Info` and `Warning`, only `--verbose` shows `Debug`), each with its continuation lines; `Error`/`Fatal` always,
+/// as the logger prints them (OXIDIZED_DESIGN_DIVERGENCES #1158).
 fn stderr_share(log: &str) -> String {
   stderr_share_at(log, latexml_core::util::logger::stderr_admits)
 }
@@ -1112,17 +1113,26 @@ fn render_manifest_pages(m: RenderManifest) -> Result<(Vec<String>, bool), Strin
 mod tests {
   use super::*;
 
-  /// Under `--quiet` a Warning keeps its unindented continuation lines (a multi-line message); the notes after an
-  /// Info record stay hidden. The default verbosity shows every line.
+  /// At the `Warn` level a Warning keeps its unindented continuation lines (a multi-line message); the notes after an
+  /// Info record stay hidden. The default verbosity shows every line; `--quiet` (`Error`) only the Error and the
+  /// Fatal, each with its continuation lines, and so does a console that admits nothing (OD #1158).
   #[test]
   fn stderr_share_keeps_a_records_continuation_lines() {
     let log = "note before\nInfo:a:x one\nMathML[Presentation] S1.html processing\nWarning:b:y first line\nsecond \
-               line\n\tat loc\nInfo:c:z two\n\tIn here\npost-processing\nError:d:w bad\n";
+               line\n\tat loc\nInfo:c:z two\n\tIn here\npost-processing\nError:d:w bad\nits second line\n\tat \
+               loc2\nWarning:e:v late\nFatal:f:u end\n\tat loc3\n";
+    let errors = "Error:d:w bad\nits second line\n\tat loc2\nFatal:f:u end\n\tat loc3\n";
     assert_eq!(
       stderr_share_at(log, |level| level <= log::Level::Warn),
-      "Warning:b:y first line\nsecond line\n\tat loc\nError:d:w bad\n"
+      "Warning:b:y first line\nsecond line\n\tat loc\nError:d:w bad\nits second line\n\tat loc2\nWarning:e:v \
+       late\nFatal:f:u end\n\tat loc3\n"
     );
     assert_eq!(stderr_share_at(log, |level| level <= log::Level::Info), log);
+    assert_eq!(
+      stderr_share_at(log, |level| level <= log::Level::Error),
+      errors
+    );
+    assert_eq!(stderr_share_at(log, |_| false), errors);
   }
 
   #[test]

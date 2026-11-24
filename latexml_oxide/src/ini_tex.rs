@@ -25,6 +25,15 @@ use latexml_core::{
 
 use crate::converter::Converter;
 
+/// A progress line on stderr; `--quiet` hides it, as it does every Info note (OXIDIZED_DESIGN_DIVERGENCES #1158).
+macro_rules! progress {
+  ($($arg:tt)*) => {
+    if latexml_core::util::logger::stderr_shows_info() {
+      eprintln!($($arg)*);
+    }
+  };
+}
+
 /// Process an init file and write a format dump.
 /// Perl equivalent: Core.pm::iniTeX → TeX_Job.pool.ltxml::DumpFile
 pub fn dump_format(
@@ -32,7 +41,7 @@ pub fn dump_format(
   init_file: &str,
   destination: Option<&str>,
 ) -> Result<usize, String> {
-  eprintln!("[ini_tex] Dumping format from {}", init_file);
+  progress!("[ini_tex] Dumping format from {}", init_file);
 
   // Strict Perl `iniTeX` + `DumpFile` order:
   //
@@ -59,7 +68,7 @@ pub fn dump_format(
   // definitions, etc. that the dump should NOT carry.
 
   // Step 1: Load Base.pool equivalent (Perl `initializeState('Base.pool')`).
-  eprintln!("[ini_tex] Loading Base.pool (Perl `initializeState('Base.pool')`)");
+  progress!("[ini_tex] Loading Base.pool (Perl `initializeState('Base.pool')`)");
   if let Err(e) = latexml_package::engine::base::load_definitions() {
     eprintln!("[ini_tex] base warning: {}", e);
   }
@@ -133,12 +142,12 @@ pub fn dump_format(
   let is_plain_init = init_lower.contains("plain");
 
   if is_plain_init {
-    eprintln!("[ini_tex] Loading plain_bootstrap (mirrors Perl `LoadPool('plain_bootstrap')`)");
+    progress!("[ini_tex] Loading plain_bootstrap (mirrors Perl `LoadPool('plain_bootstrap')`)");
     if let Err(e) = latexml_package::engine::plain_bootstrap::load_definitions() {
       eprintln!("[ini_tex] plain_bootstrap warning: {}", e);
     }
   } else {
-    eprintln!("[ini_tex] Loading latex_bootstrap (mirrors Perl `LoadPool('latex_bootstrap')`)");
+    progress!("[ini_tex] Loading latex_bootstrap (mirrors Perl `LoadPool('latex_bootstrap')`)");
     // latex_bootstrap.rs L11 does `InnerPool!(plain_bootstrap)` itself
     // (mirrors Perl `LoadPool('plain_bootstrap')` at the top of
     // latex_bootstrap.pool.ltxml), so plain_bootstrap state is included.
@@ -153,7 +162,7 @@ pub fn dump_format(
   // classification (early/late sections).
   state::stage_snapshot_value("bootstrap", snap.clone());
   let snap_size = snap.len();
-  eprintln!(
+  progress!(
     "[ini_tex] Snapshot taken at bootstrap ({} entries)",
     snap_size
   );
@@ -162,7 +171,7 @@ pub fn dump_format(
   // Perl: loadTeXDefinitions($name, $path, type => $type)
   // This digests the file through the engine, creating definitions.
   let (_, name, ext) = split_path(init_file);
-  eprintln!("[ini_tex] Loading {} (ext: {})", name, ext);
+  progress!("[ini_tex] Loading {} (ext: {})", name, ext);
   // Use the full filename with extension for proper file resolution
   let load_name = if ext.is_empty() {
     name.clone()
@@ -236,7 +245,7 @@ pub fn dump_format(
 
   // Step 3: Compute the diff — only entries that changed.
   let diff = state::diff_snapshot(&snap);
-  eprintln!(
+  progress!(
     "[ini_tex] Post-load diff: {} changed entries (from {} pre-dump)",
     diff.len(),
     snap_size
@@ -284,8 +293,8 @@ pub fn dump_format(
     {
       save_texlive_version(year);
     }
-    eprintln!("[ini_tex] Wrote {} text entries to {}", write_count, dest);
-    eprintln!("Format dump complete: {} entries written", write_count);
+    progress!("[ini_tex] Wrote {} text entries to {}", write_count, dest);
+    progress!("Format dump complete: {} entries written", write_count);
     Ok(write_count)
   } else {
     // Write compiled Rust source (legacy format)
@@ -293,11 +302,12 @@ pub fn dump_format(
     let _write_count = latexml_core::dump_writer::write_dump(Path::new(&tmp), &diff, &sources)?;
     let rs_count = latexml_core::dump_codegen::generate_rs(Path::new(&tmp), Path::new(&dest))?;
     let _ = std::fs::remove_file(&tmp);
-    eprintln!(
+    progress!(
       "[ini_tex] Generated {} Rust definitions to {}",
-      rs_count, dest
+      rs_count,
+      dest
     );
-    eprintln!("Format dump complete: {} entries written", rs_count);
+    progress!("Format dump complete: {} entries written", rs_count);
     Ok(rs_count)
   }
 }
@@ -305,10 +315,10 @@ pub fn dump_format(
 /// Generate a compiled Rust module from a dump file.
 /// Reads the text dump and produces a .rs file with direct state assignment calls.
 pub fn codegen_from_dump(dump_path: &str, output_path: &str) -> Result<usize, String> {
-  eprintln!("[ini_tex] Generating Rust module from {}", dump_path);
+  progress!("[ini_tex] Generating Rust module from {}", dump_path);
   let count =
     latexml_core::dump_codegen::generate_rs(Path::new(dump_path), Path::new(output_path))?;
-  eprintln!("[ini_tex] Generated {} entries to {}", count, output_path);
+  progress!("[ini_tex] Generated {} entries to {}", count, output_path);
   Ok(count)
 }
 

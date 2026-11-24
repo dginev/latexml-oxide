@@ -222,7 +222,7 @@ fn raw_log_warnings_register_in_the_final_verdict() {
 
 /// Error and Fatal messages are the success-rate signal — they must reach the
 /// log AND stderr at ANY verbosity (user directive 2026-08-02). The quietest CLI
-/// mapping sets the STDERR level to `Warn`, and the logger always echoes
+/// mapping sets the STDERR level to `Error`, and the logger always echoes
 /// `Error`/`Fatal` records to stderr regardless of the console level
 /// (`logger.rs`: `level <= Error || stderr_admits(level)`); this pins that
 /// contract — if someone dropped the always-emit-errors clause, the Fatal line or

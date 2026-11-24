@@ -575,6 +575,12 @@ pub fn initialize_report() {
   // next conversion.
   IGNORE_DIAGNOSTICS.set(false);
   drop(report);
+  log_session_warnings();
+}
+
+/// Logs and counts the warnings held for the session ([`warn_at_session_start`]), into the log now bound. The
+/// report's reset does it; a run that never resets it (an XML input's post-processing) calls it once its log is bound.
+pub fn log_session_warnings() {
   for (target, message) in SESSION_WARNINGS.with(|held| std::mem::take(&mut *held.borrow_mut())) {
     emit_record(LogStatus::Warning, &target, &message);
   }
@@ -589,8 +595,9 @@ thread_local! {
 /// the session): a persistent worker's next paper must not log them as its own. Called as each archive is unpacked.
 pub fn clear_session_warnings() { SESSION_WARNINGS.with(|held| held.borrow_mut().clear()) }
 
-/// A Warning raised before its conversion's report starts (a source archive is unpacked before the session): held,
-/// then logged and counted by the next [`initialize_report`] on this thread.
+/// A Warning raised before its conversion's report starts (a source archive is unpacked, a command-line option is
+/// checked, before the session): held, then logged and counted by the next [`initialize_report`] on this thread, or
+/// by [`log_session_warnings`] where post-processing opens the log of a run that has no report reset.
 pub fn warn_at_session_start(category: &str, object: &str, message: String) {
   SESSION_WARNINGS.with(|held| {
     held
