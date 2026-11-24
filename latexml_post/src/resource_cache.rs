@@ -5,10 +5,12 @@
 //! [`crate::document::CACHE_FILE`] in the destination directory): `generateResourcePathname`'s counter under
 //! `_max_<subdir>_<prefix>_counter_` (`Post.pm` L192-200) and Graphics' `key → "dest|w|h"` entries
 //! (`Post/Graphics.pm` L245-262, L331). A name's owner is its source (path relative to the destination directory,
-//! transform, type), as a Perl key is: our entries `_owner_<name>`, `_name_<owner>` and `_source_<name>` keep it, and
-//! `_holds_<name>` the bytes the name was last written with, so an edited image is a new key (the content digest
-//! replaces Perl's timestamp check) written again into the name its source owns. `_content_<content>` lets a source
-//! with the same bytes share that file while it holds them. Divergences (OXIDIZED_DESIGN_DIVERGENCES #1157): an entry
+//! page, crop and turn, type; never a size), as a Perl key is: our entries `_owner_<name>`, `_name_<owner>` and
+//! `_source_<name>` keep it, and `_holds_<name>` the bytes the name was last written with, so an edited image is a new
+//! key (the content digest replaces Perl's timestamp check) written again into the name its source owns.
+//! `_content_<bytes>` lets a source with the same bytes share that file while its owner is named in the same run with
+//! them (the pages of one document); another document's file is never shared, as that document may write other bytes
+//! into it later, under a page this run does not rewrite. Divergences (OXIDIZED_DESIGN_DIVERGENCES #1157): an entry
 //! stores the name only (Perl's width and height let it skip a conversion, which the content-addressed
 //! `graphics_cache` serves here); a converted or generated name is kept across an edit (Perl generates a new `xN`);
 //! a kept name (a copy's relative path, a converted image's stem) another source owns falls back to a generated `xN`,
@@ -16,7 +18,9 @@
 //! ([`Checks`]). Each [`resolve`] is one `IMMEDIATE` transaction, so processes naming into one folder at once through
 //! the file never hand out one name to two sources; a store in memory in place of its file (it could not be opened, or
 //! the transaction failed and runs again there) skips the names whose files hold other bytes than the request writes
-//! ([`Checks::on_disk`]), so a rerun takes its own files again.
+//! ([`Checks::on_disk`]), so a rerun takes its own files again. One that could not copy the file's entries does not
+//! know a file's owner: a file of another document holding the same bytes is taken as the request's own (OD #1157
+//! (10)).
 
 use std::collections::HashMap;
 
@@ -43,9 +47,8 @@ pub enum Proposal {
 pub struct Request {
   /// Perl's cache key (`ref($self):reldir/name.srctype.type|transform`) with the source's content digest.
   pub key:      String,
-  /// What makes two requests one resource: requests with the same content share one file.
-  pub content:  String,
-  /// What the destination file's bytes are (a copy's options make another content but the same bytes).
+  /// What the destination file's bytes are made of (the source's bytes, page, type, crop and turn, never a size):
+  /// requests with the same bytes share one file.
   pub bytes:    String,
   /// Who owns the names the request is given: its source, transform and type, so an edited source keeps them.
   pub owner:    String,
@@ -104,11 +107,14 @@ pub struct Checks<'a> {
   /// relative path to a regular file is read.
   pub vouch:   &'a dyn Fn(&Request, &ResourceName, &str) -> bool,
   /// Whether a file of the name exists in the destination directory holding other bytes than the request writes,
-  /// asked only in a transaction on a store in memory in place of its file (it does not know the names earlier runs
+  /// asked only in a transaction on a store in memory in place of its file (it may not know the names earlier runs
   /// handed out); `None` otherwise.
   pub on_disk: Option<OnDisk<'a>>,
   /// The cache file a Warning names.
   pub cache:   &'a str,
+  /// Report a Warning (`unexpected`, `cache`): the caller emits it once the transaction is done, as a transaction run
+  /// again in memory meets the same entries.
+  pub warn:    &'a dyn Fn(String),
 }
 
 /// The counter Perl's `generateResourcePathname` keeps for `prefix` (`Post.pm` L194-196; no `resource_directory`).
@@ -123,7 +129,7 @@ pub fn resolve(
   pages: &[Vec<Request>],
 ) -> rusqlite::Result<Vec<Vec<Resolved>>> {
   let counter = counter_key(checks.prefix);
-  // The bytes each source holds now: a name its source writes again with other bytes is shared by no one.
+  // The sources this run names, with their bytes: only their files are shared, while they hold the same bytes.
   let now: HashMap<&str, &str> = pages
     .iter()
     .flatten()
@@ -193,7 +199,7 @@ fn place(
   let by_key =
     kv_get(conn, &r.key)?.map(|value| value.split('|').next().unwrap_or_default().to_string());
   let by_owner = kv_get(conn, &format!("_name_{}", r.owner))?;
-  let by_content = kv_get(conn, &format!("_content_{}", r.content))?;
+  let by_content = kv_get(conn, &format!("_content_{}", r.bytes))?;
   // The first two are names this source was given: one no request could have is a corrupt or planted entry.
   let mut tried: Vec<String> = Vec::new();
   for (dest, given, keyed) in [
@@ -231,8 +237,8 @@ fn place(
 }
 
 /// Whether a stored `name` serves `r`: `Some(true)` when `r`'s source owns it (or no source does and `r` could be
-/// given it), `Some(false)` when `r` shares another source's file holding its bytes, `None` when it does not serve.
-/// A name no request of `r`'s type could have is reported when `warn` (a Warning) and never written.
+/// given it), `Some(false)` when `r` shares the file of another source of this run holding its bytes, `None` when it
+/// does not serve. A name no request of `r`'s type could have is reported when `warn` (a Warning) and never written.
 fn reusable(
   conn: &Connection,
   checks: &Checks,
@@ -244,15 +250,10 @@ fn reusable(
   let given = own_name(r, &name.dest) || generated_name(checks, r, &name.dest);
   if !given && !shareable_name(r, &name.dest) {
     if warn {
-      Warn!(
-        "unexpected",
-        "cache",
+      (checks.warn)(format!(
         "The cache {} names {} for {}, a name no {} image is given; it is ignored",
-        checks.cache,
-        name.dest,
-        r.source,
-        r.ext
-      );
+        checks.cache, name.dest, r.source, r.ext
+      ));
     }
     return Ok(None);
   }
@@ -264,12 +265,11 @@ fn reusable(
   let Some(owner) = owner.filter(|owner| *owner != r.owner) else {
     return Ok(given.then_some(true));
   };
-  // Another source's file: while it holds these bytes, and keeps them in this run.
+  // Another source's file, only while that source is named in this run with these bytes: a source of another
+  // document (or not in this run) may write other bytes into it later, under a page this run does not rewrite.
   let holds = kv_get(conn, &format!("_holds_{}", name.dest))?;
   if holds.as_deref() != Some(r.bytes.as_str())
-    || now
-      .get(owner.as_str())
-      .is_some_and(|&bytes| Some(bytes) != holds.as_deref())
+    || now.get(owner.as_str()) != Some(&r.bytes.as_str())
   {
     return Ok(None);
   }
@@ -370,7 +370,7 @@ fn take(conn: &Connection, r: &Request, name: &ResourceName) -> rusqlite::Result
 /// `r`'s key and content name `name`.
 fn share(conn: &Connection, r: &Request, name: &ResourceName) -> rusqlite::Result<()> {
   kv_put(conn, &r.key, Some(&format!("{}||", name.dest)))?;
-  kv_put(conn, &format!("_content_{}", r.content), Some(&name.dest))
+  kv_put(conn, &format!("_content_{}", r.bytes), Some(&name.dest))
 }
 
 #[cfg(test)]
@@ -388,21 +388,23 @@ mod tests {
       vouch,
       on_disk,
       cache: CACHE_FILE,
+      warn: &|_| {},
     }
   }
 
   /// Name `pages` in `cache`'s store of `dir`, in one transaction, every shared name vouched for.
   fn resolve_in(cache: &DocCache, dir: Option<&str>, pages: &[Vec<Request>]) -> Vec<Vec<Resolved>> {
-    cache.with_store(dir, |store| {
-      store.immediate(|tx, _| resolve(tx, &checks(&|_, _, _| true, None), pages))
-    })
+    cache
+      .with_store(dir, |store| {
+        store.immediate(|tx, _| resolve(tx, &checks(&|_, _, _| true, None), pages))
+      })
+      .unwrap()
   }
 
   /// A copy of `source` holding `bytes`, proposing its kept path.
   fn copy(source: &str, bytes: &str, kept: Option<&str>, ext: &str) -> Request {
     Request {
       key:      format!("c:{source}|{bytes}"),
-      content:  format!("copy|{bytes}"),
       bytes:    format!("copy|{bytes}"),
       owner:    format!("copy|{source}"),
       source:   source.to_string(),
@@ -419,7 +421,6 @@ mod tests {
   fn convert(source: &str, bytes: &str, stem: Option<&str>, svg_alt: bool) -> Request {
     Request {
       key: format!("v:{source}|{bytes}"),
-      content: format!("png|{bytes}"),
       bytes: format!("png|{bytes}"),
       owner: format!("png|{source}"),
       source: source.to_string(),
@@ -511,10 +512,32 @@ mod tests {
       convert("a/plot.pdf", "X", Some("plot"), false),
       convert("b/fig.pdf", "X", Some("fig"), false),
     ]];
-    let names = unvouched.with_store(None, |store| {
-      store.immediate(|tx, _| resolve(tx, &checks(&|_, _, _| false, None), &pages))
-    });
+    let names = unvouched
+      .with_store(None, |store| {
+        store.immediate(|tx, _| resolve(tx, &checks(&|_, _, _| false, None), &pages))
+      })
+      .unwrap();
     assert_eq!(dests(&names), [vec!["plot.png", "fig.png"]]);
+  }
+
+  /// A file is shared with another document's image of the same bytes never: that document may later write other
+  /// bytes into it, under a page this run does not rewrite (issue 995 review: `d1` and `d2` into one folder both on
+  /// `x1.png`; `d1`'s image edited and `d1` alone run again, `d2.html` showed `d1`'s new picture). The pages of one
+  /// run share it.
+  #[test]
+  fn another_documents_file_is_never_shared() {
+    let cache = DocCache::new(false);
+    let d1 = resolve_in(&cache, None, &[vec![copy("../c1/a.png", "X", None, "png")]]);
+    let d2 = resolve_in(&cache, None, &[vec![copy("../c2/b.png", "X", None, "png")]]);
+    let d1_edited = resolve_in(&cache, None, &[vec![copy("../c1/a.png", "Y", None, "png")]]);
+    let both = resolve_in(&cache, None, &[
+      vec![copy("../c3/c.png", "Z", None, "png")],
+      vec![copy("../c4/d.png", "Z", None, "png")],
+    ]);
+    let all = [dests(&d1), dests(&d2), dests(&d1_edited), dests(&both)].concat();
+    assert_eq!(all, [["x1.png"], ["x2.png"], ["x1.png"], ["x3.png"], [
+      "x3.png"
+    ]]);
   }
 
   /// A stored name no request could have been given (another type, a hidden path) is never written, nor a name a
@@ -556,9 +579,11 @@ mod tests {
       convert("a/plot.pdf", "a", Some("plot"), false),
       copy("../b.png", "b", None, "png"),
     ]];
-    let names = DocCache::new(true).with_store(None, |store| {
-      store.immediate(|tx, _| resolve(tx, &checks(&|_, _, _| true, Some(&on_disk)), &pages))
-    });
+    let names = DocCache::new(true)
+      .with_store(None, |store| {
+        store.immediate(|tx, _| resolve(tx, &checks(&|_, _, _| true, Some(&on_disk)), &pages))
+      })
+      .unwrap();
     assert_eq!(dests(&names), [vec!["x1.png", "x3.png"]]);
   }
 

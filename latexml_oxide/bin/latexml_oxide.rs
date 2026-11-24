@@ -1822,7 +1822,9 @@ fn real_main() -> Result<(), Box<dyn Error>> {
             .filter(|t| !t.is_empty() && *t != "0"),
           icon: cli.icon.as_deref(),
           whatsout: whatsout_mode,
-          nocache: chosen_by_clap(cli.cache, cli.nocache) == Some(false),
+          // A zip or an EPUB is made in a directory of its own, removed once packed: a cache there serves no later
+          // run.
+          nocache: is_archive_out || chosen_by_clap(cli.cache, cli.nocache) == Some(false),
         };
         // Drop dead core TeX state right after `MakeBibliography` (before
         // `parallel_render` sizes the worker fleet and before render phases)

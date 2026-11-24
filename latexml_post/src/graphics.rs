@@ -1204,6 +1204,13 @@ impl Graphics {
         Vec::new()
       };
       let transform = !ops.is_empty();
+      // What the file's bytes depend on besides the source, its page and type: the crop and the turn. A scale or a
+      // size (`width=0.5\textwidth`) sizes the `<img>` only, so two widths share one file, and a width edited keeps it.
+      let made = if transform {
+        format!("{ops:?}")
+      } else {
+        String::new()
+      };
       // Perl's key (`ref($self):reldir/name.srctype.type|transform`) and the content the destination holds: one
       // file per content, a changed image a new key. Unreadable, a source is known by its path.
       let rel = latexml_core::util::pathname::relative(&source, source_dir);
@@ -1232,18 +1239,11 @@ impl Graphics {
           .and_then(|s| s.to_str())
           .unwrap_or("image")
           .to_string();
-        let content = format!(
-          "{dest_type}|{identity}|{}|{options}",
-          page.map_or(String::new(), |p| p.to_string())
-        );
+        let page_key = page.map_or(String::new(), |p| p.to_string());
         let request = Request {
           key,
-          bytes: content.clone(),
-          content,
-          owner: format!(
-            "{dest_type}|{}|{options}|{owned_source}",
-            page.map_or(String::new(), |p| p.to_string())
-          ),
+          bytes: format!("{dest_type}|{identity}|{page_key}|{made}"),
+          owner: format!("{dest_type}|{page_key}|{made}|{owned_source}"),
           source: owned_source,
           identity,
           proposal: if has_page || transform {
@@ -1277,7 +1277,6 @@ impl Graphics {
           .unwrap_or_default();
         let request = Request {
           key,
-          content: format!("copy|{identity}|{options}"),
           bytes: format!("copy|{identity}"),
           owner: format!("copy|{owned_source}"),
           source: owned_source,
@@ -1480,31 +1479,47 @@ impl Graphics {
       .to_string();
     let usable =
       |name: &ResourceName| Self::kept_path(&name.dest, &dirs.dest_dir, &dirs.site_dir).is_some();
-    let reported = std::cell::Cell::new(false);
+    // Emitted once the transaction is done: one that fails runs again in memory and meets the same entries.
+    let warnings = std::cell::RefCell::new(Vec::<String>::new());
+    let warn = |w: String| {
+      let mut warnings = warnings.borrow_mut();
+      if !warnings.contains(&w) {
+        warnings.push(w);
+      }
+    };
+    // Each file read once per call: a store in memory asks of every `xN` in the folder for every image.
+    let digests = Digests::default();
     let vouch = |r: &Request, name: &ResourceName, source: &str| {
-      Self::vouch(r, name, source, dirs, &cache_file, &reported)
+      Self::vouch(r, name, source, dirs, &cache_file, &warn, &digests)
     };
     // A file of the name holding what `r` writes is the one an earlier run wrote for it: a rerun takes it again.
     let on_disk = |r: &Request, name: &ResourceName| {
       std::iter::once(&name.dest).chain(&name.alt).any(|part| {
         let path = Path::new(&dirs.dest_dir).join(part);
-        path.exists() && !Self::holds_output(r, &path, part == &name.dest, dirs, policy)
+        path.exists() && !Self::holds_output(r, &path, part == &name.dest, dirs, policy, &digests)
       })
     };
-    cache.with_store(dirs.cache_dir.as_deref(), |store| {
+    let names = cache.with_store(dirs.cache_dir.as_deref(), |store| {
       // Whether the store runs in memory is known only inside the transaction: a file that fails in it is
       // replaced by memory, and the names are planned again there.
       store.immediate(|tx, fell_back| {
+        warnings.borrow_mut().clear();
         let checks = crate::resource_cache::Checks {
           prefix,
           usable: &usable,
           vouch: &vouch,
           on_disk: fell_back.then_some(&on_disk as crate::resource_cache::OnDisk),
           cache: &cache_file,
+          warn: &warn,
         };
         crate::resource_cache::resolve(tx, &checks, pages)
       })
-    })
+    });
+    for w in warnings.into_inner() {
+      Warn!("unexpected", "cache", "{}", w);
+    }
+    // A transaction that failed in memory too (reported, an Error) names nothing: each page asks again as it renders.
+    names.unwrap_or_default()
   }
 
   /// Whether the file at `path` holds what `r` writes there: a copy its source's bytes; a render (`raster`, else the
@@ -1515,17 +1530,15 @@ impl Graphics {
     raster: bool,
     dirs: &PageDirs,
     policy: crate::graphics_cache::CachePolicy,
+    digests: &Digests,
   ) -> bool {
     use latexml_core::util::pathname::absolute;
-    let digest =
-      |path: &Path| Self::digest_file_content(&path.to_string_lossy()).map(|d| d.content());
-    let Some(held) = digest(path) else {
+    let Some(held) = digests.content(path) else {
       return false;
     };
-    let hex = |d: [u8; 32]| d.iter().map(|b| format!("{b:02x}")).collect::<String>();
     let source = absolute(&Path::new(&dirs.dest_dir).join(&r.source).to_string_lossy());
     match r.output {
-      Output::Source => hex(held) == r.identity,
+      Output::Source => hex(&held) == r.identity,
       Output::Render(page) => {
         let key = crate::graphics_cache::RenderKey {
           page,
@@ -1540,8 +1553,9 @@ impl Graphics {
             "svg"
           },
         };
-        crate::graphics_cache::cached_output(policy, &source, key)
-          .and_then(|cached| digest(&cached))
+        let digest = digests.of(Path::new(&source));
+        crate::graphics_cache::cached_output(policy, &source, digest.as_ref(), key)
+          .and_then(|cached| digests.content(&cached))
           .is_some_and(|cached| cached == held)
       },
       Output::Made => false,
@@ -1549,16 +1563,18 @@ impl Graphics {
   }
 
   /// Whether `name`, stored for the source at `source` (relative to the destination directory), is the name that
-  /// source takes (its kept path, or its stem) and the source holds `r`'s bytes, so `r` may share its file. Only a
-  /// relative path to a regular file (a link followed to one) is read: an absolute path, which no run stores, or a
-  /// device or a FIFO, whose read may never end, is reported once (Warning).
+  /// source takes (its kept path, or its stem) and the source holds `r`'s bytes, so `r` may share its file. The name
+  /// is matched first, and only then is a relative path to a regular file (a link followed to one) read: an absolute
+  /// path, which no run stores, or a device or a FIFO, whose read may never end, is reported once (Warning). A source
+  /// is not bound to the source directory: a converted image's may lie outside it (issue 995, `\subimport{../A/}`).
   fn vouch(
     r: &Request,
     name: &ResourceName,
     source: &str,
     dirs: &PageDirs,
     cache_file: &str,
-    reported: &std::cell::Cell<bool>,
+    warn: &dyn Fn(String),
+    digests: &Digests,
   ) -> bool {
     use latexml_core::util::pathname::{absolute, relative};
     if source.is_empty() {
@@ -1571,36 +1587,33 @@ impl Graphics {
       )
     });
     let abs = absolute(&Path::new(&dirs.dest_dir).join(source).to_string_lossy());
-    let regular = std::fs::metadata(&abs).map(|meta| meta.is_file());
-    if !relative_path || matches!(regular, Ok(false)) {
-      if !reported.replace(true) {
-        Warn!(
-          "unexpected",
-          "cache",
-          "The cache {} gives {} the source {}, not a file relative to the destination; it is ignored",
-          cache_file,
-          name.dest,
-          source
-        );
-      }
+    let unusable = || {
+      warn(format!(
+        "The cache {cache_file} gives {} the source {source}, not a file relative to the destination; it is ignored",
+        name.dest
+      ));
+      false
+    };
+    if !relative_path {
+      return unusable();
+    }
+    let its_name = if r.copy {
+      relative(&abs, &absolute(&dirs.source_dir)) == name.dest
+    } else {
+      Path::new(&abs)
+        .file_stem()
+        .is_some_and(|stem| format!("{}.{}", stem.to_string_lossy(), r.ext) == name.dest)
+    };
+    if !its_name {
       return false;
     }
-    let same_bytes = regular.is_ok()
-      && Self::digest_file_content(&abs).is_some_and(|d| {
-        d.content()
-          .iter()
-          .map(|b| format!("{b:02x}"))
-          .collect::<String>()
-          == r.identity
-      });
-    same_bytes
-      && if r.copy {
-        relative(&abs, &absolute(&dirs.source_dir)) == name.dest
-      } else {
-        Path::new(&abs)
-          .file_stem()
-          .is_some_and(|stem| format!("{}.{}", stem.to_string_lossy(), r.ext) == name.dest)
-      }
+    match std::fs::metadata(&abs).map(|meta| meta.is_file()) {
+      Ok(false) => unusable(),
+      Ok(true) => digests
+        .content(Path::new(&abs))
+        .is_some_and(|d| hex(&d) == r.identity),
+      Err(_) => false,
+    }
   }
 
   /// A copy's path relative to `dest_dir` when it keeps the source's path relative to the source directory: taken
@@ -2930,6 +2943,27 @@ fn base64_prefix(data: &str, limit: usize) -> Vec<u8> {
   out
 }
 
+/// The content digests of the files one naming call reads, each read once.
+#[derive(Default)]
+struct Digests(std::cell::RefCell<HashMap<PathBuf, Option<crate::graphics_cache::SourceDigest>>>);
+
+impl Digests {
+  /// The digest of the file at `path` (`None`: unreadable).
+  fn of(&self, path: &Path) -> Option<crate::graphics_cache::SourceDigest> {
+    self
+      .0
+      .borrow_mut()
+      .entry(path.to_path_buf())
+      .or_insert_with(|| crate::graphics_cache::SourceDigest::of_file(path))
+      .clone()
+  }
+
+  /// The file's content digest.
+  fn content(&self, path: &Path) -> Option<[u8; 32]> { self.of(path).map(|d| d.content()) }
+}
+
+fn hex(digest: &[u8; 32]) -> String { digest.iter().map(|b| format!("{b:02x}")).collect() }
+
 /// Map a destination path to a `&'static str` extension suitable for
 /// `graphics_cache::RenderKey::ext`. Only common image targets need to
 /// round-trip through the cache; anything else collapses to `""` and
@@ -3607,7 +3641,6 @@ mod tests {
       .into_owned();
     Request {
       key:      format!("LaTeXML::Post::Graphics:{source}.{ext}||{source}"),
-      content:  format!("{ext}|{source}||"),
       bytes:    format!("{ext}|{source}||"),
       owner:    format!("{ext}|||{source}"),
       source:   source.to_string(),
@@ -3628,10 +3661,13 @@ mod tests {
       vouch:   &|_, _, _| true,
       on_disk: None,
       cache:   crate::document::CACHE_FILE,
+      warn:    &|_| {},
     };
-    DocCache::new(true).with_store(None, |store| {
-      store.immediate(|tx, _| crate::resource_cache::resolve(tx, &checks, &pages))
-    })[0]
+    DocCache::new(true)
+      .with_store(None, |store| {
+        store.immediate(|tx, _| crate::resource_cache::resolve(tx, &checks, &pages))
+      })
+      .unwrap()[0]
       .iter()
       .map(|r| r.name.dest.clone())
       .collect()
@@ -3961,10 +3997,13 @@ endobj
     assert_eq!(Graphics::read_svg_dimensions(tmp.to_str().unwrap()), None);
   }
 
-  /// Three `<graphics>` nodes over one source: two share `options`, one
-  /// differs. `process` must coalesce the matching pair into a single
-  /// conversion and run a second one for the differing options — proven by
-  /// counting the lines a fake `convert` on `PATH` appends to its log.
+  /// Three `<graphics>` nodes over one source: two differ only in their
+  /// width, which sizes the `<img>` and not the file, one picks a page.
+  /// `process` must coalesce the two widths into a single conversion and file
+  /// and run a second one for the page — proven by counting the lines a fake
+  /// `convert` on `PATH` appends to its log. A width edited and run again
+  /// keeps the file's name (issue 995 review: `x1.png`, then `x2.png`, after
+  /// each layout tweak).
   ///
   /// **The cache must be bypassed for this to mean anything.** The
   /// observable here is "how many converter subprocesses ran", and
@@ -4015,7 +4054,7 @@ endobj
 <document xmlns="http://dlmf.nist.gov/LaTeXML" xml:id="d">
   <graphics graphic="plot.ai" candidates="{0}" options="width=20pt"/>
   <graphics graphic="plot.ai" candidates="{0}" options="width=40pt"/>
-  <graphics graphic="plot.ai" candidates="{0}" options="width=20pt"/>
+  <graphics graphic="plot.ai" candidates="{0}" options="width=20pt,page=2"/>
 </document>"#,
       source.display()
     );
@@ -4041,9 +4080,24 @@ endobj
     assert_eq!(
       log_contents.lines().count(),
       2,
-      "matching source/page/options should coalesce, but different options need separate \
-       conversions; convert log was:\n{log_contents}"
+      "two widths of one source and page should coalesce, but another page needs a conversion \
+       of its own; convert log was:\n{log_contents}"
     );
+    assert_eq!(out.matches(r#"imagesrc="plot.png""#).count(), 2);
+    assert_eq!(out.matches(r#"imagesrc="x1.png""#).count(), 1);
+    // The width edited, a second run into the folder: the same names.
+    let edited = xml
+      .replace("width=40pt", "width=30pt")
+      .replace("width=20pt", "width=25pt");
+    let doc_opts = PostDocumentOptions {
+      destination: Some(tmp.join("out.html").display().to_string()),
+      source_directory: Some(tmp.path().display().to_string()),
+      ..Default::default()
+    };
+    let doc = PostDocument::new_from_string(&edited, doc_opts).unwrap();
+    let mut graphics = Graphics::new(None, true).with_cache_policy(CachePolicy::Bypass);
+    let nodes = graphics.to_process(&doc);
+    let out = graphics.process(doc, nodes).unwrap()[0].to_xml_string();
     assert_eq!(out.matches(r#"imagesrc="plot.png""#).count(), 2);
     assert_eq!(out.matches(r#"imagesrc="x1.png""#).count(), 1);
   }
@@ -4264,8 +4318,10 @@ endobj
     png.extend_from_slice(&[0u8; 16]);
     let img = tmp.join("img.png");
     std::fs::write(&img, &png).unwrap();
+    // The author's own `x1.png`, another picture (a byte past its header).
+    let authors_png = [png.clone(), vec![1]].concat();
     let authors_x1 = tmp.join("x1.png");
-    std::fs::write(&authors_x1, &png).unwrap();
+    std::fs::write(&authors_x1, &authors_png).unwrap();
     let log = tmp.join("convert.log");
     let fake_convert = tmp.join("convert");
     std::fs::write(
@@ -4327,7 +4383,7 @@ endobj
     }
     let copied = std::fs::read(dest.parent().unwrap().join("x1.png")).unwrap();
     assert_eq!(
-      copied, png,
+      copied, authors_png,
       "the author's x1.png must reach the output unchanged"
     );
   }

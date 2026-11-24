@@ -1,13 +1,15 @@
 //! A small SQLite store for the post-processor's on-disk caches: a file, or an in-memory database when there is no
 //! file to keep or it cannot be used.
 //!
-//! WAL journal (whatever mode SQLite grants where WAL cannot be set, a network filesystem), `synchronous=OFF` (the
-//! store is rebuildable: a lost write costs a name, not a document), a busy timeout, and a `user_version` gate: a file
-//! made for another schema is left alone. Opening is retried while another process holds the file: turning a new file
-//! to WAL meets a lock the busy timeout does not wait on (SQLite returns `SQLITE_BUSY` at once to avoid a deadlock).
-//! Writers take one `IMMEDIATE` transaction per allocation ([`SqliteStore::immediate`]), so processes sharing the file
-//! serialize on it. A store is opened lazily by its owner and never kept in a static (a forked process must not
-//! inherit the connection). Failure policy: a Warning, then the rest of the run in memory ([`SqliteStore::fell_back`]).
+//! WAL journal (the file's own mode where WAL cannot be set: a network filesystem, or one without shared memory, FUSE,
+//! CIFS, WSL's `/mnt`), `synchronous=NORMAL` (in WAL no sync per commit, and a crash never corrupts the file), a busy
+//! timeout, and a `user_version` gate: a file made for another schema, or another program's database, is left alone;
+//! a new file gets its schema under the write lock. Opening is retried while another process holds the file: turning
+//! a new file to WAL meets a lock the busy timeout does not wait on (SQLite returns `SQLITE_BUSY` at once to avoid a
+//! deadlock). Writers take one `IMMEDIATE` transaction per allocation ([`SqliteStore::immediate`]), so processes
+//! sharing the file serialize on it. A store is opened lazily by its owner and never kept in a static (a forked process
+//! must not inherit the connection). Failure policy, opening, reading or writing: a Warning, then the rest of the run in
+//! memory ([`SqliteStore::fell_back`]), from a copy of what the file held when it can still be read.
 
 use std::path::{Path, PathBuf};
 
@@ -64,6 +66,7 @@ impl SqliteStore {
         Err(OpenError::Version(found)) => {
           return Err(format!("schema version {found}, not {version}"));
         },
+        Err(OpenError::Foreign) => return Err("another program's database".to_string()),
         Ok(conn) => return Ok(conn),
       }
     }
@@ -77,22 +80,43 @@ impl SqliteStore {
   }
 
   fn open_once(file: &Path, schema: &str, version: i32) -> Result<Connection, OpenError> {
-    let conn = Connection::open(file)?;
+    let mut conn = Connection::open(file)?;
     conn.busy_timeout(BUSY_TIMEOUT)?;
-    // The mode SQLite grants (`delete` where WAL cannot be set) is accepted; a file in WAL already is not asked again.
+    // A file in WAL already is not asked again. Where WAL cannot be set SQLite grants another mode, or errs (no shared
+    // memory): the file keeps its own; only a busy file is tried again.
     let mode: String = conn.query_row("PRAGMA journal_mode", [], |row| row.get(0))?;
-    if !mode.eq_ignore_ascii_case("wal") {
-      let _: String = conn.query_row("PRAGMA journal_mode=WAL", [], |row| row.get(0))?;
+    if !mode.eq_ignore_ascii_case("wal")
+      && let Err(e) = conn.query_row("PRAGMA journal_mode=WAL", [], |row| row.get::<_, String>(0))
+      && Self::busy(&e)
+    {
+      return Err(e.into());
     }
-    conn.pragma_update(None, "synchronous", "OFF")?;
+    conn.pragma_update(None, "synchronous", "NORMAL")?;
     let found: i32 = conn.pragma_query_value(None, "user_version", |row| row.get(0))?;
-    match found {
-      0 => conn.execute_batch(&format!(
-        "BEGIN IMMEDIATE; {schema} PRAGMA user_version = {version}; COMMIT;"
-      ))?,
+    if found == version {
+      return Ok(conn);
+    }
+    if found != 0 {
+      return Err(OpenError::Version(found));
+    }
+    // A new file gets the schema under the write lock, read again there: another process may have made it meanwhile.
+    let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
+    match tx.pragma_query_value(None, "user_version", |row| row.get(0))? {
+      0 => {
+        let tables: i64 = tx.query_row(
+          "SELECT count(*) FROM sqlite_master WHERE type = 'table'",
+          [],
+          |row| row.get(0),
+        )?;
+        if tables > 0 {
+          return Err(OpenError::Foreign);
+        }
+        tx.execute_batch(&format!("{schema} PRAGMA user_version = {version};"))?;
+      },
       found if found == version => {},
       found => return Err(OpenError::Version(found)),
     }
+    tx.commit()?;
     Ok(conn)
   }
 
@@ -107,33 +131,26 @@ impl SqliteStore {
   /// The file the store reads, `None` in memory.
   pub fn file(&self) -> Option<&Path> { self.file.as_deref() }
 
-  /// Whether a file was asked for and could not be used, so the store forgets what earlier runs stored there.
+  /// Whether a file was asked for and could not be used, so the store may not know what earlier runs stored there.
   pub fn fell_back(&self) -> bool { self.fell_back }
 
-  /// Run `f` in one `IMMEDIATE` transaction, committed when it succeeds. A store that fails is reported (Warning)
-  /// and replaced by an empty in-memory one, where `f` runs again. `f` is told whether the store runs in memory in
-  /// place of its file ([`Self::fell_back`]), as it is on that second run.
+  /// Run `f` in one `IMMEDIATE` transaction, committed when it succeeds. A file that fails is reported (Warning) and
+  /// replaced by memory (`fall_back`), where `f` runs again: `f` is told whether the store runs in memory in
+  /// place of its file ([`Self::fell_back`]), and defers its own side effects (a Warning) until the call returns. A
+  /// transaction that fails in memory is reported (Error) and gives `None`.
   pub fn immediate<T>(
     &mut self,
     mut f: impl FnMut(&Transaction, bool) -> rusqlite::Result<T>,
-  ) -> T {
-    match Self::run(&mut self.conn, self.fell_back, &mut f) {
-      Ok(value) => value,
+  ) -> Option<T> {
+    let mut attempt = |store: &mut Self| Self::run(&mut store.conn, store.fell_back, &mut f);
+    match attempt(self) {
+      Ok(value) => Some(value),
       Err(e) => {
-        Warn!(
-          "I/O",
-          "cache",
-          "The cache {} failed ({}); this run's further entries are kept in memory only",
-          self
-            .file
-            .as_deref()
-            .map_or("in memory".to_string(), |f| f.display().to_string()),
-          e
-        );
-        self.conn = Self::in_memory(self.schema);
-        self.fell_back |= self.file.is_some();
-        self.file = None;
-        Self::run(&mut self.conn, self.fell_back, &mut f).expect("an in-memory SQLite transaction")
+        if self.fall_back(&e) {
+          Self::ok(attempt(self))
+        } else {
+          Self::ok(Err(e))
+        }
       },
     }
   }
@@ -149,9 +166,62 @@ impl SqliteStore {
     Ok(value)
   }
 
-  /// A read outside any transaction.
-  pub fn read<T>(&self, f: impl FnOnce(&Connection) -> rusqlite::Result<T>) -> Option<T> {
-    f(&self.conn).ok()
+  /// A read outside any transaction, under [`Self::immediate`]'s failure policy.
+  pub fn read<T>(&mut self, f: impl Fn(&Connection) -> rusqlite::Result<T>) -> Option<T> {
+    match f(&self.conn) {
+      Ok(value) => Some(value),
+      Err(e) => {
+        if self.fall_back(&e) {
+          Self::ok(f(&self.conn))
+        } else {
+          Self::ok(Err(e))
+        }
+      },
+    }
+  }
+
+  /// A store in memory reports its failure (Error), a bug in its caller's statements.
+  fn ok<T>(result: rusqlite::Result<T>) -> Option<T> {
+    result
+      .map_err(|e| {
+        Error!(
+          "internal",
+          "cache",
+          "The cache in memory failed ({}); the entry is not kept",
+          e
+        );
+      })
+      .ok()
+  }
+
+  /// After `e` on the file: a Warning, then the store in memory, holding a copy of the file's entries (this run's
+  /// among them) when it can still be read, else none. Whether there was a file to leave.
+  fn fall_back(&mut self, e: &rusqlite::Error) -> bool {
+    let Some(file) = self.file.take() else {
+      return false;
+    };
+    let mut copy = Connection::open_in_memory().expect("an in-memory SQLite database");
+    let copied = rusqlite::backup::Backup::new(&self.conn, &mut copy)
+      .and_then(|backup| backup.run_to_completion(1024, std::time::Duration::ZERO, None));
+    Warn!(
+      "I/O",
+      "cache",
+      "The cache {} failed ({}); this run's further entries are kept in memory only{}",
+      file.display(),
+      e,
+      if copied.is_ok() {
+        ""
+      } else {
+        ", and its earlier ones are lost"
+      }
+    );
+    self.conn = if copied.is_ok() {
+      copy
+    } else {
+      Self::in_memory(self.schema)
+    };
+    self.fell_back = true;
+    true
   }
 }
 
@@ -159,6 +229,8 @@ enum OpenError {
   Sqlite(rusqlite::Error),
   /// The file holds this schema version, another than the store's.
   Version(i32),
+  /// The file is another program's SQLite database: tables, and no schema version.
+  Foreign,
 }
 
 impl From<rusqlite::Error> for OpenError {
@@ -191,12 +263,54 @@ mod tests {
     assert_eq!(store.file(), None);
     assert_eq!(
       store.immediate(|tx, _| tx.execute("INSERT INTO t(v) VALUES (1)", [])),
-      1
+      Some(1)
     );
     assert!(
       std::fs::read(&not_sqlite)
         .unwrap()
         .starts_with(b"a Berkeley DB file")
+    );
+    // Another program's database, its `user_version` 0, keeps its tables and its version.
+    let foreign = dir.path().join("other.db");
+    Connection::open(&foreign)
+      .unwrap()
+      .execute_batch("CREATE TABLE notes(text TEXT);")
+      .unwrap();
+    let store = SqliteStore::open(Some(&foreign), SCHEMA, 1);
+    assert_eq!((store.file(), store.fell_back()), (None, true));
+    let conn = Connection::open(&foreign).unwrap();
+    let tables: Vec<String> = conn
+      .prepare("SELECT name FROM sqlite_master WHERE type = 'table'")
+      .unwrap()
+      .query_map([], |row| row.get(0))
+      .unwrap()
+      .collect::<Result<_, _>>()
+      .unwrap();
+    let version: i32 = conn
+      .pragma_query_value(None, "user_version", |row| row.get(0))
+      .unwrap();
+    assert_eq!((tables, version), (vec!["notes".to_string()], 0));
+  }
+
+  /// A statement that fails in memory is reported and gives nothing, without a panic, and the store keeps its entries.
+  #[test]
+  fn a_failure_in_memory_gives_nothing() {
+    let mut store = SqliteStore::open(None, SCHEMA, 1);
+    assert_eq!(
+      store.immediate(|tx, _| tx.execute("INSERT INTO t(v) VALUES (1)", [])),
+      Some(1)
+    );
+    assert_eq!(
+      store.immediate(|tx, _| tx.execute("INSERT INTO nowhere(v) VALUES (1)", [])),
+      None
+    );
+    assert_eq!(
+      store.read(|conn| conn.query_row("SELECT nothing FROM t", [], |row| row.get::<_, i64>(0))),
+      None
+    );
+    assert_eq!(
+      store.read(|conn| conn.query_row("SELECT count(*) FROM t", [], |row| row.get::<_, i64>(0))),
+      Some(1)
     );
   }
 
@@ -263,7 +377,9 @@ mod tests {
     use std::os::unix::fs::PermissionsExt;
     let dir = tempfile::tempdir().unwrap();
     let file = dir.path().join("c.db");
-    drop(SqliteStore::open(Some(&file), SCHEMA, 1));
+    let mut store = SqliteStore::open(Some(&file), SCHEMA, 1);
+    store.immediate(|tx, _| tx.execute("INSERT INTO t(v) VALUES (7)", []));
+    drop(store);
     std::fs::set_permissions(&file, std::fs::Permissions::from_mode(0o444)).unwrap();
     if std::fs::OpenOptions::new().write(true).open(&file).is_ok() {
       eprintln!("SKIP: a read-only file is writable here (root)");
@@ -276,9 +392,16 @@ mod tests {
       told.push(fell_back);
       tx.execute("INSERT INTO t(v) VALUES (1)", [])
     });
+    // The entries the file held are kept in memory, the transaction's own added there once.
+    let kept = store.read(|conn| {
+      conn
+        .prepare("SELECT v FROM t ORDER BY v")?
+        .query_map([], |row| row.get::<_, i64>(0))?
+        .collect::<rusqlite::Result<Vec<_>>>()
+    });
     assert_eq!(
-      (told, store.file(), store.fell_back()),
-      (vec![false, true], None, true)
+      (told, store.file(), store.fell_back(), kept),
+      (vec![false, true], None, true, Some(vec![1, 7]))
     );
   }
 }

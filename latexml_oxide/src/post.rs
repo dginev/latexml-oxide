@@ -1629,6 +1629,8 @@ fn run_post_processing_inner(
         .unwrap_or_default(),
       log_level: latexml_core::util::logger::stderr_level().to_string(),
     };
+    // The names are stored: the workers open the cache file themselves, so this process holds no handle across.
+    run_cache.close_files();
     let t_pages = audit_start("render_pages");
     let outcome = crate::render_workers::parallel_render(
       manifest,

@@ -28,6 +28,8 @@ const EDITED: &str =
   include_str!("../../../tools/perfect_kernel/repros/loader/image_edited_keeps_its_name.tex");
 const CORRUPT: &str =
   include_str!("../../../tools/perfect_kernel/repros/loader/image_names_corrupt_cache_entry.tex");
+const SAME_BYTES: &str =
+  include_str!("../../../tools/perfect_kernel/repros/loader/image_same_bytes_two_documents.tex");
 #[cfg(unix)]
 const LINKED: &str = include_str!(
   "../../../tools/perfect_kernel/repros/loader/image_copy_through_linked_destination.tex"
@@ -703,6 +705,67 @@ fn png(w: u32, h: u32) -> Vec<u8> {
   out
 }
 
+/// Two documents into one folder, their images two files of the same bytes: each page gets a file of its own, so
+/// the first image edited and its document alone run again leaves the second page's picture (round 6: both on
+/// `x1.png`, and `d2.html` showed `d1`'s new picture). The pages of one document still share a file
+/// (`batchfix995_split_pages_share_the_generated_names`). `resource_cache.rs` `reusable`. Repro
+/// loader/image_same_bytes_two_documents.
+#[test]
+fn batchfix995_another_documents_file_is_never_shared() {
+  let root = tempfile::tempdir().unwrap();
+  let p = root.path().join("p");
+  for dir in ["p", "c1", "c2"] {
+    std::fs::create_dir_all(root.path().join(dir)).unwrap();
+  }
+  std::fs::write(p.join("d1.tex"), SAME_BYTES).unwrap();
+  std::fs::write(
+    p.join("d2.tex"),
+    SAME_BYTES.replace(
+      "D1 \\includegraphics{../c1/a.png}",
+      "D2 \\includegraphics{../c2/b.png}",
+    ),
+  )
+  .unwrap();
+  std::fs::write(root.path().join("c1/a.png"), png(3, 2)).unwrap();
+  std::fs::write(root.path().join("c2/b.png"), png(3, 2)).unwrap();
+  let run = |doc: &str| {
+    let output = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+      .args([
+        "--nocomments",
+        "--timeout=110",
+        &format!("--dest=../out/{doc}.html"),
+        &format!("{doc}.tex"),
+      ])
+      .current_dir(&p)
+      .output()
+      .expect("spawn latexml_oxide");
+    let log = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
+    assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  };
+  let out = root.path().join("out");
+  let shown = |doc: &str| images_of(&out.join(format!("{doc}.html")));
+  let png_of = |w: u32| format!("png {} bytes", png(w, 2).len());
+  run("d1");
+  run("d2");
+  assert_eq!(
+    (shown("d1"), shown("d2")),
+    (vec![("x1.png".to_string(), png_of(3))], vec![(
+      "x2.png".to_string(),
+      png_of(3)
+    )])
+  );
+  std::fs::write(root.path().join("c1/a.png"), png(5, 2)).unwrap();
+  run("d1");
+  assert_eq!(
+    (shown("d1"), shown("d2")),
+    (vec![("x1.png".to_string(), png_of(5))], vec![(
+      "x2.png".to_string(),
+      png_of(3)
+    )])
+  );
+  assert_eq!(std::fs::read(out.join("x2.png")).unwrap(), png(3, 2));
+}
+
 /// `--sitedirectory` with a destination reached through a symbolic link (`site/out` → `elsewhere/deep/out`): the copy
 /// is written at its lexical path (Perl's `pathname_copy` canonicalizes first), so `../children/c.svg` from `site/out`
 /// is the source itself and nothing is written (round 1: `elsewhere/deep/children/c.svg`, the system resolving `..`
@@ -1001,7 +1064,9 @@ fn batchfix995_a_locked_cache_waits_less_than_the_conversion() {
 
 /// A planted `_source_` that is a device, or a path out of the destination: the conversion ends promptly (round 4
 /// hashed `/dev/zero` for ever), reports the device once, and writes nothing out of the folder; a planted entry of
-/// an image's own is reported once. `Graphics::vouch`, `resource_cache::place`.
+/// an image's own is reported once. The files are said to be owned by images of this run with the same bytes
+/// (`figs/c.png`, `figs/d.png`), the only owners a file is shared with; a source whose name is not the file's is never
+/// read (round 6 hashed `../outside.png` before the name check). `Graphics::vouch`, `resource_cache::place`.
 #[cfg(unix)]
 #[test]
 fn batchfix995_a_planted_source_is_never_read_for_ever() {
@@ -1011,12 +1076,15 @@ fn batchfix995_a_planted_source_is_never_read_for_ever() {
   std::fs::write(
     src.join("p.tex"),
     "\\documentclass{article}\\usepackage{graphicx}\\begin{document}\n\
-     Fig \\includegraphics{figs/a.png} \\includegraphics{figs/b.png}\n\\end{document}\n",
+     Fig \\includegraphics{figs/a.png} \\includegraphics{figs/b.png}\n\
+     \\includegraphics{figs/c.png} \\includegraphics{figs/d.png}\n\\end{document}\n",
   )
   .unwrap();
   let (a, b) = (png(4, 4), png(4, 5));
-  std::fs::write(src.join("figs/a.png"), a).unwrap();
+  std::fs::write(src.join("figs/a.png"), &a).unwrap();
   std::fs::write(src.join("figs/b.png"), &b).unwrap();
+  std::fs::write(src.join("figs/c.png"), &a).unwrap();
+  std::fs::write(src.join("figs/d.png"), &b).unwrap();
   let run = || {
     let output = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
       .args(["--nocomments", "--timeout=60", "--dest=p.html", "p.tex"])
@@ -1041,14 +1109,14 @@ fn batchfix995_a_planted_source_is_never_read_for_ever() {
         "CREATE TABLE kv(key TEXT PRIMARY KEY, value TEXT NOT NULL) WITHOUT ROWID; PRAGMA user_version = 1;",
       )
       .unwrap();
-    for (image, name, source) in [
-      ("figs/a.png", "evil.png", "/dev/zero"),
-      ("figs/b.png", "evil2.png", "../outside.png"),
+    for (image, name, source, owner) in [
+      ("figs/a.png", "evil.png", "/dev/zero", "figs/c.png"),
+      ("figs/b.png", "evil2.png", "../outside.png", "figs/d.png"),
     ] {
       let h = digest(&src.join(image));
       for (key, value) in [
-        (format!("_content_copy|{h}|"), name.to_string()),
-        (format!("_owner_{name}"), "copy|other".to_string()),
+        (format!("_content_copy|{h}"), name.to_string()),
+        (format!("_owner_{name}"), format!("copy|{owner}")),
         (format!("_holds_{name}"), format!("copy|{h}")),
         (format!("_source_{name}"), source.to_string()),
       ] {
@@ -1087,7 +1155,12 @@ fn batchfix995_a_planted_source_is_never_read_for_ever() {
     .into_iter()
     .map(|(url, _)| url)
     .collect();
-  assert_eq!(urls, ["x1.png", "figs/b.png"]);
+  assert_eq!(urls, [
+    "figs/c.png",
+    "figs/b.png",
+    "figs/c.png",
+    "figs/b.png"
+  ]);
   assert!(!src.join("evil.png").exists() && !src.join("evil2.png").exists());
   assert_eq!(std::fs::read(root.path().join("outside.png")).unwrap(), b);
 }

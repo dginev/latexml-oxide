@@ -647,6 +647,9 @@ impl PostDocument {
       source: self.source.clone(),
       source_directory: self.source_directory.clone(),
       searchpaths: Some(self.searchpaths.clone()),
+      // The parent's cache, as Perl's `new_internal` clones it (`Post.pm` L687-690).
+      nocache: self.nocache,
+      cache: Some(self.cache.clone()),
       ..PostDocumentOptions::default()
     };
     let mut subdoc = Self::new_internal(new_xml_doc, opts);
@@ -2262,18 +2265,17 @@ impl DocCache {
   ) -> T {
     let mut inner = self.0.borrow_mut();
     let persist = !inner.nocache;
-    let store = inner
-      .stores
-      .entry(dir.unwrap_or_default().to_string())
-      .or_insert_with(|| {
-        let file = dir.filter(|_| persist).map(|dir| {
-          // Perl's `checkDestination` makes the directory (`Post.pm` L941-949): the cache is opened before any page
-          // is written into a new `--dest` directory.
-          let _ = std::fs::create_dir_all(dir);
-          Path::new(dir).join(CACHE_FILE)
-        });
-        crate::sqlite_store::SqliteStore::open(file.as_deref(), DOC_CACHE_SCHEMA, 1)
+    // One store per directory however it is spelled (`out`, `./out`).
+    let key = dir.map_or_else(String::new, latexml_core::util::pathname::absolute);
+    let store = inner.stores.entry(key).or_insert_with(|| {
+      let file = dir.filter(|_| persist).map(|dir| {
+        // Perl's `checkDestination` makes the directory (`Post.pm` L941-949): the cache is opened before any page
+        // is written into a new `--dest` directory.
+        let _ = std::fs::create_dir_all(dir);
+        Path::new(dir).join(CACHE_FILE)
       });
+      crate::sqlite_store::SqliteStore::open(file.as_deref(), DOC_CACHE_SCHEMA, 1)
+    });
     f(store)
   }
 
@@ -2290,6 +2292,16 @@ impl DocCache {
   /// Close every store (Perl's `closeCache`, `Post.pm` L1543-1548): its database checkpointed, no side file left for
   /// a package to pick up.
   pub fn close(&self) { self.0.borrow_mut().stores.clear(); }
+
+  /// Close the stores that run on their file, reopened at their next use: before other processes open it (the render
+  /// workers), the file checkpointed and no handle held across. A store in memory keeps its entries.
+  pub fn close_files(&self) {
+    self
+      .0
+      .borrow_mut()
+      .stores
+      .retain(|_, store| store.file().is_none());
+  }
 }
 
 /// The value under `key`.

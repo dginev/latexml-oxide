@@ -402,12 +402,17 @@ fn lookup_digest(
 }
 
 /// The cache's entry for `(source, key)` when `policy` consults the cache and it holds one: what a conversion of the
-/// source installs.
-pub fn cached_output(policy: CachePolicy, source: &str, key: RenderKey) -> Option<PathBuf> {
+/// source installs (`digest`: the source's, when read already).
+pub fn cached_output(
+  policy: CachePolicy,
+  source: &str,
+  digest: Option<&SourceDigest>,
+  key: RenderKey,
+) -> Option<PathBuf> {
   if policy == CachePolicy::Bypass || disabled() {
     return None;
   }
-  let cached = cache_path(&cache_root()?, &hash_key(Path::new(source), key)?, key.ext);
+  let cached = cache_path(&cache_root()?, &source_key(source, digest, key)?, key.ext);
   cached.exists().then_some(cached)
 }
 
