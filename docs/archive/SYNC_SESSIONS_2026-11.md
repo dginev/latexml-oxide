@@ -2678,3 +2678,12 @@ Verbatim from `docs/SYNC_STATUS.md` row R when it became the post-merge worklist
   2303.05007, 2312.02238, 2510.22712, 2609.35408, 2609.25700; floating `\captionof` holders 2510.09001, 2609.21948 stay
   in the body. Guards `perfect_kernel_batchtitlefig::*`. Residuals: row R TITLEFIGTRUEFLOAT, TITLEFIGHNOFLOAT,
   TITLEFIGPANELS, TITLEFIGSTREAM.
+- REGTAILB — fixed (row R REGTAIL, 2026-11-23): a braced file name (`\include{{./x}}`, `\input{{./x}}`) loses one
+  brace level as latex.ltx's `\@firstofone#3` strips it (latex.ltx:19745-19747; `gullet::expand_as_file_name` for
+  `\input`, `\include`, `\IfFileExists`, `\InputIfFileExists`, catchfile; `\includeonly` per entry) — the chapter was
+  silently dropped (KPE #1323); amsgen defines `\RIfM@` (amsgen.sty:49; KPE #1324); breqn sets `^`/`_` to catcodes 7/8
+  at load (breqn.sty:41/:54); tipa's accented letter in math is an `\hbox` (t3enc.def:270/:284); a list label that is
+  the author's own `\fnum@<ctr>` keeps the author's meaning (`\lx@list@fnum`; KPE #1325). Witnesses 2406.05605 (Fatal →
+  0 E, 170 → 53k words), 2408.05715, 2309.07288, 1701.06055, 2402.13372, 1310.2513, cond-mat9505034. A/B 540 papers vs
+  INT081G: E 7452 → 7035, F 19 → 13, 12 changed, 0 worse; 40 random `\input`/`\include` papers byte-identical. Guards
+  `perfect_kernel_batchregtailb::*`. Residuals: row R FILENAMESPACE, FNUMINDIRECT, ITEMTHEBLANK.

@@ -22634,8 +22634,8 @@ of a leading group; Duke's dissertation template writes `\include{{./Chapter1/in
 
 pdflatex reads `x.tex` twice; Perl 0.8.8 (same host) gives two `Error:missing_file:{./x}`; the Rust port gave one
 silent "No file {./x}.tex." (the chapter dropped) and one `missing_file`. Fixed in Rust:
-`gullet::expand_as_file_name`, read by `\input`, `\include`, `\includeonly`, `\IfFileExists`, `\InputIfFileExists` and
-catchfile. Witnesses 2406.05605, 2408.05715, 2309.07288; guard
+`gullet::expand_as_file_name`, read by `\input`, `\include`, `\IfFileExists`, `\InputIfFileExists` and catchfile;
+`\includeonly` strips each entry with the string helper `strip_leading_group` (sect11.rs). Witnesses 2406.05605, 2408.05715, 2309.07288; guard
 `perfect_kernel_batchregtailb::braced_file_name_group_is_read_without_its_braces`.
 
 ## 1324. Perl's amsgen defines `\RifM@` for `\RIfM@`
