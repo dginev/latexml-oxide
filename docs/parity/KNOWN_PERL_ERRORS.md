@@ -22690,5 +22690,5 @@ Minimal trigger:
 
 pdflatex prints "6.94444pt 7.5pt"; Perl 0.8.8 (same host) and the Rust port before the fix: "4.30554pt 4.30554pt".
 Fixed in Rust (OXIDIZED_DESIGN_DIVERGENCES #1155): a space-like box with height or depth is sized in its word, and
-`\hphantom` has its argument's width alone. Witness 1210.5701 (xy's `*[o]{\phantom{s}}`: "Dimension too large");
+`\hphantom` has its argument's width alone. Witnesses 1210.5701 (xy's `*[o]{\phantom{s}}`: "Dimension too large"), 2503.14426;
 guards `perfect_kernel_batchregtailc::{phantom_keeps_its_height_among_siblings, xy_circled_phantom_object_converts}`.

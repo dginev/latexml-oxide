@@ -24445,7 +24445,7 @@ with a height at `\footnotesize`, and going by it set a `\parbox` paragraph on o
 `\vphantom` no width. The math parser still reads every phantom as space (the `isSpace` property is unchanged).
 
 **Witness** 1210.5701 (xy.tex:940 boxes an object `$\objectstyle{#1}$`; `*[o]{\phantom{s}}`'s circle had no height:
-"Dimension too large", 101 errors and TooManyErrors). **Guards**
+"Dimension too large", 101 errors and TooManyErrors), 2503.14426 (xy, 15 errors). **Guards**
 `perfect_kernel_batchregtailc::{phantom_keeps_its_height_among_siblings, xy_circled_phantom_object_converts}` (repros
 `math-phantom/{phantom_height_among_siblings, xy_phantom_object_circle_1210_5701}`); repinned to the phantom's height:
 `cluster_schema::empty_node_foreign_object_is_sized` (quantikz's `{\phantom{H}}`), `box_primitives::tikz_align_line_padding`
