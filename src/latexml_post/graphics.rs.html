@@ -5344,151 +5344,166 @@
 <a href=#5344 id=5344 data-nosnippet>5344</a>    .unwrap();
 <a href=#5345 id=5345 data-nosnippet>5345</a>    <span class="kw">let </span>shared = dir.join(<span class="string">"fig.svg"</span>);
 <a href=#5346 id=5346 data-nosnippet>5346</a>    <span class="kw">let </span>stop = AtomicBool::new(<span class="bool-val">false</span>);
-<a href=#5347 id=5347 data-nosnippet>5347</a>    std::thread::scope(|s| {
-<a href=#5348 id=5348 data-nosnippet>5348</a>      s.spawn(|| {
-<a href=#5349 id=5349 data-nosnippet>5349</a>        <span class="kw">while </span>!stop.load(Ordering::Relaxed) {
-<a href=#5350 id=5350 data-nosnippet>5350</a>          <span class="kw">let _ </span>= std::fs::write(<span class="kw-2">&amp;</span>shared, <span class="string">b"&lt;svg xmlns=\"http://www.w3.org/2000/svg\""</span>);
-<a href=#5351 id=5351 data-nosnippet>5351</a>          <span class="kw">let _ </span>= std::fs::remove_file(<span class="kw-2">&amp;</span>shared);
-<a href=#5352 id=5352 data-nosnippet>5352</a>        }
-<a href=#5353 id=5353 data-nosnippet>5353</a>      });
-<a href=#5354 id=5354 data-nosnippet>5354</a>      <span class="kw">for </span>round <span class="kw">in </span><span class="number">0</span>..<span class="number">20 </span>{
-<a href=#5355 id=5355 data-nosnippet>5355</a>        <span class="kw">let </span>xml = <span class="macro">format!</span>(
-<a href=#5356 id=5356 data-nosnippet>5356</a>          <span class="string">r#"&lt;document xmlns="http://dlmf.nist.gov/LaTeXML"&gt;&lt;graphics graphic="fig.pdf" candidates="{}"/&gt;&lt;/document&gt;"#</span>,
-<a href=#5357 id=5357 data-nosnippet>5357</a>          src.display()
-<a href=#5358 id=5358 data-nosnippet>5358</a>        );
-<a href=#5359 id=5359 data-nosnippet>5359</a>        <span class="kw">let </span>doc_opts = <span class="kw">crate</span>::document::PostDocumentOptions {
-<a href=#5360 id=5360 data-nosnippet>5360</a>          destination: <span class="prelude-val">Some</span>(dir.join(<span class="string">"out.html"</span>).display().to_string()),
-<a href=#5361 id=5361 data-nosnippet>5361</a>          source_directory: <span class="prelude-val">Some</span>(dir.display().to_string()),
-<a href=#5362 id=5362 data-nosnippet>5362</a>          ..Default::default()
-<a href=#5363 id=5363 data-nosnippet>5363</a>        };
-<a href=#5364 id=5364 data-nosnippet>5364</a>        <span class="kw">let </span>doc = PostDocument::new_from_string(<span class="kw-2">&amp;</span>xml, doc_opts).expect(<span class="string">"parse"</span>);
-<a href=#5365 id=5365 data-nosnippet>5365</a>        <span class="kw">let </span><span class="kw-2">mut </span>graphics =
-<a href=#5366 id=5366 data-nosnippet>5366</a>          Graphics::new(<span class="prelude-val">None</span>, <span class="bool-val">true</span>).with_cache_policy(<span class="kw">crate</span>::graphics_cache::CachePolicy::Bypass);
-<a href=#5367 id=5367 data-nosnippet>5367</a>        <span class="kw">let </span>nodes = graphics.to_process(<span class="kw-2">&amp;</span>doc);
-<a href=#5368 id=5368 data-nosnippet>5368</a>        <span class="kw">let </span>out = graphics.process(doc, nodes).expect(<span class="string">"graphics process"</span>)[<span class="number">0</span>].to_xml_string();
-<a href=#5369 id=5369 data-nosnippet>5369</a>        <span class="kw">if </span>!out.contains(<span class="string">r#" imagesrc="fig.svg" "#</span>) {
-<a href=#5370 id=5370 data-nosnippet>5370</a>          stop.store(<span class="bool-val">true</span>, Ordering::Relaxed);
-<a href=#5371 id=5371 data-nosnippet>5371</a>          <span class="macro">panic!</span>(<span class="string">"round {round}: the figure left its vector render:\n{out}"</span>);
-<a href=#5372 id=5372 data-nosnippet>5372</a>        }
-<a href=#5373 id=5373 data-nosnippet>5373</a>      }
-<a href=#5374 id=5374 data-nosnippet>5374</a>      stop.store(<span class="bool-val">true</span>, Ordering::Relaxed);
-<a href=#5375 id=5375 data-nosnippet>5375</a>    });
-<a href=#5376 id=5376 data-nosnippet>5376</a>    <span class="kw">let </span><span class="kw-2">mut </span>left: Vec&lt;String&gt; = std::fs::read_dir(<span class="kw-2">&amp;</span>dir)
-<a href=#5377 id=5377 data-nosnippet>5377</a>      .unwrap()
-<a href=#5378 id=5378 data-nosnippet>5378</a>      .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
-<a href=#5379 id=5379 data-nosnippet>5379</a>      <span class="comment">// The cache file, `LaTeXML-oxide.cache`, closed with its document.
-<a href=#5380 id=5380 data-nosnippet>5380</a>      </span>.filter(|name| name != <span class="string">"fig.pdf" </span>&amp;&amp; name != <span class="string">"fig.svg" </span>&amp;&amp; name != <span class="string">"LaTeXML-oxide.cache"</span>)
-<a href=#5381 id=5381 data-nosnippet>5381</a>      .collect();
-<a href=#5382 id=5382 data-nosnippet>5382</a>    left.sort();
-<a href=#5383 id=5383 data-nosnippet>5383</a>    <span class="macro">assert!</span>(
-<a href=#5384 id=5384 data-nosnippet>5384</a>      left.is_empty(),
-<a href=#5385 id=5385 data-nosnippet>5385</a>      <span class="string">"no PNG and no staged file is left: {left:?}"
-<a href=#5386 id=5386 data-nosnippet>5386</a>    </span>);
-<a href=#5387 id=5387 data-nosnippet>5387</a>  }
-<a href=#5388 id=5388 data-nosnippet>5388</a>
-<a href=#5389 id=5389 data-nosnippet>5389</a>  <span class="doccomment">/// `\includegraphics[page=2]` of a vector PDF renders page 2 (100×300 bp; page 1 is 300×100) and leaves
-<a href=#5390 id=5390 data-nosnippet>5390</a>  /// no temp file: mutool's `%d` counts OUTPUT pages from 1, so a temp named for the source page was
-<a href=#5391 id=5391 data-nosnippet>5391</a>  /// never found — pdftocairo drew the image and mutool's SVG stayed in the destination (witnesses
-<a href=#5392 id=5392 data-nosnippet>5392</a>  /// 2305.12780, 1906.10268, 2406.07459, 2406.14311, 1709.02311). Each converter, then the pipeline.
-<a href=#5393 id=5393 data-nosnippet>5393</a>  /// Fixture: `tests/fixtures/two_page_sizes.tex`.
-<a href=#5394 id=5394 data-nosnippet>5394</a>  </span><span class="attr">#[test]
-<a href=#5395 id=5395 data-nosnippet>5395</a>  </span><span class="kw">fn </span>vector_svg_of_page_two_is_page_two() {
-<a href=#5396 id=5396 data-nosnippet>5396</a>    <span class="kw">use </span>latexml_core::util::image::{svg_attr_value, svg_root_tag};
-<a href=#5397 id=5397 data-nosnippet>5397</a>    <span class="kw">let </span>fixture = <span class="macro">format!</span>(
-<a href=#5398 id=5398 data-nosnippet>5398</a>      <span class="string">"{}/tests/fixtures/two_page_sizes.pdf"</span>,
-<a href=#5399 id=5399 data-nosnippet>5399</a>      <span class="macro">env!</span>(<span class="string">"CARGO_MANIFEST_DIR"</span>)
-<a href=#5400 id=5400 data-nosnippet>5400</a>    );
-<a href=#5401 id=5401 data-nosnippet>5401</a>    <span class="kw">let </span>view_box = |path: <span class="kw-2">&amp;</span>Path| {
-<a href=#5402 id=5402 data-nosnippet>5402</a>      <span class="kw">let </span>text = std::fs::read_to_string(path).unwrap();
-<a href=#5403 id=5403 data-nosnippet>5403</a>      svg_root_tag(<span class="kw-2">&amp;</span>text)
-<a href=#5404 id=5404 data-nosnippet>5404</a>        .and_then(|tag| svg_attr_value(tag, <span class="string">"viewBox"</span>))
-<a href=#5405 id=5405 data-nosnippet>5405</a>        .map(|v| v.split_whitespace().collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;().join(<span class="string">" "</span>))
-<a href=#5406 id=5406 data-nosnippet>5406</a>    };
-<a href=#5407 id=5407 data-nosnippet>5407</a>    <span class="kw">let </span>listing = |dir: <span class="kw-2">&amp;</span>Path| {
-<a href=#5408 id=5408 data-nosnippet>5408</a>      <span class="kw">let </span><span class="kw-2">mut </span>names: Vec&lt;String&gt; = std::fs::read_dir(dir)
-<a href=#5409 id=5409 data-nosnippet>5409</a>        .unwrap()
-<a href=#5410 id=5410 data-nosnippet>5410</a>        .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
-<a href=#5411 id=5411 data-nosnippet>5411</a>        .collect();
-<a href=#5412 id=5412 data-nosnippet>5412</a>      names.sort();
-<a href=#5413 id=5413 data-nosnippet>5413</a>      names
-<a href=#5414 id=5414 data-nosnippet>5414</a>    };
-<a href=#5415 id=5415 data-nosnippet>5415</a>    <span class="kw">let </span>tmp = TempDir::new(<span class="string">"svg_page_two"</span>);
-<a href=#5416 id=5416 data-nosnippet>5416</a>    <span class="kw">type </span>Converter = <span class="kw">fn</span>(<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str, <span class="prelude-ty">Option</span>&lt;u32&gt;) -&gt; bool;
-<a href=#5417 id=5417 data-nosnippet>5417</a>    <span class="kw">let </span>converters: [(<span class="kw-2">&amp;</span>str, Converter); <span class="number">2</span>] = [
-<a href=#5418 id=5418 data-nosnippet>5418</a>      (<span class="string">"mutool"</span>, Graphics::convert_image_svg_mutool),
-<a href=#5419 id=5419 data-nosnippet>5419</a>      (<span class="string">"pdftocairo"</span>, Graphics::convert_image_svg_pdftocairo),
-<a href=#5420 id=5420 data-nosnippet>5420</a>    ];
-<a href=#5421 id=5421 data-nosnippet>5421</a>    <span class="kw">let </span><span class="kw-2">mut </span>mutool = <span class="bool-val">false</span>;
-<a href=#5422 id=5422 data-nosnippet>5422</a>    <span class="kw">for </span>(tool, convert) <span class="kw">in </span>converters {
-<a href=#5423 id=5423 data-nosnippet>5423</a>      <span class="kw">if </span>!svg_tool_or_skip(tool, <span class="string">"svg_page_two"</span>) {
-<a href=#5424 id=5424 data-nosnippet>5424</a>        <span class="kw">continue</span>;
-<a href=#5425 id=5425 data-nosnippet>5425</a>      }
-<a href=#5426 id=5426 data-nosnippet>5426</a>      mutool |= tool == <span class="string">"mutool"</span>;
-<a href=#5427 id=5427 data-nosnippet>5427</a>      <span class="kw">let </span>dir = tmp.join(tool);
-<a href=#5428 id=5428 data-nosnippet>5428</a>      std::fs::create_dir_all(<span class="kw-2">&amp;</span>dir).unwrap();
-<a href=#5429 id=5429 data-nosnippet>5429</a>      <span class="kw">for </span>(page, expected) <span class="kw">in </span>[(<span class="number">2</span>, <span class="string">"0 0 100 300"</span>), (<span class="number">1</span>, <span class="string">"0 0 300 100"</span>)] {
-<a href=#5430 id=5430 data-nosnippet>5430</a>        <span class="kw">let </span>dest = dir.join(<span class="macro">format!</span>(<span class="string">"p{page}.svg"</span>));
-<a href=#5431 id=5431 data-nosnippet>5431</a>        <span class="macro">assert!</span>(
-<a href=#5432 id=5432 data-nosnippet>5432</a>          convert(<span class="kw-2">&amp;</span>fixture, dest.to_str().unwrap(), <span class="prelude-val">Some</span>(page)),
-<a href=#5433 id=5433 data-nosnippet>5433</a>          <span class="string">"{tool} converts page {page}"
-<a href=#5434 id=5434 data-nosnippet>5434</a>        </span>);
-<a href=#5435 id=5435 data-nosnippet>5435</a>        <span class="macro">assert_eq!</span>(
-<a href=#5436 id=5436 data-nosnippet>5436</a>          view_box(<span class="kw-2">&amp;</span>dest).as_deref(),
-<a href=#5437 id=5437 data-nosnippet>5437</a>          <span class="prelude-val">Some</span>(expected),
-<a href=#5438 id=5438 data-nosnippet>5438</a>          <span class="string">"{tool} page {page}"
-<a href=#5439 id=5439 data-nosnippet>5439</a>        </span>);
+<a href=#5347 id=5347 data-nosnippet>5347</a>    <span class="kw">let </span><span class="kw-2">mut </span>renders: Vec&lt;String&gt; = Vec::new();
+<a href=#5348 id=5348 data-nosnippet>5348</a>    std::thread::scope(|s| {
+<a href=#5349 id=5349 data-nosnippet>5349</a>      s.spawn(|| {
+<a href=#5350 id=5350 data-nosnippet>5350</a>        <span class="kw">while </span>!stop.load(Ordering::Relaxed) {
+<a href=#5351 id=5351 data-nosnippet>5351</a>          <span class="kw">let _ </span>= std::fs::write(<span class="kw-2">&amp;</span>shared, <span class="string">b"&lt;svg xmlns=\"http://www.w3.org/2000/svg\""</span>);
+<a href=#5352 id=5352 data-nosnippet>5352</a>          <span class="kw">let _ </span>= std::fs::remove_file(<span class="kw-2">&amp;</span>shared);
+<a href=#5353 id=5353 data-nosnippet>5353</a>        }
+<a href=#5354 id=5354 data-nosnippet>5354</a>      });
+<a href=#5355 id=5355 data-nosnippet>5355</a>      <span class="kw">for </span>round <span class="kw">in </span><span class="number">0</span>..<span class="number">20 </span>{
+<a href=#5356 id=5356 data-nosnippet>5356</a>        <span class="kw">let </span>xml = <span class="macro">format!</span>(
+<a href=#5357 id=5357 data-nosnippet>5357</a>          <span class="string">r#"&lt;document xmlns="http://dlmf.nist.gov/LaTeXML"&gt;&lt;graphics graphic="fig.pdf" candidates="{}"/&gt;&lt;/document&gt;"#</span>,
+<a href=#5358 id=5358 data-nosnippet>5358</a>          src.display()
+<a href=#5359 id=5359 data-nosnippet>5359</a>        );
+<a href=#5360 id=5360 data-nosnippet>5360</a>        <span class="kw">let </span>doc_opts = <span class="kw">crate</span>::document::PostDocumentOptions {
+<a href=#5361 id=5361 data-nosnippet>5361</a>          destination: <span class="prelude-val">Some</span>(dir.join(<span class="string">"out.html"</span>).display().to_string()),
+<a href=#5362 id=5362 data-nosnippet>5362</a>          source_directory: <span class="prelude-val">Some</span>(dir.display().to_string()),
+<a href=#5363 id=5363 data-nosnippet>5363</a>          ..Default::default()
+<a href=#5364 id=5364 data-nosnippet>5364</a>        };
+<a href=#5365 id=5365 data-nosnippet>5365</a>        <span class="kw">let </span>doc = PostDocument::new_from_string(<span class="kw-2">&amp;</span>xml, doc_opts).expect(<span class="string">"parse"</span>);
+<a href=#5366 id=5366 data-nosnippet>5366</a>        <span class="kw">let </span><span class="kw-2">mut </span>graphics =
+<a href=#5367 id=5367 data-nosnippet>5367</a>          Graphics::new(<span class="prelude-val">None</span>, <span class="bool-val">true</span>).with_cache_policy(<span class="kw">crate</span>::graphics_cache::CachePolicy::Bypass);
+<a href=#5368 id=5368 data-nosnippet>5368</a>        <span class="kw">let </span>nodes = graphics.to_process(<span class="kw-2">&amp;</span>doc);
+<a href=#5369 id=5369 data-nosnippet>5369</a>        <span class="kw">let </span>out = graphics.process(doc, nodes).expect(<span class="string">"graphics process"</span>)[<span class="number">0</span>].to_xml_string();
+<a href=#5370 id=5370 data-nosnippet>5370</a>        <span class="comment">// A vector render, whatever its name: since issue 995 a destination holding other bytes
+<a href=#5371 id=5371 data-nosnippet>5371</a>        // (the sibling's) is never written over, so the figure may be named `x1.svg` instead.
+<a href=#5372 id=5372 data-nosnippet>5372</a>        </span><span class="kw">let </span>src = out
+<a href=#5373 id=5373 data-nosnippet>5373</a>          .split(<span class="string">r#" imagesrc=""#</span>)
+<a href=#5374 id=5374 data-nosnippet>5374</a>          .nth(<span class="number">1</span>)
+<a href=#5375 id=5375 data-nosnippet>5375</a>          .and_then(|rest| rest.split(<span class="string">'"'</span>).next())
+<a href=#5376 id=5376 data-nosnippet>5376</a>          .unwrap_or_default()
+<a href=#5377 id=5377 data-nosnippet>5377</a>          .to_string();
+<a href=#5378 id=5378 data-nosnippet>5378</a>        <span class="kw">if </span>!src.ends_with(<span class="string">".svg"</span>) {
+<a href=#5379 id=5379 data-nosnippet>5379</a>          stop.store(<span class="bool-val">true</span>, Ordering::Relaxed);
+<a href=#5380 id=5380 data-nosnippet>5380</a>          <span class="macro">panic!</span>(<span class="string">"round {round}: the figure left its vector render:\n{out}"</span>);
+<a href=#5381 id=5381 data-nosnippet>5381</a>        }
+<a href=#5382 id=5382 data-nosnippet>5382</a>        renders.push(src);
+<a href=#5383 id=5383 data-nosnippet>5383</a>      }
+<a href=#5384 id=5384 data-nosnippet>5384</a>      stop.store(<span class="bool-val">true</span>, Ordering::Relaxed);
+<a href=#5385 id=5385 data-nosnippet>5385</a>    });
+<a href=#5386 id=5386 data-nosnippet>5386</a>    <span class="kw">let </span><span class="kw-2">mut </span>left: Vec&lt;String&gt; = std::fs::read_dir(<span class="kw-2">&amp;</span>dir)
+<a href=#5387 id=5387 data-nosnippet>5387</a>      .unwrap()
+<a href=#5388 id=5388 data-nosnippet>5388</a>      .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+<a href=#5389 id=5389 data-nosnippet>5389</a>      <span class="comment">// The cache file, `LaTeXML-oxide.cache`, closed with its document.
+<a href=#5390 id=5390 data-nosnippet>5390</a>      </span>.filter(|name| {
+<a href=#5391 id=5391 data-nosnippet>5391</a>        name != <span class="string">"fig.pdf"
+<a href=#5392 id=5392 data-nosnippet>5392</a>          </span>&amp;&amp; name != <span class="string">"fig.svg"
+<a href=#5393 id=5393 data-nosnippet>5393</a>          </span>&amp;&amp; name != <span class="string">"LaTeXML-oxide.cache"
+<a href=#5394 id=5394 data-nosnippet>5394</a>          </span>&amp;&amp; !renders.contains(name)
+<a href=#5395 id=5395 data-nosnippet>5395</a>      })
+<a href=#5396 id=5396 data-nosnippet>5396</a>      .collect();
+<a href=#5397 id=5397 data-nosnippet>5397</a>    left.sort();
+<a href=#5398 id=5398 data-nosnippet>5398</a>    <span class="macro">assert!</span>(
+<a href=#5399 id=5399 data-nosnippet>5399</a>      left.is_empty(),
+<a href=#5400 id=5400 data-nosnippet>5400</a>      <span class="string">"no PNG and no staged file is left: {left:?}"
+<a href=#5401 id=5401 data-nosnippet>5401</a>    </span>);
+<a href=#5402 id=5402 data-nosnippet>5402</a>  }
+<a href=#5403 id=5403 data-nosnippet>5403</a>
+<a href=#5404 id=5404 data-nosnippet>5404</a>  <span class="doccomment">/// `\includegraphics[page=2]` of a vector PDF renders page 2 (100×300 bp; page 1 is 300×100) and leaves
+<a href=#5405 id=5405 data-nosnippet>5405</a>  /// no temp file: mutool's `%d` counts OUTPUT pages from 1, so a temp named for the source page was
+<a href=#5406 id=5406 data-nosnippet>5406</a>  /// never found — pdftocairo drew the image and mutool's SVG stayed in the destination (witnesses
+<a href=#5407 id=5407 data-nosnippet>5407</a>  /// 2305.12780, 1906.10268, 2406.07459, 2406.14311, 1709.02311). Each converter, then the pipeline.
+<a href=#5408 id=5408 data-nosnippet>5408</a>  /// Fixture: `tests/fixtures/two_page_sizes.tex`.
+<a href=#5409 id=5409 data-nosnippet>5409</a>  </span><span class="attr">#[test]
+<a href=#5410 id=5410 data-nosnippet>5410</a>  </span><span class="kw">fn </span>vector_svg_of_page_two_is_page_two() {
+<a href=#5411 id=5411 data-nosnippet>5411</a>    <span class="kw">use </span>latexml_core::util::image::{svg_attr_value, svg_root_tag};
+<a href=#5412 id=5412 data-nosnippet>5412</a>    <span class="kw">let </span>fixture = <span class="macro">format!</span>(
+<a href=#5413 id=5413 data-nosnippet>5413</a>      <span class="string">"{}/tests/fixtures/two_page_sizes.pdf"</span>,
+<a href=#5414 id=5414 data-nosnippet>5414</a>      <span class="macro">env!</span>(<span class="string">"CARGO_MANIFEST_DIR"</span>)
+<a href=#5415 id=5415 data-nosnippet>5415</a>    );
+<a href=#5416 id=5416 data-nosnippet>5416</a>    <span class="kw">let </span>view_box = |path: <span class="kw-2">&amp;</span>Path| {
+<a href=#5417 id=5417 data-nosnippet>5417</a>      <span class="kw">let </span>text = std::fs::read_to_string(path).unwrap();
+<a href=#5418 id=5418 data-nosnippet>5418</a>      svg_root_tag(<span class="kw-2">&amp;</span>text)
+<a href=#5419 id=5419 data-nosnippet>5419</a>        .and_then(|tag| svg_attr_value(tag, <span class="string">"viewBox"</span>))
+<a href=#5420 id=5420 data-nosnippet>5420</a>        .map(|v| v.split_whitespace().collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;().join(<span class="string">" "</span>))
+<a href=#5421 id=5421 data-nosnippet>5421</a>    };
+<a href=#5422 id=5422 data-nosnippet>5422</a>    <span class="kw">let </span>listing = |dir: <span class="kw-2">&amp;</span>Path| {
+<a href=#5423 id=5423 data-nosnippet>5423</a>      <span class="kw">let </span><span class="kw-2">mut </span>names: Vec&lt;String&gt; = std::fs::read_dir(dir)
+<a href=#5424 id=5424 data-nosnippet>5424</a>        .unwrap()
+<a href=#5425 id=5425 data-nosnippet>5425</a>        .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+<a href=#5426 id=5426 data-nosnippet>5426</a>        .collect();
+<a href=#5427 id=5427 data-nosnippet>5427</a>      names.sort();
+<a href=#5428 id=5428 data-nosnippet>5428</a>      names
+<a href=#5429 id=5429 data-nosnippet>5429</a>    };
+<a href=#5430 id=5430 data-nosnippet>5430</a>    <span class="kw">let </span>tmp = TempDir::new(<span class="string">"svg_page_two"</span>);
+<a href=#5431 id=5431 data-nosnippet>5431</a>    <span class="kw">type </span>Converter = <span class="kw">fn</span>(<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str, <span class="prelude-ty">Option</span>&lt;u32&gt;) -&gt; bool;
+<a href=#5432 id=5432 data-nosnippet>5432</a>    <span class="kw">let </span>converters: [(<span class="kw-2">&amp;</span>str, Converter); <span class="number">2</span>] = [
+<a href=#5433 id=5433 data-nosnippet>5433</a>      (<span class="string">"mutool"</span>, Graphics::convert_image_svg_mutool),
+<a href=#5434 id=5434 data-nosnippet>5434</a>      (<span class="string">"pdftocairo"</span>, Graphics::convert_image_svg_pdftocairo),
+<a href=#5435 id=5435 data-nosnippet>5435</a>    ];
+<a href=#5436 id=5436 data-nosnippet>5436</a>    <span class="kw">let </span><span class="kw-2">mut </span>mutool = <span class="bool-val">false</span>;
+<a href=#5437 id=5437 data-nosnippet>5437</a>    <span class="kw">for </span>(tool, convert) <span class="kw">in </span>converters {
+<a href=#5438 id=5438 data-nosnippet>5438</a>      <span class="kw">if </span>!svg_tool_or_skip(tool, <span class="string">"svg_page_two"</span>) {
+<a href=#5439 id=5439 data-nosnippet>5439</a>        <span class="kw">continue</span>;
 <a href=#5440 id=5440 data-nosnippet>5440</a>      }
-<a href=#5441 id=5441 data-nosnippet>5441</a>      <span class="macro">assert_eq!</span>(listing(<span class="kw-2">&amp;</span>dir), [<span class="string">"p1.svg"</span>, <span class="string">"p2.svg"</span>], <span class="string">"{tool}"</span>);
-<a href=#5442 id=5442 data-nosnippet>5442</a>    }
-<a href=#5443 id=5443 data-nosnippet>5443</a>    <span class="comment">// The pipeline: page=1 and page=2 of one source, each its own page's SVG, and nothing else.
-<a href=#5444 id=5444 data-nosnippet>5444</a>    </span><span class="kw">if </span>!mutool {
-<a href=#5445 id=5445 data-nosnippet>5445</a>      <span class="kw">return</span>;
-<a href=#5446 id=5446 data-nosnippet>5446</a>    }
-<a href=#5447 id=5447 data-nosnippet>5447</a>    <span class="kw">let </span>src = tmp.join(<span class="string">"two_page_sizes.pdf"</span>);
-<a href=#5448 id=5448 data-nosnippet>5448</a>    std::fs::copy(<span class="kw-2">&amp;</span>fixture, <span class="kw-2">&amp;</span>src).unwrap();
-<a href=#5449 id=5449 data-nosnippet>5449</a>    <span class="kw">let </span>dest = tmp.join(<span class="string">"out"</span>).join(<span class="string">"out.html"</span>);
-<a href=#5450 id=5450 data-nosnippet>5450</a>    std::fs::create_dir_all(dest.parent().unwrap()).unwrap();
-<a href=#5451 id=5451 data-nosnippet>5451</a>    <span class="kw">let </span>xml = <span class="macro">format!</span>(
-<a href=#5452 id=5452 data-nosnippet>5452</a>      <span class="string">r#"&lt;document xmlns="http://dlmf.nist.gov/LaTeXML"&gt;
-<a href=#5453 id=5453 data-nosnippet>5453</a>  &lt;graphics graphic="two_page_sizes.pdf" candidates="{0}" options="page=1" xml:id="g1"/&gt;
-<a href=#5454 id=5454 data-nosnippet>5454</a>  &lt;graphics graphic="two_page_sizes.pdf" candidates="{0}" options="page=2" xml:id="g2"/&gt;
-<a href=#5455 id=5455 data-nosnippet>5455</a>&lt;/document&gt;"#</span>,
-<a href=#5456 id=5456 data-nosnippet>5456</a>      src.display()
-<a href=#5457 id=5457 data-nosnippet>5457</a>    );
-<a href=#5458 id=5458 data-nosnippet>5458</a>    <span class="kw">let </span>doc_opts = <span class="kw">crate</span>::document::PostDocumentOptions {
-<a href=#5459 id=5459 data-nosnippet>5459</a>      destination: <span class="prelude-val">Some</span>(dest.display().to_string()),
-<a href=#5460 id=5460 data-nosnippet>5460</a>      source_directory: <span class="prelude-val">Some</span>(tmp.path().display().to_string()),
-<a href=#5461 id=5461 data-nosnippet>5461</a>      ..Default::default()
-<a href=#5462 id=5462 data-nosnippet>5462</a>    };
-<a href=#5463 id=5463 data-nosnippet>5463</a>    <span class="kw">let </span>doc = PostDocument::new_from_string(<span class="kw-2">&amp;</span>xml, doc_opts).expect(<span class="string">"parse"</span>);
-<a href=#5464 id=5464 data-nosnippet>5464</a>    <span class="kw">let </span><span class="kw-2">mut </span>graphics =
-<a href=#5465 id=5465 data-nosnippet>5465</a>      Graphics::new(<span class="prelude-val">None</span>, <span class="bool-val">true</span>).with_cache_policy(<span class="kw">crate</span>::graphics_cache::CachePolicy::Bypass);
-<a href=#5466 id=5466 data-nosnippet>5466</a>    <span class="kw">let </span>nodes = graphics.to_process(<span class="kw-2">&amp;</span>doc);
-<a href=#5467 id=5467 data-nosnippet>5467</a>    <span class="macro">assert_eq!</span>(nodes.len(), <span class="number">2</span>);
-<a href=#5468 id=5468 data-nosnippet>5468</a>    <span class="comment">// The page is dropped here, and with it its cache, `LaTeXML-oxide.cache`, closed: no side file is left.
-<a href=#5469 id=5469 data-nosnippet>5469</a>    </span><span class="kw">let </span>out = graphics.process(doc, nodes).expect(<span class="string">"graphics process"</span>)[<span class="number">0</span>].to_xml_string();
-<a href=#5470 id=5470 data-nosnippet>5470</a>    <span class="kw">let </span>element = |id: <span class="kw-2">&amp;</span>str| {
-<a href=#5471 id=5471 data-nosnippet>5471</a>      <span class="kw">let </span>at = out.find(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">r#"xml:id="{id}""#</span>)).unwrap();
-<a href=#5472 id=5472 data-nosnippet>5472</a>      <span class="kw">let </span>tag = <span class="kw-2">&amp;</span>out[out[..at].rfind(<span class="string">'&lt;'</span>).unwrap()..at + out[at..].find(<span class="string">'&gt;'</span>).unwrap()];
-<a href=#5473 id=5473 data-nosnippet>5473</a>      <span class="kw">let </span>attr = |name: <span class="kw-2">&amp;</span>str| {
-<a href=#5474 id=5474 data-nosnippet>5474</a>        <span class="kw">let </span>at = tag.find(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">" {name}=\""</span>))<span class="question-mark">? </span>+ name.len() + <span class="number">3</span>;
-<a href=#5475 id=5475 data-nosnippet>5475</a>        <span class="prelude-val">Some</span>(tag[at..at + tag[at..].find(<span class="string">'"'</span>)<span class="question-mark">?</span>].to_string())
-<a href=#5476 id=5476 data-nosnippet>5476</a>      };
-<a href=#5477 id=5477 data-nosnippet>5477</a>      [attr(<span class="string">"imagesrc"</span>), attr(<span class="string">"imagewidth"</span>), attr(<span class="string">"imageheight"</span>)]
-<a href=#5478 id=5478 data-nosnippet>5478</a>    };
-<a href=#5479 id=5479 data-nosnippet>5479</a>    <span class="kw">let </span>some = |v: [<span class="kw-2">&amp;</span>str; <span class="number">3</span>]| v.map(|s| <span class="prelude-val">Some</span>(s.to_string()));
-<a href=#5480 id=5480 data-nosnippet>5480</a>    <span class="macro">assert_eq!</span>(element(<span class="string">"g1"</span>), some([<span class="string">"x1.svg"</span>, <span class="string">"300"</span>, <span class="string">"100"</span>]), <span class="string">"{out}"</span>);
-<a href=#5481 id=5481 data-nosnippet>5481</a>    <span class="macro">assert_eq!</span>(element(<span class="string">"g2"</span>), some([<span class="string">"x2.svg"</span>, <span class="string">"100"</span>, <span class="string">"300"</span>]), <span class="string">"{out}"</span>);
-<a href=#5482 id=5482 data-nosnippet>5482</a>    <span class="kw">let </span>out_dir = dest.parent().unwrap();
-<a href=#5483 id=5483 data-nosnippet>5483</a>    <span class="macro">assert_eq!</span>(
-<a href=#5484 id=5484 data-nosnippet>5484</a>      listing(out_dir),
-<a href=#5485 id=5485 data-nosnippet>5485</a>      [<span class="string">"LaTeXML-oxide.cache"</span>, <span class="string">"x1.svg"</span>, <span class="string">"x2.svg"</span>],
-<a href=#5486 id=5486 data-nosnippet>5486</a>      <span class="string">"{out}"
-<a href=#5487 id=5487 data-nosnippet>5487</a>    </span>);
-<a href=#5488 id=5488 data-nosnippet>5488</a>    <span class="macro">assert_eq!</span>(
-<a href=#5489 id=5489 data-nosnippet>5489</a>      view_box(<span class="kw-2">&amp;</span>out_dir.join(<span class="string">"x2.svg"</span>)).as_deref(),
-<a href=#5490 id=5490 data-nosnippet>5490</a>      <span class="prelude-val">Some</span>(<span class="string">"0 0 100 300"</span>)
-<a href=#5491 id=5491 data-nosnippet>5491</a>    );
-<a href=#5492 id=5492 data-nosnippet>5492</a>  }
-<a href=#5493 id=5493 data-nosnippet>5493</a>}
+<a href=#5441 id=5441 data-nosnippet>5441</a>      mutool |= tool == <span class="string">"mutool"</span>;
+<a href=#5442 id=5442 data-nosnippet>5442</a>      <span class="kw">let </span>dir = tmp.join(tool);
+<a href=#5443 id=5443 data-nosnippet>5443</a>      std::fs::create_dir_all(<span class="kw-2">&amp;</span>dir).unwrap();
+<a href=#5444 id=5444 data-nosnippet>5444</a>      <span class="kw">for </span>(page, expected) <span class="kw">in </span>[(<span class="number">2</span>, <span class="string">"0 0 100 300"</span>), (<span class="number">1</span>, <span class="string">"0 0 300 100"</span>)] {
+<a href=#5445 id=5445 data-nosnippet>5445</a>        <span class="kw">let </span>dest = dir.join(<span class="macro">format!</span>(<span class="string">"p{page}.svg"</span>));
+<a href=#5446 id=5446 data-nosnippet>5446</a>        <span class="macro">assert!</span>(
+<a href=#5447 id=5447 data-nosnippet>5447</a>          convert(<span class="kw-2">&amp;</span>fixture, dest.to_str().unwrap(), <span class="prelude-val">Some</span>(page)),
+<a href=#5448 id=5448 data-nosnippet>5448</a>          <span class="string">"{tool} converts page {page}"
+<a href=#5449 id=5449 data-nosnippet>5449</a>        </span>);
+<a href=#5450 id=5450 data-nosnippet>5450</a>        <span class="macro">assert_eq!</span>(
+<a href=#5451 id=5451 data-nosnippet>5451</a>          view_box(<span class="kw-2">&amp;</span>dest).as_deref(),
+<a href=#5452 id=5452 data-nosnippet>5452</a>          <span class="prelude-val">Some</span>(expected),
+<a href=#5453 id=5453 data-nosnippet>5453</a>          <span class="string">"{tool} page {page}"
+<a href=#5454 id=5454 data-nosnippet>5454</a>        </span>);
+<a href=#5455 id=5455 data-nosnippet>5455</a>      }
+<a href=#5456 id=5456 data-nosnippet>5456</a>      <span class="macro">assert_eq!</span>(listing(<span class="kw-2">&amp;</span>dir), [<span class="string">"p1.svg"</span>, <span class="string">"p2.svg"</span>], <span class="string">"{tool}"</span>);
+<a href=#5457 id=5457 data-nosnippet>5457</a>    }
+<a href=#5458 id=5458 data-nosnippet>5458</a>    <span class="comment">// The pipeline: page=1 and page=2 of one source, each its own page's SVG, and nothing else.
+<a href=#5459 id=5459 data-nosnippet>5459</a>    </span><span class="kw">if </span>!mutool {
+<a href=#5460 id=5460 data-nosnippet>5460</a>      <span class="kw">return</span>;
+<a href=#5461 id=5461 data-nosnippet>5461</a>    }
+<a href=#5462 id=5462 data-nosnippet>5462</a>    <span class="kw">let </span>src = tmp.join(<span class="string">"two_page_sizes.pdf"</span>);
+<a href=#5463 id=5463 data-nosnippet>5463</a>    std::fs::copy(<span class="kw-2">&amp;</span>fixture, <span class="kw-2">&amp;</span>src).unwrap();
+<a href=#5464 id=5464 data-nosnippet>5464</a>    <span class="kw">let </span>dest = tmp.join(<span class="string">"out"</span>).join(<span class="string">"out.html"</span>);
+<a href=#5465 id=5465 data-nosnippet>5465</a>    std::fs::create_dir_all(dest.parent().unwrap()).unwrap();
+<a href=#5466 id=5466 data-nosnippet>5466</a>    <span class="kw">let </span>xml = <span class="macro">format!</span>(
+<a href=#5467 id=5467 data-nosnippet>5467</a>      <span class="string">r#"&lt;document xmlns="http://dlmf.nist.gov/LaTeXML"&gt;
+<a href=#5468 id=5468 data-nosnippet>5468</a>  &lt;graphics graphic="two_page_sizes.pdf" candidates="{0}" options="page=1" xml:id="g1"/&gt;
+<a href=#5469 id=5469 data-nosnippet>5469</a>  &lt;graphics graphic="two_page_sizes.pdf" candidates="{0}" options="page=2" xml:id="g2"/&gt;
+<a href=#5470 id=5470 data-nosnippet>5470</a>&lt;/document&gt;"#</span>,
+<a href=#5471 id=5471 data-nosnippet>5471</a>      src.display()
+<a href=#5472 id=5472 data-nosnippet>5472</a>    );
+<a href=#5473 id=5473 data-nosnippet>5473</a>    <span class="kw">let </span>doc_opts = <span class="kw">crate</span>::document::PostDocumentOptions {
+<a href=#5474 id=5474 data-nosnippet>5474</a>      destination: <span class="prelude-val">Some</span>(dest.display().to_string()),
+<a href=#5475 id=5475 data-nosnippet>5475</a>      source_directory: <span class="prelude-val">Some</span>(tmp.path().display().to_string()),
+<a href=#5476 id=5476 data-nosnippet>5476</a>      ..Default::default()
+<a href=#5477 id=5477 data-nosnippet>5477</a>    };
+<a href=#5478 id=5478 data-nosnippet>5478</a>    <span class="kw">let </span>doc = PostDocument::new_from_string(<span class="kw-2">&amp;</span>xml, doc_opts).expect(<span class="string">"parse"</span>);
+<a href=#5479 id=5479 data-nosnippet>5479</a>    <span class="kw">let </span><span class="kw-2">mut </span>graphics =
+<a href=#5480 id=5480 data-nosnippet>5480</a>      Graphics::new(<span class="prelude-val">None</span>, <span class="bool-val">true</span>).with_cache_policy(<span class="kw">crate</span>::graphics_cache::CachePolicy::Bypass);
+<a href=#5481 id=5481 data-nosnippet>5481</a>    <span class="kw">let </span>nodes = graphics.to_process(<span class="kw-2">&amp;</span>doc);
+<a href=#5482 id=5482 data-nosnippet>5482</a>    <span class="macro">assert_eq!</span>(nodes.len(), <span class="number">2</span>);
+<a href=#5483 id=5483 data-nosnippet>5483</a>    <span class="comment">// The page is dropped here, and with it its cache, `LaTeXML-oxide.cache`, closed: no side file is left.
+<a href=#5484 id=5484 data-nosnippet>5484</a>    </span><span class="kw">let </span>out = graphics.process(doc, nodes).expect(<span class="string">"graphics process"</span>)[<span class="number">0</span>].to_xml_string();
+<a href=#5485 id=5485 data-nosnippet>5485</a>    <span class="kw">let </span>element = |id: <span class="kw-2">&amp;</span>str| {
+<a href=#5486 id=5486 data-nosnippet>5486</a>      <span class="kw">let </span>at = out.find(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">r#"xml:id="{id}""#</span>)).unwrap();
+<a href=#5487 id=5487 data-nosnippet>5487</a>      <span class="kw">let </span>tag = <span class="kw-2">&amp;</span>out[out[..at].rfind(<span class="string">'&lt;'</span>).unwrap()..at + out[at..].find(<span class="string">'&gt;'</span>).unwrap()];
+<a href=#5488 id=5488 data-nosnippet>5488</a>      <span class="kw">let </span>attr = |name: <span class="kw-2">&amp;</span>str| {
+<a href=#5489 id=5489 data-nosnippet>5489</a>        <span class="kw">let </span>at = tag.find(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">" {name}=\""</span>))<span class="question-mark">? </span>+ name.len() + <span class="number">3</span>;
+<a href=#5490 id=5490 data-nosnippet>5490</a>        <span class="prelude-val">Some</span>(tag[at..at + tag[at..].find(<span class="string">'"'</span>)<span class="question-mark">?</span>].to_string())
+<a href=#5491 id=5491 data-nosnippet>5491</a>      };
+<a href=#5492 id=5492 data-nosnippet>5492</a>      [attr(<span class="string">"imagesrc"</span>), attr(<span class="string">"imagewidth"</span>), attr(<span class="string">"imageheight"</span>)]
+<a href=#5493 id=5493 data-nosnippet>5493</a>    };
+<a href=#5494 id=5494 data-nosnippet>5494</a>    <span class="kw">let </span>some = |v: [<span class="kw-2">&amp;</span>str; <span class="number">3</span>]| v.map(|s| <span class="prelude-val">Some</span>(s.to_string()));
+<a href=#5495 id=5495 data-nosnippet>5495</a>    <span class="macro">assert_eq!</span>(element(<span class="string">"g1"</span>), some([<span class="string">"x1.svg"</span>, <span class="string">"300"</span>, <span class="string">"100"</span>]), <span class="string">"{out}"</span>);
+<a href=#5496 id=5496 data-nosnippet>5496</a>    <span class="macro">assert_eq!</span>(element(<span class="string">"g2"</span>), some([<span class="string">"x2.svg"</span>, <span class="string">"100"</span>, <span class="string">"300"</span>]), <span class="string">"{out}"</span>);
+<a href=#5497 id=5497 data-nosnippet>5497</a>    <span class="kw">let </span>out_dir = dest.parent().unwrap();
+<a href=#5498 id=5498 data-nosnippet>5498</a>    <span class="macro">assert_eq!</span>(
+<a href=#5499 id=5499 data-nosnippet>5499</a>      listing(out_dir),
+<a href=#5500 id=5500 data-nosnippet>5500</a>      [<span class="string">"LaTeXML-oxide.cache"</span>, <span class="string">"x1.svg"</span>, <span class="string">"x2.svg"</span>],
+<a href=#5501 id=5501 data-nosnippet>5501</a>      <span class="string">"{out}"
+<a href=#5502 id=5502 data-nosnippet>5502</a>    </span>);
+<a href=#5503 id=5503 data-nosnippet>5503</a>    <span class="macro">assert_eq!</span>(
+<a href=#5504 id=5504 data-nosnippet>5504</a>      view_box(<span class="kw-2">&amp;</span>out_dir.join(<span class="string">"x2.svg"</span>)).as_deref(),
+<a href=#5505 id=5505 data-nosnippet>5505</a>      <span class="prelude-val">Some</span>(<span class="string">"0 0 100 300"</span>)
+<a href=#5506 id=5506 data-nosnippet>5506</a>    );
+<a href=#5507 id=5507 data-nosnippet>5507</a>  }
+<a href=#5508 id=5508 data-nosnippet>5508</a>}
 </code></pre></div></section></main></body></html>
