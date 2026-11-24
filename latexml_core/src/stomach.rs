@@ -1143,11 +1143,10 @@ fn close_environment_frame(closer: Token, semi_simple: bool) -> Result<bool> {
     .unwrap_or_default();
   // A bare frame's end is the binding's `\endX` under its private alias (dialect.rs `def_environment`); the
   // messages name it as the document knows it.
-  let end_name = end.to_string();
-  let shown_end = match end_name.strip_prefix("\\lx@env@bare@end@") {
-    Some(name) => s!("\\end{name}"),
-    None => end_name,
-  };
+  let shown_end = bare
+    .then(|| lookup_token("lx@env@bare@end@shown"))
+    .flatten()
+    .unwrap_or(end);
   assign_frame_value_sym(crate::pin!("lx@env@ended@by@group"), true);
   let kind = if is_value_bound("lx@env@tex@group", Some(0)) {
     TexGroup::from_name(&lookup_string("lx@env@tex@group")).unwrap_or(TexGroup::None)

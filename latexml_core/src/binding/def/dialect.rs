@@ -1975,9 +1975,11 @@ pub fn def_environment(
   // (`\def\endremark{\vspace{1ex}}` beside a wrapped `\remark`, 1907.13475) closes nothing.
   let bare_frame_end = T_CS!(s!("\\lx@env@bare@end@{}", &name));
   let bare_end_alias = bare_frame_end;
+  let bare_frame_shown_end = T_CS!(s!("\\end{}", &name));
   before_digest_bare.push(before_digest_simple!({
     bgroup();
     assign_frame_value_sym(crate::pin!("lx@env@bare@end"), bare_frame_end);
+    assign_frame_value_sym(crate::pin!("lx@env@bare@end@shown"), bare_frame_shown_end);
     let kind = environment_tex_group(&tex_group_key, tex_group);
     if kind != TexGroup::None {
       assign_frame_value_sym(crate::pin!("lx@env@tex@group"), kind.as_str());
