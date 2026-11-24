@@ -149,6 +149,8 @@ LoadDefinitions!({
   // (`THEOREM_UNNUMBERED_STEPS`; 1606.01585). Perl's ntheorem.sty.ltxml:163-166 declares it as the kernel's starred
   // theorem, which steps none (KNOWN_PERL_ERRORS #1120). Guard `perfect_kernel_batch78s::ntheorem_starred_steps_its_counter`.
   AssignValue!(THEOREM_UNNUMBERED_STEPS => true, Some(Scope::Global));
+  // ntheorem.sty's `\@xnthm` has no `\ifx\relax` test of amsthm's: a `\relax` counter argument errs.
+  AssignValue!(THEOREM_RELAX_NAMES_NO_COUNTER => false, Some(Scope::Global));
 
   //======================================================================
   // Redefine \newtheorem to also create * variants

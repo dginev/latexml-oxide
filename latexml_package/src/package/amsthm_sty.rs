@@ -13,6 +13,11 @@ LoadDefinitions!({
   // amsthm.sty's `\newtheorem` (its own `\@xnthm`) prints `\the<within>`, replacing a class's (IEEEtran.cls:5612;
   // ntheorem and theorem.sty borrow this binding, and replace it alike). Witness 1911.01952 (IEEEtran).
   clear_theorem_within_display();
+  // amsthm.sty:94/:114 `\ifx\relax#2\relax`: a `\relax` counter argument names none (AVT.sty's `numberwithin=…\relax`,
+  // 2208.14960). Not for a borrow, whose `\newtheorem` is theorem.sty's or ntheorem's.
+  if !borrowing {
+    AssignValue!(THEOREM_RELAX_NAMES_NO_COUNTER => true, Some(Scope::Global));
+  }
   // amsthm.sty:77 `\renewcommand{\newtheorem}`: the binding's theorem definer is whatever `\newtheorem` is in
   // force when amsthm FIRST loads (the kernel's, unless a binding loaded before it had replaced it), saved as
   // `\lx@amsthm@newtheorem`. When amsthm loads again — after a binding that borrows it and leaves it unloaded

@@ -4142,6 +4142,10 @@ pub fn clear_theorem_within_display() {
 /// no number, so `\newtheorem*{rmk}[thm]{Remark}` takes a number from `thm` (1606.01585: five references one behind).
 /// Read where a theorem is declared ([`define_new_theorem`]). Global.
 pub const THEOREM_UNNUMBERED_STEPS: &str = "lx@theorem@unnumbered@steps";
+/// Set by a package whose `\newtheorem` reads a counter argument led by `\relax` as none: amsthm.sty:94 `\@ynthm` and
+/// :114 `\@xthm` test `\ifx\relax#2\relax`; the kernel's `\@xnthm`, ntheorem's and theorem.sty's err on it. Read where a
+/// theorem is declared ([`define_new_theorem`]). Global.
+pub const THEOREM_RELAX_NAMES_NO_COUNTER: &str = "lx@theorem@relax@names@no@counter";
 
 pub fn define_new_theorem(
   flag: Option<Tokens>,
@@ -4175,14 +4179,14 @@ pub fn define_new_theorem(
   // (latex.ltx `\@xnthm`: `\@addtoreset{#1}{#3}`, `\csname the#3\endcsname`), so it is read through `\csname` too:
   // digested (Perl `DigestLiteral`), `\newtheorem{x}{X}[todo_counter]` raised "Script _ can only appear in math mode"
   // where pdflatex is silent (1307.7314). Guards `perfect_kernel_batch67s::newtheorem_*`.
-  // Under amsthm a counter argument led by `\relax` names none (amsthm.sty:94 `\@ynthm`, :114 `\@xthm`: `\ifx\relax#2
-  // \relax`): thm-kv.sty:401's `[\thmt@parent]` of AVT.sty:583's `numberwithin=\ifAVT@notes…\relax\else\relax\fi`
-  // (2208.14960, 2309.00854, 2409.18804). The kernel's `\@xnthm` errs on it ("No counter '\relax ' defined").
+  // Under amsthm a counter argument led by `\relax` names none ([`THEOREM_RELAX_NAMES_NO_COUNTER`]): thm-kv.sty:401's
+  // `[\thmt@parent]` of AVT.sty:583's `numberwithin=\ifAVT@notes…\relax\else\relax\fi` (2208.14960, 2309.00854,
+  // 2409.18804). The kernel's `\@xnthm` errs on it ("No counter '\relax ' defined").
   // Guard `perfect_kernel_batchregtaild::amsthm_relax_counter_argument_names_no_counter`.
-  let amsthm = package_loaded("amsthm");
+  let relax_names_none = lookup_bool(THEOREM_RELAX_NAMES_NO_COUNTER);
   let counter_name = |t: Tokens| -> Result<Option<String>> {
     let name = ::latexml_core::gullet::expand_as_csname_text(t)?;
-    if amsthm
+    if relax_names_none
       && name
         .unlist_ref()
         .first()

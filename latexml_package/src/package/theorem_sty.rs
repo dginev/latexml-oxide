@@ -26,6 +26,8 @@ LoadDefinitions!({
   // template does so (`\let\theoremstyle\undefined\usepackage{amsthm}` after ifacconf.cls:593
   // `\RequirePackage{theorem}`; 2211.14033, 2512.06733, 2603.11260, 2603.11265).
   require_package_borrowed("amsthm")?;
+  // theorem.sty's `\newtheorem` (below) has no `\ifx\relax` test of amsthm's: a `\relax` counter argument errs.
+  AssignValue!(THEOREM_RELAX_NAMES_NO_COUNTER => false, Some(Scope::Global));
 
   // However, theorem.sty's styles do NOT record the headfont!
   set_savable_theorem_parameters(vec![
