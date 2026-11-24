@@ -24,6 +24,10 @@ const NAV: &str = include_str!(
 const TWO_DOCS: &str = include_str!(
   "../../../tools/perfect_kernel/repros/loader/image_names_two_documents_one_folder.tex"
 );
+const EDITED: &str =
+  include_str!("../../../tools/perfect_kernel/repros/loader/image_edited_keeps_its_name.tex");
+const CORRUPT: &str =
+  include_str!("../../../tools/perfect_kernel/repros/loader/image_names_corrupt_cache_entry.tex");
 #[cfg(unix)]
 const LINKED: &str = include_str!(
   "../../../tools/perfect_kernel/repros/loader/image_copy_through_linked_destination.tex"
@@ -393,8 +397,9 @@ fn batchfix995_every_job_count_names_images_alike() {
 
 /// Documents converted into one folder: `a.tex` (child_1) names its image `x1.svg`, then `b.tex` (child_2) continues
 /// with `x2.svg` and `x3.svg` (base: both `x1.svg`, `a.html` showing child_2's image). child_1's image changed, `a.tex`
-/// again takes `x4.svg` for it, leaving `b.html` right. Perl's `LaTeXML-oxide.cache` counter (`Post.pm` L192-200), the key
-/// carrying the content digest in place of Perl's timestamp check. Repro loader/image_names_two_documents_one_folder.
+/// again writes it into `x1.svg`, the name its source has (round 3: `x4.svg`), leaving `b.html` right. Perl's
+/// `LaTeXML-oxide.cache` counter (`Post.pm` L192-200), the key carrying the content digest in place of Perl's
+/// timestamp check. Repro loader/image_names_two_documents_one_folder.
 #[test]
 fn batchfix995_documents_in_one_folder_keep_their_own_images() {
   let root = tempfile::tempdir().unwrap();
@@ -435,17 +440,24 @@ fn batchfix995_documents_in_one_folder_keep_their_own_images() {
   run("a");
   assert_eq!(
     images_of(&parent.join("a.html")),
-    pairs(&[("x4.svg", "child_1/images/A changed")])
+    pairs(&[("x1.svg", "child_1/images/A changed")])
   );
   assert_eq!(images_of(&parent.join("b.html")), b);
 }
 
-/// Eight documents converted into one folder at once, each with two images of its own: every name is handed out
-/// once (each allocation one `IMMEDIATE` transaction on `LaTeXML-oxide.cache`), so every page shows its own images, and no
-/// SQLite side file is left. `resource_cache.rs`.
+/// Eight documents converted at one moment into a new folder, each with two images of its own, three times: every
+/// process ends on `LaTeXML-oxide.cache` (creating it is retried while another holds it: the first round fell back to
+/// memory in 3 of 5 trials, `database is locked`, and two pages showed one `x1.png`), every name is handed out once
+/// (one `IMMEDIATE` transaction per plan), every page shows its own images, and no SQLite side file is left. The
+/// processes wait on one start signal (a FIFO, on Unix). `sqlite_store.rs`, `resource_cache.rs`.
 #[test]
 fn batchfix995_concurrent_documents_in_one_folder_never_share_a_name() {
-  let root = tempfile::tempdir().unwrap();
+  for trial in 0..3 {
+    concurrent_documents(&tempfile::tempdir().unwrap(), trial);
+  }
+}
+
+fn concurrent_documents(root: &tempfile::TempDir, trial: usize) {
   let parent = root.path().join("parent");
   std::fs::create_dir_all(&parent).unwrap();
   for doc in 0..8 {
@@ -467,15 +479,46 @@ fn batchfix995_concurrent_documents_in_one_folder_never_share_a_name() {
     )
     .unwrap();
   }
+  // The start signal: each process waits for its line on a FIFO the test holds open for writing, so none starts before
+  // the last is spawned.
+  #[cfg(unix)]
+  let signal = {
+    let fifo = root.path().join("start");
+    assert!(
+      Command::new("mkfifo")
+        .arg(&fifo)
+        .status()
+        .is_ok_and(|s| s.success())
+    );
+    let writer = std::fs::OpenOptions::new()
+      .read(true)
+      .write(true)
+      .open(&fifo)
+      .unwrap();
+    (fifo, writer)
+  };
   let children: Vec<_> = (0..8)
     .map(|doc| {
-      Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
-        .args([
-          "--nocomments",
-          "--timeout=110",
-          &format!("--dest=d{doc}.html"),
-          &format!("d{doc}.tex"),
-        ])
+      let args = [
+        "--nocomments".to_string(),
+        "--timeout=110".to_string(),
+        format!("--dest=d{doc}.html"),
+        format!("d{doc}.tex"),
+      ];
+      #[cfg(unix)]
+      let mut command = {
+        let mut command = Command::new("sh");
+        command
+          .arg("-c")
+          .arg("read go < \"$0\" && exec \"$@\"")
+          .arg(&signal.0)
+          .arg(env!("CARGO_BIN_EXE_latexml_oxide"));
+        command
+      };
+      #[cfg(not(unix))]
+      let mut command = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"));
+      command
+        .args(args)
         .current_dir(&parent)
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::piped())
@@ -483,10 +526,20 @@ fn batchfix995_concurrent_documents_in_one_folder_never_share_a_name() {
         .expect("spawn latexml_oxide")
     })
     .collect();
+  #[cfg(unix)]
+  {
+    use std::io::Write;
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    (&signal.1).write_all(&b"go\n".repeat(8)).unwrap();
+  }
   for child in children {
     let output = child.wait_with_output().unwrap();
     let log = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
-    assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, 0),
+      "trial {trial}: {log}"
+    );
   }
   let mut urls = Vec::new();
   for doc in 0..8 {
@@ -497,13 +550,13 @@ fn batchfix995_concurrent_documents_in_one_folder_never_share_a_name() {
         .map(|(_, text)| text.as_str())
         .collect::<Vec<_>>(),
       [format!("c{doc}/A"), format!("c{doc}/B")],
-      "d{doc}"
+      "trial {trial}: d{doc}"
     );
     urls.extend(shown.into_iter().map(|(url, _)| url));
   }
   urls.sort();
   urls.dedup();
-  assert_eq!(urls.len(), 16, "{urls:?}");
+  assert_eq!(urls.len(), 16, "trial {trial}: {urls:?}");
   assert_eq!(images_in(&parent).len(), 16);
   let side_files: Vec<String> = std::fs::read_dir(&parent)
     .unwrap()
@@ -511,7 +564,7 @@ fn batchfix995_concurrent_documents_in_one_folder_never_share_a_name() {
     .map(|entry| entry.file_name().to_string_lossy().into_owned())
     .filter(|name| name.starts_with("LaTeXML-oxide.cache-"))
     .collect();
-  assert!(side_files.is_empty(), "{side_files:?}");
+  assert!(side_files.is_empty(), "trial {trial}: {side_files:?}");
 }
 
 /// `LaTeXML-oxide.cache` and its SQLite side files stay out of a `.zip` destination and an EPUB (as Perl keeps its
@@ -696,4 +749,174 @@ fn batchfix995_linked_destination_writes_nothing_outside_the_site_directory() {
     0
   );
   assert_eq!(images_in(&elsewhere.join("deep/out")), ["x1.svg"]);
+}
+
+fn imagemagick_present() -> bool {
+  Command::new("convert")
+    .arg("-version")
+    .output()
+    .is_ok_and(|o| o.status.success())
+}
+
+/// An edited image keeps its name: a copy at its kept path (`figs/a.png`), a converted EPS at its stem (`p.png`) and a
+/// turned PNG at its generated `x1.png` are written again with the new pictures (round 3: `x1.png`, `x2.png`, `x3.png`,
+/// `out/figs/a.png` keeping the old picture), as Perl copies a simply scaled image to its kept path every run
+/// (`Post/Graphics.pm` L292-300). In place (`--dest` in the source folder) `figs/a.png` stays linked where it is, with
+/// no copy of it. A name's owner is its source, not its bytes (`resource_cache.rs`). The EPS needs Ghostscript and the
+/// turn ImageMagick: each is left out, visibly, where its tool is absent. Repro loader/image_edited_keeps_its_name.
+#[test]
+fn batchfix995_an_edited_image_keeps_its_name() {
+  let (gs, im) = (ghostscript_present(), imagemagick_present());
+  if !gs || !im {
+    eprintln!(
+      "SKIP part of batchfix995_an_edited_image_keeps_its_name: Ghostscript {gs}, ImageMagick {im}"
+    );
+  }
+  let root = tempfile::tempdir().unwrap();
+  let src = root.path().join("src");
+  std::fs::create_dir_all(src.join("figs")).unwrap();
+  let tex: Vec<&str> = EDITED
+    .lines()
+    .filter(|line| (gs || !line.contains("p.eps")) && (im || !line.contains("angle")))
+    .collect();
+  std::fs::write(src.join("p.tex"), tex.join("\n")).unwrap();
+  let draw = |v: u32| {
+    std::fs::write(src.join("figs/a.png"), png(3 + v, 2)).unwrap();
+    std::fs::write(src.join("figs/r.png"), png(2, 3 + v)).unwrap();
+    std::fs::write(
+      src.join("figs/p.eps"),
+      format!(
+        "%!PS-Adobe-3.0 EPSF-3.0\n%%BoundingBox: 0 0 20 20\n{} setlinewidth 0 0 moveto 20 20 lineto stroke\n%%EOF\n",
+        v * 4 + 1
+      ),
+    )
+    .unwrap();
+  };
+  let mut expected = vec!["figs/a.png"];
+  expected.extend(gs.then_some("p.png"));
+  expected.extend(im.then_some("x1.png"));
+  let generated: Vec<&str> = expected[1..].to_vec();
+  for dest in ["out/p.html", "p.html"] {
+    draw(0);
+    let page = src.join(dest);
+    let dir = page.parent().unwrap().to_path_buf();
+    let run = || {
+      let output = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+        .args([
+          "--nocomments",
+          "--timeout=110",
+          &format!("--dest={dest}"),
+          "p.tex",
+        ])
+        .current_dir(&src)
+        .output()
+        .expect("spawn latexml_oxide");
+      let log = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
+      assert_eq!(
+        (error_count(&log), warning_count(&log)),
+        (0, 0),
+        "{dest}: {log}"
+      );
+      let urls: Vec<String> = images_of(&page).into_iter().map(|(url, _)| url).collect();
+      assert_eq!(urls, expected, "{dest}: {log}");
+      generated
+        .iter()
+        .map(|name| std::fs::read(dir.join(name)).unwrap())
+        .collect::<Vec<_>>()
+    };
+    let first = run();
+    draw(1);
+    let second = run();
+    for (name, (before, after)) in generated.iter().zip(first.iter().zip(&second)) {
+      assert_ne!(before, after, "{dest}: {name} holds the edited image");
+    }
+    assert_eq!(
+      std::fs::read(dir.join("figs/a.png")).unwrap(),
+      png(4, 2),
+      "{dest}: figs/a.png is the edited image"
+    );
+    assert_eq!(images_in(&dir), generated, "{dest}");
+  }
+  let mut figs: Vec<String> = std::fs::read_dir(src.join("figs"))
+    .unwrap()
+    .flatten()
+    .map(|entry| entry.file_name().to_string_lossy().into_owned())
+    .collect();
+  figs.sort();
+  assert_eq!(figs, ["a.png", "p.eps", "r.png"]);
+}
+
+/// A corrupt or planted `LaTeXML-oxide.cache` decides no file a run writes: entries set to `Ch1.html||` and
+/// `.hidden/evil||` are names no PNG could have been given, so each is ignored with a Warning naming the cache and the
+/// images are named again (round 3: a PNG written over `Ch1.html`, `.hidden/evil` created). Perl writes only names it
+/// generates (`Post/Graphics.pm` L249-260 reuse an existing file). Repro loader/image_names_corrupt_cache_entry.
+#[test]
+fn batchfix995_a_corrupt_cache_entry_decides_no_file() {
+  let root = tempfile::tempdir().unwrap();
+  let (src, img) = (root.path().join("src"), root.path().join("img"));
+  std::fs::create_dir_all(&src).unwrap();
+  std::fs::create_dir_all(&img).unwrap();
+  std::fs::write(src.join("index.tex"), CORRUPT).unwrap();
+  std::fs::write(src.join("a.png"), png(4, 4)).unwrap();
+  std::fs::write(img.join("b.png"), png(4, 5)).unwrap();
+  std::fs::write(img.join("c.png"), png(5, 5)).unwrap();
+  let run = || {
+    let output = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+      .args([
+        "--nocomments",
+        "--timeout=110",
+        "--split",
+        "--splitat=chapter",
+        "--dest=index.html",
+        "index.tex",
+      ])
+      .current_dir(&src)
+      .output()
+      .expect("spawn latexml_oxide");
+    String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "")
+  };
+  let shown = || {
+    ["Ch1.html", "Ch2.html"]
+      .map(|page| images_of(&src.join(page)))
+      .to_vec()
+  };
+  let log = run();
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let before = shown();
+  let urls: Vec<Vec<&str>> = before
+    .iter()
+    .map(|page| page.iter().map(|(url, _)| url.as_str()).collect())
+    .collect();
+  assert_eq!(urls, [vec!["a.png", "x1.png"], vec!["x2.png"]]);
+  {
+    let conn = rusqlite::Connection::open(src.join("LaTeXML-oxide.cache")).unwrap();
+    let keys: Vec<String> = conn
+      .prepare("SELECT key FROM kv WHERE key LIKE 'LaTeXML::Post::Graphics:%' ORDER BY key")
+      .unwrap()
+      .query_map([], |row| row.get(0))
+      .unwrap()
+      .collect::<Result<_, _>>()
+      .unwrap();
+    assert_eq!(keys.len(), 3, "{keys:?}");
+    for (key, value) in keys.iter().zip(["Ch1.html||", ".hidden/evil||"]) {
+      conn
+        .execute("UPDATE kv SET value = ?1 WHERE key = ?2", [value, key])
+        .unwrap();
+    }
+  }
+  let log = run();
+  let warnings: Vec<&str> = log.lines().filter(|l| l.starts_with("Warning:")).collect();
+  assert_eq!(error_count(&log), 0, "{log}");
+  assert_eq!(warnings.len(), 2, "{log}");
+  assert!(
+    warnings.iter().all(|w| w.contains("LaTeXML-oxide.cache")),
+    "{warnings:?}"
+  );
+  assert_eq!(shown(), before);
+  assert!(
+    std::fs::read_to_string(src.join("Ch1.html"))
+      .unwrap()
+      .contains("<html")
+  );
+  assert!(!src.join(".hidden").exists());
 }

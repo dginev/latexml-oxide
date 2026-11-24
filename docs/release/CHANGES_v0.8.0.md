@@ -128,10 +128,11 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     in the destination directory as `LaTeXML-oxide.cache` (an SQLite database; Perl's `LaTeXML.cache` is a DB_File,
     left untouched): every page's images are named before any page is rendered, so the parallel render of 64 pages or
     more names them exactly as the serial one, whatever the worker count, and a page's navigation shows the other
-    pages' title images right. A name is handed out once per directory: a rerun keeps every unchanged image's name, a
-    changed image takes a new one, a second document converted into the same directory continues the numbering (it
-    restarted at `x1` and overwrote the first document's images), and conversions writing into one directory at once
-    never share a name. A converted (or turned, cropped) image is made once and shown by every page that uses it. A
+    pages' title images right. A name belongs to its source: a rerun keeps every image's name, an edited image is
+    written again under the name it had, a second document converted into the same directory continues the numbering
+    (it restarted at `x1` and overwrote the first document's images), conversions started together into one new
+    directory all share its cache and never share a name, and a corrupt cache entry is ignored with a Warning instead
+    of deciding where an image is written. A converted (or turned, cropped) image is made once and shown by every page that uses it. A
     copy is never written through a symbolic link out of the site directory. `.zip` and EPUB outputs leave the cache
     out, and the cortex worker keeps it in memory. The parallel render's private database snapshot is now named
     `LaTeXML-render.db`.

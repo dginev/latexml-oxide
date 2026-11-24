@@ -247,7 +247,7 @@ enum NodeDesc {
   Copy {
     source:  String,
     options: String,
-    request: Request,
+    request: Box<Request>,
   },
   Convert(Box<ConvertDesc>),
 }
@@ -269,7 +269,7 @@ impl NodeDesc {
   fn request(&self) -> Option<&Request> {
     match self {
       NodeDesc::NotFound(_) => None,
-      NodeDesc::Copy { request, .. } => Some(request),
+      NodeDesc::Copy { request, .. } => Some(request.as_ref()),
       NodeDesc::Convert(desc) => Some(&desc.request),
     }
   }
@@ -1075,13 +1075,7 @@ impl Graphics {
         .filter(|p| p.dirs.dest_dir == *dir)
         .map(|p| p.requests.clone())
         .collect();
-      let site_dir = &first.dirs.site_dir;
-      let usable = |name: &ResourceName| Self::kept_path(&name.dest, dir, site_dir).is_some();
-      let resolved = first
-        .cache
-        .with_store(first.dirs.cache_dir.as_deref(), |store| {
-          store.immediate(|tx| crate::resource_cache::resolve(tx, &prefix, &pages, &usable))
-        });
+      let resolved = Self::resolve_names(&first.cache, &first.dirs, &prefix, &pages);
       for (requests, resolved) in pages.iter().zip(resolved) {
         for (request, resolved) in requests.iter().zip(resolved) {
           names
@@ -1207,6 +1201,11 @@ impl Graphics {
       // Perl's key (`ref($self):reldir/name.srctype.type|transform`) and the content the destination holds: one
       // file per content, a changed image a new key. Unreadable, a source is known by its path.
       let rel = latexml_core::util::pathname::relative(&source, source_dir);
+      // The source as the names it owns record it: relative to the destination, so a moved folder keeps them.
+      let owned_source = {
+        use latexml_core::util::pathname::{absolute, relative};
+        relative(&absolute(&source), &absolute(dest_dir))
+      };
       let digest = names.digest(&source);
       let identity = digest.as_ref().map_or_else(
         || format!("path:{source}"),
@@ -1233,8 +1232,14 @@ impl Graphics {
         );
         let request = Request {
           key,
-          file: content.clone(),
+          bytes: content.clone(),
           content,
+          owner: format!(
+            "{dest_type}|{}|{options}|{owned_source}",
+            page.map_or(String::new(), |p| p.to_string())
+          ),
+          source: owned_source,
+          identity,
           proposal: if has_page || transform {
             Proposal::Generated
           } else {
@@ -1262,14 +1267,21 @@ impl Graphics {
         let request = Request {
           key,
           content: format!("copy|{identity}|{options}"),
-          file: format!("copy|{identity}"),
+          bytes: format!("copy|{identity}"),
+          owner: format!("copy|{owned_source}"),
+          source: owned_source,
+          identity,
           proposal: Self::kept_path(&rel, dest_dir, site_dir)
             .map_or(Proposal::Generated, Proposal::Kept),
           ext,
           svg_alt: false,
           copy: true,
         };
-        descs.push(NodeDesc::Copy { source, options, request });
+        descs.push(NodeDesc::Copy {
+          source,
+          options,
+          request: Box::new(request),
+        });
       }
     }
     descs
@@ -1304,15 +1316,9 @@ impl Graphics {
       .filter_map(|&i| descs[i].request().cloned())
       .collect();
     let planning = names.planning;
-    let usable =
-      |name: &ResourceName| Self::kept_path(&name.dest, &dirs.dest_dir, &dirs.site_dir).is_some();
     let prefix = names.prefix.clone().unwrap_or_else(|| "x".to_string());
     let cache = names.cache.clone().unwrap_or_else(|| doc.cache().clone());
-    let pages = [requests];
-    let resolved = cache
-      .with_store(dirs.cache_dir.as_deref(), |store| {
-        store.immediate(|tx| crate::resource_cache::resolve(tx, &prefix, &pages, &usable))
-      })
+    let resolved = Self::resolve_names(&cache, dirs, &prefix, &[requests])
       .into_iter()
       .next()
       .unwrap_or_default();
@@ -1445,6 +1451,64 @@ impl Graphics {
       jobs: convert_jobs,
       known,
     }
+  }
+
+  /// Name `pages` in `cache`'s store of the destination directory, in one transaction ([`crate::resource_cache`]).
+  fn resolve_names(
+    cache: &DocCache,
+    dirs: &PageDirs,
+    prefix: &str,
+    pages: &[Vec<Request>],
+  ) -> Vec<Vec<crate::resource_cache::Resolved>> {
+    let usable =
+      |name: &ResourceName| Self::kept_path(&name.dest, &dirs.dest_dir, &dirs.site_dir).is_some();
+    let vouch = |r: &Request, name: &ResourceName, source: &str| Self::vouch(r, name, source, dirs);
+    let on_disk = |name: &ResourceName| {
+      std::iter::once(&name.dest)
+        .chain(&name.alt)
+        .any(|part| Path::new(&dirs.dest_dir).join(part).exists())
+    };
+    let cache_file = Path::new(&dirs.dest_dir)
+      .join(crate::document::CACHE_FILE)
+      .display()
+      .to_string();
+    cache.with_store(dirs.cache_dir.as_deref(), |store| {
+      let checks = crate::resource_cache::Checks {
+        prefix,
+        usable: &usable,
+        vouch: &vouch,
+        on_disk: store
+          .fell_back()
+          .then_some(&on_disk as &dyn Fn(&ResourceName) -> bool),
+        cache: &cache_file,
+      };
+      store.immediate(|tx| crate::resource_cache::resolve(tx, &checks, pages))
+    })
+  }
+
+  /// Whether `name`, stored for the source at `source` (relative to the destination directory), is the name that
+  /// source takes (its kept path, or its stem) and the source holds `r`'s bytes, so `r` may share its file.
+  fn vouch(r: &Request, name: &ResourceName, source: &str, dirs: &PageDirs) -> bool {
+    use latexml_core::util::pathname::{absolute, relative};
+    if source.is_empty() {
+      return false;
+    }
+    let abs = absolute(&Path::new(&dirs.dest_dir).join(source).to_string_lossy());
+    let same_bytes = Self::digest_file_content(&abs).is_some_and(|d| {
+      d.content()
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect::<String>()
+        == r.identity
+    });
+    same_bytes
+      && if r.copy {
+        relative(&abs, &absolute(&dirs.source_dir)) == name.dest
+      } else {
+        Path::new(&abs)
+          .file_stem()
+          .is_some_and(|stem| format!("{}.{}", stem.to_string_lossy(), r.ext) == name.dest)
+      }
   }
 
   /// A copy's path relative to `dest_dir` when it keeps the source's path relative to the source directory: taken
@@ -3452,7 +3516,10 @@ mod tests {
     Request {
       key:      format!("LaTeXML::Post::Graphics:{source}.{ext}||{source}"),
       content:  format!("{ext}|{source}||"),
-      file:     format!("{ext}|{source}||"),
+      bytes:    format!("{ext}|{source}||"),
+      owner:    format!("{ext}|||{source}"),
+      source:   source.to_string(),
+      identity: source.to_string(),
       proposal: Proposal::Stem(stem),
       ext:      ext.to_string(),
       svg_alt:  false,
@@ -3462,8 +3529,15 @@ mod tests {
 
   fn dests_of(requests: Vec<Request>) -> Vec<String> {
     let pages = [requests];
+    let checks = crate::resource_cache::Checks {
+      prefix:  "x",
+      usable:  &|_| true,
+      vouch:   &|_, _, _| true,
+      on_disk: None,
+      cache:   crate::document::CACHE_FILE,
+    };
     DocCache::new(true).with_store(None, |store| {
-      store.immediate(|tx| crate::resource_cache::resolve(tx, "x", &pages, &|_| true))
+      store.immediate(|tx| crate::resource_cache::resolve(tx, &checks, &pages))
     })[0]
       .iter()
       .map(|r| r.name.dest.clone())

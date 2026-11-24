@@ -24196,13 +24196,16 @@ lies outside `--sitedirectory`. Packages leave the cache out (`Pack/Zip.pm` `ARC
 `Manifest/Epub.pm` L205).
 **Rust.** `PostDocument::cache_lookup`/`cache_store` are backed by `document.rs` `DocCache`: one key-value store per
 destination directory, the SQLite table `kv(key, value)` with Perl's keys and values, in the file `LaTeXML-oxide.cache`
-there (`sqlite_store.rs`: WAL, `synchronous=OFF`, a busy timeout, a `user_version` gate; opened at the first lookup),
-in memory under `nocache` (the cortex worker, whose every paper gets a fresh directory, and the LSP) or without a
+there (`sqlite_store.rs`: WAL, `synchronous=OFF`, a busy timeout, a `user_version` gate; opened at the first lookup,
+the directory made first as Perl's `checkDestination` makes it, L941-949; opening retried while another process holds
+a new file, whose turn to WAL SQLite refuses at once rather than wait), in memory under `nocache` (the cortex worker, whose every paper gets a fresh directory, and the LSP) or without a
 destination directory. Every page of a run shares the run's `DocCache` (`PostDocumentOptions::cache`); a render
 worker opens its own on the same file. `resource_cache.rs` names images over it: every name goes through it (a copy's
-kept path, a converted image's stem, a generated `xN` from Perl's counter key), and two entry kinds of ours,
-`_content_<content>` (one content, one file) and `_file_<name>` (what a file holds), make a name another file already
-claimed fall back to the next free `xN` (the claim covers the `.svg` a vector render may take beside a raster), so
+kept path, a converted image's stem, a generated `xN` from Perl's counter key). A name's owner is its source (its path
+relative to the destination directory, the transform and the target type), as Perl's key names it: entries of ours,
+`_owner_<name>`, `_name_<owner>`, `_source_<name>` and `_holds_<name>` (the bytes it was last written with), make a
+name another source owns fall back to the next free `xN` (the claim covers the `.svg` a vector render may take beside a
+raster), and `_content_<content>` lets a source with the same bytes share that file while it holds them, so
 neither split pages (Chapter One showed child_2's figure), nor two converted sources sharing a stem (`a/plot.eps`,
 `b/plot.eps`; witness 2401.00054, `Figures/ch2/qz.pdf` and `Figures/ch5/qz.pdf`), nor a converted `plot.png` and an
 author's `plot.png` overwrite each other. The names are planned before any page is rendered: each page of a split as it
@@ -24221,15 +24224,24 @@ base's own parent, which Perl's regex lets through (KNOWN_PERL_ERRORS #1329); (2
 link that leaves the site and destination directories (OD #1081); (3) the file is SQLite, named `LaTeXML-oxide.cache`
 so that a Perl run's DB_File `LaTeXML.cache` in the same directory is never touched; every allocation is one
 `IMMEDIATE` transaction, so runs writing into one folder at once never hand out one name twice (their numbering then
-follows which run commits first); a file that is not ours, or of another schema version, is left alone (a Warning;
-the run's entries stay in memory); (4) the key carries the source's content digest instead of Perl's timestamp check,
-so a changed image is a new key and takes a new name; (5) an entry stores the name only (`dest||`): Perl's width and
+follows which run commits first); a file that is not ours, or of another schema version, is left alone (a Warning
+that names it and says to delete it; the run's entries stay in memory); (4) the key carries the source's content digest instead of Perl's timestamp check,
+so a changed image is a new key, copied or converted again into the name its source owns (a kept path, as Perl
+copies it every run; a stem; a generated `xN`, where Perl generates a new one), and a source sharing that file takes
+its own name once the file's owner writes other bytes into it; (5) an entry stores the name only (`dest||`): Perl's width and
 height let it skip the conversion, which the content-addressed graphics cache (`graphics_cache.rs`) serves here;
 (6) an image first met in another page's navigation is numbered at its own page, where Perl's serial
 CrossRef-then-Graphics numbered it at the first page whose navigation showed it; (7) a converted image keeps its stem
 when free (`plot.png`, witness 2606.30620), where Perl generates `xN` for every conversion (`Post/Graphics.pm`
 L318-319); (8) a stored name this run's site directory does not allow (a kept `../children/…` path, rerun without
-`--sitedirectory`) is not reused, where Perl reuses it. The run closes the cache when post ends (checkpointed, no
+`--sitedirectory`) is not reused, where Perl reuses it; (9) a stored name is written only when the image could have
+been given it: its kept path, its stem or a generated `<prefix>N`, or another source's kept path or stem when that
+source holds the same bytes; a name of another type or on a hidden path (a corrupt or planted cache, which a source
+archive converted in place can carry) is ignored with a Warning naming the cache (`unexpected:cache`), where Perl's
+cache is written only by Perl; (10) a store that fell back to memory (the file locked past the timeout, read-only,
+corrupt) skips a generated name or a stem whose file exists in the destination; (11) Perl's `--whatsout=math` unlinks
+`LaTeXML.cache` relative to the working directory after packing (`Util/Pack.pm` L343), which misses a cache in another
+destination directory; not ported: a math-only run keeps its cache, as every run does. The run closes the cache when post ends (checkpointed, no
 `-wal`/`-shm` left), before anything is packed, and packages skip it and its side files by name (`pack.rs`
 `is_excluded_archive_entry`, the EPUB manifest; a killed process's side files included). The parallel render's
 ObjectDB snapshot is a separate file, `LaTeXML-render.db` in the private spill directory (a read-only per-run
@@ -24240,14 +24252,19 @@ batchfix995_split_pages_keep_converted_stems_apart, batchfix995_split_pages_reus
 batchfix995_every_job_count_names_images_alike, batchfix995_documents_in_one_folder_keep_their_own_images,
 batchfix995_concurrent_documents_in_one_folder_never_share_a_name,
 batchfix995_packages_leave_the_cache_out_when_a_worker_is_killed,
-batchfix995_linked_destination_writes_nothing_outside_the_site_directory}`
+batchfix995_linked_destination_writes_nothing_outside_the_site_directory, batchfix995_an_edited_image_keeps_its_name,
+batchfix995_a_corrupt_cache_entry_decides_no_file}`
 (`tools/perfect_kernel/repros/loader/image_subimport_sitedirectory.tex`,
 `tools/perfect_kernel/repros/loader/image_copy_through_linked_destination.tex`,
 `tools/perfect_kernel/repros/loader/image_names_two_documents_one_folder.tex`,
+`tools/perfect_kernel/repros/loader/image_edited_keeps_its_name.tex`,
+`tools/perfect_kernel/repros/loader/image_names_corrupt_cache_entry.tex`,
 `tools/perfect_kernel/repros/split-navigation/image_names_shared_across_split_pages.tex`,
 `tools/perfect_kernel/repros/split-navigation/converted_image_reused_across_split_pages.tex`,
 `tools/perfect_kernel/repros/split-navigation/image_names_parallel_render_as_serial.tex`,
 `tools/perfect_kernel/repros/split-navigation/image_names_title_images_in_navigation.tex`);
-`resource_cache::tests::{names_follow_the_page_order_and_never_clash, concurrent_tables_on_one_file_never_share_a_name}`,
-`sqlite_store::tests::another_version_is_left_alone`, `pack::tests` (the side files),
+`resource_cache::tests::{names_follow_the_page_order_and_never_clash, an_edited_source_keeps_its_names,
+a_shared_file_is_left_when_its_owner_changes, a_planted_name_is_ignored, a_store_in_memory_skips_files_on_disk,
+concurrent_tables_on_one_file_never_share_a_name}`,
+`sqlite_store::tests::{another_version_is_left_alone, simultaneous_opens_of_a_new_file_all_use_it}`, `pack::tests` (the side files),
 `pathname::tests::is_contained_is_underneath_only`.

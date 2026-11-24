@@ -1,14 +1,14 @@
 % mechanism: latexml_post resource_cache.rs (Perl's LaTeXML.cache in the destination directory, Post.pm L1517-1548):
 %   the names a run hands out are stored in the destination directory, so a second document converted into it
-%   continues the counter, and a source whose content changed is a new key with a new name.
+%   continues the counter, and a source whose content changed is copied again into the name its source has.
 % witness: issue 995 review (a.tex and b.tex in one folder each wrote x1.svg: a's page showed b's image)
 % layout:  parent/a.tex (this file), parent/b.tex (the same with child_2), the children of
 %          loader/image_subimport_sitedirectory; cwd parent/
 % oracle:  latex (DVI) 0 errors with PNGs in place of the SVGs (pdflatex reads no SVG)
 % engines: rust=GREEN perl=GREEN (read, not run: its LaTeXML.cache counter continues, Post.pm L192-200)
 % expect:  --dest=a.html, then --dest=b.html: a.html x1.svg (child_1 A); b.html x2.svg, x3.svg (child_2 A, B);
-%          child_1's A changed, a.html again: x4.svg (the new A), b.html still right; 0 errors
-%          (base: both x1.svg, a.html showing child_2's A)
+%          child_1's A changed, a.html again: x1.svg (the new A), b.html still right; 0 errors
+%          (base: both x1.svg, a.html showing child_2's A; round 3: x4.svg after the edit)
 % status:  GREEN
 \documentclass{book}
 \usepackage{import}

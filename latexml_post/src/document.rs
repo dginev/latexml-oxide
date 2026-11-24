@@ -2266,9 +2266,12 @@ impl DocCache {
       .stores
       .entry(dir.unwrap_or_default().to_string())
       .or_insert_with(|| {
-        let file = dir
-          .filter(|_| persist)
-          .map(|dir| Path::new(dir).join(CACHE_FILE));
+        let file = dir.filter(|_| persist).map(|dir| {
+          // Perl's `checkDestination` makes the directory (`Post.pm` L941-949): the cache is opened before any page
+          // is written into a new `--dest` directory.
+          let _ = std::fs::create_dir_all(dir);
+          Path::new(dir).join(CACHE_FILE)
+        });
         crate::sqlite_store::SqliteStore::open(file.as_deref(), DOC_CACHE_SCHEMA, 1)
       });
     f(store)
