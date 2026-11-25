@@ -708,6 +708,58 @@ fn a_dump_built_from_another_tree_is_not_used() {
   );
 }
 
+/// The one-time format build runs off the conversion's `--timeout` (`watchdog::off_the_clock`). Red (0.8.0-rc4,
+/// Windows): the watchdog killed a build that outlasted the timeout (exit 124) and counted it as failed; two such runs
+/// marked the format failed for a day. The builds take ~28 s in the `ci` profile, past the 10 s given here.
+#[test]
+fn the_format_build_is_off_the_conversion_clock() {
+  let (no_dumps, cache) = (tempfile::tempdir().unwrap(), tempfile::tempdir().unwrap());
+  let (no_dumps_path, cache_path) = (
+    no_dumps.path().display().to_string(),
+    cache.path().display().to_string(),
+  );
+  let env = [
+    ("LATEXML_DUMP_DIR", no_dumps_path.as_str()),
+    ("LATEXML_DUMP_DIR_ONLY", "1"),
+    ("LATEXML_NO_EMBEDDED_DUMP", "1"),
+    ("LATEXML_FORMAT_CACHE", cache_path.as_str()),
+  ];
+  let started = std::time::Instant::now();
+  let (ok, stderr, _) = convert_cli(
+    "\\documentclass{article}\\begin{document}Text.\\end{document}",
+    10,
+    &env,
+  );
+  assert!(ok, "the conversion exited non-zero:\n{stderr}");
+  assert!(
+    started.elapsed().as_secs() >= 10,
+    "the build no longer outlasts the timeout: lower it"
+  );
+  let built = std::fs::read_dir(cache.path())
+    .unwrap()
+    .flatten()
+    .next()
+    .expect("a cache directory")
+    .path();
+  let names: Vec<String> = std::fs::read_dir(built)
+    .unwrap()
+    .flatten()
+    .map(|e| e.file_name().to_string_lossy().into_owned())
+    .collect();
+  assert!(
+    names
+      .iter()
+      .any(|n| n.starts_with("latex.") && n.ends_with(".dump.txt")),
+    "{names:?}"
+  );
+  assert!(
+    !names
+      .iter()
+      .any(|n| n.starts_with(".attempts.") || n.starts_with(".failed.")),
+    "{names:?}"
+  );
+}
+
 /// plain.tex's `\ialign` (`\everycr{}\tabskip\z@skip\halign`) on the NODUMP branch too: an `\everycr` set before it
 /// does not run (pdftex "count: 0"; the dump branch reads plain.tex's own). Red (78b r1, NODUMP): "count: 2", from
 /// plain_base.rs's `\let\ialign\halign` (Perl plain_base.pool.ltxml:118), right only while `\halign` inserted no

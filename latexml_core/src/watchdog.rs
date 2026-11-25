@@ -902,6 +902,39 @@ pub fn park_if_exiting() {
   }
 }
 
+/// One-time setup kept off every deadline ([`off_the_clock`]): the one running now (its start and bound), and the time
+/// the finished ones took.
+static SETUP: std::sync::Mutex<(Option<(Instant, Duration)>, Duration)> =
+  std::sync::Mutex::new((None, Duration::ZERO));
+
+fn setup() -> std::sync::MutexGuard<'static, (Option<(Instant, Duration)>, Duration)> {
+  SETUP
+    .lock()
+    .unwrap_or_else(std::sync::PoisonError::into_inner)
+}
+
+/// Runs `work`, one-time setup that is not the conversion's — the format build for the host's TeX tree — off the
+/// watchdog's deadline, which moves back by the time it took; while it runs, only `bound` ends it.
+pub fn off_the_clock<T>(bound: Duration, work: impl FnOnce() -> T) -> T {
+  let started = Instant::now();
+  setup().0 = Some((started, bound));
+  let result = work();
+  let mut setup = setup();
+  setup.0 = None;
+  setup.1 += started.elapsed();
+  result
+}
+
+/// Whether a watchdog started after `setup_before` of setup has passed its `deadline`, or a running setup its bound.
+fn past_deadline(deadline: Instant, setup_before: Duration) -> bool {
+  let (running, setup_done) = *setup();
+  let now = Instant::now();
+  match running {
+    Some((started, bound)) => now >= started + bound,
+    None => now >= deadline + setup_done.saturating_sub(setup_before),
+  }
+}
+
 pub struct Watchdog {
   cancelled: Arc<AtomicBool>,
 }
@@ -933,13 +966,14 @@ impl Watchdog {
 
   fn run(cancelled: Arc<AtomicBool>, timeout_secs: u64, max_rss_kb: u64) {
     let deadline = (timeout_secs > 0).then(|| Instant::now() + Duration::from_secs(timeout_secs));
+    let setup_before = setup().1;
     let poll_interval = Duration::from_millis(100);
     loop {
       if cancelled.load(Ordering::Relaxed) {
         return; // cancelled: graceful exit.
       }
       if let Some(deadline) = deadline
-        && Instant::now() >= deadline
+        && past_deadline(deadline, setup_before)
       {
         // Claimed first: a normal end claimed before it (the result being written) stands the breach down.
         if cancelled.load(Ordering::Relaxed) || !claim_exit(EXIT_TIMEOUT) {

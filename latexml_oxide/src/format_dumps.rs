@@ -166,7 +166,11 @@ pub fn ensure_format_dumps() {
   }
   static ENSURED: OnceLock<()> = OnceLock::new();
   ENSURED.get_or_init(|| {
-    if let Err(reason) = ensure() {
+    // Once per TeX tree, not the document's work: off the conversion's `--timeout`, which a busy host's build outlasted
+    // and, killed twice, marked the format failed. Bounded by the lock wait and a build of its own.
+    let ensured =
+      latexml_core::watchdog::off_the_clock(LOCK_WAIT + Duration::from_secs(300), ensure);
+    if let Err(reason) = ensured {
       // A Warning, as each conversion logs it (`converter::note_format_build_failure`).
       note(log::Level::Warn, format_args!(
         "[format_dumps] {reason}: the format loads from the engine's own definitions instead of a dump"
