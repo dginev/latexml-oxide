@@ -73,7 +73,7 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (392 items on 2026-11-25 on `int/towards_v0_8_1`: 392 open, weight 882, 43 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (396 items on 2026-11-25 on `int/towards_v0_8_1`: 396 open, weight 886, 43 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
 
 
   - ODR6 — OD ruling 12 (recorded in OD #449): `dump_reader.rs`'s "add-only" docstrings (:365, :574) corrected, then a removal trial of the skip lists against CLAUDE.md rule 2; 1
@@ -850,6 +850,27 @@ Rules that keep this file honest and mergeable:
     issued pathnames in `Split` and warn, or suffix, on a repeat, both split paths (beyond Perl). A label of `..`
     segments writes outside the destination (`\label{../esc}`, rc3 and Perl alike, OD #1164): drop leading `..` or
     make it an Error as Perl's site-directory check does (issue 1006 round-5 review); 2
+  - KEPTDEDUP — two `\includegraphics` of different files with identical bytes both point at the first file's path,
+    even where each is referenced in place and nothing is copied (`figs/a`, `figs/b` → `data="figs/a.svg"` twice; under
+    `--sitedirectory` a chapter links another child's `../children/c1/images/A.svg`), so a page silently depends on
+    another folder's file; Perl keeps each node's own path (`Post/Graphics.pm` L289-300). A kept copy's key is
+    `bytes: "copy|{identity}"` (`graphics.rs` ~1280) and `resource_cache.rs` `place()` checks the content key
+    `_content_{bytes}` (~203) before the kept path: skip the content key for a kept-in-place copy, keep the dedup for
+    conversions and generated `x*` copies (OD #24). rc1 and rc4 alike (GENUINE-RUST-ONLY, found by the Nasser workflow
+    check 2026-11-25; repro `kept_path_dedup` in its scratch); 1
+  - LTCAPDUP — a longtable with `\caption{T}\\ … \endfirsthead \caption[]{T (continued)}\\ … \endhead … \endfoot`
+    prints "Table 1: T (continued)" as a second `<figcaption>` under the table, where pdflatex shows it on continuation
+    pages only: `\endhead` after `\endfirsthead` drops the head rows but leaves `LONGTABLE_CAPTIONS` set, and the
+    `\endfoot` grab adopts it (Perl `longtable.sty.ltxml` L101-120, ours `longtable_sty.rs` ~128-160; Perl alike,
+    verified same-host 2026-11-25). Clear the captions when a group's rows are discarded; guard: one `<figcaption>`.
+    Reach ≤ 788 (`who_uses.py --cs endhead --cs endfoot --cs caption --env longtable --and`, an upper bound); 1
+  - NOTETAGSWS — a footnote pop-up's text starts with an extra space: the core XML is re-parsed before post (the spill
+    handoff) and the indentation inside `<ltx:tags>` survives `xsl:preserve-space elements="ltx:note"`
+    (`LaTeXML-meta-xhtml.xsl:37`); Perl's own two-step `latexmlpost` on the same XML does the same, only `latexmlc`'s
+    in-memory path avoids it. `<xsl:strip-space elements="ltx:tags"/>` (tag elements only); every footnote's HTML
+    changes; 1
+  - IDXSTARPART — an index entry inside a `\chapter*` of a book with parts reads its locator as "Part I" (Perl alike;
+    Nasser workflow check 2026-11-25, drained repro `idx_unnumbered_chapter_tag`); 1
   - POSTRESID — after the core, ~190 MB of C heap stays live into post (pass B 12.69 s vs 11.26 s on a clean heap at
     n1600): core nodes unlinked and never freed, ~98 KB a subsection (heaptrack, n100: `insert_math_token` ~52 %, the
     amsmath rearrangement `ams_rearrangeable_bindings`/`equationgroup_join_cols` ~15 %, `tex_math`, `sect07`,
