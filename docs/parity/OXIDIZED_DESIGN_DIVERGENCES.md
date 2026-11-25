@@ -24846,8 +24846,8 @@ it, not under `$HOME`. One `split::PageNamer` names the pages of both split path
 the root's first:
 - A pathname already issued (`\label{dup}` and `\label{dup/}`, `./x` and `x`, `\label{index}` beside `index.html`)
   is not issued again: the page takes the fallback a missing label takes (its `xml:id`, else `FOO<n>`) with one
-  Warning naming both keys and the file. Perl and rc3 wrote both pages to one file, the first one lost (Perl keeps
-  `dup/` as the hidden `dup/.html`).
+  Warning naming both keys and the file. Perl and rc3 wrote both pages to one file and one was lost (Perl keeps
+  `dup/` as the hidden `dup/.html`; its `\label{index}` page replaced the root page).
 - A page whose name leaves the destination's directory (`\label{../esc}`, or `..` past it under `labelrelative`) is
   an Error and takes the same fallback inside it; `a/../b` (`b`) stays and is clean. Perl's check (`Post.pm` L700-704,
   a Fatal) tests the site directory and misses a single `../` (`pathname_is_contained`, `Pathname.pm` L186, wants a
