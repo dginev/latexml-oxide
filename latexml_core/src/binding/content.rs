@@ -6996,7 +6996,7 @@ mod content_files_tests {
   #[test]
   fn each_content_file_costs_the_arena_its_path_once() {
     set_state(State::new(StateOptions::default()));
-    let path = |i: usize| s!("/book/OUTPUT/{i:05}_problem_of_monday_september_29/step.tex");
+    let path = |i: usize| s!("/book/chapters/chapter_{i:05}/sections/section_body.tex");
     let before = arena::buffer_len();
     for i in 0..200 {
       note_content_file(&path(i));
@@ -7008,13 +7008,8 @@ mod content_files_tests {
       grown <= 2 * 200 * each,
       "{grown} bytes for 200 paths of {each}"
     );
-    let files = content_files();
-    assert_eq!(files.len(), 200);
-    assert_eq!(
-      (files[0].as_str(), files[199].as_str()),
-      (path(0).as_str(), path(199).as_str())
-    );
-    assert_eq!(files[7], path(7));
+    // The whole reading order, every path once.
+    assert_eq!(content_files(), (0..200).map(path).collect::<Vec<_>>());
   }
 }
 
