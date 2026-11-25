@@ -1718,11 +1718,13 @@ mod split_nav_relations {
         assert_split_links_resolve(work.path(), &case);
       }
     }
-    // Order and climbing (review of SPLITFIX). Pages are named in document order, each before its children (Perl
-    // `prenamePages`, `Split.pm` L87-93): `y` (A1) keeps `y.html` before `y/` (B), and the `FOO<n>` fallbacks count
-    // in that order (red: B in `y.html`, A1 in `S1.SS1.html`, `FOO1` E). A `labelrelative` child `../up` of a foldered
-    // page lies beside it, its pathname resolved so its links are made from it (red: 6 dead `../index.html`). An
-    // EPUB's messages name its pages as the package does (red: `/tmp/…/OPS/…`). pdflatex 0 `!` each.
+    // Order and climbing (review of SPLITFIX). Pages are named in Perl's order, each before its children
+    // (`prenamePages`, `Split.pm` L87-93); on a collision the earlier page keeps the name (our rule, OD #1164: Perl
+    // writes both pages to one file, which holds the later one): `y` (A1) keeps `y.html` before `y/` (B), and the
+    // `FOO<n>` fallbacks count in that order (red: B in `y.html`, A1 in `S1.SS1.html`, `FOO1` E). A `labelrelative`
+    // child `../up` of a foldered page lies beside it, its pathname resolved so its links are made from it (red: 10 of
+    // 29 links dead). An EPUB's messages name its pages as the package does (red: `/tmp/…/OPS/…`), and its package
+    // keeps the four pages apart, the nav on the root. pdflatex 0 `!` each.
     for (repro, args, messages, pages) in [
       (
         include_str!("../../tools/perfect_kernel/repros/split-navigation/split_label_names_collide_in_document_order.tex"),
@@ -1797,6 +1799,24 @@ mod split_nav_relations {
           assert_eq!(page_heading(&work.path().join(file)), *heading, "{case}, {file}");
         }
         assert_split_links_resolve(work.path(), &case);
+        if let Some(epub) = args.iter().find_map(|a| a.strip_prefix("--dest=").filter(|d| d.ends_with(".epub"))) {
+          let file = std::fs::File::open(work.path().join(epub)).expect("the package");
+          let mut archive = zip::ZipArchive::new(file).expect("a zip container");
+          let mut opf = String::new();
+          std::io::Read::read_to_string(&mut archive.by_name("OPS/content.opf").expect("OPS/content.opf"), &mut opf)
+            .unwrap();
+          let pages: Vec<String> = opf
+            .split("<item ")
+            .skip(1)
+            .filter_map(|item| {
+              let item = &item[..item.find('>')?];
+              let href = item.split("href=\"").nth(1)?.split('"').next()?;
+              let nav = if item.contains("properties=\"nav\"") { " nav" } else { "" };
+              href.ends_with(".xhtml").then(|| format!("{href}{nav}"))
+            })
+            .collect();
+          assert_eq!(pages, ["doc.xhtml nav", "S1.xhtml", "a.xhtml", "bib.xhtml"], "{case}");
+        }
       }
     }
   }
