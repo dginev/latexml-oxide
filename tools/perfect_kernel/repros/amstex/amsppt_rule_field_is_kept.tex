@@ -1,0 +1,28 @@
+% witness: synthetic (amsppt.sty's own `\bysame` body, `\hbox to3em{\hrulefill}\thinspace\kern\z@`, and a bare
+%          `\vrule` as the `\by` field: the "same authors" rule of a reference list; a field ended by `\endgraf`; a
+%          `\newline` in a field, math0003031)
+% oracle:  pdftex (\input amstex) 0 errors; "[B] ——, Second, K (1991)." "[C] ——, Third, L (1992)."
+%          "[D] D. Fourth, Fourth, M (1993)." "[E] E. Fifth, Fifth, Preprint, available via" / "a web page." on the
+%          next line (amstex.tex:215 `\newline`, a line break); amsppt.sty:956-965 `\makerefbox` keeps a field whose
+%          box has width, `\ifdim\wd\@ne>\z@`, and sets its last line, `\endgraf\setbox\z@\lastbox`, without its end
+%          space
+% engines: rust INT081T = 0 errors, the rules kept in `ltx_bib_authors`; perl the same; rust AMSPPTRES (round 1) =
+%          0 errors, 0 warnings, both rules and their comma dropped silently ("[B] Second, K (1991).": a rule read
+%          as no content), and "Fourth ," (the space before `\endgraf` kept); round 2 before the fix: `\newline` (the
+%          AmSTeX pool's `\par`, as Perl's) closed reference E with an Error, "a web page" an untagged item
+% expect:  0 errors, 0 warnings; each rule in its `ltx_bib_authors`, then ", Second" and ", Third"; "Fourth,"; a
+%          `<break/>` before "a web page"
+% status:  RED (AMSPPTRES) -> GREEN (AMSPPTRES2); guard perfect_kernel_batchamsppt::amsppt_heads_and_theorems
+\input amstex
+\documentstyle{amsppt}
+\document
+\head 1. Intro\endhead
+Text.
+\Refs
+\ref\key A\by A. Author\paper First\jour J\yr 1990\endref
+\ref\key B\by\hbox to3em{\hrulefill}\thinspace\kern0pt\paper Second\jour K\yr 1991\endref
+\ref\key C\by\vrule width3em height.4pt depth0pt\paper Third\jour L\yr 1992\endref
+\ref\key D\by D. Fourth\paper Fourth \endgraf\jour M\yr 1993\endref
+\ref\key E\by E. Fifth\paper Fifth\paperinfo Preprint, available via \newline a web page\endref
+\endRefs
+\enddocument

@@ -15178,9 +15178,20 @@ amsppt.sty.ltxml:439), and the paper's `\noOf` (jmhlab.tex:210) puts `\make@ref`
 (`\let\if@fwdref\iftrue`) the read evaluated as a conditional. TeX boxes each field (amsppt.sty:956-965
 `\makerefbox`, `\setbox\curbox\vbox\bgroup`), where the `\let` is executed; so the binding digests it (AMSPPTRES;
 KNOWN_PERL_ERRORS #1298; repro amstex/amsppt_bibfield_is_digested): math0610862 2 Errors (`\Refst`, `\subrefhead`).
-A field the input ends in (a field marker outside a `\ref`, math9204232's `\Refs\ra\key{HM2}`; an unclosed `\ref`) is
-printed where it stands, counted by the body's "expected" Warning: math9204232 keeps its 5 references, which pdftex
-and Perl drop (repro amstex/amsppt_stray_field_after_refs).
+A field is kept when it has ink, a rule too (`\bysame`'s `\hrulefill`; TeX keeps any box of width, so a field of blank
+width alone, `\by\kern3em`, is dropped here with its comma, no word lost; repro amstex/amsppt_rule_field_is_kept).
+Inside a `\ref`, `\par` is `\add@missing\endref` (amsppt.sty:886-889), so a blank line, the next `\ref` or `\endRefs`
+closes a reference left open, with TeX's Error; a printed field is emptied, as `\unhbox` empties its box, so the stray
+fields an `\endref` prints after such a close are printed once, untagged (repro amstex/amsppt_ref_missing_endref).
+There `\newline` is amstex.tex:215's line break (`<ltx:break/>`), not the AmSTeX pool's `\par` (Perl
+AmSTeX.pool.ltxml:159), which would close the reference (math0003031). A field marker met inside a `{` or
+`\begingroup` the field opened closes it first (tex.web §1064 `off_save`), inside a box it stays part of the box, each
+with a Warning; TeX's `\makerefbox` `\egroup` closes the author's group and loses the field (repro
+amstex/amsppt_field_marker_inside_a_group). A field the
+input ends in (a field marker outside a `\ref`, math9204232's `\Refs\ra\key{HM2}`; a `\ref` the document ends in) is
+printed where it stands, counted by the body's "expected" Warning: math9204232 keeps its 5 references, which Perl
+drops; pdftex cannot run on the paper (`bull-ppt.tex` is missing), and drops them on the repro
+amstex/amsppt_stray_field_after_refs.
 Repros amstex/{amstex_copied_style_takes_the_binding, amstex_amsppt_guard_test_is_no_copy,
 amstex_inlined_package_guard_is_read}; guards `perfect_kernel_batchregfixd::{amsppt_copy_takes_the_binding,
 only_an_amsppt_copy_takes_the_binding}`. amstex.tex's `\Invalid@` (:251-252), with which such a style marks the

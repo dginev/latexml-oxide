@@ -1,0 +1,24 @@
+% witness: synthetic (a `{`, a `\begingroup` and an `\hbox` open across a field marker: `\by {\smc A. Author\paper …}`)
+% oracle:  pdftex (\input amstex) 2 errors (the `\begingroup` reference's "Extra }, or forgotten \endgroup", "Missing }
+%          inserted"); "[A] J (1990)." "[B] K (1991)." "[C] C. Third, Third (1992)." "After the references.": TeX's
+%          `\makerefbox` `\egroup` (amsppt.sty:956-965) closes the author's group instead of the field's box, and the
+%          fields before it are lost (C: the journal)
+% engines: rust INT081T = 1 error, A's paper "Title" lost, its `\smc` running on through B and the text after, C's
+%          journal printed as A's "J" and its "L" lost; rust AMSPPTRES (round 1) = 8 errors, 2 warnings, A's and C's tags
+%          set in invented `<picture>`s, `ltx_bib_authors` lost; perl reads fields as INT081T does (XUntil)
+% expect:  2 errors, 3 warnings; every word kept: the `{` and the `\begingroup` closed at the marker (a Warning each,
+%          tex.web §1064 `off_save`; the author's own closer later an Error, as on INT081T), the `\hbox`'s marker read
+%          as part of its box (a Warning: "ThirdL" in the paper); no `<picture>`
+% status:  RED (AMSPPTRES) -> GREEN (AMSPPTRES2); guard perfect_kernel_batchamsppt::amsppt_heads_and_theorems
+\input amstex
+\documentstyle{amsppt}
+\document
+\head 1. Intro\endhead
+Text.
+\Refs
+\ref\key A\by {\smc A. Author\paper Title}\jour J\yr 1990\endref
+\ref\key B\by \begingroup B. Writer\paper Second\endgroup\jour K\yr 1991\endref
+\ref\key C\by C. Third\paper \hbox{Third\jour L}\yr 1992\endref
+\endRefs
+After the references.
+\enddocument

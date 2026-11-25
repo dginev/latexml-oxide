@@ -1,0 +1,17 @@
+% witness: synthetic (a `\ref` with no `\key` and no `\no`)
+% oracle:  pdftex (\input amstex) 0 errors; "A. Author, First, J (1990)." "B. Writer, Second, K (1991).", no label
+%          (amsppt.sty:1011: the key box is printed only when set)
+% engines: rust INT081T and AMSPPTRES2 = 0 errors, each bibitem tagged "0" (`key="0"`, the binding's `\the@bibitem`,
+%          a counter `\@bibitem`'s id step leaves at 0); perl the same (amsppt.sty.ltxml `\@fill@bibitem`)
+% expect:  0 errors, 0 warnings; no "0" tag: no tag, or a number of each reference's own
+% status:  RED (INT081T, AMSPPTRES2)
+% moves:   post-merge
+\input amstex
+\documentstyle{amsppt}
+\document
+Text.
+\Refs
+\ref\by A. Author\paper First\jour J\yr 1990\endref
+\ref\by B. Writer\paper Second\jour K\yr 1991\endref
+\endRefs
+\enddocument

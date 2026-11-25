@@ -1,0 +1,21 @@
+% witness: synthetic (`\endref` inside an `\hbox` a field opened)
+% oracle:  pdftex (\input amstex) 2 errors ("Extra }, or forgotten \endgroup", "Missing } inserted"); reference A not
+%          printed; "[B] B. Writer, Second, K (1991)." "After the references."
+% engines: rust INT081T = 0 errors, 0 warnings, everything after A lost (B, "After the references."); rust AMSPPTRES2 =
+%          3 errors, A filled inside its own `\paper` box: its tag "0" and "[A]" in an invented `<picture>`, an empty
+%          bibitem "."; B and the text after kept
+% expect:  every word kept once, no `<picture>`, no invented tag
+% status:  RED (INT081T, AMSPPTRES2)
+% moves:   post-merge (a field marker inside a box stays in the box, `\@end@bibfield`; `\endref` there fills the
+%          reference inside the box)
+\input amstex
+\documentstyle{amsppt}
+\document
+\head 1. Intro\endhead
+Text.
+\Refs
+\ref\key A\by A. Author\paper \hbox{Title\endref}
+\ref\key B\by B. Writer\paper Second\jour K\yr 1991\endref
+\endRefs
+After the references.
+\enddocument
