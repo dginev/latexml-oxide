@@ -141,7 +141,8 @@ fn hyperref_leaves_refstepcounter_to_the_kernel() {
     assert!(xml.contains(whole), "{xml}");
   }
 
-  // Cleveref before hyperref: its own load-order Error only (pdflatex: 1 `!`).
+  // Cleveref before hyperref: its own load-order Error only (pdflatex: 1 `!`); in both orders cleveref's typed step
+  // `\refstepcounter[thm]{myc}` prints nothing (cleveref first, the base printed `thm]myc` with an undefined `\the[`).
   for (tex, errors) in [
     (
       include_str!(
@@ -158,6 +159,7 @@ fn hyperref_leaves_refstepcounter_to_the_kernel() {
   ] {
     let (log, xml) = convert_with(tex, None);
     assert_eq!(counts(&log), (errors, 0), "{log}");
+    assert!(!xml.contains("myc"), "{xml}");
     assert_eq!(
       log
         .matches("cleveref must be loaded after hyperref!")

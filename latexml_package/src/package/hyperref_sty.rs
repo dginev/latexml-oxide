@@ -600,11 +600,13 @@ LoadDefinitions!({
   // Loaded again — a document's own `\usepackage{hyperref}` after the revtex classes' preload, revtex4_support_sty.rs
   // — `\H@refstepcounter` saved as `\refstepcounter` called itself, a PushbackLimit Fatal under cleveref (2207.13707).
   Let!("\\H@refstepcounter", "\\lx@kernel@refstepcounter");
-  // hyperref.sty:6662-6673's `hyperref/fixcleveref` plug, for every released cleveref (cleveref.sty:2044-2054 sets its
-  // label data only in `\H@refstepcounter`): the update after the kernel's step
-  // (latex2e-first-aid-for-external-files.ltx:238-247), in cleveref's `\refstepcounter@noarg` copy too (2403.15855).
-  // Defined once, before the hook below; needed only where cleveref took its hyperref branch (cleveref.sty:2026-2036),
-  // as its own `\refstepcounter` sets the same data otherwise (cleveref first: 1811.08194, 1909.08399).
+  // hyperref.sty:6662-6673's `hyperref/fixcleveref` plug, for cleveref v0.21.4 and here any copy
+  // (cleveref.sty:2044-2054 sets its label data only in `\H@refstepcounter`; OXIDIZED_DESIGN_DIVERGENCES #1100): the
+  // update after the kernel's step (latex2e-first-aid-for-external-files.ltx:238-247), in cleveref's
+  // `\refstepcounter@noarg` copy too (2403.15855). Defined once, before the hook below; needed only where cleveref took
+  // its hyperref branch (cleveref.sty:2026-2036), as its own `\refstepcounter` sets the same data otherwise (cleveref
+  // first: 1811.08194, 1909.08399). An undefined flag (cleveref v0.15.3, shipped unused in 1107.1648's source) installs
+  // it: that version's hyperref branch needs it.
   RawTeX!(
     r"\ifdefined\lx@hyperref@fixcleveref\else\def\lx@hyperref@fixcleveref{\let\lx@hyperref@fixcleveref\relax
 \ifx\refstepcounter@noarg\cref@old@refstepcounter\def\refstepcounter@noarg{\cref@old@refstepcounter}\fi
@@ -618,7 +620,7 @@ LoadDefinitions!({
   // through `\H@refstepcounter`, as Perl never does (hyperref.sty.ltxml:385; OXIDIZED_DESIGN_DIVERGENCES #1100).
   RawTeX!(
     r"\@ifl@t@r\fmtversion{2024/11/01}{\AddToHook{package/cleveref/after}{\@ifpackagelater{cleveref}{2018/03/28}{}%
-{\if@cref@hyperrefloaded\lx@hyperref@fixcleveref\fi}}}{\def\refstepcounter#1{\H@refstepcounter{#1}}}"
+{\ifx\if@cref@hyperrefloaded\iffalse\else\lx@hyperref@fixcleveref\fi}}}{\def\refstepcounter#1{\H@refstepcounter{#1}}}"
   );
 
   // Blech...

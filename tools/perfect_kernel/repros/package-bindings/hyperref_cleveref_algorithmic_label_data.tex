@@ -5,7 +5,9 @@
 %          ran); HYPREFSTEP with hyperref's `hyperref/fixcleveref` plug (hyperref.sty:6662-6673) disabled
 %          (`\let\lx@hyperref@fixcleveref\relax`): 2 Errors, algorithmicx's `\ALG@step` read `\cref@currentlabel`'s
 %          placeholder and `\xdef`d `\cref@currentprefix` into itself
-% expect:  0 errors, 0 warnings; two numbered algorithmic lines, both `\cref`s resolved
+%          perl 6 errors (the two recursions; four missing-argument Errors of `\cref@override@label@type` at the
+%          typed step `\refstepcounter[thm]{myc}`)
+% expect:  0 errors, 0 warnings; two numbered algorithmic lines, both `\cref`s resolved, no step text
 % status:  GREEN (INT081T, HYPREFSTEP)
 % preload: ar5iv.sty
 \documentclass{article}
@@ -13,11 +15,14 @@
 \usepackage{algorithm}
 \usepackage{algpseudocode}
 \usepackage{cleveref}
+\newtheorem{thm}{Theorem}
+\newcounter{myc}
 \begin{document}
 \section{Intro}\label{s:a}
 \begin{algorithmic}[1]
 \State $x$\label{l:a}
 \State $y$
 \end{algorithmic}
+\refstepcounter[thm]{myc}
 See \cref{l:a} and \cref{s:a}.
 \end{document}

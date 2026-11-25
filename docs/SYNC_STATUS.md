@@ -73,7 +73,7 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (404 items on 2026-11-25 on `int/towards_v0_8_1`: 404 open, weight 898, 43 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (406 items on 2026-11-25 on `int/towards_v0_8_1`: 406 open, weight 902, 43 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
 
 
   - ODR6 — OD ruling 12 (recorded in OD #449): `dump_reader.rs`'s "add-only" docstrings (:365, :574) corrected, then a removal trial of the skip lists against CLAUDE.md rule 2; 1
@@ -363,9 +363,20 @@ Rules that keep this file honest and mergeable:
   - BABELINPUT — (LTXOWN review, pre-existing) `\input babel.def` in a LaTeX document with no copy raises 9 Errors
     (`\bbl@trace`, `\bbl@ifshorthand`, `\bbl@bidimode` …) where pdflatex has 0; and aa.cls with
     `\usepackage[english]{babel}` (1004.1914) gets no document `xml:lang` where a plain article gets `en`; 1
-  - HYPREFSTEP (post-release) — 2609.30372's `\AtBeginDocument{\let\H@refstepcounter\refstepcounter}` loops under
-    our hyperref binding's `\refstepcounter` dispatch (OD #1100 class); pdflatex finishes the paper (21 pages). Since
-    CYCLEWIN a 5 s cycle Fatal instead of the 180 s wall clock; 1
+  - HYPREFSTEPRES — (HYPREFSTEP review, pre-existing) a `\label` after a bare or typed `\refstepcounter{myc}` under
+    cleveref attaches to the last labelled object ("lemma 1", pdflatex "mything 1"/"mything 2";
+    `package-bindings/cleveref_label_after_bare_refstepcounter_red.tex`); our `hyperref/fixcleveref` plug wraps only
+    `\cref@old@refstepcounter`, where hyperref's sits on the kernel's `refstepcounter` socket and also covers
+    `\@kernel@refstepcounter` callers (`\@thm`, latex.ltx:17197; `\H@refstepcounter`), hidden today by the cleveref
+    binding's native label typing; 2
+  - CREFOLDPLUG — (ruling needed) our plug sets the label data for every cleveref copy, where pdflatex's first aid works
+    only for v0.21.4 and stops on an undefined `\firstaid@cref@updatelabeldata` for any other
+    (latex2e-first-aid-for-external-files.ltx:194, 238-247; v0.19 with hyperref first: pdflatex 2 `!`, ours 0 Errors; OD
+    #1100): an unrecorded surpass under the "Error where TeX errs" rule; 1
+  - CREFPREFIX — (perf) cleveref's own `\refstepcounter` costs ~1.1M instructions per step, ~89 % of it in
+    `\cref@constructprefix` (1811.08194 +7.3 % since HYPREFSTEP, which runs it as pdflatex does; DG 2026-11-25: the cost
+    is accepted for the correctness): a native `\cref@constructprefix` in `cleveref_sty.rs`, which every cleveref
+    document pays; 2
   - TOKLIMFLOOR — a token budget below the 20G default never takes effect: `--token-limit` (`latexml_oxide.rs:734-736`)
     and latexml.sty's `tokenlimit` (`latexml_sty/mod.rs:730-731`) set it, then every file open (`mouth.rs:694`,
     `core_interface.rs:1276`) runs `scale_token_limit_to_source` (`gullet.rs:793-807`), which lifts any limit to at

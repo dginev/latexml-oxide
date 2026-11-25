@@ -1,10 +1,13 @@
 % witness: 1811.08194, 1909.08399 (cleveref loaded before hyperref, + algpseudocode)
 % oracle:  pdflatex 1 error, cleveref's own "cleveref must be loaded after hyperref!"; lines "1: x", "2: y";
-%          "See section 1 and section 1." (TL 2025's first aid; our `\cref` reads the label's own object)
-% engines: rust INT081T 3 errors (cleveref's, and two `\cref@currentprefix` recursions: algorithmicx's `\ALG@step` read
-%          `\cref@currentlabel`'s placeholder); HYPREFSTEP round 1 2 errors (cleveref's, and an undefined
-%          `\lx@hyperref@fixcleveref`: the `package/cleveref/after` hook ran at once, before the plug was defined)
-% expect:  1 error (cleveref's), 0 warnings; two numbered algorithmic lines, both `\cref`s resolved
+%          "See section 1 and section 1." (TL 2025's first aid; our `\cref` reads the label's own object); the
+%          typed step `\refstepcounter[thm]{myc}` prints nothing
+% engines: rust INT081T 4 errors, 2 warnings (cleveref's; two `\cref@currentprefix` recursions: algorithmicx's
+%          `\ALG@step` read `\cref@currentlabel`'s placeholder; an undefined `\the[` from the typed step, which
+%          printed `thm]myc` as text); HYPREFSTEP round 1 2 errors (cleveref's, and an undefined
+%          `\lx@hyperref@fixcleveref`: the `package/cleveref/after` hook ran at once, before the plug was defined);
+%          perl 1 error (cleveref's)
+% expect:  1 error (cleveref's), 0 warnings; two numbered algorithmic lines, both `\cref`s resolved, no step text
 % status:  GREEN (HYPREFSTEP2)
 % preload: ar5iv.sty
 \documentclass{article}
@@ -12,11 +15,14 @@
 \usepackage{algpseudocode}
 \usepackage{cleveref}
 \usepackage{hyperref}
+\newtheorem{thm}{Theorem}
+\newcounter{myc}
 \begin{document}
 \section{Intro}\label{s:a}
 \begin{algorithmic}[1]
 \State $x$\label{l:a}
 \State $y$
 \end{algorithmic}
+\refstepcounter[thm]{myc}
 See \cref{l:a} and \cref{s:a}.
 \end{document}

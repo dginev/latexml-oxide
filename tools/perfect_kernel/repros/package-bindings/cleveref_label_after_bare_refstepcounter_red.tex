@@ -1,8 +1,9 @@
-% witness: synthetic (found by HYPREFSTEP2 on the reviewer's probe p2_clev, `\Cref{c:a}`)
-% oracle:  pdflatex 0 errors: "See lemma 1 and mything 1." — the `\label` after a bare `\refstepcounter{myc}` takes
-%          myc's type and number (cleveref's label data, latex.ltx:14956-14962 `\@currentcounter`)
-% engines: rust INT081T, HYPREFSTEP2: "See lemma 1 and lemma 1." (`c:a` labels the lemma, the last labelled object)
-% expect:  0 errors, 0 warnings; "See lemma 1 and mything 1."
+% witness: synthetic
+% oracle:  pdflatex 0 errors: "See lemma 1, mything 1 and mything 2." — a `\label` after a bare or typed
+%          `\refstepcounter{myc}` takes myc's number (cleveref's label data, latex.ltx:14956-14962 `\@currentcounter`)
+% engines: rust INT081T, HYPREFSTEP2: "See lemma 1, lemma 1 and lemma 1." (both labels attach to the lemma, the
+%          last labelled object)
+% expect:  0 errors, 0 warnings; "See lemma 1, mything 1 and mything 2."
 % status:  RED (INT081T, HYPREFSTEP2)
 % moves:   post-merge
 % preload: ar5iv.sty
@@ -15,5 +16,6 @@
 \begin{document}
 \begin{lem}\label{le:b} True. \end{lem}
 \refstepcounter{myc}\label{c:a}
-See \cref{le:b} and \cref{c:a}.
+\refstepcounter[thm]{myc}\label{c:b}
+See \cref{le:b}, \cref{c:a} and \cref{c:b}.
 \end{document}

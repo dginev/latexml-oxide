@@ -9,6 +9,13 @@ top of its group.
 
 ### Unreleased
 
+  - **hyperref keeps the kernel's `\refstepcounter` on a format from 2024-11-01, as hyperref.sty does, and sets
+    cleveref's label data through its `hyperref/fixcleveref` plug.** A document's
+    `\let\H@refstepcounter\refstepcounter` no longer loops (2609.30372: a `Timeout:Recursion` Fatal, now no Fatal);
+    with cleveref loaded before hyperref only cleveref's own load-order Error remains, as in pdflatex (1811.08194,
+    1909.08399), and its typed `\refstepcounter[thm]{myc}` no longer prints `thm]myc`. Such documents now run cleveref's
+    own `\refstepcounter`, as pdflatex does (1811.08194: +7.3 % instructions, the cost the other load order already
+    paid). Guard: `perfect_kernel_batchloopfix::hyperref_leaves_refstepcounter_to_the_kernel`.
   - **Fewer `unsafe` blocks (issue 937, phase 2 step 1).** The glibc heap statistics (`mallinfo2`) and mimalloc's page
     purge (`mi_collect`) are each called from one safe function in `heap_trim.rs` (`c_heap_mb`, `collect_rust_heap`);
     their other call sites are safe code: 69 → 65 `unsafe` keywords. Output byte-identical; instructions and syscalls

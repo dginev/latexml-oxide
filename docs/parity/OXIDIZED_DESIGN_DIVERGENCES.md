@@ -21703,20 +21703,22 @@ aas_support's preload for AASTeX 5.x, which loads no hyperref). hyperref's own d
 hyperref.sty:6658-6714 redefines `\refstepcounter` only on a format before 2024-11-01, and otherwise plugs the
 kernel's `refstepcounter` sockets (latex.ltx:14951-14968), so the binding dispatches only there; on a later format a
 document's `\let\H@refstepcounter\refstepcounter` is no cycle (2609.30372, after cleveref: a 5 s `Timeout:Recursion`
-Fatal), and those restores are no-ops. hyperref's `hyperref/fixcleveref` plug (:6662-6673), which sets the label data
-of every released cleveref (dated before its 2018/03/28 test; TL 2025 ships v0.21.4, 2018/03/27) after the kernel's
-step (cleveref.sty:2044-2054 sets it only in `\H@refstepcounter`), is a wrapper of cleveref's
+Fatal), and those restores are no-ops. hyperref's `hyperref/fixcleveref` plug (:6662-6673), which sets cleveref
+v0.21.4's label data (the copy TL 2025 ships, 2018/03/27; the plug tests for one dated before 2018/03/28) after the
+kernel's step (cleveref.sty:2044-2054 sets it only in `\H@refstepcounter`), is a wrapper of cleveref's
 `\cref@old@refstepcounter` (and of `\refstepcounter@noarg`, its `\let` copy) that a `package/cleveref/after` hook
 installs; algorithmicx's `\ALG@step` reads that data (2403.15855). The wrapper is defined, once, before the hook, which
 runs at once when cleveref came first (1811.08194, 1909.08399: cleveref's own load-order Error only, as pdflatex), and
-installed only under cleveref's hyperref branch (`\if@cref@hyperrefloaded`, cleveref.sty:2026-2036): otherwise
-cleveref's own `\refstepcounter` (:45-56) sets the same data after the step, and the plug, which only ever runs inside
-it here, would compute it twice (1811.08194: +6.6 % instructions, the same XML).
-The hook comes with any hyperref load, the AASTeX 5.x preload's too, so an aastex + algpseudocode + cleveref document
-no longer `\xdef`s `\cref@currentprefix` into itself (1 Error before; aastex + cleveref in 0 of 35,942 census papers;
-row AAS5-HYPERREF). TL 2025's pdflatex prints "section A" for a `\cref` to a section after `\appendix` (with or without
-hyperref, and under `latexrelease` 2024-06-01); our cleveref binding reads the label's own type, "appendix A",
-cleveref's documented appendix typing, with or without the wrapper.
+installed only under cleveref's hyperref branch (`\if@cref@hyperrefloaded`, cleveref.sty:2026-2036; a cleveref without
+the flag, v0.15.3, installs it, as its hyperref branch, :1482-1488, sets the data only in `\H@refstepcounter`):
+otherwise cleveref's own `\refstepcounter` (:45-56) sets the same data after the step, and the plug, which only ever
+runs inside it here, would compute it twice (1811.08194: +6.6 % instructions, the same XML). The hook comes with any
+hyperref load, the AASTeX 5.x preload's too, so an aastex + algpseudocode + cleveref document no longer `\xdef`s
+`\cref@currentprefix` into itself (1 Error before; aastex + cleveref in 0 of 35,942 census papers; row AAS5-HYPERREF).
+The binding sets the data for every cleveref copy, where pdflatex stops on the first aid's undefined
+`\firstaid@cref@updatelabeldata` for any copy but v0.21.4 (latex2e-first-aid-for-external-files.ltx:194, 238-247; v0.19
+with hyperref first: 2 `!`, ours 0 Errors): a surpass awaiting a ruling, row R CREFOLDPLUG. The appendix typing after `\appendix` is
+KNOWN_PERL_ERRORS #1145's, the same with or without the wrapper.
 On a format before 2024-11-01, the document's own `\usepackage{hyperref}` installs the dispatch again under revtex,
 but not under AASTeX 5.x, where aas_support leaves hyperref marked loaded (as Perl).
 Without a dump (`LATEXML_NODUMP`), `\fmtversion` is the bootstrap's 2018/12/01 (latex_base.rs, as Perl
