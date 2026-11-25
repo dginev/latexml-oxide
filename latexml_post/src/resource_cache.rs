@@ -10,7 +10,7 @@
 //! key (the content digest replaces Perl's timestamp check) written again into the name its source owns.
 //! `_content_<bytes>` lets a source with the same bytes share that file while its owner is named in the same run with
 //! them (the pages of one document); another document's file is never shared, as that document may write other bytes
-//! into it later, under a page this run does not rewrite. Divergences (OXIDIZED_DESIGN_DIVERGENCES #1157): an entry
+//! into it later, under a page this run does not rewrite. A copy keeping its path shares none (Perl L289-300). Divergences (OXIDIZED_DESIGN_DIVERGENCES #1157): an entry
 //! stores the name only (Perl's width and height let it skip a conversion, which the content-addressed
 //! `graphics_cache` serves here); a converted or generated name is kept across an edit (Perl generates a new `xN`);
 //! a kept name (a copy's relative path, a converted image's stem) another source owns falls back to a generated `xN`,
@@ -196,11 +196,18 @@ fn place(
   proposed: Option<ResourceName>,
   warn: bool,
 ) -> rusqlite::Result<Option<Resolved>> {
+  // A copy offered its kept path is that path or none: it shares no other source's file of the same bytes, as Perl
+  // copies each to its own path (`Post/Graphics.pm` L289-300).
+  let keeps = r.copy && matches!(r.proposal, Proposal::Kept(_)) && proposed.is_some();
   // Perl's value, `dest|w|h`.
   let by_key =
     kv_get(conn, &r.key)?.map(|value| value.split('|').next().unwrap_or_default().to_string());
   let by_owner = kv_get(conn, &format!("_name_{}", r.owner))?;
-  let by_content = kv_get(conn, &format!("_content_{}", r.bytes))?;
+  let by_content = if keeps {
+    None
+  } else {
+    kv_get(conn, &format!("_content_{}", r.bytes))?
+  };
   // The first two are names this source was given: one no request could have is a corrupt or planted entry.
   let mut tried: Vec<String> = Vec::new();
   for (dest, given, keyed) in [
@@ -213,7 +220,7 @@ fn place(
     };
     tried.push(dest.clone());
     let name = name_of(&dest, r.svg_alt);
-    let Some(own) = reusable(conn, checks, now, r, &name, warn && given)? else {
+    let Some(own) = reusable(conn, checks, now, r, &name, warn && given, !keeps)? else {
       continue;
     };
     if own {
@@ -238,8 +245,9 @@ fn place(
 }
 
 /// Whether a stored `name` serves `r`: `Some(true)` when `r`'s source owns it (or no source does and `r` could be
-/// given it), `Some(false)` when `r` shares the file of another source of this run holding its bytes, `None` when it
-/// does not serve. A name no request of `r`'s type could have is reported when `warn` (a Warning) and never written.
+/// given it), `Some(false)` when `r` may `share` and shares the file of another source of this run holding its bytes,
+/// `None` when it does not serve. A name no request of `r`'s type could have is reported when `warn` (a Warning) and
+/// never written.
 fn reusable(
   conn: &Connection,
   checks: &Checks,
@@ -247,6 +255,7 @@ fn reusable(
   r: &Request,
   name: &ResourceName,
   warn: bool,
+  share: bool,
 ) -> rusqlite::Result<Option<bool>> {
   let given = own_name(r, &name.dest) || generated_name(checks, r, &name.dest);
   if !given && !shareable_name(r, &name.dest) {
@@ -266,6 +275,9 @@ fn reusable(
   let Some(owner) = owner.filter(|owner| *owner != r.owner) else {
     return Ok(given.then_some(true));
   };
+  if !share {
+    return Ok(None);
+  }
   // Another source's file, only while that source is named in this run with these bytes: a source of another
   // document (or not in this run) may write other bytes into it later, under a page this run does not rewrite.
   let holds = kv_get(conn, &format!("_holds_{}", name.dest))?;
@@ -510,20 +522,43 @@ mod tests {
   }
 
   /// A source sharing another's file (same bytes) leaves it when its owner writes other bytes into it, whichever of
-  /// the two is named first; a name no source vouches for is not shared.
+  /// the two is named first; a name no source vouches for is not shared. A copy keeping its path shares none, also
+  /// where a cache of before stored the shared name (KEPTDEDUP: `figs/a.svg` and `figs/b.svg`, one SVG, both
+  /// `figs/a.svg`; Perl `Post/Graphics.pm` L289-300).
   #[test]
   fn a_shared_file_is_left_when_its_owner_changes() {
     let cache = DocCache::new(false);
     let first = resolve_in(&cache, None, &[vec![
+      copy("../a.png", "X", None, "png"),
+      copy("../b.png", "X", None, "png"),
+    ]]);
+    assert_eq!(dests(&first), [vec!["x1.png", "x1.png"]]);
+    let second = resolve_in(&cache, None, &[vec![
+      copy("../b.png", "X", None, "png"),
+      copy("../a.png", "Y", None, "png"),
+    ]]);
+    assert_eq!(dests(&second), [vec!["x2.png", "x1.png"]]);
+    let kept = [vec![
       copy("a.png", "X", Some("a.png"), "png"),
       copy("b.png", "X", Some("b.png"), "png"),
-    ]]);
-    assert_eq!(dests(&first), [vec!["a.png", "a.png"]]);
-    let second = resolve_in(&cache, None, &[vec![
-      copy("b.png", "X", Some("b.png"), "png"),
-      copy("a.png", "Y", Some("a.png"), "png"),
-    ]]);
-    assert_eq!(dests(&second), [vec!["b.png", "a.png"]]);
+      copy("c.png", "X", Some("c.png"), "png"),
+    ]];
+    let shared_before = DocCache::new(false);
+    shared_before.with_store(None, |store| {
+      store.immediate(|tx, _| {
+        kv_put(tx, "c:b.png|X", Some("a.png||"))?;
+        kv_put(tx, "_content_copy|X", Some("a.png"))?;
+        kv_put(tx, "_owner_a.png", Some("copy|a.png"))?;
+        kv_put(tx, "_holds_a.png", Some("copy|X"))
+      })
+    });
+    for cache in [DocCache::new(false), shared_before] {
+      for _run in 0..2 {
+        assert_eq!(dests(&resolve_in(&cache, None, &kept)), [vec![
+          "a.png", "b.png", "c.png"
+        ]]);
+      }
+    }
     let unvouched = DocCache::new(false);
     let pages = [vec![
       convert("a/plot.pdf", "X", Some("plot"), false),
@@ -535,6 +570,14 @@ mod tests {
       })
       .unwrap();
     assert_eq!(dests(&names), [vec!["plot.png", "fig.png"]]);
+    // Vouched for, two conversions of one content share one file, as two copies with generated names do.
+    let vouched = resolve_in(&DocCache::new(false), None, &[pages[0].clone(), vec![
+      copy("../p.svg", "S", None, "svg"),
+      copy("../q.svg", "S", None, "svg"),
+    ]]);
+    assert_eq!(dests(&vouched), [vec!["plot.png", "plot.png"], vec![
+      "x1.svg", "x1.svg"
+    ]]);
   }
 
   /// A file is shared with another document's image of the same bytes never: that document may later write other
