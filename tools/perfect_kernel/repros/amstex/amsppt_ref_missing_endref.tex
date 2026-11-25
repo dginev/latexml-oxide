@@ -4,9 +4,9 @@
 %          amsppt.sty:889's `\def\par{\add@missing\endref}`, 3 times, and the stray fields' `\makerefbox` errors), every
 %          word printed: "[A] A. Author, First." "J (1990)." "[B] B. Writer, Second." "[C] C. Third, Third, L (1992)."
 %          "[D] D. Fourth, Fourth, M (1993)." "After the references."
-% engines: rust INT081T = 0 errors, 0 warnings, everything after the blank line lost (the expanding field read ran
-%          to the end); rust AMSPPTRES (round 1) = only the last field of each open reference printed where it stands,
-%          the rest lost, counted by 1 Warning (expected:\@end@bibfield); perl 0 errors, 0 warnings, as INT081T
+% engines: rust INT081T = 0 errors, 0 warnings, C, D and "After the references." lost (the expanding read of C's
+%          open field ran to the end); rust AMSPPTRES (round 1) = 1 error, 2 warnings, C and D lost but their years,
+%          printed where they stand; perl reads the fields as INT081T does (XUntil)
 % expect:  4 errors, 0 warnings; the missing `\endref` inserted at the `\par` as amsppt.sty:886-889 does (a
 %          reference's `\par`, a blank line or the next `\ref`'s, and `\endRefs`'s), with its Error; every word kept,
 %          the stray "J (1990)" untagged and printed once (B has no year)
