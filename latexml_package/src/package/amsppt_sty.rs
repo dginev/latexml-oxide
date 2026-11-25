@@ -725,7 +725,7 @@ LoadDefinitions!({
         break;
       };
       Warn!("unexpected", "\\@end@bibfield", s!("A reference field ends inside a group it opened; inserting {}",
-        closer.stringify()));
+        if closer == T_END!() { "}" } else { "\\endgroup" }));
       // (a `}` ends the `{` group's own digestion, which then reads this marker again)
       if closer == T_END!() {
         unread(Tokens!(closer, T_CS!("\\@end@bibfield")));

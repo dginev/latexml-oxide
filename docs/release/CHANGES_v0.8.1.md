@@ -9,6 +9,13 @@ top of its group.
 
 ### Unreleased
 
+  - **amsppt (AMS-TeX preprint) references keep their fields.** Each `\ref` field is digested as amsppt's `\makerefbox`
+    boxes it, so field macros that assign (math0610862's `\noOf`) no longer misfire: math0610862 and math0205237 no
+    longer end in `Fatal:TooManyErrors` (101 Errors → 2; +1,985 and +2,144 words), and math9204232's 5 references are
+    back. A field that prints only a rule (`\bysame`) is kept; a `\ref` left open is closed by its next `\par`, `\ref`
+    or `\endRefs` with AMS-TeX's Error and every field kept; `\newline` in a reference is a line break; a field marker
+    inside a group the field opened no longer invents a picture; the `\paper` italic no longer leaks over the journal
+    and year. Guards: `perfect_kernel_batchamsppt`.
   - **hyperref keeps the kernel's `\refstepcounter` on a format from 2024-11-01, as hyperref.sty does, and sets
     cleveref's label data through its `hyperref/fixcleveref` plug.** A document's
     `\let\H@refstepcounter\refstepcounter` no longer loops (2609.30372: a `Timeout:Recursion` Fatal, now no Fatal);

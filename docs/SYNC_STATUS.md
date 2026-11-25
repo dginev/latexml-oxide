@@ -73,7 +73,7 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (406 items on 2026-11-25 on `int/towards_v0_8_1`: 406 open, weight 902, 43 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (406 items on 2026-11-25 on `int/towards_v0_8_1`: 406 open, weight 900, 43 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
 
 
   - ODR6 — OD ruling 12 (recorded in OD #449): `dump_reader.rs`'s "add-only" docstrings (:365, :574) corrected, then a removal trial of the skip lists against CLAUDE.md rule 2; 1
@@ -1007,13 +1007,19 @@ Rules that keep this file honest and mergeable:
     `catch_unwind` inside a printed and an unprinted note, silenced notes); a dispatcher that logs and then declines
     leaves a phantom `(Loading X... )` (Perl's `FindFile` runs before `ProgressSpinup`); a `.tex` binding's note names
     the raw file (`(Loading epsf.tex... )`); 3
-  - AMSPPTRES — REGFIX-D's residuals (PR #960): math0610862 is back at its Oct-8 `Fatal:TooManyErrors` — the amsppt
-    binding reads each `\ref` field expanding (`\@bibfield … XUntil`, `amsppt_sty.rs`; Perl amsppt.sty.ltxml:439,
-    KNOWN_PERL_ERRORS #1298) where amsppt.sty boxes it (:956-965), so the paper's `\noOf` assignment misfires: read the
-    field by digesting it (RED `amstex/amsppt_bibfield_expands_a_conditional_red`); a copy's additions over amsppt
-    are lost (math0610862 `\Refst`, `\subrefhead`; 1003.5377 `\SecondPage`; RED
-    `amstex/amstex_copy_additions_are_kept_red`); amsppt's self-redefining `\title` stays refused, 1 Error with every
-    word kept where TeX prints "[T:Hello]" (RED `amstex/amstex_self_redefining_title_runs_red`; LOCKSIDEFX); Reach (census 2026-11-24): 38/30k ≈ 3534 papers; 5
+  - AMSPPTRESRES — (AMSPPTRES done on int: each `\ref` field digested as `\makerefbox` boxes it; math0610862 101 Errors
+    + Fatal → 2 Errors, +1,985 words; math0205237 +2,144) residuals: a copy's additions over amsppt are lost
+    (math0610862 `\Refst`, `\subrefhead`; 1003.5377 `\SecondPage`; RED `amstex/amstex_copy_additions_are_kept_red`);
+    amsppt's self-redefining `\title` stays refused, 1 Error with every word kept where TeX prints "[T:Hello]" (RED
+    `amstex/amstex_self_redefining_title_runs_red`; LOCKSIDEFX); post-merge REDs from the round-2 review, all synthetic
+    (0 of the 182 `\endref` papers): a blank line inside a field glues its rest to the next field in an invented
+    untagged bibitem, and one before `\moreref` splits the translation off
+    (`amstex/amsppt_blank_line_inside_a_field_red`; fix: a marker with no field open ends the paragraph, as
+    `\makerefbox`'s `\endgraf`, amsppt.sty:956); a blank line after `\ref` gives a bibitem tagged "0"
+    (`amstex/amsppt_keyless_ref_is_numbered_red`, Perl the same for keyless refs); `\endref` inside a box
+    (`amstex/amsppt_endref_inside_a_box_red`); a kern-only field (`\by\kern3em`) is dropped with its comma, where TeX
+    prints blank width (PDF-only); cost ~30k instructions per reference (math0610862 +0.24 %; four per-reference group
+    assignments, a Rust primitive would take them); Reach (census 2026-11-24): 38/30k ≈ 3534 papers; 3
   - THMEDPSRES — REGFIX-E's residuals (PR #960): thm-listof's filters (`\showtheorems`, `\ignoretheorems`,
     `\onlynamedtheorems`, `\setlisttheoremstyle`) are undefined under the thmtools binding (2 of ~519 census papers;
     `\usepackage{thmtools}\ignoretheorems{x}`); edpsmath's `\keywords` stores into box `\@b@kwrds` and our

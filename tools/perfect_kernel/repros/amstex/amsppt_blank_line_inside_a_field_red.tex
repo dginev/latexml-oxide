@@ -1,0 +1,20 @@
+% witness: synthetic (AMSPPTRES round-2 review; none of the 182 \endref papers has a blank line inside a \ref)
+% oracle:  pdftex 6 errors (amsppt.sty:886-889: a \par inside a \ref is \add@missing\endref); "[A] A. Author, First
+%          part." then "second part" and "J (1990)." as separate paragraphs; [B] whole
+% engines: rust INT081T 0 errors: "First part second part, J (1990)."; AMSPPTRES2 2 errors: "First part." then an
+%          untagged bibitem whose "second part" runs into the journal with no separator (\@end@bibfield does nothing
+%          with no field open, where amsppt's \makerefbox opens with \endgraf, amsppt.sty:956)
+% expect:  every word kept, "second part" and "J (1990)." apart, as pdftex
+% status:  RED (AMSPPTRES2)
+% moves:   post-merge
+% preload: ar5iv.sty
+\input amstex
+\documentstyle{amsppt}
+\document
+\Refs
+\ref\key A\by A. Author\paper First part
+
+second part\jour J\yr 1990\endref
+\ref\key B\by B. Writer\paper Whole\jour K\yr 1991\endref
+\endRefs
+\enddocument

@@ -3,6 +3,9 @@
 %          (amsppt.sty:1011: the key box is printed only when set)
 % engines: rust INT081T and AMSPPTRES2 = 0 errors, each bibitem tagged "0" (`key="0"`, the binding's `\the@bibitem`,
 %          a counter `\@bibitem`'s id step leaves at 0); perl the same (amsppt.sty.ltxml `\@fill@bibitem`)
+%          A keyed `\ref` whose `\key` follows a blank line (`\ref` blank line `\key A ... \endref`) reaches it too
+%          since AMSPPTRES2: an empty bibitem tagged "0" and the keyed fields in a second, keyless one (Warning
+%          malformed:key); pdftex 6 `!` and prints "[A]" (AMSPPTRES2 review)
 % expect:  0 errors, 0 warnings; no "0" tag: no tag, or a number of each reference's own
 % status:  RED (INT081T, AMSPPTRES2)
 % moves:   post-merge

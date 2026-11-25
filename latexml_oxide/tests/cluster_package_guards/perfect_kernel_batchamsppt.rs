@@ -157,7 +157,8 @@ fn amsppt_heads_and_theorems() {
   );
   // a field marker inside a group the field opened: a `{` and a `\begingroup` closed first (a Warning each; the author's
   // own closer later an Error, as on INT081T), inside an `\hbox` the field stays in the box (a Warning); every word kept
-  // (pdftex 2 `!`, A's and B's fields before the marker lost)
+  // (pdftex 2 `!`, A's and B's fields before the marker lost); C's "ThirdL" is expected: `\hbox{Third\jour L}` has no
+  // space between the two fields, and the box keeps the journal's text
   let xml = assert_elements_with(
     include_str!(
       "../../../tools/perfect_kernel/repros/amstex/amsppt_field_marker_inside_a_group.tex"
