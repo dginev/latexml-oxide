@@ -24441,3 +24441,21 @@ as natbib does: author "Smith", year "Jones".
 `index-bib/natbib_{apalike,citename}_label_splits_at_comma`); repinned: `perfect_kernel_batch70a::
 natbib_entry_constructor_is_binding_private` (author "Batselier et al.", no full authors),
 `perfect_kernel_batch56::apacite_old_bbl_keeps_its_declared_italics` (no full authors).
+
+### 1164. A split page named after a label: no `~` expansion, no absolute path (issue 1006)
+
+**Perl behavior**: `Split::getPageName` (Split.pm L185-191) builds the page path with `pathname_make`, which runs
+`pathname_canonical` over the whole path, the label included: under `--splitnaming=label` a page `\label{~one}` is
+`$HOME` + `one.html`, outside the site directory (Perl then stops: "The destination directory … must be within the
+siteDirectory"), and `\label{/x}` beside a root with no directory is the absolute `/x.html`.
+**Rust behavior**: `split::page_name_segments` takes the label's path segments as Perl's `pathname_canonical` leaves
+them (`Pathname.pm` L126-128: no `.` segment, a `name/..` pair collapsed, `a/../b` is `b`), and drops empty segments too
+(Perl keeps `a//b`, and a trailing `/` makes its page the hidden `a/.html`; ours is `a/b.html`, `a.html`), but with no
+`~` expansion and no root, so the page is
+`~one.html` or `x.html` in the destination, as rc3 wrote them; a label of separators alone (`\label{/}`) is an empty
+name and takes the page's `xml:id`, Perl's `!$name` branch (`Split.pm` L167-175). A `../` in the label is kept, so `\label{../esc}`
+still lies outside the destination, where Perl and rc3 put it, and its links keep the `../`. The parent page's
+directory is taken as written too, so the child of a `~one.html` page lies beside it, not under `$HOME`. **Why**: the
+label is the document's text, not a path the user gave; expanding it writes outside the destination and leaks a
+filesystem path into the links. A candidate patch for Perl. **Guard**
+`split_nav_relations::split_label_names_stay_in_the_destination`.

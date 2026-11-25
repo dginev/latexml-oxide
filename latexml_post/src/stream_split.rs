@@ -1191,6 +1191,7 @@ impl Splitter {
     if let Some(stripped) = name.strip_prefix("LABEL:") {
       name = stripped.to_string();
     }
+    name = crate::split::page_name_segments(&name);
     if name.is_empty() {
       if use_labels && let Some(id) = self.metas[page].xml_id.clone() {
         Info!(
@@ -1222,34 +1223,18 @@ impl Splitter {
         };
         if let Some(pname) = parent_attr {
           let pname = pname.split_whitespace().next().unwrap_or("");
-          let pname = pname.strip_prefix("LABEL:").unwrap_or(pname);
-          if let Some(rest) = name.strip_prefix(pname) {
-            let rest = rest.trim_start_matches(['.', '_', ':']);
-            if !rest.is_empty() {
-              name = rest.to_string();
-            }
+          let pname =
+            crate::split::page_name_segments(pname.strip_prefix("LABEL:").unwrap_or(pname));
+          if let Some(rest) = crate::split::strip_parent_name(&name, &pname) {
+            name = rest;
           }
         }
         recursive
       },
       _ => false,
     };
-    name = name.replace(':', "_");
-    let parent_path = &self.metas[parent].name;
-    let parent_dir = Path::new(parent_path)
-      .parent()
-      .and_then(|p| p.to_str())
-      .unwrap_or(".");
-    let parent_dir = if parent_dir.is_empty() {
-      "."
-    } else {
-      parent_dir
-    };
-    if as_dir {
-      format!("{}/{}/index.{}", parent_dir, name, ext)
-    } else {
-      format!("{}/{}.{}", parent_dir, name, ext)
-    }
+    name = crate::split::colons_to_underscore(&name);
+    crate::split::page_pathname(&self.metas[parent].name, &name, ext, as_dir)
   }
 
   /// The `inlist="toc"` lookahead pass: for each tree level where any page's
