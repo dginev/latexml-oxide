@@ -1,0 +1,17 @@
+% mechanism: latexml_post split.rs PageNamer (OXIDIZED_DESIGN_DIVERGENCES #1164): a label page whose pathname leaves
+%   the destination's directory is an Error (as Perl's site check, Post.pm L700-704) and takes the page's xml:id
+%   inside it; a label holding `..` that stays inside (a/../b is b) is clean.
+% witness: synthetic (row R SPLITNAMES)
+% oracle:  pdflatex 0 errors: two sections
+% engines: perl latexmlc 2026-11-25 = esc.html beside out/, 0 errors (pathname_is_contained, Pathname.pm L186, misses
+%   a bare `..`; ../../esc is Fatal); rust INT081P = the same
+% expect:  --splitat=section --splitnaming=label --dest=out/index.html: out/index.html, out/S1.html, out/b.html,
+%   nothing outside out/; 1 error, 0 warnings; both split paths
+% status:  GREEN (guard split_nav_relations::split_label_names_stay_in_the_destination, the boundary table)
+\documentclass{article}
+\begin{document}
+\section{One}\label{../esc}
+Text one, see \ref{a/../b}.
+\section{Two}\label{a/../b}
+Text two, see \ref{../esc}.
+\end{document}

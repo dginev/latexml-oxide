@@ -1,0 +1,24 @@
+% mechanism: latexml_post split.rs PageNamer (OXIDIZED_DESIGN_DIVERGENCES #1164): a pathname issued once in a split,
+%   the root's included, is not issued again; the repeat takes the page's xml:id (Split.pm L167-175's fallback) with
+%   one Warning naming both labels and the file.
+% witness: synthetic (row R SPLITNAMES; epub/split_label_collides_with_root)
+% oracle:  pdflatex 0 errors: five sections
+% engines: perl latexmlc 2026-11-25 = dup.html (One), dup/.html (Two), x.html (Four; Three lost), index.html (Five;
+%   the root page lost), 0 warnings; rust INT081P = dup.html (Two; One lost), x.html (Four; Three lost), index.html
+%   (the root; Five lost), 0 warnings
+% expect:  --splitat=section --splitnaming=label --dest=index.html: index.html, dup.html, S2.html, x.html, S4.html,
+%   S5.html; 0 errors, 3 warnings; both split paths; labelrelative the same set
+% status:  GREEN (guard split_nav_relations::split_label_names_stay_in_the_destination, dot and index)
+\documentclass{article}
+\begin{document}
+\section{One}\label{dup}
+Text one, see \ref{dup/} and \ref{x}.
+\section{Two}\label{dup/}
+Text two.
+\section{Three}\label{./x}
+Text three.
+\section{Four}\label{x}
+Text four.
+\section{Five}\label{index}
+Text five.
+\end{document}

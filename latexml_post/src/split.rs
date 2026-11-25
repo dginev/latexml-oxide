@@ -39,15 +39,13 @@ struct PageEntry {
 ///
 /// Port of `LaTeXML::Post::Split`.
 pub struct Split {
-  name:                 String,
+  name:          String,
   /// XPath expression to find elements that become pages.
-  split_xpath:          String,
-  /// Naming strategy for page files.
-  split_naming:         SplitNaming,
+  split_xpath:   String,
   /// Whether to suppress navigation links.
-  no_navigation:        bool,
-  /// Counter for unnamed pages.
-  unnamed_page_counter: u32,
+  no_navigation: bool,
+  /// Names the pages: Perl's `splitnaming` and `unnamed_page_counter`.
+  namer:         PageNamer,
 }
 
 impl Split {
@@ -55,9 +53,8 @@ impl Split {
     Split {
       name: "Split".to_string(),
       split_xpath: split_xpath.to_string(),
-      split_naming,
       no_navigation,
-      unnamed_page_counter: 0,
+      namer: PageNamer::new(split_naming),
     }
   }
 
@@ -75,12 +72,6 @@ impl Split {
           .is_some_and(|class| class.split_whitespace().any(|c| c == "ltx_nodisplay"))
       })
       .collect()
-  }
-
-  /// Generate a name for an unnamed page.
-  fn generate_unnamed_page_name(&mut self) -> String {
-    self.unnamed_page_counter += 1;
-    format!("FOO{}", self.unnamed_page_counter)
   }
 
   /// Sort pages into a tree hierarchy.
@@ -350,7 +341,7 @@ impl Split {
 
   /// Compute the destination pathname for a page.
   ///
-  /// Port of `Split::getPageName`.
+  /// Port of `Split::getPageName`, through [`PageNamer`].
   fn get_page_name(
     &mut self,
     doc: &PostDocument,
@@ -359,85 +350,203 @@ impl Split {
     parent_path: &str,
     recursive: bool,
   ) -> String {
-    let attr = match self.split_naming {
+    let (labels, id) = (page.get_attribute("labels"), get_xml_id(page));
+    let (parent_labels, parent_id) = (parent.get_attribute("labels"), get_xml_id(parent));
+    let ext = doc
+      .get_destination_extension()
+      .unwrap_or_else(|| "xml".to_string());
+    self.namer.page_name(
+      PageKeys {
+        labels: labels.as_deref(),
+        id:     id.as_deref(),
+      },
+      PageKeys {
+        labels: parent_labels.as_deref(),
+        id:     parent_id.as_deref(),
+      },
+      parent_path,
+      &ext,
+      recursive,
+    )
+  }
+}
+
+/// A page's `labels` and `xml:id`, the keys `Split::getPageName` names a page and its parent by.
+#[derive(Clone, Copy)]
+pub(crate) struct PageKeys<'a> {
+  pub(crate) labels: Option<&'a str>,
+  pub(crate) id:     Option<&'a str>,
+}
+
+impl PageKeys<'_> {
+  /// The first key of `attr` less `LABEL:` (`Split.pm` L164-166, L177-179).
+  fn key(&self, attr: &str) -> &str {
+    let value = if attr == "labels" {
+      self.labels
+    } else {
+      self.id
+    };
+    let first = value
+      .and_then(|v| v.split_whitespace().next())
+      .unwrap_or("");
+    first.strip_prefix("LABEL:").unwrap_or(first)
+  }
+}
+
+/// Why a page cannot have the pathname its key gives.
+enum Refusal {
+  /// Outside the destination's directory.
+  Outside,
+  /// Issued to another page (`None`: the document's own).
+  Taken(Option<String>),
+}
+
+/// Perl `Split::getPageName` (`Split.pm` L158-191) for both split paths, and the pathnames one split has issued.
+pub(crate) struct PageNamer {
+  /// Perl's `splitnaming`.
+  naming:                SplitNaming,
+  /// Perl's `unnamed_page_counter`, which no split resets.
+  unnamed_page_counter:  u32,
+  /// The destination's directory, which every page lies in.
+  destination_directory: String,
+  /// Each pathname issued in this split, absolute, with what named it (`None`: the document's own page).
+  issued:                HashMap<String, Option<String>>,
+}
+
+impl PageNamer {
+  pub(crate) fn new(naming: SplitNaming) -> Self {
+    PageNamer {
+      naming,
+      unnamed_page_counter: 0,
+      destination_directory: String::new(),
+      issued: HashMap::default(),
+    }
+  }
+
+  /// Start the split of a document written to `destination`.
+  pub(crate) fn start(&mut self, destination: &str) {
+    self.destination_directory = latexml_core::util::pathname::directory(destination);
+    self.issued.clear();
+    self
+      .issued
+      .insert(latexml_core::util::pathname::absolute(destination), None);
+  }
+
+  /// Perl `generateUnnamedPageName`.
+  fn generate_unnamed_page_name(&mut self) -> String {
+    self.unnamed_page_counter += 1;
+    format!("FOO{}", self.unnamed_page_counter)
+  }
+
+  /// A page with no usable `attr` key takes its `xml:id`, and is then named relative to its parent's `xml:id`
+  /// (`Split.pm` L167-171); without one, a generated name.
+  fn fallback_name(&mut self, page: PageKeys, attr: &'static str) -> (&'static str, String) {
+    match page.id.filter(|_| attr == "labels") {
+      Some(id) => ("xml:id", id.to_string()),
+      None => (attr, self.generate_unnamed_page_name()),
+    }
+  }
+
+  /// The pathname for `page`, a child of `parent` written to `parent_path`. A page that would leave the destination's
+  /// directory (an Error, as Perl's site check `Post.pm` L700-704) or take an issued pathname (a Warning) takes its
+  /// fallback name instead (OD #1164).
+  pub(crate) fn page_name(
+    &mut self,
+    page: PageKeys,
+    parent: PageKeys,
+    parent_path: &str,
+    ext: &str,
+    recursive: bool,
+  ) -> String {
+    use latexml_core::util::pathname;
+    let mut attr = match self.naming {
       SplitNaming::Id | SplitNaming::IdRelative => "xml:id",
       SplitNaming::Label | SplitNaming::LabelRelative => "labels",
     };
-
-    let mut name = if attr == "xml:id" {
-      get_xml_id(page).unwrap_or_default()
-    } else {
-      page.get_attribute(attr).unwrap_or_default()
-    };
-
-    // Truncate to first label, strip LABEL: prefix
-    if let Some(first) = name.split_whitespace().next() {
-      name = first.to_string();
-    }
-    if let Some(stripped) = name.strip_prefix("LABEL:") {
-      name = stripped.to_string();
-    }
-    name = page_name_segments(&name);
-
+    let mut name = page_name_segments(page.key(attr));
     if name.is_empty() {
-      if attr == "labels" {
-        if let Some(id) = get_xml_id(page) {
-          Info!(
-            "split",
-            "pathname",
-            "Using '{}' to create page pathname, instead of missing '{}'",
-            id,
-            attr
-          );
-          name = id;
-        } else {
-          name = self.generate_unnamed_page_name();
-          Info!(
-            "split",
-            "pathname",
-            "Using '{}' to create page pathname, instead of missing '{}'",
-            name,
-            attr
-          );
-        }
-      } else {
-        name = self.generate_unnamed_page_name();
-        Info!(
-          "split",
-          "pathname",
-          "Using '{}' to create page pathname, instead of missing '{}'",
-          name,
-          attr
-        );
-      }
+      let missing = attr;
+      (attr, name) = self.fallback_name(page, attr);
+      Info!(
+        "split",
+        "pathname",
+        "Using '{}' to create page pathname, instead of missing '{}'",
+        name,
+        missing
+      );
     }
+    // The first pathname refused, the key that named it, and why.
+    let mut refused: Option<(String, String, Refusal)> = None;
+    loop {
+      let pathname = self.pathname(attr, &name, parent, parent_path, ext, recursive);
+      let key = pathname::absolute(&pathname);
+      let by = match page.key(attr) {
+        "" => format!("'{name}'"),
+        key if attr == "labels" => format!("label '{key}'"),
+        key => format!("id '{key}'"),
+      };
+      let refusal = if name.split('/').next() == Some("..")
+        && pathname::is_contained(&pathname::directory(&key), &self.destination_directory).is_none()
+      {
+        Some(Refusal::Outside)
+      } else {
+        self.issued.get(&key).cloned().map(Refusal::Taken)
+      };
+      if let Some(refusal) = refusal {
+        refused.get_or_insert((pathname, by, refusal));
+        (attr, name) = self.fallback_name(page, attr);
+        continue;
+      }
+      self.issued.insert(key, Some(by));
+      match refused {
+        Some((refused, by, Refusal::Outside)) => Error!(
+          "unexpected",
+          &refused,
+          "The page of {} ({}) must be within the destination directory ({}); it is written to {} instead",
+          by,
+          refused,
+          self.destination_directory,
+          pathname
+        ),
+        Some((refused, by, Refusal::Taken(owner))) => Warn!(
+          "unexpected",
+          &refused,
+          "The page of {} would overwrite {} ({}); it is written to {} instead",
+          by,
+          owner.map_or_else(
+            || "the document's own page".to_string(),
+            |owner| format!("the page of {owner}")
+          ),
+          refused,
+          pathname
+        ),
+        None => {},
+      }
+      return pathname;
+    }
+  }
 
-    // Relative naming: strip parent prefix
-    let as_dir = match self.split_naming {
+  /// The pathname of a page named `name` by `attr` (`Split.pm` L176-191).
+  fn pathname(
+    &self,
+    attr: &str,
+    name: &str,
+    parent: PageKeys,
+    parent_path: &str,
+    ext: &str,
+    recursive: bool,
+  ) -> String {
+    let mut name = name.to_string();
+    let as_dir = match self.naming {
       SplitNaming::IdRelative | SplitNaming::LabelRelative => {
-        let parent_attr = if attr == "xml:id" {
-          get_xml_id(parent)
-        } else {
-          parent.get_attribute(attr)
-        };
-        if let Some(pname) = parent_attr {
-          let pname = pname.split_whitespace().next().unwrap_or("");
-          let pname = page_name_segments(pname.strip_prefix("LABEL:").unwrap_or(pname));
-          if let Some(rest) = strip_parent_name(&name, &pname) {
-            name = rest;
-          }
+        if let Some(rest) = strip_parent_name(&name, &page_name_segments(parent.key(attr))) {
+          name = rest;
         }
         recursive
       },
       _ => false,
     };
-
-    name = colons_to_underscore(&name);
-
-    let ext = doc
-      .get_destination_extension()
-      .unwrap_or_else(|| "xml".to_string());
-    page_pathname(parent_path, &name, &ext, as_dir)
+    page_pathname(parent_path, &colons_to_underscore(&name), ext, as_dir)
   }
 }
 
@@ -559,6 +668,7 @@ impl Processor for Split {
 
     let mut haschildren = HashMap::default();
     Self::presort_pages(&mut tree, &mut haschildren, pages);
+    self.namer.start(&tree.name);
 
     // Take doc out so we can pass &PostDocument and &mut tree without borrow conflict
     let doc_tmp = tree.document.take().unwrap();
