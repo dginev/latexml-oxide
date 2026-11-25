@@ -940,322 +940,324 @@
 <a href=#940 id=940 data-nosnippet>940</a>  // `\delimsize` outside any group: with `\delimsize` in the delimiters (`[\cbig]` where `\cbig#1` is
 <a href=#941 id=941 data-nosnippet>941</a>  // `\mathopen{\hbox{$\big#1$}}`) the size read the delimiter's `\delimsize` as its argument and the closing `$` of
 <a href=#942 id=942 data-nosnippet>942</a>  // its box was swallowed — 2609.17447, 100 such pairs, Fatal TooManyErrors.
-<a href=#943 id=943 data-nosnippet>943</a>  </span><span class="kw">fn </span>declare_paired_delimiter_x(cs: Token, n: usize, pre: Vec&lt;Token&gt;, ldel: Vec&lt;Token&gt;, rdel: Vec&lt;Token&gt;,
+<a href=#943 id=943 data-nosnippet>943</a>  </span><span class="kw">fn </span>declare_paired_delimiter_x(cs: Token, n: i64, pre: Vec&lt;Token&gt;, ldel: Vec&lt;Token&gt;, rdel: Vec&lt;Token&gt;,
 <a href=#944 id=944 data-nosnippet>944</a>    post: Vec&lt;Token&gt;, body: Vec&lt;Token&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
 <a href=#945 id=945 data-nosnippet>945</a>    <span class="kw">use </span>latexml_core::definition::ExpansionBody;
 <a href=#946 id=946 data-nosnippet>946</a>    <span class="kw">let </span>cmd = cs.to_string();
 <a href=#947 id=947 data-nosnippet>947</a>    <span class="kw">let </span>inner_cs_name = <span class="macro">s!</span>(<span class="string">"{}@inner"</span>, cmd);
 <a href=#948 id=948 data-nosnippet>948</a>    <span class="kw">let </span>lsize_cs_name = <span class="macro">s!</span>(<span class="string">"{}@lsize"</span>, cmd);
 <a href=#949 id=949 data-nosnippet>949</a>    <span class="kw">let </span>rsize_cs_name = <span class="macro">s!</span>(<span class="string">"{}@rsize"</span>, cmd);
-<a href=#950 id=950 data-nosnippet>950</a>    <span class="kw">let </span>param_spec: String = (<span class="number">0</span>..n.max(<span class="number">1</span>)).map(|<span class="kw">_</span>| <span class="string">"{}"</span>).collect();
-<a href=#951 id=951 data-nosnippet>951</a>    <span class="comment">// The precode, the delimiters and the postcode are in the command the arguments are read by, as mathtools.sty:953-988
-<a href=#952 id=952 data-nosnippet>952</a>    // generates it, so they may use them (`\DeclarePairedDelimiterXPP\expect[2]{\mathbb{E}_{#1}}[]{}{#2}`, 2310.04475;
-<a href=#953 id=953 data-nosnippet>953</a>    // Perl's mathtools.sty.ltxml:702-708 puts them before the arguments: the `#` reached the stomach); the dispatcher
-<a href=#954 id=954 data-nosnippet>954</a>    // gives each call its sizes.
-<a href=#955 id=955 data-nosnippet>955</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>inner_body_toks = pre;
-<a href=#956 id=956 data-nosnippet>956</a>    inner_body_toks.push(<span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>lsize_cs_name));
-<a href=#957 id=957 data-nosnippet>957</a>    inner_body_toks.extend(ldel);
-<a href=#958 id=958 data-nosnippet>958</a>    inner_body_toks.extend(body);
-<a href=#959 id=959 data-nosnippet>959</a>    inner_body_toks.push(<span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>rsize_cs_name));
-<a href=#960 id=960 data-nosnippet>960</a>    inner_body_toks.extend(rdel);
-<a href=#961 id=961 data-nosnippet>961</a>    inner_body_toks.extend(post);
-<a href=#962 id=962 data-nosnippet>962</a>    inner_body_toks.push(<span class="macro">T_CS!</span>(<span class="string">"\\endgroup"</span>));
-<a href=#963 id=963 data-nosnippet>963</a>    def_macro(<span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>inner_cs_name),
-<a href=#964 id=964 data-nosnippet>964</a>      parse_parameters(<span class="kw-2">&amp;</span>param_spec, <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>inner_cs_name), <span class="bool-val">true</span>)<span class="question-mark">?</span>,
-<a href=#965 id=965 data-nosnippet>965</a>      ExpansionBody::Tokens(Tokens::new(inner_body_toks)), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#966 id=966 data-nosnippet>966</a>    def_macro(cs, parse_parameters(<span class="string">"OptionalMatch:* []"</span>, <span class="kw-2">&amp;</span>cs, <span class="bool-val">true</span>)<span class="question-mark">?</span>,
-<a href=#967 id=967 data-nosnippet>967</a>      <span class="prelude-val">Some</span>(ExpansionBody::Closure(Rc::new(<span class="kw">move </span>|args| {
-<a href=#968 id=968 data-nosnippet>968</a>        <span class="kw">let </span>is_star = !args[<span class="number">0</span>].is_empty();
-<a href=#969 id=969 data-nosnippet>969</a>        <span class="kw">let </span>size: Vec&lt;Token&gt; = <span class="kw">if </span>is_star { <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\middle"</span>)] } <span class="kw">else </span>{ args[<span class="number">1</span>].unlist_cow().to_vec() };
-<a href=#970 id=970 data-nosnippet>970</a>        <span class="kw">let </span>size_cs = size.iter().find(|t| t.get_catcode() != Catcode::SPACE).copied();
-<a href=#971 id=971 data-nosnippet>971</a>        <span class="comment">// One side's sizing: `\left`/`\right`, or `\csname&lt;size name&gt;&lt;l|r&gt;\endcsname` (`\MH_cs_to_str:N` is
-<a href=#972 id=972 data-nosnippet>972</a>        // `\string` without its first character), or nothing.
-<a href=#973 id=973 data-nosnippet>973</a>        </span><span class="kw">let </span>side = |left: bool| -&gt; Vec&lt;Token&gt; {
-<a href=#974 id=974 data-nosnippet>974</a>          <span class="kw">if </span>is_star {
-<a href=#975 id=975 data-nosnippet>975</a>            <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="kw">if </span>left { <span class="string">"\\left" </span>} <span class="kw">else </span>{ <span class="string">"\\right" </span>})]
-<a href=#976 id=976 data-nosnippet>976</a>          } <span class="kw">else if let </span><span class="prelude-val">Some</span>(first) = size_cs {
-<a href=#977 id=977 data-nosnippet>977</a>            <span class="kw">let </span>name = first.to_string();
-<a href=#978 id=978 data-nosnippet>978</a>            <span class="kw">let </span><span class="kw-2">mut </span>toks = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\csname"</span>)];
-<a href=#979 id=979 data-nosnippet>979</a>            toks.extend(name.chars().skip(<span class="number">1</span>).chain([<span class="kw">if </span>left { <span class="string">'l' </span>} <span class="kw">else </span>{ <span class="string">'r' </span>}]).map(|c| <span class="macro">CharToken!</span>(c)));
-<a href=#980 id=980 data-nosnippet>980</a>            toks.push(<span class="macro">T_CS!</span>(<span class="string">"\\endcsname"</span>));
-<a href=#981 id=981 data-nosnippet>981</a>            toks
-<a href=#982 id=982 data-nosnippet>982</a>          } <span class="kw">else </span>{
-<a href=#983 id=983 data-nosnippet>983</a>            <span class="macro">vec!</span>[]
-<a href=#984 id=984 data-nosnippet>984</a>          }
-<a href=#985 id=985 data-nosnippet>985</a>        };
-<a href=#986 id=986 data-nosnippet>986</a>        <span class="kw">let </span><span class="kw-2">mut </span>toks: Vec&lt;Token&gt; = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\begingroup"</span>), <span class="macro">T_CS!</span>(<span class="string">"\\def"</span>), <span class="macro">T_CS!</span>(<span class="string">"\\delimsize"</span>), <span class="macro">T_BEGIN!</span>()];
-<a href=#987 id=987 data-nosnippet>987</a>        toks.extend(size.iter().copied());
-<a href=#988 id=988 data-nosnippet>988</a>        toks.push(<span class="macro">T_END!</span>());
-<a href=#989 id=989 data-nosnippet>989</a>        toks.extend([<span class="macro">T_CS!</span>(<span class="string">"\\def"</span>), <span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>lsize_cs_name), <span class="macro">T_BEGIN!</span>()]);
-<a href=#990 id=990 data-nosnippet>990</a>        toks.extend(side(<span class="bool-val">true</span>));
-<a href=#991 id=991 data-nosnippet>991</a>        toks.extend([<span class="macro">T_END!</span>(), <span class="macro">T_CS!</span>(<span class="string">"\\def"</span>), <span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>rsize_cs_name), <span class="macro">T_BEGIN!</span>()]);
-<a href=#992 id=992 data-nosnippet>992</a>        toks.extend(side(<span class="bool-val">false</span>));
-<a href=#993 id=993 data-nosnippet>993</a>        toks.push(<span class="macro">T_END!</span>());
-<a href=#994 id=994 data-nosnippet>994</a>        toks.push(<span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>inner_cs_name));
-<a href=#995 id=995 data-nosnippet>995</a>        <span class="prelude-val">Ok</span>(Tokens::new(toks))
-<a href=#996 id=996 data-nosnippet>996</a>      }))), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#997 id=997 data-nosnippet>997</a>    <span class="prelude-val">Ok</span>(())
-<a href=#998 id=998 data-nosnippet>998</a>  }
-<a href=#999 id=999 data-nosnippet>999</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\DeclarePairedDelimiterX DefToken [Number] {} {} {}"</span>, sub[(cs, nargs, ldel, rdel, body)] {
-<a href=#1000 id=1000 data-nosnippet>1000</a>    declare_paired_delimiter_x(cs, nargs.value_of() <span class="kw">as </span>usize, Vec::new(), ldel.unlist(), rdel.unlist(), Vec::new(),
-<a href=#1001 id=1001 data-nosnippet>1001</a>      body.unlist())<span class="question-mark">?</span>;
-<a href=#1002 id=1002 data-nosnippet>1002</a>  });
-<a href=#1003 id=1003 data-nosnippet>1003</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\DeclarePairedDelimiterXPP DefToken [Number] {} {} {} {} {}"</span>, sub[(cs, nargs, pre, ldel, rdel, post, body)] {
-<a href=#1004 id=1004 data-nosnippet>1004</a>    declare_paired_delimiter_x(cs, nargs.value_of() <span class="kw">as </span>usize, pre.unlist(), ldel.unlist(), rdel.unlist(),
-<a href=#1005 id=1005 data-nosnippet>1005</a>      post.unlist(), body.unlist())<span class="question-mark">?</span>;
-<a href=#1006 id=1006 data-nosnippet>1006</a>  });
-<a href=#1007 id=1007 data-nosnippet>1007</a>
-<a href=#1008 id=1008 data-nosnippet>1008</a>  <span class="comment">// \reDeclarePairedDelimiterInnerWrapper\cmd{star|nostar}{body}
-<a href=#1009 id=1009 data-nosnippet>1009</a>  // Perl: redefines the @star@wrapper or @nostar@wrapper for \DeclarePairedDelimiter
-<a href=#1010 id=1010 data-nosnippet>1010</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\reDeclarePairedDelimiterInnerWrapper DefToken {}{}"</span>, sub[(cs, nstar, body)] {
-<a href=#1011 id=1011 data-nosnippet>1011</a>    <span class="kw">use </span>latexml_core::definition::ExpansionBody;
-<a href=#1012 id=1012 data-nosnippet>1012</a>    <span class="kw">let </span>cmd = cs.to_string();
-<a href=#1013 id=1013 data-nosnippet>1013</a>    <span class="kw">let </span>cmd_name = cmd.trim_start_matches(<span class="string">'\\'</span>);
-<a href=#1014 id=1014 data-nosnippet>1014</a>    <span class="kw">let </span>variant = nstar.to_string();
-<a href=#1015 id=1015 data-nosnippet>1015</a>    <span class="kw">let </span>wrapper_cs = <span class="macro">s!</span>(<span class="string">"\\MT@delim@{}@{}@wrapper"</span>, cmd_name, variant);
-<a href=#1016 id=1016 data-nosnippet>1016</a>    <span class="kw">let </span>body_toks: Vec&lt;Token&gt; = body.unlist();
-<a href=#1017 id=1017 data-nosnippet>1017</a>    def_macro(<span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>wrapper_cs),
-<a href=#1018 id=1018 data-nosnippet>1018</a>      parse_parameters(<span class="string">"{}{}{}"</span>, <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>wrapper_cs), <span class="bool-val">true</span>)<span class="question-mark">?</span>,
-<a href=#1019 id=1019 data-nosnippet>1019</a>      ExpansionBody::Tokens(Tokens::new(body_toks)), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#1020 id=1020 data-nosnippet>1020</a>  });
-<a href=#1021 id=1021 data-nosnippet>1021</a>
-<a href=#1022 id=1022 data-nosnippet>1022</a>  <span class="comment">//======================================================================
-<a href=#1023 id=1023 data-nosnippet>1023</a>  // 3.7 — Math-mode symbol definitions
-<a href=#1024 id=1024 data-nosnippet>1024</a>  //======================================================================
-<a href=#1025 id=1025 data-nosnippet>1025</a>
-<a href=#1026 id=1026 data-nosnippet>1026</a>  </span><span class="macro">DefMath!</span>(<span class="string">"\\lparen"</span>, <span class="string">"("</span>, role =&gt; <span class="string">"OPEN"</span>,  stretchy =&gt; <span class="bool-val">false</span>);
-<a href=#1027 id=1027 data-nosnippet>1027</a>  <span class="macro">DefMath!</span>(<span class="string">"\\rparen"</span>, <span class="string">")"</span>, role =&gt; <span class="string">"CLOSE"</span>, stretchy =&gt; <span class="bool-val">false</span>);
-<a href=#1028 id=1028 data-nosnippet>1028</a>
-<a href=#1029 id=1029 data-nosnippet>1029</a>  <span class="macro">DefMath!</span>(<span class="string">"\\vcentcolon"</span>, <span class="prelude-val">None</span>, <span class="string">":"</span>, role =&gt; <span class="string">"RELOP"</span>);
-<a href=#1030 id=1030 data-nosnippet>1030</a>  <span class="macro">DefMath!</span>(<span class="string">"\\ordinarycolon"</span>, <span class="prelude-val">None</span>, <span class="string">":"</span>, role =&gt; <span class="string">"RELOP"</span>);
-<a href=#1031 id=1031 data-nosnippet>1031</a>
-<a href=#1032 id=1032 data-nosnippet>1032</a>  <span class="macro">DefMath!</span>(<span class="string">"\\dblcolon"</span>, <span class="string">"::"</span>, role =&gt; <span class="string">"RELOP"</span>);
+<a href=#950 id=950 data-nosnippet>950</a>    <span class="comment">// (its `\newcommand…[#2]`, mathtools.sty:961-963)
+<a href=#951 id=951 data-nosnippet>951</a>    </span><span class="kw">let </span>n = latex_arg_count(n)<span class="question-mark">?</span>;
+<a href=#952 id=952 data-nosnippet>952</a>    <span class="kw">let </span>param_spec: String = (<span class="number">0</span>..n.max(<span class="number">1</span>)).map(|<span class="kw">_</span>| <span class="string">"{}"</span>).collect();
+<a href=#953 id=953 data-nosnippet>953</a>    <span class="comment">// The precode, the delimiters and the postcode are in the command the arguments are read by, as mathtools.sty:953-988
+<a href=#954 id=954 data-nosnippet>954</a>    // generates it, so they may use them (`\DeclarePairedDelimiterXPP\expect[2]{\mathbb{E}_{#1}}[]{}{#2}`, 2310.04475;
+<a href=#955 id=955 data-nosnippet>955</a>    // Perl's mathtools.sty.ltxml:702-708 puts them before the arguments: the `#` reached the stomach); the dispatcher
+<a href=#956 id=956 data-nosnippet>956</a>    // gives each call its sizes.
+<a href=#957 id=957 data-nosnippet>957</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>inner_body_toks = pre;
+<a href=#958 id=958 data-nosnippet>958</a>    inner_body_toks.push(<span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>lsize_cs_name));
+<a href=#959 id=959 data-nosnippet>959</a>    inner_body_toks.extend(ldel);
+<a href=#960 id=960 data-nosnippet>960</a>    inner_body_toks.extend(body);
+<a href=#961 id=961 data-nosnippet>961</a>    inner_body_toks.push(<span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>rsize_cs_name));
+<a href=#962 id=962 data-nosnippet>962</a>    inner_body_toks.extend(rdel);
+<a href=#963 id=963 data-nosnippet>963</a>    inner_body_toks.extend(post);
+<a href=#964 id=964 data-nosnippet>964</a>    inner_body_toks.push(<span class="macro">T_CS!</span>(<span class="string">"\\endgroup"</span>));
+<a href=#965 id=965 data-nosnippet>965</a>    def_macro(<span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>inner_cs_name),
+<a href=#966 id=966 data-nosnippet>966</a>      parse_parameters(<span class="kw-2">&amp;</span>param_spec, <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>inner_cs_name), <span class="bool-val">true</span>)<span class="question-mark">?</span>,
+<a href=#967 id=967 data-nosnippet>967</a>      ExpansionBody::Tokens(Tokens::new(inner_body_toks)), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#968 id=968 data-nosnippet>968</a>    def_macro(cs, parse_parameters(<span class="string">"OptionalMatch:* []"</span>, <span class="kw-2">&amp;</span>cs, <span class="bool-val">true</span>)<span class="question-mark">?</span>,
+<a href=#969 id=969 data-nosnippet>969</a>      <span class="prelude-val">Some</span>(ExpansionBody::Closure(Rc::new(<span class="kw">move </span>|args| {
+<a href=#970 id=970 data-nosnippet>970</a>        <span class="kw">let </span>is_star = !args[<span class="number">0</span>].is_empty();
+<a href=#971 id=971 data-nosnippet>971</a>        <span class="kw">let </span>size: Vec&lt;Token&gt; = <span class="kw">if </span>is_star { <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\middle"</span>)] } <span class="kw">else </span>{ args[<span class="number">1</span>].unlist_cow().to_vec() };
+<a href=#972 id=972 data-nosnippet>972</a>        <span class="kw">let </span>size_cs = size.iter().find(|t| t.get_catcode() != Catcode::SPACE).copied();
+<a href=#973 id=973 data-nosnippet>973</a>        <span class="comment">// One side's sizing: `\left`/`\right`, or `\csname&lt;size name&gt;&lt;l|r&gt;\endcsname` (`\MH_cs_to_str:N` is
+<a href=#974 id=974 data-nosnippet>974</a>        // `\string` without its first character), or nothing.
+<a href=#975 id=975 data-nosnippet>975</a>        </span><span class="kw">let </span>side = |left: bool| -&gt; Vec&lt;Token&gt; {
+<a href=#976 id=976 data-nosnippet>976</a>          <span class="kw">if </span>is_star {
+<a href=#977 id=977 data-nosnippet>977</a>            <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="kw">if </span>left { <span class="string">"\\left" </span>} <span class="kw">else </span>{ <span class="string">"\\right" </span>})]
+<a href=#978 id=978 data-nosnippet>978</a>          } <span class="kw">else if let </span><span class="prelude-val">Some</span>(first) = size_cs {
+<a href=#979 id=979 data-nosnippet>979</a>            <span class="kw">let </span>name = first.to_string();
+<a href=#980 id=980 data-nosnippet>980</a>            <span class="kw">let </span><span class="kw-2">mut </span>toks = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\csname"</span>)];
+<a href=#981 id=981 data-nosnippet>981</a>            toks.extend(name.chars().skip(<span class="number">1</span>).chain([<span class="kw">if </span>left { <span class="string">'l' </span>} <span class="kw">else </span>{ <span class="string">'r' </span>}]).map(|c| <span class="macro">CharToken!</span>(c)));
+<a href=#982 id=982 data-nosnippet>982</a>            toks.push(<span class="macro">T_CS!</span>(<span class="string">"\\endcsname"</span>));
+<a href=#983 id=983 data-nosnippet>983</a>            toks
+<a href=#984 id=984 data-nosnippet>984</a>          } <span class="kw">else </span>{
+<a href=#985 id=985 data-nosnippet>985</a>            <span class="macro">vec!</span>[]
+<a href=#986 id=986 data-nosnippet>986</a>          }
+<a href=#987 id=987 data-nosnippet>987</a>        };
+<a href=#988 id=988 data-nosnippet>988</a>        <span class="kw">let </span><span class="kw-2">mut </span>toks: Vec&lt;Token&gt; = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\begingroup"</span>), <span class="macro">T_CS!</span>(<span class="string">"\\def"</span>), <span class="macro">T_CS!</span>(<span class="string">"\\delimsize"</span>), <span class="macro">T_BEGIN!</span>()];
+<a href=#989 id=989 data-nosnippet>989</a>        toks.extend(size.iter().copied());
+<a href=#990 id=990 data-nosnippet>990</a>        toks.push(<span class="macro">T_END!</span>());
+<a href=#991 id=991 data-nosnippet>991</a>        toks.extend([<span class="macro">T_CS!</span>(<span class="string">"\\def"</span>), <span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>lsize_cs_name), <span class="macro">T_BEGIN!</span>()]);
+<a href=#992 id=992 data-nosnippet>992</a>        toks.extend(side(<span class="bool-val">true</span>));
+<a href=#993 id=993 data-nosnippet>993</a>        toks.extend([<span class="macro">T_END!</span>(), <span class="macro">T_CS!</span>(<span class="string">"\\def"</span>), <span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>rsize_cs_name), <span class="macro">T_BEGIN!</span>()]);
+<a href=#994 id=994 data-nosnippet>994</a>        toks.extend(side(<span class="bool-val">false</span>));
+<a href=#995 id=995 data-nosnippet>995</a>        toks.push(<span class="macro">T_END!</span>());
+<a href=#996 id=996 data-nosnippet>996</a>        toks.push(<span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>inner_cs_name));
+<a href=#997 id=997 data-nosnippet>997</a>        <span class="prelude-val">Ok</span>(Tokens::new(toks))
+<a href=#998 id=998 data-nosnippet>998</a>      }))), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#999 id=999 data-nosnippet>999</a>    <span class="prelude-val">Ok</span>(())
+<a href=#1000 id=1000 data-nosnippet>1000</a>  }
+<a href=#1001 id=1001 data-nosnippet>1001</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\DeclarePairedDelimiterX DefToken [Number] {} {} {}"</span>, sub[(cs, nargs, ldel, rdel, body)] {
+<a href=#1002 id=1002 data-nosnippet>1002</a>    declare_paired_delimiter_x(cs, nargs.value_of(), Vec::new(), ldel.unlist(), rdel.unlist(), Vec::new(),
+<a href=#1003 id=1003 data-nosnippet>1003</a>      body.unlist())<span class="question-mark">?</span>;
+<a href=#1004 id=1004 data-nosnippet>1004</a>  });
+<a href=#1005 id=1005 data-nosnippet>1005</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\DeclarePairedDelimiterXPP DefToken [Number] {} {} {} {} {}"</span>, sub[(cs, nargs, pre, ldel, rdel, post, body)] {
+<a href=#1006 id=1006 data-nosnippet>1006</a>    declare_paired_delimiter_x(cs, nargs.value_of(), pre.unlist(), ldel.unlist(), rdel.unlist(),
+<a href=#1007 id=1007 data-nosnippet>1007</a>      post.unlist(), body.unlist())<span class="question-mark">?</span>;
+<a href=#1008 id=1008 data-nosnippet>1008</a>  });
+<a href=#1009 id=1009 data-nosnippet>1009</a>
+<a href=#1010 id=1010 data-nosnippet>1010</a>  <span class="comment">// \reDeclarePairedDelimiterInnerWrapper\cmd{star|nostar}{body}
+<a href=#1011 id=1011 data-nosnippet>1011</a>  // Perl: redefines the @star@wrapper or @nostar@wrapper for \DeclarePairedDelimiter
+<a href=#1012 id=1012 data-nosnippet>1012</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\reDeclarePairedDelimiterInnerWrapper DefToken {}{}"</span>, sub[(cs, nstar, body)] {
+<a href=#1013 id=1013 data-nosnippet>1013</a>    <span class="kw">use </span>latexml_core::definition::ExpansionBody;
+<a href=#1014 id=1014 data-nosnippet>1014</a>    <span class="kw">let </span>cmd = cs.to_string();
+<a href=#1015 id=1015 data-nosnippet>1015</a>    <span class="kw">let </span>cmd_name = cmd.trim_start_matches(<span class="string">'\\'</span>);
+<a href=#1016 id=1016 data-nosnippet>1016</a>    <span class="kw">let </span>variant = nstar.to_string();
+<a href=#1017 id=1017 data-nosnippet>1017</a>    <span class="kw">let </span>wrapper_cs = <span class="macro">s!</span>(<span class="string">"\\MT@delim@{}@{}@wrapper"</span>, cmd_name, variant);
+<a href=#1018 id=1018 data-nosnippet>1018</a>    <span class="kw">let </span>body_toks: Vec&lt;Token&gt; = body.unlist();
+<a href=#1019 id=1019 data-nosnippet>1019</a>    def_macro(<span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>wrapper_cs),
+<a href=#1020 id=1020 data-nosnippet>1020</a>      parse_parameters(<span class="string">"{}{}{}"</span>, <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>wrapper_cs), <span class="bool-val">true</span>)<span class="question-mark">?</span>,
+<a href=#1021 id=1021 data-nosnippet>1021</a>      ExpansionBody::Tokens(Tokens::new(body_toks)), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#1022 id=1022 data-nosnippet>1022</a>  });
+<a href=#1023 id=1023 data-nosnippet>1023</a>
+<a href=#1024 id=1024 data-nosnippet>1024</a>  <span class="comment">//======================================================================
+<a href=#1025 id=1025 data-nosnippet>1025</a>  // 3.7 — Math-mode symbol definitions
+<a href=#1026 id=1026 data-nosnippet>1026</a>  //======================================================================
+<a href=#1027 id=1027 data-nosnippet>1027</a>
+<a href=#1028 id=1028 data-nosnippet>1028</a>  </span><span class="macro">DefMath!</span>(<span class="string">"\\lparen"</span>, <span class="string">"("</span>, role =&gt; <span class="string">"OPEN"</span>,  stretchy =&gt; <span class="bool-val">false</span>);
+<a href=#1029 id=1029 data-nosnippet>1029</a>  <span class="macro">DefMath!</span>(<span class="string">"\\rparen"</span>, <span class="string">")"</span>, role =&gt; <span class="string">"CLOSE"</span>, stretchy =&gt; <span class="bool-val">false</span>);
+<a href=#1030 id=1030 data-nosnippet>1030</a>
+<a href=#1031 id=1031 data-nosnippet>1031</a>  <span class="macro">DefMath!</span>(<span class="string">"\\vcentcolon"</span>, <span class="prelude-val">None</span>, <span class="string">":"</span>, role =&gt; <span class="string">"RELOP"</span>);
+<a href=#1032 id=1032 data-nosnippet>1032</a>  <span class="macro">DefMath!</span>(<span class="string">"\\ordinarycolon"</span>, <span class="prelude-val">None</span>, <span class="string">":"</span>, role =&gt; <span class="string">"RELOP"</span>);
 <a href=#1033 id=1033 data-nosnippet>1033</a>
-<a href=#1034 id=1034 data-nosnippet>1034</a>  <span class="macro">DefMath!</span>(<span class="string">"\\coloneqq"</span>,    <span class="string">"\u{2254}"</span>,   role =&gt; <span class="string">"RELOP"</span>);
-<a href=#1035 id=1035 data-nosnippet>1035</a>  <span class="macro">DefMath!</span>(<span class="string">"\\Coloneqq"</span>,    <span class="string">"\u{2A74}"</span>,   role =&gt; <span class="string">"RELOP"</span>);
-<a href=#1036 id=1036 data-nosnippet>1036</a>  <span class="macro">DefMath!</span>(<span class="string">"\\coloneq"</span>,     <span class="string">"\u{2254}"</span>,   role =&gt; <span class="string">"RELOP"</span>);
-<a href=#1037 id=1037 data-nosnippet>1037</a>  <span class="macro">DefMath!</span>(<span class="string">"\\Coloneq"</span>,     <span class="string">"\u{2A74}"</span>,   role =&gt; <span class="string">"RELOP"</span>);
-<a href=#1038 id=1038 data-nosnippet>1038</a>  <span class="macro">DefMath!</span>(<span class="string">"\\eqqcolon"</span>,    <span class="string">"\u{2255}"</span>,   role =&gt; <span class="string">"RELOP"</span>);
-<a href=#1039 id=1039 data-nosnippet>1039</a>  <span class="macro">DefMath!</span>(<span class="string">"\\Eqqcolon"</span>,    <span class="string">"=::"</span>,        role =&gt; <span class="string">"RELOP"</span>);
-<a href=#1040 id=1040 data-nosnippet>1040</a>  <span class="macro">DefMath!</span>(<span class="string">"\\eqcolon"</span>,     <span class="string">"\u{2255}"</span>,   role =&gt; <span class="string">"RELOP"</span>);
-<a href=#1041 id=1041 data-nosnippet>1041</a>  <span class="macro">DefMath!</span>(<span class="string">"\\Eqcolon"</span>,     <span class="string">"=::"</span>,        role =&gt; <span class="string">"RELOP"</span>);
-<a href=#1042 id=1042 data-nosnippet>1042</a>  <span class="macro">DefMath!</span>(<span class="string">"\\colonapprox"</span>, <span class="string">":\u{2248}"</span>,  role =&gt; <span class="string">"RELOP"</span>);
-<a href=#1043 id=1043 data-nosnippet>1043</a>  <span class="macro">DefMath!</span>(<span class="string">"\\Colonapprox"</span>, <span class="string">"::\u{2248}"</span>, role =&gt; <span class="string">"RELOP"</span>);
-<a href=#1044 id=1044 data-nosnippet>1044</a>  <span class="macro">DefMath!</span>(<span class="string">"\\approxcolon"</span>, <span class="string">"\u{2248}:"</span>,  role =&gt; <span class="string">"RELOP"</span>);
-<a href=#1045 id=1045 data-nosnippet>1045</a>  <span class="macro">DefMath!</span>(<span class="string">"\\Approxcolon"</span>, <span class="string">"\u{2248}::"</span>, role =&gt; <span class="string">"RELOP"</span>);
-<a href=#1046 id=1046 data-nosnippet>1046</a>  <span class="macro">DefMath!</span>(<span class="string">"\\colonsim"</span>,    <span class="string">":\u{223C}"</span>,  role =&gt; <span class="string">"RELOP"</span>);
-<a href=#1047 id=1047 data-nosnippet>1047</a>  <span class="macro">DefMath!</span>(<span class="string">"\\Colonsim"</span>,    <span class="string">"::\u{223C}"</span>, role =&gt; <span class="string">"RELOP"</span>);
-<a href=#1048 id=1048 data-nosnippet>1048</a>  <span class="macro">DefMath!</span>(<span class="string">"\\simcolon"</span>,    <span class="string">"\u{223C}:"</span>,  role =&gt; <span class="string">"RELOP"</span>);
-<a href=#1049 id=1049 data-nosnippet>1049</a>  <span class="macro">DefMath!</span>(<span class="string">"\\Simcolon"</span>,    <span class="string">"\u{223C}::"</span>, role =&gt; <span class="string">"RELOP"</span>);
-<a href=#1050 id=1050 data-nosnippet>1050</a>  <span class="macro">DefMath!</span>(<span class="string">"\\colondash"</span>,   <span class="string">":-"</span>,         role =&gt; <span class="string">"RELOP"</span>);
-<a href=#1051 id=1051 data-nosnippet>1051</a>  <span class="macro">DefMath!</span>(<span class="string">"\\Colondash"</span>,   <span class="string">"::-"</span>,        role =&gt; <span class="string">"RELOP"</span>);
-<a href=#1052 id=1052 data-nosnippet>1052</a>  <span class="macro">DefMath!</span>(<span class="string">"\\dashcolon"</span>,   <span class="string">"-:"</span>,         role =&gt; <span class="string">"RELOP"</span>);
-<a href=#1053 id=1053 data-nosnippet>1053</a>  <span class="macro">DefMath!</span>(<span class="string">"\\Dashcolon"</span>,   <span class="string">"-::"</span>,        role =&gt; <span class="string">"RELOP"</span>);
-<a href=#1054 id=1054 data-nosnippet>1054</a>
-<a href=#1055 id=1055 data-nosnippet>1055</a>  <span class="comment">// Perl: UTF(0x2909) — RIGHTWARDS DOUBLE ARROW FROM BAR (approximation)
-<a href=#1056 id=1056 data-nosnippet>1056</a>  </span><span class="macro">DefMath!</span>(<span class="string">"\\nuparrow"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{2909}"</span>, role =&gt; <span class="string">"ARROW"</span>);
-<a href=#1057 id=1057 data-nosnippet>1057</a>  <span class="comment">// Perl: UTF(0x2908) — DOWNWARDS DOUBLE ARROW FROM BAR (approximation)
-<a href=#1058 id=1058 data-nosnippet>1058</a>  </span><span class="macro">DefMath!</span>(<span class="string">"\\ndownarrow"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{2908}"</span>, role =&gt; <span class="string">"ARROW"</span>);
-<a href=#1059 id=1059 data-nosnippet>1059</a>  <span class="comment">// Perl: UTF(0xD7) = × MULTIPLICATION SIGN
-<a href=#1060 id=1060 data-nosnippet>1060</a>  // Perl: font =&gt; { size =&gt; 'Big' } where rationalizeFontSize('Big') = 1.6 * DEFSIZE(10) = 16.0pt
-<a href=#1061 id=1061 data-nosnippet>1061</a>  </span><span class="macro">DefMath!</span>(<span class="string">"\\bigtimes"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{00D7}"</span>, role =&gt; <span class="string">"MULOP"</span>, meaning =&gt; <span class="string">"times"</span>,
-<a href=#1062 id=1062 data-nosnippet>1062</a>    font =&gt; sub[_f] { <span class="prelude-val">Ok</span>(Font { size: <span class="prelude-val">Some</span>(font::rationalize_font_size(<span class="string">"Big"</span>)), ..Font::default() }) },
-<a href=#1063 id=1063 data-nosnippet>1063</a>    dynamic_scriptpos =&gt; <span class="bool-val">true</span>);
-<a href=#1064 id=1064 data-nosnippet>1064</a>
-<a href=#1065 id=1065 data-nosnippet>1065</a>  <span class="comment">//======================================================================
-<a href=#1066 id=1066 data-nosnippet>1066</a>  // 4 — Extended features
-<a href=#1067 id=1067 data-nosnippet>1067</a>  //======================================================================
-<a href=#1068 id=1068 data-nosnippet>1068</a>
-<a href=#1069 id=1069 data-nosnippet>1069</a>  // 4.2 — Prescripts
-<a href=#1070 id=1070 data-nosnippet>1070</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\prescript{}{}{}"</span>,
-<a href=#1071 id=1071 data-nosnippet>1071</a>    <span class="string">"\\@ams@prescript{#1}{#2}{#3}{\
-<a href=#1072 id=1072 data-nosnippet>1072</a>     {}^{\\@mt@getmtoption{prescript-sup-format}{#1}}\
-<a href=#1073 id=1073 data-nosnippet>1073</a>     _{\\@mt@getmtoption{prescript-sub-format}{#2}}\
-<a href=#1074 id=1074 data-nosnippet>1074</a>     {\\@mt@getmtoption{prescript-arg-format}{#3}}\
-<a href=#1075 id=1075 data-nosnippet>1075</a>     }"</span>);
-<a href=#1076 id=1076 data-nosnippet>1076</a>  <span class="comment">// wrapper to get reversion
-<a href=#1077 id=1077 data-nosnippet>1077</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\@ams@prescript{}{}{}{}"</span>, <span class="string">"#4"</span>,
-<a href=#1078 id=1078 data-nosnippet>1078</a>    reversion =&gt; <span class="string">"\\prescript{#1}{#2}{#3}"</span>);
-<a href=#1079 id=1079 data-nosnippet>1079</a>
-<a href=#1080 id=1080 data-nosnippet>1080</a>  <span class="comment">// 4.4 — Spread lines
-<a href=#1081 id=1081 data-nosnippet>1081</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\csname spreadlines\\endcsname{}"</span>, <span class="string">"\\begingroup\\jot=#1\\relax"</span>);
-<a href=#1082 id=1082 data-nosnippet>1082</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\csname endspreadlines\\endcsname"</span>, <span class="string">"\\endgroup"</span>);
-<a href=#1083 id=1083 data-nosnippet>1083</a>
-<a href=#1084 id=1084 data-nosnippet>1084</a>  <span class="comment">// 4.5 — lgathered / rgathered
-<a href=#1085 id=1085 data-nosnippet>1085</a>  // TODO: @@lgathered/@@rgathered have complex afterDigest/afterConstruct — simplified
-<a href=#1086 id=1086 data-nosnippet>1086</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lgathered[]"</span>,
-<a href=#1087 id=1087 data-nosnippet>1087</a>    <span class="string">"\\@ams@multirow@bindings{name=lgathered,vattach=#1}\\@@lgathered\\lx@begin@alignment"</span>);
-<a href=#1088 id=1088 data-nosnippet>1088</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\endlgathered"</span>, <span class="string">"\\lx@end@alignment\\@end@gathered"</span>);
-<a href=#1089 id=1089 data-nosnippet>1089</a>
-<a href=#1090 id=1090 data-nosnippet>1090</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\rgathered[]"</span>,
-<a href=#1091 id=1091 data-nosnippet>1091</a>    <span class="string">"\\@ams@multirow@bindings{name=rgathered,vattach=#1}\\@@rgathered\\lx@begin@alignment"</span>);
-<a href=#1092 id=1092 data-nosnippet>1092</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\endrgathered"</span>, <span class="string">"\\lx@end@alignment\\@end@gathered"</span>);
-<a href=#1093 id=1093 data-nosnippet>1093</a>
-<a href=#1094 id=1094 data-nosnippet>1094</a>  <span class="comment">// Perl: DefConstructor('\@@lgathered DigestedBody', ...)
-<a href=#1095 id=1095 data-nosnippet>1095</a>  // Perl: afterDigest sets MULTIROW_ALIGNMENT_RULE { default =&gt; 'left' }
-<a href=#1096 id=1096 data-nosnippet>1096</a>  // afterConstruct calls rearrangeAMSMultirow
-<a href=#1097 id=1097 data-nosnippet>1097</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\@@lgathered DigestedBody"</span>, <span class="string">"#1"</span>,
-<a href=#1098 id=1098 data-nosnippet>1098</a>    before_digest =&gt; { bgroup(); },
-<a href=#1099 id=1099 data-nosnippet>1099</a>    after_digest =&gt; sub[whatsit] {
-<a href=#1100 id=1100 data-nosnippet>1100</a>      whatsit.set_property(<span class="string">"MULTIROW_ALIGNMENT_RULE_DEFAULT"</span>, Stored::from(<span class="string">"left"</span>));
-<a href=#1101 id=1101 data-nosnippet>1101</a>    },
-<a href=#1102 id=1102 data-nosnippet>1102</a>    reversion =&gt; <span class="string">"\\begin{lgathered}#1\\end{lgathered}"</span>,
-<a href=#1103 id=1103 data-nosnippet>1103</a>    after_construct =&gt; sub[document, whatsit] {
-<a href=#1104 id=1104 data-nosnippet>1104</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(last) = document.get_node().get_last_child() {
-<a href=#1105 id=1105 data-nosnippet>1105</a>        <span class="kw">let </span>align_rule = amsmath_sty::get_multirow_alignment_rule(whatsit);
-<a href=#1106 id=1106 data-nosnippet>1106</a>        amsmath_sty::rearrange_ams_multirow(document, last, <span class="kw-2">&amp;</span>align_rule)<span class="question-mark">?</span>;
-<a href=#1107 id=1107 data-nosnippet>1107</a>      }
-<a href=#1108 id=1108 data-nosnippet>1108</a>    });
-<a href=#1109 id=1109 data-nosnippet>1109</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\@@rgathered DigestedBody"</span>, <span class="string">"#1"</span>,
-<a href=#1110 id=1110 data-nosnippet>1110</a>    before_digest =&gt; { bgroup(); },
-<a href=#1111 id=1111 data-nosnippet>1111</a>    after_digest =&gt; sub[whatsit] {
-<a href=#1112 id=1112 data-nosnippet>1112</a>      whatsit.set_property(<span class="string">"MULTIROW_ALIGNMENT_RULE_DEFAULT"</span>, Stored::from(<span class="string">"right"</span>));
-<a href=#1113 id=1113 data-nosnippet>1113</a>    },
-<a href=#1114 id=1114 data-nosnippet>1114</a>    reversion =&gt; <span class="string">"\\begin{rgathered}#1\\end{rgathered}"</span>,
-<a href=#1115 id=1115 data-nosnippet>1115</a>    after_construct =&gt; sub[document, whatsit] {
-<a href=#1116 id=1116 data-nosnippet>1116</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(last) = document.get_node().get_last_child() {
-<a href=#1117 id=1117 data-nosnippet>1117</a>        <span class="kw">let </span>align_rule = amsmath_sty::get_multirow_alignment_rule(whatsit);
-<a href=#1118 id=1118 data-nosnippet>1118</a>        amsmath_sty::rearrange_ams_multirow(document, last, <span class="kw-2">&amp;</span>align_rule)<span class="question-mark">?</span>;
-<a href=#1119 id=1119 data-nosnippet>1119</a>      }
-<a href=#1120 id=1120 data-nosnippet>1120</a>    });
-<a href=#1121 id=1121 data-nosnippet>1121</a>
-<a href=#1122 id=1122 data-nosnippet>1122</a>  <span class="comment">// \newgathered{name}{pre_line}{post_line}{after}
-<a href=#1123 id=1123 data-nosnippet>1123</a>  // Creates \name and \endname environments for gathered-like displays.
-<a href=#1124 id=1124 data-nosnippet>1124</a>  // Perl: DefMacro sub{} body that dynamically DefMacroI-installs runtime
-<a href=#1125 id=1125 data-nosnippet>1125</a>  // macros. Rust DefPrimitive does the installs at stomach time.
-<a href=#1126 id=1126 data-nosnippet>1126</a>  // WISDOM #44: NOT universally equivalent — safe here because
-<a href=#1127 id=1127 data-nosnippet>1127</a>  // `\newgathered` is a user-facing preamble declaration, not something
-<a href=#1128 id=1128 data-nosnippet>1128</a>  // that flows through `\edef`.
-<a href=#1129 id=1129 data-nosnippet>1129</a>  // WISDOM #44 verified 2026-04-23: zero `\edef`/`\ifx`/`\expandafter`
-<a href=#1130 id=1130 data-nosnippet>1130</a>  // uses of `\newgathered` across LaTeXML/lib + ar5iv-bindings.
-<a href=#1131 id=1131 data-nosnippet>1131</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\newgathered{}{}{}{}"</span>, sub[(name, _pre, _post, _after)] {
-<a href=#1132 id=1132 data-nosnippet>1132</a>    <span class="kw">let </span>env_name = name.to_string();
-<a href=#1133 id=1133 data-nosnippet>1133</a>    <span class="comment">// Create \name macro → begins gathered alignment
-<a href=#1134 id=1134 data-nosnippet>1134</a>    // Build tokens manually to preserve @ in CS names
-<a href=#1135 id=1135 data-nosnippet>1135</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>begin_toks = <span class="macro">vec!</span>[
-<a href=#1136 id=1136 data-nosnippet>1136</a>      <span class="macro">T_CS!</span>(<span class="string">"\\@ams@multirow@bindings"</span>),
-<a href=#1137 id=1137 data-nosnippet>1137</a>      <span class="macro">T_BEGIN!</span>(),
-<a href=#1138 id=1138 data-nosnippet>1138</a>    ];
-<a href=#1139 id=1139 data-nosnippet>1139</a>    begin_toks.extend(<span class="macro">ExplodeText!</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"name={env_name}"</span>)));
-<a href=#1140 id=1140 data-nosnippet>1140</a>    begin_toks.extend(<span class="macro">vec!</span>[
-<a href=#1141 id=1141 data-nosnippet>1141</a>      <span class="macro">T_END!</span>(),
-<a href=#1142 id=1142 data-nosnippet>1142</a>      <span class="macro">T_CS!</span>(<span class="string">"\\@@newgathered@dummy"</span>),
-<a href=#1143 id=1143 data-nosnippet>1143</a>      <span class="macro">T_CS!</span>(<span class="string">"\\lx@begin@alignment"</span>),
-<a href=#1144 id=1144 data-nosnippet>1144</a>    ]);
-<a href=#1145 id=1145 data-nosnippet>1145</a>    <span class="kw">let </span>begin_cs = <span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"\\{env_name}"</span>));
-<a href=#1146 id=1146 data-nosnippet>1146</a>    def_macro(begin_cs, <span class="prelude-val">None</span>, Tokens::new(begin_toks), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#1147 id=1147 data-nosnippet>1147</a>    <span class="comment">// Create \endname macro → ends alignment
-<a href=#1148 id=1148 data-nosnippet>1148</a>    </span><span class="kw">let </span>end_toks = Tokens::new(<span class="macro">vec!</span>[
-<a href=#1149 id=1149 data-nosnippet>1149</a>      <span class="macro">T_CS!</span>(<span class="string">"\\lx@end@alignment"</span>),
-<a href=#1150 id=1150 data-nosnippet>1150</a>      <span class="macro">T_CS!</span>(<span class="string">"\\@end@gathered"</span>),
-<a href=#1151 id=1151 data-nosnippet>1151</a>    ]);
-<a href=#1152 id=1152 data-nosnippet>1152</a>    <span class="kw">let </span>end_cs = <span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"\\end{env_name}"</span>));
-<a href=#1153 id=1153 data-nosnippet>1153</a>    def_macro(end_cs, <span class="prelude-val">None</span>, end_toks, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#1154 id=1154 data-nosnippet>1154</a>  });
-<a href=#1155 id=1155 data-nosnippet>1155</a>  <span class="macro">Let!</span>(<span class="string">"\\renewgathered"</span>, <span class="string">"\\newgathered"</span>);
-<a href=#1156 id=1156 data-nosnippet>1156</a>
-<a href=#1157 id=1157 data-nosnippet>1157</a>  <span class="comment">// \@@newgathered@dummy — gathered-like constructor with DigestedBody
-<a href=#1158 id=1158 data-nosnippet>1158</a>  // Perl: afterConstruct extracts array cells and wraps in XMDual.
-<a href=#1159 id=1159 data-nosnippet>1159</a>  // Simplified: just output the body as-is, like \@@gathered.
-<a href=#1160 id=1160 data-nosnippet>1160</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\@@newgathered@dummy DigestedBody"</span>,
-<a href=#1161 id=1161 data-nosnippet>1161</a>    <span class="string">"#1"</span>,
-<a href=#1162 id=1162 data-nosnippet>1162</a>    before_digest =&gt; { bgroup(); },
-<a href=#1163 id=1163 data-nosnippet>1163</a>    reversion =&gt; <span class="string">"\\begin{gathered}#1\\end{gathered}"</span>,
-<a href=#1164 id=1164 data-nosnippet>1164</a>    after_construct =&gt; sub[document, whatsit] {
-<a href=#1165 id=1165 data-nosnippet>1165</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(last) = document.get_node().get_last_child() {
-<a href=#1166 id=1166 data-nosnippet>1166</a>        <span class="kw">let </span>align_rule = amsmath_sty::get_multirow_alignment_rule(whatsit);
-<a href=#1167 id=1167 data-nosnippet>1167</a>        amsmath_sty::rearrange_ams_multirow(document, last, <span class="kw-2">&amp;</span>align_rule)<span class="question-mark">?</span>;
-<a href=#1168 id=1168 data-nosnippet>1168</a>      }
-<a href=#1169 id=1169 data-nosnippet>1169</a>    }
-<a href=#1170 id=1170 data-nosnippet>1170</a>  );
-<a href=#1171 id=1171 data-nosnippet>1171</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\@end@gathered"</span>, { egroup()<span class="question-mark">?</span>; });
-<a href=#1172 id=1172 data-nosnippet>1172</a>
-<a href=#1173 id=1173 data-nosnippet>1173</a>  <span class="comment">// 4.6 — Split fractions
-<a href=#1174 id=1174 data-nosnippet>1174</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\splitfrac{}{}"</span>,
-<a href=#1175 id=1175 data-nosnippet>1175</a>    <span class="string">"\\@ams@multirow@bindings{name=splitfrac}\\@@multlined\\lx@begin@alignment #1 \\\\\\\\ #2 \\lx@end@alignment\\@end@multline"</span>);
-<a href=#1176 id=1176 data-nosnippet>1176</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\splitdfrac{}{}"</span>,
-<a href=#1177 id=1177 data-nosnippet>1177</a>    <span class="string">"\\displaystyle\\@ams@multirow@bindings{name=splitdfrac}\\@@multlined\\lx@begin@alignment #1 \\\\\\\\ #2 \\lx@end@alignment\\@end@multline"</span>);
-<a href=#1178 id=1178 data-nosnippet>1178</a>});
-<a href=#1179 id=1179 data-nosnippet>1179</a>
-<a href=#1180 id=1180 data-nosnippet>1180</a><span class="doccomment">/// The `\lx@ams@cases` keys of a cases environment `name` whose preambles and delimiters are those `\newcases` and
-<a href=#1181 id=1181 data-nosnippet>1181</a>/// `\MT_start_cases:nnnn` take (mathtools.sty:995-1019): its delimiters (a `.` or empty one is none), `\displaystyle`
-<a href=#1182 id=1182 data-nosnippet>1182</a>/// when the left preamble sets it, and math conditions when the right preamble is a `$…$` cell.
-<a href=#1183 id=1183 data-nosnippet>1183</a></span><span class="kw">fn </span>cases_keys(
-<a href=#1184 id=1184 data-nosnippet>1184</a>  name: <span class="kw-2">&amp;</span>str,
-<a href=#1185 id=1185 data-nosnippet>1185</a>  lpre: <span class="kw-2">&amp;</span>Tokens,
-<a href=#1186 id=1186 data-nosnippet>1186</a>  rpre: <span class="kw-2">&amp;</span>Tokens,
-<a href=#1187 id=1187 data-nosnippet>1187</a>  ldelim: Tokens,
-<a href=#1188 id=1188 data-nosnippet>1188</a>  rdelim: Tokens,
-<a href=#1189 id=1189 data-nosnippet>1189</a>) -&gt; Vec&lt;Token&gt; {
-<a href=#1190 id=1190 data-nosnippet>1190</a>  <span class="kw">let </span>display = lpre
-<a href=#1191 id=1191 data-nosnippet>1191</a>    .unlist_ref()
-<a href=#1192 id=1192 data-nosnippet>1192</a>    .iter()
-<a href=#1193 id=1193 data-nosnippet>1193</a>    .any(|t| <span class="kw-2">*</span>t == <span class="macro">T_CS!</span>(<span class="string">"\\displaystyle"</span>));
-<a href=#1194 id=1194 data-nosnippet>1194</a>  <span class="kw">let </span>math_conditions = rpre
-<a href=#1195 id=1195 data-nosnippet>1195</a>    .unlist_ref()
-<a href=#1196 id=1196 data-nosnippet>1196</a>    .iter()
-<a href=#1197 id=1197 data-nosnippet>1197</a>    .any(|t| t.get_catcode() == Catcode::MATH);
-<a href=#1198 id=1198 data-nosnippet>1198</a>  <span class="kw">let </span><span class="kw-2">mut </span>keys: Vec&lt;Token&gt; = <span class="macro">ExplodeText!</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"name={name},meaning=cases,"</span>));
-<a href=#1199 id=1199 data-nosnippet>1199</a>  <span class="kw">for </span>(key, delimiter, cs) <span class="kw">in </span>[
-<a href=#1200 id=1200 data-nosnippet>1200</a>    (<span class="string">"left"</span>, ldelim, <span class="string">"\\lx@left"</span>),
-<a href=#1201 id=1201 data-nosnippet>1201</a>    (<span class="string">"right"</span>, rdelim, <span class="string">"\\lx@right"</span>),
-<a href=#1202 id=1202 data-nosnippet>1202</a>  ] {
-<a href=#1203 id=1203 data-nosnippet>1203</a>    <span class="kw">let </span>text = delimiter.clone().untex();
-<a href=#1204 id=1204 data-nosnippet>1204</a>    <span class="kw">if </span>!<span class="macro">matches!</span>(text.trim(), <span class="string">"" </span>| <span class="string">"."</span>) {
-<a href=#1205 id=1205 data-nosnippet>1205</a>      keys.extend(<span class="macro">ExplodeText!</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"{key}="</span>)));
-<a href=#1206 id=1206 data-nosnippet>1206</a>      keys.push(<span class="macro">T_CS!</span>(cs));
-<a href=#1207 id=1207 data-nosnippet>1207</a>      keys.extend(delimiter.unlist());
-<a href=#1208 id=1208 data-nosnippet>1208</a>      keys.extend(<span class="macro">ExplodeText!</span>(<span class="string">","</span>));
-<a href=#1209 id=1209 data-nosnippet>1209</a>    }
-<a href=#1210 id=1210 data-nosnippet>1210</a>  }
-<a href=#1211 id=1211 data-nosnippet>1211</a>  keys.extend(<span class="macro">ExplodeText!</span>(<span class="string">"style="</span>));
-<a href=#1212 id=1212 data-nosnippet>1212</a>  keys.push(<span class="macro">T_CS!</span>(<span class="kw">if </span>display {
-<a href=#1213 id=1213 data-nosnippet>1213</a>    <span class="string">"\\displaystyle"
-<a href=#1214 id=1214 data-nosnippet>1214</a>  </span>} <span class="kw">else </span>{
-<a href=#1215 id=1215 data-nosnippet>1215</a>    <span class="string">"\\textstyle"
-<a href=#1216 id=1216 data-nosnippet>1216</a>  </span>}));
-<a href=#1217 id=1217 data-nosnippet>1217</a>  keys.extend(<span class="macro">ExplodeText!</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(
-<a href=#1218 id=1218 data-nosnippet>1218</a>    <span class="string">",conditionmode={}"</span>,
-<a href=#1219 id=1219 data-nosnippet>1219</a>    <span class="kw">if </span>math_conditions { <span class="string">"math" </span>} <span class="kw">else </span>{ <span class="string">"text" </span>}
-<a href=#1220 id=1220 data-nosnippet>1220</a>  )));
-<a href=#1221 id=1221 data-nosnippet>1221</a>  keys
-<a href=#1222 id=1222 data-nosnippet>1222</a>}
-<a href=#1223 id=1223 data-nosnippet>1223</a>
-<a href=#1224 id=1224 data-nosnippet>1224</a><span class="doccomment">/// The definitions `\newcases` makes (mathtools.sty:1015-1019): `\&lt;name&gt;` opens `\lx@ams@cases` with the keys its
-<a href=#1225 id=1225 data-nosnippet>1225</a>/// arguments decide ([`cases_keys`]), `\end&lt;name&gt;` closes it.
-<a href=#1226 id=1226 data-nosnippet>1226</a></span><span class="kw">fn </span>mathtools_newcases(
-<a href=#1227 id=1227 data-nosnippet>1227</a>  name: Tokens,
-<a href=#1228 id=1228 data-nosnippet>1228</a>  lpre: <span class="kw-2">&amp;</span>Tokens,
-<a href=#1229 id=1229 data-nosnippet>1229</a>  rpre: <span class="kw-2">&amp;</span>Tokens,
-<a href=#1230 id=1230 data-nosnippet>1230</a>  ldelim: Tokens,
-<a href=#1231 id=1231 data-nosnippet>1231</a>  rdelim: Tokens,
-<a href=#1232 id=1232 data-nosnippet>1232</a>) -&gt; Tokens {
-<a href=#1233 id=1233 data-nosnippet>1233</a>  <span class="kw">let </span>name = name.untex();
-<a href=#1234 id=1234 data-nosnippet>1234</a>  <span class="kw">let </span>name = name.trim();
-<a href=#1235 id=1235 data-nosnippet>1235</a>  <span class="kw">let </span>keys = cases_keys(name, lpre, rpre, ldelim, rdelim);
-<a href=#1236 id=1236 data-nosnippet>1236</a>  <span class="kw">let </span><span class="kw-2">mut </span>toks = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\expandafter"</span>), <span class="macro">T_CS!</span>(<span class="string">"\\def"</span>), <span class="macro">T_CS!</span>(<span class="string">"\\csname"</span>)];
-<a href=#1237 id=1237 data-nosnippet>1237</a>  toks.extend(<span class="macro">ExplodeText!</span>(name));
-<a href=#1238 id=1238 data-nosnippet>1238</a>  toks.extend([
-<a href=#1239 id=1239 data-nosnippet>1239</a>    <span class="macro">T_CS!</span>(<span class="string">"\\endcsname"</span>),
-<a href=#1240 id=1240 data-nosnippet>1240</a>    <span class="macro">T_BEGIN!</span>(),
-<a href=#1241 id=1241 data-nosnippet>1241</a>    <span class="macro">T_CS!</span>(<span class="string">"\\lx@ams@cases"</span>),
+<a href=#1034 id=1034 data-nosnippet>1034</a>  <span class="macro">DefMath!</span>(<span class="string">"\\dblcolon"</span>, <span class="string">"::"</span>, role =&gt; <span class="string">"RELOP"</span>);
+<a href=#1035 id=1035 data-nosnippet>1035</a>
+<a href=#1036 id=1036 data-nosnippet>1036</a>  <span class="macro">DefMath!</span>(<span class="string">"\\coloneqq"</span>,    <span class="string">"\u{2254}"</span>,   role =&gt; <span class="string">"RELOP"</span>);
+<a href=#1037 id=1037 data-nosnippet>1037</a>  <span class="macro">DefMath!</span>(<span class="string">"\\Coloneqq"</span>,    <span class="string">"\u{2A74}"</span>,   role =&gt; <span class="string">"RELOP"</span>);
+<a href=#1038 id=1038 data-nosnippet>1038</a>  <span class="macro">DefMath!</span>(<span class="string">"\\coloneq"</span>,     <span class="string">"\u{2254}"</span>,   role =&gt; <span class="string">"RELOP"</span>);
+<a href=#1039 id=1039 data-nosnippet>1039</a>  <span class="macro">DefMath!</span>(<span class="string">"\\Coloneq"</span>,     <span class="string">"\u{2A74}"</span>,   role =&gt; <span class="string">"RELOP"</span>);
+<a href=#1040 id=1040 data-nosnippet>1040</a>  <span class="macro">DefMath!</span>(<span class="string">"\\eqqcolon"</span>,    <span class="string">"\u{2255}"</span>,   role =&gt; <span class="string">"RELOP"</span>);
+<a href=#1041 id=1041 data-nosnippet>1041</a>  <span class="macro">DefMath!</span>(<span class="string">"\\Eqqcolon"</span>,    <span class="string">"=::"</span>,        role =&gt; <span class="string">"RELOP"</span>);
+<a href=#1042 id=1042 data-nosnippet>1042</a>  <span class="macro">DefMath!</span>(<span class="string">"\\eqcolon"</span>,     <span class="string">"\u{2255}"</span>,   role =&gt; <span class="string">"RELOP"</span>);
+<a href=#1043 id=1043 data-nosnippet>1043</a>  <span class="macro">DefMath!</span>(<span class="string">"\\Eqcolon"</span>,     <span class="string">"=::"</span>,        role =&gt; <span class="string">"RELOP"</span>);
+<a href=#1044 id=1044 data-nosnippet>1044</a>  <span class="macro">DefMath!</span>(<span class="string">"\\colonapprox"</span>, <span class="string">":\u{2248}"</span>,  role =&gt; <span class="string">"RELOP"</span>);
+<a href=#1045 id=1045 data-nosnippet>1045</a>  <span class="macro">DefMath!</span>(<span class="string">"\\Colonapprox"</span>, <span class="string">"::\u{2248}"</span>, role =&gt; <span class="string">"RELOP"</span>);
+<a href=#1046 id=1046 data-nosnippet>1046</a>  <span class="macro">DefMath!</span>(<span class="string">"\\approxcolon"</span>, <span class="string">"\u{2248}:"</span>,  role =&gt; <span class="string">"RELOP"</span>);
+<a href=#1047 id=1047 data-nosnippet>1047</a>  <span class="macro">DefMath!</span>(<span class="string">"\\Approxcolon"</span>, <span class="string">"\u{2248}::"</span>, role =&gt; <span class="string">"RELOP"</span>);
+<a href=#1048 id=1048 data-nosnippet>1048</a>  <span class="macro">DefMath!</span>(<span class="string">"\\colonsim"</span>,    <span class="string">":\u{223C}"</span>,  role =&gt; <span class="string">"RELOP"</span>);
+<a href=#1049 id=1049 data-nosnippet>1049</a>  <span class="macro">DefMath!</span>(<span class="string">"\\Colonsim"</span>,    <span class="string">"::\u{223C}"</span>, role =&gt; <span class="string">"RELOP"</span>);
+<a href=#1050 id=1050 data-nosnippet>1050</a>  <span class="macro">DefMath!</span>(<span class="string">"\\simcolon"</span>,    <span class="string">"\u{223C}:"</span>,  role =&gt; <span class="string">"RELOP"</span>);
+<a href=#1051 id=1051 data-nosnippet>1051</a>  <span class="macro">DefMath!</span>(<span class="string">"\\Simcolon"</span>,    <span class="string">"\u{223C}::"</span>, role =&gt; <span class="string">"RELOP"</span>);
+<a href=#1052 id=1052 data-nosnippet>1052</a>  <span class="macro">DefMath!</span>(<span class="string">"\\colondash"</span>,   <span class="string">":-"</span>,         role =&gt; <span class="string">"RELOP"</span>);
+<a href=#1053 id=1053 data-nosnippet>1053</a>  <span class="macro">DefMath!</span>(<span class="string">"\\Colondash"</span>,   <span class="string">"::-"</span>,        role =&gt; <span class="string">"RELOP"</span>);
+<a href=#1054 id=1054 data-nosnippet>1054</a>  <span class="macro">DefMath!</span>(<span class="string">"\\dashcolon"</span>,   <span class="string">"-:"</span>,         role =&gt; <span class="string">"RELOP"</span>);
+<a href=#1055 id=1055 data-nosnippet>1055</a>  <span class="macro">DefMath!</span>(<span class="string">"\\Dashcolon"</span>,   <span class="string">"-::"</span>,        role =&gt; <span class="string">"RELOP"</span>);
+<a href=#1056 id=1056 data-nosnippet>1056</a>
+<a href=#1057 id=1057 data-nosnippet>1057</a>  <span class="comment">// Perl: UTF(0x2909) — RIGHTWARDS DOUBLE ARROW FROM BAR (approximation)
+<a href=#1058 id=1058 data-nosnippet>1058</a>  </span><span class="macro">DefMath!</span>(<span class="string">"\\nuparrow"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{2909}"</span>, role =&gt; <span class="string">"ARROW"</span>);
+<a href=#1059 id=1059 data-nosnippet>1059</a>  <span class="comment">// Perl: UTF(0x2908) — DOWNWARDS DOUBLE ARROW FROM BAR (approximation)
+<a href=#1060 id=1060 data-nosnippet>1060</a>  </span><span class="macro">DefMath!</span>(<span class="string">"\\ndownarrow"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{2908}"</span>, role =&gt; <span class="string">"ARROW"</span>);
+<a href=#1061 id=1061 data-nosnippet>1061</a>  <span class="comment">// Perl: UTF(0xD7) = × MULTIPLICATION SIGN
+<a href=#1062 id=1062 data-nosnippet>1062</a>  // Perl: font =&gt; { size =&gt; 'Big' } where rationalizeFontSize('Big') = 1.6 * DEFSIZE(10) = 16.0pt
+<a href=#1063 id=1063 data-nosnippet>1063</a>  </span><span class="macro">DefMath!</span>(<span class="string">"\\bigtimes"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{00D7}"</span>, role =&gt; <span class="string">"MULOP"</span>, meaning =&gt; <span class="string">"times"</span>,
+<a href=#1064 id=1064 data-nosnippet>1064</a>    font =&gt; sub[_f] { <span class="prelude-val">Ok</span>(Font { size: <span class="prelude-val">Some</span>(font::rationalize_font_size(<span class="string">"Big"</span>)), ..Font::default() }) },
+<a href=#1065 id=1065 data-nosnippet>1065</a>    dynamic_scriptpos =&gt; <span class="bool-val">true</span>);
+<a href=#1066 id=1066 data-nosnippet>1066</a>
+<a href=#1067 id=1067 data-nosnippet>1067</a>  <span class="comment">//======================================================================
+<a href=#1068 id=1068 data-nosnippet>1068</a>  // 4 — Extended features
+<a href=#1069 id=1069 data-nosnippet>1069</a>  //======================================================================
+<a href=#1070 id=1070 data-nosnippet>1070</a>
+<a href=#1071 id=1071 data-nosnippet>1071</a>  // 4.2 — Prescripts
+<a href=#1072 id=1072 data-nosnippet>1072</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\prescript{}{}{}"</span>,
+<a href=#1073 id=1073 data-nosnippet>1073</a>    <span class="string">"\\@ams@prescript{#1}{#2}{#3}{\
+<a href=#1074 id=1074 data-nosnippet>1074</a>     {}^{\\@mt@getmtoption{prescript-sup-format}{#1}}\
+<a href=#1075 id=1075 data-nosnippet>1075</a>     _{\\@mt@getmtoption{prescript-sub-format}{#2}}\
+<a href=#1076 id=1076 data-nosnippet>1076</a>     {\\@mt@getmtoption{prescript-arg-format}{#3}}\
+<a href=#1077 id=1077 data-nosnippet>1077</a>     }"</span>);
+<a href=#1078 id=1078 data-nosnippet>1078</a>  <span class="comment">// wrapper to get reversion
+<a href=#1079 id=1079 data-nosnippet>1079</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\@ams@prescript{}{}{}{}"</span>, <span class="string">"#4"</span>,
+<a href=#1080 id=1080 data-nosnippet>1080</a>    reversion =&gt; <span class="string">"\\prescript{#1}{#2}{#3}"</span>);
+<a href=#1081 id=1081 data-nosnippet>1081</a>
+<a href=#1082 id=1082 data-nosnippet>1082</a>  <span class="comment">// 4.4 — Spread lines
+<a href=#1083 id=1083 data-nosnippet>1083</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\csname spreadlines\\endcsname{}"</span>, <span class="string">"\\begingroup\\jot=#1\\relax"</span>);
+<a href=#1084 id=1084 data-nosnippet>1084</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\csname endspreadlines\\endcsname"</span>, <span class="string">"\\endgroup"</span>);
+<a href=#1085 id=1085 data-nosnippet>1085</a>
+<a href=#1086 id=1086 data-nosnippet>1086</a>  <span class="comment">// 4.5 — lgathered / rgathered
+<a href=#1087 id=1087 data-nosnippet>1087</a>  // TODO: @@lgathered/@@rgathered have complex afterDigest/afterConstruct — simplified
+<a href=#1088 id=1088 data-nosnippet>1088</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lgathered[]"</span>,
+<a href=#1089 id=1089 data-nosnippet>1089</a>    <span class="string">"\\@ams@multirow@bindings{name=lgathered,vattach=#1}\\@@lgathered\\lx@begin@alignment"</span>);
+<a href=#1090 id=1090 data-nosnippet>1090</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\endlgathered"</span>, <span class="string">"\\lx@end@alignment\\@end@gathered"</span>);
+<a href=#1091 id=1091 data-nosnippet>1091</a>
+<a href=#1092 id=1092 data-nosnippet>1092</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\rgathered[]"</span>,
+<a href=#1093 id=1093 data-nosnippet>1093</a>    <span class="string">"\\@ams@multirow@bindings{name=rgathered,vattach=#1}\\@@rgathered\\lx@begin@alignment"</span>);
+<a href=#1094 id=1094 data-nosnippet>1094</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\endrgathered"</span>, <span class="string">"\\lx@end@alignment\\@end@gathered"</span>);
+<a href=#1095 id=1095 data-nosnippet>1095</a>
+<a href=#1096 id=1096 data-nosnippet>1096</a>  <span class="comment">// Perl: DefConstructor('\@@lgathered DigestedBody', ...)
+<a href=#1097 id=1097 data-nosnippet>1097</a>  // Perl: afterDigest sets MULTIROW_ALIGNMENT_RULE { default =&gt; 'left' }
+<a href=#1098 id=1098 data-nosnippet>1098</a>  // afterConstruct calls rearrangeAMSMultirow
+<a href=#1099 id=1099 data-nosnippet>1099</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\@@lgathered DigestedBody"</span>, <span class="string">"#1"</span>,
+<a href=#1100 id=1100 data-nosnippet>1100</a>    before_digest =&gt; { bgroup(); },
+<a href=#1101 id=1101 data-nosnippet>1101</a>    after_digest =&gt; sub[whatsit] {
+<a href=#1102 id=1102 data-nosnippet>1102</a>      whatsit.set_property(<span class="string">"MULTIROW_ALIGNMENT_RULE_DEFAULT"</span>, Stored::from(<span class="string">"left"</span>));
+<a href=#1103 id=1103 data-nosnippet>1103</a>    },
+<a href=#1104 id=1104 data-nosnippet>1104</a>    reversion =&gt; <span class="string">"\\begin{lgathered}#1\\end{lgathered}"</span>,
+<a href=#1105 id=1105 data-nosnippet>1105</a>    after_construct =&gt; sub[document, whatsit] {
+<a href=#1106 id=1106 data-nosnippet>1106</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(last) = document.get_node().get_last_child() {
+<a href=#1107 id=1107 data-nosnippet>1107</a>        <span class="kw">let </span>align_rule = amsmath_sty::get_multirow_alignment_rule(whatsit);
+<a href=#1108 id=1108 data-nosnippet>1108</a>        amsmath_sty::rearrange_ams_multirow(document, last, <span class="kw-2">&amp;</span>align_rule)<span class="question-mark">?</span>;
+<a href=#1109 id=1109 data-nosnippet>1109</a>      }
+<a href=#1110 id=1110 data-nosnippet>1110</a>    });
+<a href=#1111 id=1111 data-nosnippet>1111</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\@@rgathered DigestedBody"</span>, <span class="string">"#1"</span>,
+<a href=#1112 id=1112 data-nosnippet>1112</a>    before_digest =&gt; { bgroup(); },
+<a href=#1113 id=1113 data-nosnippet>1113</a>    after_digest =&gt; sub[whatsit] {
+<a href=#1114 id=1114 data-nosnippet>1114</a>      whatsit.set_property(<span class="string">"MULTIROW_ALIGNMENT_RULE_DEFAULT"</span>, Stored::from(<span class="string">"right"</span>));
+<a href=#1115 id=1115 data-nosnippet>1115</a>    },
+<a href=#1116 id=1116 data-nosnippet>1116</a>    reversion =&gt; <span class="string">"\\begin{rgathered}#1\\end{rgathered}"</span>,
+<a href=#1117 id=1117 data-nosnippet>1117</a>    after_construct =&gt; sub[document, whatsit] {
+<a href=#1118 id=1118 data-nosnippet>1118</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(last) = document.get_node().get_last_child() {
+<a href=#1119 id=1119 data-nosnippet>1119</a>        <span class="kw">let </span>align_rule = amsmath_sty::get_multirow_alignment_rule(whatsit);
+<a href=#1120 id=1120 data-nosnippet>1120</a>        amsmath_sty::rearrange_ams_multirow(document, last, <span class="kw-2">&amp;</span>align_rule)<span class="question-mark">?</span>;
+<a href=#1121 id=1121 data-nosnippet>1121</a>      }
+<a href=#1122 id=1122 data-nosnippet>1122</a>    });
+<a href=#1123 id=1123 data-nosnippet>1123</a>
+<a href=#1124 id=1124 data-nosnippet>1124</a>  <span class="comment">// \newgathered{name}{pre_line}{post_line}{after}
+<a href=#1125 id=1125 data-nosnippet>1125</a>  // Creates \name and \endname environments for gathered-like displays.
+<a href=#1126 id=1126 data-nosnippet>1126</a>  // Perl: DefMacro sub{} body that dynamically DefMacroI-installs runtime
+<a href=#1127 id=1127 data-nosnippet>1127</a>  // macros. Rust DefPrimitive does the installs at stomach time.
+<a href=#1128 id=1128 data-nosnippet>1128</a>  // WISDOM #44: NOT universally equivalent — safe here because
+<a href=#1129 id=1129 data-nosnippet>1129</a>  // `\newgathered` is a user-facing preamble declaration, not something
+<a href=#1130 id=1130 data-nosnippet>1130</a>  // that flows through `\edef`.
+<a href=#1131 id=1131 data-nosnippet>1131</a>  // WISDOM #44 verified 2026-04-23: zero `\edef`/`\ifx`/`\expandafter`
+<a href=#1132 id=1132 data-nosnippet>1132</a>  // uses of `\newgathered` across LaTeXML/lib + ar5iv-bindings.
+<a href=#1133 id=1133 data-nosnippet>1133</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\newgathered{}{}{}{}"</span>, sub[(name, _pre, _post, _after)] {
+<a href=#1134 id=1134 data-nosnippet>1134</a>    <span class="kw">let </span>env_name = name.to_string();
+<a href=#1135 id=1135 data-nosnippet>1135</a>    <span class="comment">// Create \name macro → begins gathered alignment
+<a href=#1136 id=1136 data-nosnippet>1136</a>    // Build tokens manually to preserve @ in CS names
+<a href=#1137 id=1137 data-nosnippet>1137</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>begin_toks = <span class="macro">vec!</span>[
+<a href=#1138 id=1138 data-nosnippet>1138</a>      <span class="macro">T_CS!</span>(<span class="string">"\\@ams@multirow@bindings"</span>),
+<a href=#1139 id=1139 data-nosnippet>1139</a>      <span class="macro">T_BEGIN!</span>(),
+<a href=#1140 id=1140 data-nosnippet>1140</a>    ];
+<a href=#1141 id=1141 data-nosnippet>1141</a>    begin_toks.extend(<span class="macro">ExplodeText!</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"name={env_name}"</span>)));
+<a href=#1142 id=1142 data-nosnippet>1142</a>    begin_toks.extend(<span class="macro">vec!</span>[
+<a href=#1143 id=1143 data-nosnippet>1143</a>      <span class="macro">T_END!</span>(),
+<a href=#1144 id=1144 data-nosnippet>1144</a>      <span class="macro">T_CS!</span>(<span class="string">"\\@@newgathered@dummy"</span>),
+<a href=#1145 id=1145 data-nosnippet>1145</a>      <span class="macro">T_CS!</span>(<span class="string">"\\lx@begin@alignment"</span>),
+<a href=#1146 id=1146 data-nosnippet>1146</a>    ]);
+<a href=#1147 id=1147 data-nosnippet>1147</a>    <span class="kw">let </span>begin_cs = <span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"\\{env_name}"</span>));
+<a href=#1148 id=1148 data-nosnippet>1148</a>    def_macro(begin_cs, <span class="prelude-val">None</span>, Tokens::new(begin_toks), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#1149 id=1149 data-nosnippet>1149</a>    <span class="comment">// Create \endname macro → ends alignment
+<a href=#1150 id=1150 data-nosnippet>1150</a>    </span><span class="kw">let </span>end_toks = Tokens::new(<span class="macro">vec!</span>[
+<a href=#1151 id=1151 data-nosnippet>1151</a>      <span class="macro">T_CS!</span>(<span class="string">"\\lx@end@alignment"</span>),
+<a href=#1152 id=1152 data-nosnippet>1152</a>      <span class="macro">T_CS!</span>(<span class="string">"\\@end@gathered"</span>),
+<a href=#1153 id=1153 data-nosnippet>1153</a>    ]);
+<a href=#1154 id=1154 data-nosnippet>1154</a>    <span class="kw">let </span>end_cs = <span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"\\end{env_name}"</span>));
+<a href=#1155 id=1155 data-nosnippet>1155</a>    def_macro(end_cs, <span class="prelude-val">None</span>, end_toks, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#1156 id=1156 data-nosnippet>1156</a>  });
+<a href=#1157 id=1157 data-nosnippet>1157</a>  <span class="macro">Let!</span>(<span class="string">"\\renewgathered"</span>, <span class="string">"\\newgathered"</span>);
+<a href=#1158 id=1158 data-nosnippet>1158</a>
+<a href=#1159 id=1159 data-nosnippet>1159</a>  <span class="comment">// \@@newgathered@dummy — gathered-like constructor with DigestedBody
+<a href=#1160 id=1160 data-nosnippet>1160</a>  // Perl: afterConstruct extracts array cells and wraps in XMDual.
+<a href=#1161 id=1161 data-nosnippet>1161</a>  // Simplified: just output the body as-is, like \@@gathered.
+<a href=#1162 id=1162 data-nosnippet>1162</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\@@newgathered@dummy DigestedBody"</span>,
+<a href=#1163 id=1163 data-nosnippet>1163</a>    <span class="string">"#1"</span>,
+<a href=#1164 id=1164 data-nosnippet>1164</a>    before_digest =&gt; { bgroup(); },
+<a href=#1165 id=1165 data-nosnippet>1165</a>    reversion =&gt; <span class="string">"\\begin{gathered}#1\\end{gathered}"</span>,
+<a href=#1166 id=1166 data-nosnippet>1166</a>    after_construct =&gt; sub[document, whatsit] {
+<a href=#1167 id=1167 data-nosnippet>1167</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(last) = document.get_node().get_last_child() {
+<a href=#1168 id=1168 data-nosnippet>1168</a>        <span class="kw">let </span>align_rule = amsmath_sty::get_multirow_alignment_rule(whatsit);
+<a href=#1169 id=1169 data-nosnippet>1169</a>        amsmath_sty::rearrange_ams_multirow(document, last, <span class="kw-2">&amp;</span>align_rule)<span class="question-mark">?</span>;
+<a href=#1170 id=1170 data-nosnippet>1170</a>      }
+<a href=#1171 id=1171 data-nosnippet>1171</a>    }
+<a href=#1172 id=1172 data-nosnippet>1172</a>  );
+<a href=#1173 id=1173 data-nosnippet>1173</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\@end@gathered"</span>, { egroup()<span class="question-mark">?</span>; });
+<a href=#1174 id=1174 data-nosnippet>1174</a>
+<a href=#1175 id=1175 data-nosnippet>1175</a>  <span class="comment">// 4.6 — Split fractions
+<a href=#1176 id=1176 data-nosnippet>1176</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\splitfrac{}{}"</span>,
+<a href=#1177 id=1177 data-nosnippet>1177</a>    <span class="string">"\\@ams@multirow@bindings{name=splitfrac}\\@@multlined\\lx@begin@alignment #1 \\\\\\\\ #2 \\lx@end@alignment\\@end@multline"</span>);
+<a href=#1178 id=1178 data-nosnippet>1178</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\splitdfrac{}{}"</span>,
+<a href=#1179 id=1179 data-nosnippet>1179</a>    <span class="string">"\\displaystyle\\@ams@multirow@bindings{name=splitdfrac}\\@@multlined\\lx@begin@alignment #1 \\\\\\\\ #2 \\lx@end@alignment\\@end@multline"</span>);
+<a href=#1180 id=1180 data-nosnippet>1180</a>});
+<a href=#1181 id=1181 data-nosnippet>1181</a>
+<a href=#1182 id=1182 data-nosnippet>1182</a><span class="doccomment">/// The `\lx@ams@cases` keys of a cases environment `name` whose preambles and delimiters are those `\newcases` and
+<a href=#1183 id=1183 data-nosnippet>1183</a>/// `\MT_start_cases:nnnn` take (mathtools.sty:995-1019): its delimiters (a `.` or empty one is none), `\displaystyle`
+<a href=#1184 id=1184 data-nosnippet>1184</a>/// when the left preamble sets it, and math conditions when the right preamble is a `$…$` cell.
+<a href=#1185 id=1185 data-nosnippet>1185</a></span><span class="kw">fn </span>cases_keys(
+<a href=#1186 id=1186 data-nosnippet>1186</a>  name: <span class="kw-2">&amp;</span>str,
+<a href=#1187 id=1187 data-nosnippet>1187</a>  lpre: <span class="kw-2">&amp;</span>Tokens,
+<a href=#1188 id=1188 data-nosnippet>1188</a>  rpre: <span class="kw-2">&amp;</span>Tokens,
+<a href=#1189 id=1189 data-nosnippet>1189</a>  ldelim: Tokens,
+<a href=#1190 id=1190 data-nosnippet>1190</a>  rdelim: Tokens,
+<a href=#1191 id=1191 data-nosnippet>1191</a>) -&gt; Vec&lt;Token&gt; {
+<a href=#1192 id=1192 data-nosnippet>1192</a>  <span class="kw">let </span>display = lpre
+<a href=#1193 id=1193 data-nosnippet>1193</a>    .unlist_ref()
+<a href=#1194 id=1194 data-nosnippet>1194</a>    .iter()
+<a href=#1195 id=1195 data-nosnippet>1195</a>    .any(|t| <span class="kw-2">*</span>t == <span class="macro">T_CS!</span>(<span class="string">"\\displaystyle"</span>));
+<a href=#1196 id=1196 data-nosnippet>1196</a>  <span class="kw">let </span>math_conditions = rpre
+<a href=#1197 id=1197 data-nosnippet>1197</a>    .unlist_ref()
+<a href=#1198 id=1198 data-nosnippet>1198</a>    .iter()
+<a href=#1199 id=1199 data-nosnippet>1199</a>    .any(|t| t.get_catcode() == Catcode::MATH);
+<a href=#1200 id=1200 data-nosnippet>1200</a>  <span class="kw">let </span><span class="kw-2">mut </span>keys: Vec&lt;Token&gt; = <span class="macro">ExplodeText!</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"name={name},meaning=cases,"</span>));
+<a href=#1201 id=1201 data-nosnippet>1201</a>  <span class="kw">for </span>(key, delimiter, cs) <span class="kw">in </span>[
+<a href=#1202 id=1202 data-nosnippet>1202</a>    (<span class="string">"left"</span>, ldelim, <span class="string">"\\lx@left"</span>),
+<a href=#1203 id=1203 data-nosnippet>1203</a>    (<span class="string">"right"</span>, rdelim, <span class="string">"\\lx@right"</span>),
+<a href=#1204 id=1204 data-nosnippet>1204</a>  ] {
+<a href=#1205 id=1205 data-nosnippet>1205</a>    <span class="kw">let </span>text = delimiter.clone().untex();
+<a href=#1206 id=1206 data-nosnippet>1206</a>    <span class="kw">if </span>!<span class="macro">matches!</span>(text.trim(), <span class="string">"" </span>| <span class="string">"."</span>) {
+<a href=#1207 id=1207 data-nosnippet>1207</a>      keys.extend(<span class="macro">ExplodeText!</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"{key}="</span>)));
+<a href=#1208 id=1208 data-nosnippet>1208</a>      keys.push(<span class="macro">T_CS!</span>(cs));
+<a href=#1209 id=1209 data-nosnippet>1209</a>      keys.extend(delimiter.unlist());
+<a href=#1210 id=1210 data-nosnippet>1210</a>      keys.extend(<span class="macro">ExplodeText!</span>(<span class="string">","</span>));
+<a href=#1211 id=1211 data-nosnippet>1211</a>    }
+<a href=#1212 id=1212 data-nosnippet>1212</a>  }
+<a href=#1213 id=1213 data-nosnippet>1213</a>  keys.extend(<span class="macro">ExplodeText!</span>(<span class="string">"style="</span>));
+<a href=#1214 id=1214 data-nosnippet>1214</a>  keys.push(<span class="macro">T_CS!</span>(<span class="kw">if </span>display {
+<a href=#1215 id=1215 data-nosnippet>1215</a>    <span class="string">"\\displaystyle"
+<a href=#1216 id=1216 data-nosnippet>1216</a>  </span>} <span class="kw">else </span>{
+<a href=#1217 id=1217 data-nosnippet>1217</a>    <span class="string">"\\textstyle"
+<a href=#1218 id=1218 data-nosnippet>1218</a>  </span>}));
+<a href=#1219 id=1219 data-nosnippet>1219</a>  keys.extend(<span class="macro">ExplodeText!</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(
+<a href=#1220 id=1220 data-nosnippet>1220</a>    <span class="string">",conditionmode={}"</span>,
+<a href=#1221 id=1221 data-nosnippet>1221</a>    <span class="kw">if </span>math_conditions { <span class="string">"math" </span>} <span class="kw">else </span>{ <span class="string">"text" </span>}
+<a href=#1222 id=1222 data-nosnippet>1222</a>  )));
+<a href=#1223 id=1223 data-nosnippet>1223</a>  keys
+<a href=#1224 id=1224 data-nosnippet>1224</a>}
+<a href=#1225 id=1225 data-nosnippet>1225</a>
+<a href=#1226 id=1226 data-nosnippet>1226</a><span class="doccomment">/// The definitions `\newcases` makes (mathtools.sty:1015-1019): `\&lt;name&gt;` opens `\lx@ams@cases` with the keys its
+<a href=#1227 id=1227 data-nosnippet>1227</a>/// arguments decide ([`cases_keys`]), `\end&lt;name&gt;` closes it.
+<a href=#1228 id=1228 data-nosnippet>1228</a></span><span class="kw">fn </span>mathtools_newcases(
+<a href=#1229 id=1229 data-nosnippet>1229</a>  name: Tokens,
+<a href=#1230 id=1230 data-nosnippet>1230</a>  lpre: <span class="kw-2">&amp;</span>Tokens,
+<a href=#1231 id=1231 data-nosnippet>1231</a>  rpre: <span class="kw-2">&amp;</span>Tokens,
+<a href=#1232 id=1232 data-nosnippet>1232</a>  ldelim: Tokens,
+<a href=#1233 id=1233 data-nosnippet>1233</a>  rdelim: Tokens,
+<a href=#1234 id=1234 data-nosnippet>1234</a>) -&gt; Tokens {
+<a href=#1235 id=1235 data-nosnippet>1235</a>  <span class="kw">let </span>name = name.untex();
+<a href=#1236 id=1236 data-nosnippet>1236</a>  <span class="kw">let </span>name = name.trim();
+<a href=#1237 id=1237 data-nosnippet>1237</a>  <span class="kw">let </span>keys = cases_keys(name, lpre, rpre, ldelim, rdelim);
+<a href=#1238 id=1238 data-nosnippet>1238</a>  <span class="kw">let </span><span class="kw-2">mut </span>toks = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\expandafter"</span>), <span class="macro">T_CS!</span>(<span class="string">"\\def"</span>), <span class="macro">T_CS!</span>(<span class="string">"\\csname"</span>)];
+<a href=#1239 id=1239 data-nosnippet>1239</a>  toks.extend(<span class="macro">ExplodeText!</span>(name));
+<a href=#1240 id=1240 data-nosnippet>1240</a>  toks.extend([
+<a href=#1241 id=1241 data-nosnippet>1241</a>    <span class="macro">T_CS!</span>(<span class="string">"\\endcsname"</span>),
 <a href=#1242 id=1242 data-nosnippet>1242</a>    <span class="macro">T_BEGIN!</span>(),
-<a href=#1243 id=1243 data-nosnippet>1243</a>  ]);
-<a href=#1244 id=1244 data-nosnippet>1244</a>  toks.extend(keys);
-<a href=#1245 id=1245 data-nosnippet>1245</a>  toks.extend([
-<a href=#1246 id=1246 data-nosnippet>1246</a>    <span class="macro">T_END!</span>(),
-<a href=#1247 id=1247 data-nosnippet>1247</a>    <span class="macro">T_END!</span>(),
-<a href=#1248 id=1248 data-nosnippet>1248</a>    <span class="macro">T_CS!</span>(<span class="string">"\\expandafter"</span>),
-<a href=#1249 id=1249 data-nosnippet>1249</a>    <span class="macro">T_CS!</span>(<span class="string">"\\def"</span>),
-<a href=#1250 id=1250 data-nosnippet>1250</a>    <span class="macro">T_CS!</span>(<span class="string">"\\csname"</span>),
-<a href=#1251 id=1251 data-nosnippet>1251</a>  ]);
-<a href=#1252 id=1252 data-nosnippet>1252</a>  toks.extend(<span class="macro">ExplodeText!</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"end{name}"</span>)));
-<a href=#1253 id=1253 data-nosnippet>1253</a>  toks.extend([
-<a href=#1254 id=1254 data-nosnippet>1254</a>    <span class="macro">T_CS!</span>(<span class="string">"\\endcsname"</span>),
-<a href=#1255 id=1255 data-nosnippet>1255</a>    <span class="macro">T_BEGIN!</span>(),
-<a href=#1256 id=1256 data-nosnippet>1256</a>    <span class="macro">T_CS!</span>(<span class="string">"\\lx@end@ams@cases"</span>),
-<a href=#1257 id=1257 data-nosnippet>1257</a>    <span class="macro">T_END!</span>(),
-<a href=#1258 id=1258 data-nosnippet>1258</a>  ]);
-<a href=#1259 id=1259 data-nosnippet>1259</a>  Tokens::new(toks)
-<a href=#1260 id=1260 data-nosnippet>1260</a>}
+<a href=#1243 id=1243 data-nosnippet>1243</a>    <span class="macro">T_CS!</span>(<span class="string">"\\lx@ams@cases"</span>),
+<a href=#1244 id=1244 data-nosnippet>1244</a>    <span class="macro">T_BEGIN!</span>(),
+<a href=#1245 id=1245 data-nosnippet>1245</a>  ]);
+<a href=#1246 id=1246 data-nosnippet>1246</a>  toks.extend(keys);
+<a href=#1247 id=1247 data-nosnippet>1247</a>  toks.extend([
+<a href=#1248 id=1248 data-nosnippet>1248</a>    <span class="macro">T_END!</span>(),
+<a href=#1249 id=1249 data-nosnippet>1249</a>    <span class="macro">T_END!</span>(),
+<a href=#1250 id=1250 data-nosnippet>1250</a>    <span class="macro">T_CS!</span>(<span class="string">"\\expandafter"</span>),
+<a href=#1251 id=1251 data-nosnippet>1251</a>    <span class="macro">T_CS!</span>(<span class="string">"\\def"</span>),
+<a href=#1252 id=1252 data-nosnippet>1252</a>    <span class="macro">T_CS!</span>(<span class="string">"\\csname"</span>),
+<a href=#1253 id=1253 data-nosnippet>1253</a>  ]);
+<a href=#1254 id=1254 data-nosnippet>1254</a>  toks.extend(<span class="macro">ExplodeText!</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"end{name}"</span>)));
+<a href=#1255 id=1255 data-nosnippet>1255</a>  toks.extend([
+<a href=#1256 id=1256 data-nosnippet>1256</a>    <span class="macro">T_CS!</span>(<span class="string">"\\endcsname"</span>),
+<a href=#1257 id=1257 data-nosnippet>1257</a>    <span class="macro">T_BEGIN!</span>(),
+<a href=#1258 id=1258 data-nosnippet>1258</a>    <span class="macro">T_CS!</span>(<span class="string">"\\lx@end@ams@cases"</span>),
+<a href=#1259 id=1259 data-nosnippet>1259</a>    <span class="macro">T_END!</span>(),
+<a href=#1260 id=1260 data-nosnippet>1260</a>  ]);
+<a href=#1261 id=1261 data-nosnippet>1261</a>  Tokens::new(toks)
+<a href=#1262 id=1262 data-nosnippet>1262</a>}
 </code></pre></div></section></main></body></html>

@@ -128,7 +128,7 @@
 <a href=#128 id=128 data-nosnippet>128</a>    // was "undefined:\thetcbcounter" once the title was typeset).
 <a href=#129 id=129 data-nosnippet>129</a>    </span><span class="kw">let </span>box_name = cmd_tok.with_str(|s| s.trim_start_matches(<span class="string">'\\'</span>).to_string());
 <a href=#130 id=130 data-nosnippet>130</a>    tcb_process_init(<span class="kw-2">&amp;</span>init.map(|t| t.to_string()).unwrap_or_default(), <span class="kw-2">&amp;</span>box_name);
-<a href=#131 id=131 data-nosnippet>131</a>    <span class="kw">let </span>n: usize = n.value_of() <span class="kw">as </span>usize;
+<a href=#131 id=131 data-nosnippet>131</a>    <span class="kw">let </span>n = latex_arg_count(n.value_of())<span class="question-mark">?</span>;
 <a href=#132 id=132 data-nosnippet>132</a>    <span class="kw">let </span><span class="kw-2">mut </span>param_spec = String::new();
 <a href=#133 id=133 data-nosnippet>133</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>d) = default {
 <a href=#134 id=134 data-nosnippet>134</a>      param_spec.push_str(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"[Default:{d}]"</span>));

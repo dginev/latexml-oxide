@@ -1160,7 +1160,7 @@
 <a href=#1160 id=1160 data-nosnippet>1160</a>
 <a href=#1161 id=1161 data-nosnippet>1161</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\lxDefMath {} [Number] [] {} OptionalKeyVals:XMath"</span>, sub[(cs, nargs, opt, presentation, params_opt)] {
 <a href=#1162 id=1162 data-nosnippet>1162</a>    <span class="kw">let </span>cs_name = cs.to_string();
-<a href=#1163 id=1163 data-nosnippet>1163</a>    <span class="kw">let </span>n = nargs.value_of() <span class="kw">as </span>usize;
+<a href=#1163 id=1163 data-nosnippet>1163</a>    <span class="kw">let </span>n = latex_arg_count(nargs.value_of())<span class="question-mark">?</span>;
 <a href=#1164 id=1164 data-nosnippet>1164</a>    <span class="comment">// Extract semantic properties from keyvals.
 <a href=#1165 id=1165 data-nosnippet>1165</a>    // Perl L368 always sets `revert_as =&gt; 'context'` so source-export
 <a href=#1166 id=1166 data-nosnippet>1166</a>    // emits the user-defined CS rather than expanding the presentation

@@ -169,19 +169,19 @@
 <a href=#169 id=169 data-nosnippet>169</a>      <span class="macro">Info!</span>(<span class="string">"ignore"</span>, cs,
 <a href=#170 id=170 data-nosnippet>170</a>        <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"Ignoring redefinition (\\newcommand) of '{cs}'"</span>)); }
 <a href=#171 id=171 data-nosnippet>171</a>  } <span class="kw">else </span>{
-<a href=#172 id=172 data-nosnippet>172</a>    <span class="kw">let </span>args = convert_latex_args(nargs.value_of() <span class="kw">as </span>usize, opt)<span class="question-mark">?</span>;
+<a href=#172 id=172 data-nosnippet>172</a>    <span class="kw">let </span>args = convert_latex_args(nargs.value_of(), opt)<span class="question-mark">?</span>;
 <a href=#173 id=173 data-nosnippet>173</a>    <span class="macro">DefMacro!</span>(cs, args, body, protected =&gt; <span class="bool-val">true</span>, long =&gt; <span class="bool-val">true</span>);
 <a href=#174 id=174 data-nosnippet>174</a>  }
 <a href=#175 id=175 data-nosnippet>175</a>  <span class="macro">Tokens!</span>() }, peeks_by_futurelet =&gt; <span class="bool-val">true</span>, protected =&gt; <span class="bool-val">true</span>);
 <a href=#176 id=176 data-nosnippet>176</a>
 <a href=#177 id=177 data-nosnippet>177</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\renewrobustcmd OptionalMatch:* DefToken [Number][]{}"</span>, sub[(_star,cs,nargs,opt,body)] {
-<a href=#178 id=178 data-nosnippet>178</a>  <span class="kw">let </span>args = convert_latex_args(nargs.value_of() <span class="kw">as </span>usize, opt)<span class="question-mark">?</span>;
+<a href=#178 id=178 data-nosnippet>178</a>  <span class="kw">let </span>args = convert_latex_args(nargs.value_of(), opt)<span class="question-mark">?</span>;
 <a href=#179 id=179 data-nosnippet>179</a>  <span class="macro">DefMacro!</span>(cs, args, body, protected =&gt; <span class="bool-val">true</span>, long =&gt; <span class="bool-val">true</span>);
 <a href=#180 id=180 data-nosnippet>180</a>  <span class="macro">Tokens!</span>() }, peeks_by_futurelet =&gt; <span class="bool-val">true</span>, protected =&gt; <span class="bool-val">true</span>);
 <a href=#181 id=181 data-nosnippet>181</a>
 <a href=#182 id=182 data-nosnippet>182</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\providerobustcmd OptionalMatch:* DefToken [Number][]{}"</span>, sub[(_star,cs,nargs,opt,body)] {
 <a href=#183 id=183 data-nosnippet>183</a>  <span class="kw">if </span>is_definable(<span class="kw-2">&amp;</span>cs) {
-<a href=#184 id=184 data-nosnippet>184</a>    <span class="kw">let </span>args = convert_latex_args(nargs.value_of() <span class="kw">as </span>usize, opt)<span class="question-mark">?</span>;
+<a href=#184 id=184 data-nosnippet>184</a>    <span class="kw">let </span>args = convert_latex_args(nargs.value_of(), opt)<span class="question-mark">?</span>;
 <a href=#185 id=185 data-nosnippet>185</a>    <span class="macro">DefMacro!</span>(cs, args, body, protected =&gt; <span class="bool-val">true</span>, long =&gt; <span class="bool-val">true</span>); }
 <a href=#186 id=186 data-nosnippet>186</a>  <span class="macro">Tokens!</span>() }, peeks_by_futurelet =&gt; <span class="bool-val">true</span>, protected =&gt; <span class="bool-val">true</span>);
 <a href=#187 id=187 data-nosnippet>187</a>

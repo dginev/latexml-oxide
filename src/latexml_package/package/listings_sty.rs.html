@@ -3223,7 +3223,7 @@
 <a href=#3223 id=3223 data-nosnippet>3223</a>    <span class="kw">let </span>start_code = start_code.pack_parameters()<span class="question-mark">?</span>;
 <a href=#3224 id=3224 data-nosnippet>3224</a>    <span class="kw">let </span>end_code = end_code.pack_parameters()<span class="question-mark">?</span>;
 <a href=#3225 id=3225 data-nosnippet>3225</a>    <span class="kw">let </span>env_name = name.to_string();
-<a href=#3226 id=3226 data-nosnippet>3226</a>    <span class="kw">let </span>n: usize = n_arg.value_of() <span class="kw">as </span>usize;
+<a href=#3226 id=3226 data-nosnippet>3226</a>    <span class="kw">let </span>n = latex_arg_count(n_arg.value_of())<span class="question-mark">?</span>;
 <a href=#3227 id=3227 data-nosnippet>3227</a>    <span class="comment">// Build parameter spec matching Perl's convertLaTeXArgs($n, $opt).
 <a href=#3228 id=3228 data-nosnippet>3228</a>    // `[N][default]` syntax: N total args; if [default] present, the FIRST
 <a href=#3229 id=3229 data-nosnippet>3229</a>    // arg is OPTIONAL with that default value. The default IS allowed to

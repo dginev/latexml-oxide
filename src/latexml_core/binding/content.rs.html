@@ -6616,412 +6616,426 @@
 <a href=#6616 id=6616 data-nosnippet>6616</a>  Tokens::new(out)
 <a href=#6617 id=6617 data-nosnippet>6617</a>}
 <a href=#6618 id=6618 data-nosnippet>6618</a>
-<a href=#6619 id=6619 data-nosnippet>6619</a><span class="doccomment">/// Convert a LaTeX-style argument spec to our Package form.
-<a href=#6620 id=6620 data-nosnippet>6620</a>/// Ie. given $nargs and $optional, being the two optional arguments to
-<a href=#6621 id=6621 data-nosnippet>6621</a>/// something like \newcommand, convert it to the form we use
-<a href=#6622 id=6622 data-nosnippet>6622</a></span><span class="kw">pub fn </span>convert_latex_args(
-<a href=#6623 id=6623 data-nosnippet>6623</a>  <span class="kw-2">mut </span>nargs: usize,
-<a href=#6624 id=6624 data-nosnippet>6624</a>  optional: <span class="prelude-ty">Option</span>&lt;Tokens&gt;,
-<a href=#6625 id=6625 data-nosnippet>6625</a>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Parameters&gt;&gt; {
-<a href=#6626 id=6626 data-nosnippet>6626</a>  <span class="kw">let </span><span class="kw-2">mut </span>params = Vec::new();
-<a href=#6627 id=6627 data-nosnippet>6627</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(tks) = optional {
-<a href=#6628 id=6628 data-nosnippet>6628</a>    <span class="comment">// The kernel stores an optional default through TWO `\def` bodies —
-<a href=#6629 id=6629 data-nosnippet>6629</a>    // `\@xargdef`'s `\def\foo{\@protected@testopt\foo\\foo{&lt;default&gt;}}`
-<a href=#6630 id=6630 data-nosnippet>6630</a>    // (latex.ltx:1249, `\@xargdef` 1245-1258) and `\kernel@ifnextchar`'s `\def\reserved@b{#3}`
-<a href=#6631 id=6631 data-nosnippet>6631</a>    // (:14131) — each of which reads `##` as one parameter character, so
-<a href=#6632 id=6632 data-nosnippet>6632</a>    // `\newcommand{\x}[4][########1]` hands `\\x` a default of `##1`
-<a href=#6633 id=6633 data-nosnippet>6633</a>    // (pdflatex-probed `\detokenize{#1}` = `####1`). etoolbox's
-<a href=#6634 id=6634 data-nosnippet>6634</a>    // `\patchcmd` idiom relies on exactly that (biditools.sty:769
-<a href=#6635 id=6635 data-nosnippet>6635</a>    // `\newcommand{\bidi@@patchcmd}[4][########1]` — the raw `#`s reached
-<a href=#6636 id=6636 data-nosnippet>6636</a>    // the stomach and every biditools-loading manual errored `misdefined:#`,
-<a href=#6637 id=6637 data-nosnippet>6637</a>    // 7 docs). Perl's convertLaTeXArgs stores the default raw (KNOWN_PERL_ERRORS
-<a href=#6638 id=6638 data-nosnippet>6638</a>    // #134). Guard: `perfect_kernel_batch54::newcommand_default_halves_param_tokens_twice`.
-<a href=#6639 id=6639 data-nosnippet>6639</a>    </span><span class="kw">let </span>tks = halve_param_tokens(<span class="kw-2">&amp;</span>halve_param_tokens(<span class="kw-2">&amp;</span>tks));
-<a href=#6640 id=6640 data-nosnippet>6640</a>    params.push(
-<a href=#6641 id=6641 data-nosnippet>6641</a>      Parameter {
-<a href=#6642 id=6642 data-nosnippet>6642</a>        name: <span class="macro">pin!</span>(<span class="string">"Optional"</span>),
-<a href=#6643 id=6643 data-nosnippet>6643</a>        spec: arena::pin(<span class="macro">s!</span>(<span class="string">"[Default:{}]"</span>, tks.clone().untex())),
-<a href=#6644 id=6644 data-nosnippet>6644</a>        extra: <span class="macro">vec!</span>[tks],
-<a href=#6645 id=6645 data-nosnippet>6645</a>        <span class="comment">// `\@protected@testopt`'s peek: a number scan ends at the macro
-<a href=#6646 id=6646 data-nosnippet>6646</a>        // (tex.web §445; `\cc=1\foo` assigns 1, pdflatex).
-<a href=#6647 id=6647 data-nosnippet>6647</a>        </span>testopt: <span class="bool-val">true</span>,
-<a href=#6648 id=6648 data-nosnippet>6648</a>        ..Parameter::default()
-<a href=#6649 id=6649 data-nosnippet>6649</a>      }
-<a href=#6650 id=6650 data-nosnippet>6650</a>      .init()<span class="question-mark">?</span>,
-<a href=#6651 id=6651 data-nosnippet>6651</a>    );
-<a href=#6652 id=6652 data-nosnippet>6652</a>    <span class="comment">// Perl `convertLaTeXArgs` does `$nargs-- if $optional`; with `$nargs==0`
-<a href=#6653 id=6653 data-nosnippet>6653</a>    // that just yields an empty `1..$nargs` range. Saturate so the malformed
-<a href=#6654 id=6654 data-nosnippet>6654</a>    // `\newcommand\foo[0][d]{}` (0 args yet an optional default — outside
-<a href=#6655 id=6655 data-nosnippet>6655</a>    // LaTeX's 0..9 domain) can't underflow `usize` to ~2^64 and spin the loop
-<a href=#6656 id=6656 data-nosnippet>6656</a>    // below. Mirrors the sibling `convert_twoopt_args`.
-<a href=#6657 id=6657 data-nosnippet>6657</a>    </span>nargs = nargs.saturating_sub(<span class="number">1</span>);
-<a href=#6658 id=6658 data-nosnippet>6658</a>  }
-<a href=#6659 id=6659 data-nosnippet>6659</a>
-<a href=#6660 id=6660 data-nosnippet>6660</a>  <span class="kw">for _ in </span><span class="number">1</span>..=nargs {
-<a href=#6661 id=6661 data-nosnippet>6661</a>    params.push(
-<a href=#6662 id=6662 data-nosnippet>6662</a>      Parameter {
-<a href=#6663 id=6663 data-nosnippet>6663</a>        name: <span class="macro">pin!</span>(<span class="string">"Plain"</span>),
-<a href=#6664 id=6664 data-nosnippet>6664</a>        spec: <span class="macro">pin!</span>(<span class="string">"{}"</span>),
-<a href=#6665 id=6665 data-nosnippet>6665</a>        ..Parameter::default()
-<a href=#6666 id=6666 data-nosnippet>6666</a>      }
-<a href=#6667 id=6667 data-nosnippet>6667</a>      .init()<span class="question-mark">?</span>,
-<a href=#6668 id=6668 data-nosnippet>6668</a>    );
-<a href=#6669 id=6669 data-nosnippet>6669</a>  }
-<a href=#6670 id=6670 data-nosnippet>6670</a>  <span class="kw">if </span>params.is_empty() {
-<a href=#6671 id=6671 data-nosnippet>6671</a>    <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
-<a href=#6672 id=6672 data-nosnippet>6672</a>  } <span class="kw">else </span>{
-<a href=#6673 id=6673 data-nosnippet>6673</a>    <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Parameters::new(params)))
-<a href=#6674 id=6674 data-nosnippet>6674</a>  }
-<a href=#6675 id=6675 data-nosnippet>6675</a>}
-<a href=#6676 id=6676 data-nosnippet>6676</a>
-<a href=#6677 id=6677 data-nosnippet>6677</a><span class="doccomment">/// Two-optional variant of `convert_latex_args` — mirrors Perl's
-<a href=#6678 id=6678 data-nosnippet>6678</a>/// `convert2optArgs` helper in twoopt.sty.ltxml. `\newcommandtwoopt{\cs}[n][d1][d2]{…}`
-<a href=#6679 id=6679 data-nosnippet>6679</a>/// builds a signature of `[Default d1][Default d2]{…}…` where the remaining
-<a href=#6680 id=6680 data-nosnippet>6680</a>/// `n - 2` args are plain required.
-<a href=#6681 id=6681 data-nosnippet>6681</a></span><span class="kw">pub fn </span>convert_twoopt_args(
-<a href=#6682 id=6682 data-nosnippet>6682</a>  <span class="kw-2">mut </span>nargs: usize,
-<a href=#6683 id=6683 data-nosnippet>6683</a>  opt1: <span class="prelude-ty">Option</span>&lt;Tokens&gt;,
-<a href=#6684 id=6684 data-nosnippet>6684</a>  opt2: <span class="prelude-ty">Option</span>&lt;Tokens&gt;,
-<a href=#6685 id=6685 data-nosnippet>6685</a>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Parameters&gt;&gt; {
-<a href=#6686 id=6686 data-nosnippet>6686</a>  <span class="kw">let </span><span class="kw-2">mut </span>params = Vec::new();
-<a href=#6687 id=6687 data-nosnippet>6687</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(tks) = opt1 {
-<a href=#6688 id=6688 data-nosnippet>6688</a>    params.push(
-<a href=#6689 id=6689 data-nosnippet>6689</a>      Parameter {
-<a href=#6690 id=6690 data-nosnippet>6690</a>        name: <span class="macro">pin!</span>(<span class="string">"Optional"</span>),
-<a href=#6691 id=6691 data-nosnippet>6691</a>        spec: arena::pin(<span class="macro">s!</span>(<span class="string">"[Default:{}]"</span>, tks.clone().untex())),
-<a href=#6692 id=6692 data-nosnippet>6692</a>        extra: <span class="macro">vec!</span>[tks],
-<a href=#6693 id=6693 data-nosnippet>6693</a>        <span class="comment">// twoopt.sty:49-53 defines the command with `\newcommand#2#3[1][{#5}]`.
-<a href=#6694 id=6694 data-nosnippet>6694</a>        </span>testopt: <span class="bool-val">true</span>,
-<a href=#6695 id=6695 data-nosnippet>6695</a>        ..Parameter::default()
-<a href=#6696 id=6696 data-nosnippet>6696</a>      }
-<a href=#6697 id=6697 data-nosnippet>6697</a>      .init()<span class="question-mark">?</span>,
-<a href=#6698 id=6698 data-nosnippet>6698</a>    );
-<a href=#6699 id=6699 data-nosnippet>6699</a>    nargs = nargs.saturating_sub(<span class="number">1</span>);
-<a href=#6700 id=6700 data-nosnippet>6700</a>  }
-<a href=#6701 id=6701 data-nosnippet>6701</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(tks) = opt2 {
+<a href=#6619 id=6619 data-nosnippet>6619</a><span class="doccomment">/// LaTeX's argument count `[n]`, 0 to 9: latex.ltx:1276-1283 `\@yargd@f` writes `#1`…`#9` and then the count, so a
+<a href=#6620 id=6620 data-nosnippet>6620</a>/// count outside is tex.web §476's "You already have nine parameters". An Error, then the count clamped into range.
+<a href=#6621 id=6621 data-nosnippet>6621</a></span><span class="kw">pub fn </span>latex_arg_count(nargs: i64) -&gt; <span class="prelude-ty">Result</span>&lt;usize&gt; {
+<a href=#6622 id=6622 data-nosnippet>6622</a>  <span class="kw">let </span>count = nargs.clamp(<span class="number">0</span>, <span class="number">9</span>);
+<a href=#6623 id=6623 data-nosnippet>6623</a>  <span class="kw">if </span>count != nargs {
+<a href=#6624 id=6624 data-nosnippet>6624</a>    <span class="macro">Error!</span>(
+<a href=#6625 id=6625 data-nosnippet>6625</a>      <span class="string">"misdefined"</span>,
+<a href=#6626 id=6626 data-nosnippet>6626</a>      <span class="macro">s!</span>(<span class="string">"[{nargs}]"</span>),
+<a href=#6627 id=6627 data-nosnippet>6627</a>      <span class="string">"You already have nine parameters"</span>,
+<a href=#6628 id=6628 data-nosnippet>6628</a>      <span class="macro">s!</span>(<span class="string">"a LaTeX command takes 0 to 9 arguments; [{nargs}] is read as [{count}]"</span>)
+<a href=#6629 id=6629 data-nosnippet>6629</a>    );
+<a href=#6630 id=6630 data-nosnippet>6630</a>  }
+<a href=#6631 id=6631 data-nosnippet>6631</a>  <span class="prelude-val">Ok</span>(count <span class="kw">as </span>usize)
+<a href=#6632 id=6632 data-nosnippet>6632</a>}
+<a href=#6633 id=6633 data-nosnippet>6633</a>
+<a href=#6634 id=6634 data-nosnippet>6634</a><span class="doccomment">/// Convert a LaTeX-style argument spec to our Package form.
+<a href=#6635 id=6635 data-nosnippet>6635</a>/// Ie. given $nargs and $optional, being the two optional arguments to
+<a href=#6636 id=6636 data-nosnippet>6636</a>/// something like \newcommand, convert it to the form we use
+<a href=#6637 id=6637 data-nosnippet>6637</a></span><span class="kw">pub fn </span>convert_latex_args(nargs: i64, optional: <span class="prelude-ty">Option</span>&lt;Tokens&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Parameters&gt;&gt; {
+<a href=#6638 id=6638 data-nosnippet>6638</a>  <span class="kw">let </span><span class="kw-2">mut </span>nargs = latex_arg_count(nargs)<span class="question-mark">?</span>;
+<a href=#6639 id=6639 data-nosnippet>6639</a>  <span class="kw">let </span><span class="kw-2">mut </span>params = Vec::new();
+<a href=#6640 id=6640 data-nosnippet>6640</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(tks) = optional {
+<a href=#6641 id=6641 data-nosnippet>6641</a>    <span class="comment">// The kernel stores an optional default through TWO `\def` bodies —
+<a href=#6642 id=6642 data-nosnippet>6642</a>    // `\@xargdef`'s `\def\foo{\@protected@testopt\foo\\foo{&lt;default&gt;}}`
+<a href=#6643 id=6643 data-nosnippet>6643</a>    // (latex.ltx:1249, `\@xargdef` 1245-1258) and `\kernel@ifnextchar`'s `\def\reserved@b{#3}`
+<a href=#6644 id=6644 data-nosnippet>6644</a>    // (:14131) — each of which reads `##` as one parameter character, so
+<a href=#6645 id=6645 data-nosnippet>6645</a>    // `\newcommand{\x}[4][########1]` hands `\\x` a default of `##1`
+<a href=#6646 id=6646 data-nosnippet>6646</a>    // (pdflatex-probed `\detokenize{#1}` = `####1`). etoolbox's
+<a href=#6647 id=6647 data-nosnippet>6647</a>    // `\patchcmd` idiom relies on exactly that (biditools.sty:769
+<a href=#6648 id=6648 data-nosnippet>6648</a>    // `\newcommand{\bidi@@patchcmd}[4][########1]` — the raw `#`s reached
+<a href=#6649 id=6649 data-nosnippet>6649</a>    // the stomach and every biditools-loading manual errored `misdefined:#`,
+<a href=#6650 id=6650 data-nosnippet>6650</a>    // 7 docs). Perl's convertLaTeXArgs stores the default raw (KNOWN_PERL_ERRORS
+<a href=#6651 id=6651 data-nosnippet>6651</a>    // #134). Guard: `perfect_kernel_batch54::newcommand_default_halves_param_tokens_twice`.
+<a href=#6652 id=6652 data-nosnippet>6652</a>    </span><span class="kw">let </span>tks = halve_param_tokens(<span class="kw-2">&amp;</span>halve_param_tokens(<span class="kw-2">&amp;</span>tks));
+<a href=#6653 id=6653 data-nosnippet>6653</a>    params.push(
+<a href=#6654 id=6654 data-nosnippet>6654</a>      Parameter {
+<a href=#6655 id=6655 data-nosnippet>6655</a>        name: <span class="macro">pin!</span>(<span class="string">"Optional"</span>),
+<a href=#6656 id=6656 data-nosnippet>6656</a>        spec: arena::pin(<span class="macro">s!</span>(<span class="string">"[Default:{}]"</span>, tks.clone().untex())),
+<a href=#6657 id=6657 data-nosnippet>6657</a>        extra: <span class="macro">vec!</span>[tks],
+<a href=#6658 id=6658 data-nosnippet>6658</a>        <span class="comment">// `\@protected@testopt`'s peek: a number scan ends at the macro
+<a href=#6659 id=6659 data-nosnippet>6659</a>        // (tex.web §445; `\cc=1\foo` assigns 1, pdflatex).
+<a href=#6660 id=6660 data-nosnippet>6660</a>        </span>testopt: <span class="bool-val">true</span>,
+<a href=#6661 id=6661 data-nosnippet>6661</a>        ..Parameter::default()
+<a href=#6662 id=6662 data-nosnippet>6662</a>      }
+<a href=#6663 id=6663 data-nosnippet>6663</a>      .init()<span class="question-mark">?</span>,
+<a href=#6664 id=6664 data-nosnippet>6664</a>    );
+<a href=#6665 id=6665 data-nosnippet>6665</a>    <span class="comment">// Perl `convertLaTeXArgs` does `$nargs-- if $optional`; with `$nargs==0`
+<a href=#6666 id=6666 data-nosnippet>6666</a>    // that just yields an empty `1..$nargs` range. Saturate so the malformed
+<a href=#6667 id=6667 data-nosnippet>6667</a>    // `\newcommand\foo[0][d]{}` (0 args yet an optional default — outside
+<a href=#6668 id=6668 data-nosnippet>6668</a>    // LaTeX's 0..9 domain) can't underflow `usize` to ~2^64 and spin the loop
+<a href=#6669 id=6669 data-nosnippet>6669</a>    // below. Mirrors the sibling `convert_twoopt_args`.
+<a href=#6670 id=6670 data-nosnippet>6670</a>    </span>nargs = nargs.saturating_sub(<span class="number">1</span>);
+<a href=#6671 id=6671 data-nosnippet>6671</a>  }
+<a href=#6672 id=6672 data-nosnippet>6672</a>
+<a href=#6673 id=6673 data-nosnippet>6673</a>  <span class="kw">for _ in </span><span class="number">1</span>..=nargs {
+<a href=#6674 id=6674 data-nosnippet>6674</a>    params.push(
+<a href=#6675 id=6675 data-nosnippet>6675</a>      Parameter {
+<a href=#6676 id=6676 data-nosnippet>6676</a>        name: <span class="macro">pin!</span>(<span class="string">"Plain"</span>),
+<a href=#6677 id=6677 data-nosnippet>6677</a>        spec: <span class="macro">pin!</span>(<span class="string">"{}"</span>),
+<a href=#6678 id=6678 data-nosnippet>6678</a>        ..Parameter::default()
+<a href=#6679 id=6679 data-nosnippet>6679</a>      }
+<a href=#6680 id=6680 data-nosnippet>6680</a>      .init()<span class="question-mark">?</span>,
+<a href=#6681 id=6681 data-nosnippet>6681</a>    );
+<a href=#6682 id=6682 data-nosnippet>6682</a>  }
+<a href=#6683 id=6683 data-nosnippet>6683</a>  <span class="kw">if </span>params.is_empty() {
+<a href=#6684 id=6684 data-nosnippet>6684</a>    <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
+<a href=#6685 id=6685 data-nosnippet>6685</a>  } <span class="kw">else </span>{
+<a href=#6686 id=6686 data-nosnippet>6686</a>    <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Parameters::new(params)))
+<a href=#6687 id=6687 data-nosnippet>6687</a>  }
+<a href=#6688 id=6688 data-nosnippet>6688</a>}
+<a href=#6689 id=6689 data-nosnippet>6689</a>
+<a href=#6690 id=6690 data-nosnippet>6690</a><span class="doccomment">/// Two-optional variant of `convert_latex_args` — mirrors Perl's
+<a href=#6691 id=6691 data-nosnippet>6691</a>/// `convert2optArgs` helper in twoopt.sty.ltxml. `\newcommandtwoopt{\cs}[n][d1][d2]{…}`
+<a href=#6692 id=6692 data-nosnippet>6692</a>/// builds a signature of `[Default d1][Default d2]{…}…` where the remaining
+<a href=#6693 id=6693 data-nosnippet>6693</a>/// `n - 2` args are plain required.
+<a href=#6694 id=6694 data-nosnippet>6694</a></span><span class="kw">pub fn </span>convert_twoopt_args(
+<a href=#6695 id=6695 data-nosnippet>6695</a>  nargs: i64,
+<a href=#6696 id=6696 data-nosnippet>6696</a>  opt1: <span class="prelude-ty">Option</span>&lt;Tokens&gt;,
+<a href=#6697 id=6697 data-nosnippet>6697</a>  opt2: <span class="prelude-ty">Option</span>&lt;Tokens&gt;,
+<a href=#6698 id=6698 data-nosnippet>6698</a>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Parameters&gt;&gt; {
+<a href=#6699 id=6699 data-nosnippet>6699</a>  <span class="kw">let </span><span class="kw-2">mut </span>nargs = latex_arg_count(nargs)<span class="question-mark">?</span>;
+<a href=#6700 id=6700 data-nosnippet>6700</a>  <span class="kw">let </span><span class="kw-2">mut </span>params = Vec::new();
+<a href=#6701 id=6701 data-nosnippet>6701</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(tks) = opt1 {
 <a href=#6702 id=6702 data-nosnippet>6702</a>    params.push(
 <a href=#6703 id=6703 data-nosnippet>6703</a>      Parameter {
 <a href=#6704 id=6704 data-nosnippet>6704</a>        name: <span class="macro">pin!</span>(<span class="string">"Optional"</span>),
 <a href=#6705 id=6705 data-nosnippet>6705</a>        spec: arena::pin(<span class="macro">s!</span>(<span class="string">"[Default:{}]"</span>, tks.clone().untex())),
 <a href=#6706 id=6706 data-nosnippet>6706</a>        extra: <span class="macro">vec!</span>[tks],
-<a href=#6707 id=6707 data-nosnippet>6707</a>        ..Parameter::default()
-<a href=#6708 id=6708 data-nosnippet>6708</a>      }
-<a href=#6709 id=6709 data-nosnippet>6709</a>      .init()<span class="question-mark">?</span>,
-<a href=#6710 id=6710 data-nosnippet>6710</a>    );
-<a href=#6711 id=6711 data-nosnippet>6711</a>    nargs = nargs.saturating_sub(<span class="number">1</span>);
-<a href=#6712 id=6712 data-nosnippet>6712</a>  }
-<a href=#6713 id=6713 data-nosnippet>6713</a>  <span class="kw">for _ in </span><span class="number">1</span>..=nargs {
-<a href=#6714 id=6714 data-nosnippet>6714</a>    params.push(
-<a href=#6715 id=6715 data-nosnippet>6715</a>      Parameter {
-<a href=#6716 id=6716 data-nosnippet>6716</a>        name: <span class="macro">pin!</span>(<span class="string">"Plain"</span>),
-<a href=#6717 id=6717 data-nosnippet>6717</a>        spec: <span class="macro">pin!</span>(<span class="string">"{}"</span>),
-<a href=#6718 id=6718 data-nosnippet>6718</a>        ..Parameter::default()
-<a href=#6719 id=6719 data-nosnippet>6719</a>      }
-<a href=#6720 id=6720 data-nosnippet>6720</a>      .init()<span class="question-mark">?</span>,
-<a href=#6721 id=6721 data-nosnippet>6721</a>    );
-<a href=#6722 id=6722 data-nosnippet>6722</a>  }
-<a href=#6723 id=6723 data-nosnippet>6723</a>  <span class="kw">if </span>params.is_empty() {
-<a href=#6724 id=6724 data-nosnippet>6724</a>    <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
-<a href=#6725 id=6725 data-nosnippet>6725</a>  } <span class="kw">else </span>{
-<a href=#6726 id=6726 data-nosnippet>6726</a>    <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Parameters::new(params)))
-<a href=#6727 id=6727 data-nosnippet>6727</a>  }
-<a href=#6728 id=6728 data-nosnippet>6728</a>}
-<a href=#6729 id=6729 data-nosnippet>6729</a>
-<a href=#6730 id=6730 data-nosnippet>6730</a><span class="doccomment">/// Decode a codepoint using the fontmap for a given font and/or encoding (Perl: FontDecode).
-<a href=#6731 id=6731 data-nosnippet>6731</a>/// Returns the decoded glyph (if any) and the possibly-adjusted font.
-<a href=#6732 id=6732 data-nosnippet>6732</a></span><span class="kw">pub fn </span>font_decode(
-<a href=#6733 id=6733 data-nosnippet>6733</a>  code: i32,
-<a href=#6734 id=6734 data-nosnippet>6734</a>  encoding_opt: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;,
-<a href=#6735 id=6735 data-nosnippet>6735</a>  font_opt: <span class="prelude-ty">Option</span>&lt;Rc&lt;Font&gt;&gt;,
-<a href=#6736 id=6736 data-nosnippet>6736</a>) -&gt; (<span class="prelude-ty">Option</span>&lt;char&gt;, <span class="prelude-ty">Option</span>&lt;Rc&lt;Font&gt;&gt;) {
-<a href=#6737 id=6737 data-nosnippet>6737</a>  <span class="kw">if </span>code &lt; <span class="number">0 </span>{
-<a href=#6738 id=6738 data-nosnippet>6738</a>    <span class="kw">return </span>(<span class="prelude-val">None</span>, font_opt);
-<a href=#6739 id=6739 data-nosnippet>6739</a>  }
-<a href=#6740 id=6740 data-nosnippet>6740</a>  <span class="kw">let </span>font = font_opt.unwrap_or_else(|| lookup_font().unwrap());
-<a href=#6741 id=6741 data-nosnippet>6741</a>  <span class="kw">let </span>encoding = <span class="kw">match </span>encoding_opt {
-<a href=#6742 id=6742 data-nosnippet>6742</a>    <span class="prelude-val">Some</span>(enc) =&gt; enc.to_string(),
-<a href=#6743 id=6743 data-nosnippet>6743</a>    <span class="prelude-val">None </span>=&gt; font
-<a href=#6744 id=6744 data-nosnippet>6744</a>      .get_encoding()
-<a href=#6745 id=6745 data-nosnippet>6745</a>      .map_or_else(|| <span class="string">"OT1"</span>.to_string(), |c| c.to_string()),
-<a href=#6746 id=6746 data-nosnippet>6746</a>  };
-<a href=#6747 id=6747 data-nosnippet>6747</a>  <span class="kw">let </span>map = load_font_map(<span class="kw-2">&amp;</span>encoding);
-<a href=#6748 id=6748 data-nosnippet>6748</a>  <span class="comment">// Check for family-specific map. Use with_value to avoid cloning the
-<a href=#6749 id=6749 data-nosnippet>6749</a>  // Stored envelope when the From&lt;&amp;Stored&gt;→Option&lt;Fontmap&gt; impl only
-<a href=#6750 id=6750 data-nosnippet>6750</a>  // needs the enum variant discriminant + an Rc bump.
-<a href=#6751 id=6751 data-nosnippet>6751</a>  </span><span class="kw">let </span>(effective_map, _effective_enc) = <span class="kw">if let </span><span class="prelude-val">Some</span>(family) = font.get_family() {
-<a href=#6752 id=6752 data-nosnippet>6752</a>    <span class="kw">let </span>fam_key = <span class="macro">s!</span>(<span class="string">"{}_{}_fontmap"</span>, encoding, family);
-<a href=#6753 id=6753 data-nosnippet>6753</a>    <span class="kw">let </span>fam_map: <span class="prelude-ty">Option</span>&lt;Fontmap&gt; = with_value(<span class="kw-2">&amp;</span>fam_key, |v| v.and_then(|s| s.into()));
-<a href=#6754 id=6754 data-nosnippet>6754</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(fm) = fam_map {
-<a href=#6755 id=6755 data-nosnippet>6755</a>      (<span class="prelude-val">Some</span>(fm), <span class="macro">s!</span>(<span class="string">"{}_{}"</span>, encoding, family))
-<a href=#6756 id=6756 data-nosnippet>6756</a>    } <span class="kw">else </span>{
-<a href=#6757 id=6757 data-nosnippet>6757</a>      (map, encoding)
-<a href=#6758 id=6758 data-nosnippet>6758</a>    }
-<a href=#6759 id=6759 data-nosnippet>6759</a>  } <span class="kw">else </span>{
-<a href=#6760 id=6760 data-nosnippet>6760</a>    (map, encoding)
-<a href=#6761 id=6761 data-nosnippet>6761</a>  };
-<a href=#6762 id=6762 data-nosnippet>6762</a>  <span class="kw">let </span>glyph = effective_map
-<a href=#6763 id=6763 data-nosnippet>6763</a>    .as_ref()
-<a href=#6764 id=6764 data-nosnippet>6764</a>    .and_then(|m| m.get(code <span class="kw">as </span>usize).copied().flatten());
-<a href=#6765 id=6765 data-nosnippet>6765</a>  <span class="comment">// In-math alphanumeric mathstyle handling is done in decodeMathChar instead
-<a href=#6766 id=6766 data-nosnippet>6766</a>  </span>(glyph, <span class="prelude-val">Some</span>(font))
-<a href=#6767 id=6767 data-nosnippet>6767</a>}
-<a href=#6768 id=6768 data-nosnippet>6768</a>
-<a href=#6769 id=6769 data-nosnippet>6769</a><span class="doccomment">/// Decode a string using the fontmap for a given encoding (Perl: FontDecodeString).
-<a href=#6770 id=6770 data-nosnippet>6770</a>/// If `implicit` is true, codepoints missing from the map decode to themselves.
-<a href=#6771 id=6771 data-nosnippet>6771</a></span><span class="kw">pub fn </span>font_decode_string(string: <span class="kw-2">&amp;</span>str, encoding_opt: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;, implicit: bool) -&gt; String {
-<a href=#6772 id=6772 data-nosnippet>6772</a>  <span class="kw">let </span>font = lookup_font().unwrap();
-<a href=#6773 id=6773 data-nosnippet>6773</a>  <span class="kw">let </span>encoding = <span class="kw">match </span>encoding_opt {
-<a href=#6774 id=6774 data-nosnippet>6774</a>    <span class="prelude-val">Some</span>(enc) =&gt; enc.to_string(),
-<a href=#6775 id=6775 data-nosnippet>6775</a>    <span class="prelude-val">None </span>=&gt; font
-<a href=#6776 id=6776 data-nosnippet>6776</a>      .get_encoding()
-<a href=#6777 id=6777 data-nosnippet>6777</a>      .map_or_else(|| <span class="string">"OT1"</span>.to_string(), |c| c.to_string()),
-<a href=#6778 id=6778 data-nosnippet>6778</a>  };
-<a href=#6779 id=6779 data-nosnippet>6779</a>  <span class="kw">let </span>map = load_font_map(<span class="kw-2">&amp;</span>encoding);
-<a href=#6780 id=6780 data-nosnippet>6780</a>  <span class="comment">// Check for family-specific map — same with_value motivation as above.
-<a href=#6781 id=6781 data-nosnippet>6781</a>  </span><span class="kw">let </span>effective_map = <span class="kw">if let </span><span class="prelude-val">Some</span>(family) = font.get_family() {
-<a href=#6782 id=6782 data-nosnippet>6782</a>    <span class="kw">let </span>fam_key = <span class="macro">s!</span>(<span class="string">"{}_{}_fontmap"</span>, encoding, family);
-<a href=#6783 id=6783 data-nosnippet>6783</a>    <span class="kw">let </span>fam_map: <span class="prelude-ty">Option</span>&lt;Fontmap&gt; = with_value(<span class="kw-2">&amp;</span>fam_key, |v| v.and_then(|s| s.into()));
-<a href=#6784 id=6784 data-nosnippet>6784</a>    fam_map.or(map)
-<a href=#6785 id=6785 data-nosnippet>6785</a>  } <span class="kw">else </span>{
-<a href=#6786 id=6786 data-nosnippet>6786</a>    map
-<a href=#6787 id=6787 data-nosnippet>6787</a>  };
-<a href=#6788 id=6788 data-nosnippet>6788</a>  <span class="kw">let </span>input_enc = lookup_string(<span class="string">"INPUT_ENCODING"</span>);
-<a href=#6789 id=6789 data-nosnippet>6789</a>  <span class="kw">let </span>map_max: usize = <span class="kw">if </span>input_enc == <span class="string">"utf8" </span>{ <span class="number">128 </span>} <span class="kw">else </span>{ <span class="number">256 </span>};
-<a href=#6790 id=6790 data-nosnippet>6790</a>  <span class="comment">// Also limit for short font maps
-<a href=#6791 id=6791 data-nosnippet>6791</a>  </span><span class="kw">let </span>map_max = <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>m) = effective_map {
-<a href=#6792 id=6792 data-nosnippet>6792</a>    <span class="kw">if </span>m.len() &lt; map_max { m.len() } <span class="kw">else </span>{ map_max }
-<a href=#6793 id=6793 data-nosnippet>6793</a>  } <span class="kw">else </span>{
-<a href=#6794 id=6794 data-nosnippet>6794</a>    map_max
-<a href=#6795 id=6795 data-nosnippet>6795</a>  };
-<a href=#6796 id=6796 data-nosnippet>6796</a>
-<a href=#6797 id=6797 data-nosnippet>6797</a>  <span class="kw">let </span><span class="kw-2">mut </span>result = String::new();
-<a href=#6798 id=6798 data-nosnippet>6798</a>  <span class="kw">for </span>ch <span class="kw">in </span>string.chars() {
-<a href=#6799 id=6799 data-nosnippet>6799</a>    <span class="kw">let </span>code = ch <span class="kw">as </span>usize;
-<a href=#6800 id=6800 data-nosnippet>6800</a>    <span class="kw">if </span>implicit {
-<a href=#6801 id=6801 data-nosnippet>6801</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>m) = effective_map {
-<a href=#6802 id=6802 data-nosnippet>6802</a>        <span class="kw">if </span>code &lt; map_max {
-<a href=#6803 id=6803 data-nosnippet>6803</a>          <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(glyph)) = m.get(code) {
-<a href=#6804 id=6804 data-nosnippet>6804</a>            result.push(<span class="kw-2">*</span>glyph);
-<a href=#6805 id=6805 data-nosnippet>6805</a>          }
-<a href=#6806 id=6806 data-nosnippet>6806</a>        } <span class="kw">else </span>{
-<a href=#6807 id=6807 data-nosnippet>6807</a>          result.push(ch);
-<a href=#6808 id=6808 data-nosnippet>6808</a>        }
-<a href=#6809 id=6809 data-nosnippet>6809</a>      } <span class="kw">else </span>{
-<a href=#6810 id=6810 data-nosnippet>6810</a>        result.push(ch);
-<a href=#6811 id=6811 data-nosnippet>6811</a>      }
-<a href=#6812 id=6812 data-nosnippet>6812</a>    } <span class="kw">else if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>m) = effective_map
-<a href=#6813 id=6813 data-nosnippet>6813</a>      &amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(glyph)) = m.get(code)
-<a href=#6814 id=6814 data-nosnippet>6814</a>    {
-<a href=#6815 id=6815 data-nosnippet>6815</a>      result.push(<span class="kw-2">*</span>glyph);
-<a href=#6816 id=6816 data-nosnippet>6816</a>    }
-<a href=#6817 id=6817 data-nosnippet>6817</a>  }
-<a href=#6818 id=6818 data-nosnippet>6818</a>  result
-<a href=#6819 id=6819 data-nosnippet>6819</a>}
-<a href=#6820 id=6820 data-nosnippet>6820</a>
-<a href=#6821 id=6821 data-nosnippet>6821</a><span class="comment">// Memoized key symbols for the per-encoding fontmap Value-table entries.
-<a href=#6822 id=6822 data-nosnippet>6822</a>// `decode_string` runs per digested character run and used to rebuild (format!
-<a href=#6823 id=6823 data-nosnippet>6823</a>// + arena probe) the `"{encoding}_fontmap"`-family keys on every call — ~1M
-<a href=#6824 id=6824 data-nosnippet>6824</a>// allocations on a 1.3 s paper (2026-08-23 audit R6, dhat). Encodings are few
-<a href=#6825 id=6825 data-nosnippet>6825</a>// (OT1/T1/OML/…), so the (encoding → key syms) maps stay tiny. Value lookups
-<a href=#6826 id=6826 data-nosnippet>6826</a>// still go through the state tables — only the key STRINGS are memoized.
-<a href=#6827 id=6827 data-nosnippet>6827</a>// Keyed by arena SymStr, so MUST be cleared with `arena::reset()`
-<a href=#6828 id=6828 data-nosnippet>6828</a>// (`reset_fontmap_key_memo`, called from `reset_thread_engine`).
-<a href=#6829 id=6829 data-nosnippet>6829</a></span><span class="macro">thread_local!</span> {
-<a href=#6830 id=6830 data-nosnippet>6830</a>  <span class="kw">static </span>FONTMAP_KEY_MEMO: std::cell::RefCell&lt;HashMap&lt;String, FontmapKeySyms&gt;&gt; =
-<a href=#6831 id=6831 data-nosnippet>6831</a>    std::cell::RefCell::new(HashMap::default());
-<a href=#6832 id=6832 data-nosnippet>6832</a>  <span class="kw">static </span>FONTMAP_FAMILY_KEY_MEMO: std::cell::RefCell&lt;HashMap&lt;(String, String), (SymStr, SymStr)&gt;&gt; =
-<a href=#6833 id=6833 data-nosnippet>6833</a>    std::cell::RefCell::new(HashMap::default());
-<a href=#6834 id=6834 data-nosnippet>6834</a>  <span class="doccomment">/// The last answers of the two memos: text decodes glyph after glyph in one font, a few probes per glyph
-<a href=#6835 id=6835 data-nosnippet>6835</a>  /// (2103.04797, 1704.02085), and a string compare is cheaper than a hash probe (the family one built two keys).
-<a href=#6836 id=6836 data-nosnippet>6836</a>  </span><span class="kw">static </span>FONTMAP_KEY_LAST: std::cell::RefCell&lt;<span class="prelude-ty">Option</span>&lt;(String, FontmapKeySyms)&gt;&gt; =
-<a href=#6837 id=6837 data-nosnippet>6837</a>    <span class="kw">const </span>{ std::cell::RefCell::new(<span class="prelude-val">None</span>) };
-<a href=#6838 id=6838 data-nosnippet>6838</a>  <span class="kw">static </span>FONTMAP_FAMILY_KEY_LAST: std::cell::RefCell&lt;<span class="prelude-ty">Option</span>&lt;(String, String, FamilyKeySyms)&gt;&gt; =
-<a href=#6839 id=6839 data-nosnippet>6839</a>    <span class="kw">const </span>{ std::cell::RefCell::new(<span class="prelude-val">None</span>) };
-<a href=#6840 id=6840 data-nosnippet>6840</a>}
-<a href=#6841 id=6841 data-nosnippet>6841</a>
-<a href=#6842 id=6842 data-nosnippet>6842</a><span class="doccomment">/// `fontmap_family_key_syms`' answer: the family map's key and its multichar table's.
-<a href=#6843 id=6843 data-nosnippet>6843</a></span><span class="kw">type </span>FamilyKeySyms = (SymStr, SymStr);
-<a href=#6844 id=6844 data-nosnippet>6844</a>
-<a href=#6845 id=6845 data-nosnippet>6845</a><span class="attr">#[derive(Clone, Copy)]
-<a href=#6846 id=6846 data-nosnippet>6846</a></span><span class="kw">pub struct </span>FontmapKeySyms {
-<a href=#6847 id=6847 data-nosnippet>6847</a>  <span class="doccomment">/// `"{encoding}_fontmap"`
-<a href=#6848 id=6848 data-nosnippet>6848</a>  </span><span class="kw">pub </span>map:       SymStr,
-<a href=#6849 id=6849 data-nosnippet>6849</a>  <span class="doccomment">/// `"{encoding}_fontmap_failed_to_load"`
-<a href=#6850 id=6850 data-nosnippet>6850</a>  </span><span class="kw">pub </span>fail:      SymStr,
-<a href=#6851 id=6851 data-nosnippet>6851</a>  <span class="doccomment">/// `"{encoding}_fontmap_multichar"`
-<a href=#6852 id=6852 data-nosnippet>6852</a>  </span><span class="kw">pub </span>multichar: SymStr,
-<a href=#6853 id=6853 data-nosnippet>6853</a>}
-<a href=#6854 id=6854 data-nosnippet>6854</a>
-<a href=#6855 id=6855 data-nosnippet>6855</a><span class="doccomment">/// The memoized key symbols for `encoding`'s fontmap Value-table entries.
-<a href=#6856 id=6856 data-nosnippet>6856</a></span><span class="kw">pub fn </span>fontmap_key_syms(encoding: <span class="kw-2">&amp;</span>str) -&gt; FontmapKeySyms {
-<a href=#6857 id=6857 data-nosnippet>6857</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(keys) = FONTMAP_KEY_LAST.with_borrow(|last| {
-<a href=#6858 id=6858 data-nosnippet>6858</a>    last
-<a href=#6859 id=6859 data-nosnippet>6859</a>      .as_ref()
-<a href=#6860 id=6860 data-nosnippet>6860</a>      .filter(|(e, <span class="kw">_</span>)| e == encoding)
-<a href=#6861 id=6861 data-nosnippet>6861</a>      .map(|(<span class="kw">_</span>, keys)| <span class="kw-2">*</span>keys)
-<a href=#6862 id=6862 data-nosnippet>6862</a>  }) {
-<a href=#6863 id=6863 data-nosnippet>6863</a>    <span class="kw">return </span>keys;
-<a href=#6864 id=6864 data-nosnippet>6864</a>  }
-<a href=#6865 id=6865 data-nosnippet>6865</a>  <span class="kw">let </span>keys = FONTMAP_KEY_MEMO.with(|m| {
-<a href=#6866 id=6866 data-nosnippet>6866</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(keys) = m.borrow().get(encoding) {
-<a href=#6867 id=6867 data-nosnippet>6867</a>      <span class="kw">return </span><span class="kw-2">*</span>keys;
-<a href=#6868 id=6868 data-nosnippet>6868</a>    }
-<a href=#6869 id=6869 data-nosnippet>6869</a>    <span class="kw">let </span>keys = FontmapKeySyms {
-<a href=#6870 id=6870 data-nosnippet>6870</a>      map:       arena::pin(<span class="macro">s!</span>(<span class="string">"{encoding}_fontmap"</span>)),
-<a href=#6871 id=6871 data-nosnippet>6871</a>      fail:      arena::pin(<span class="macro">s!</span>(<span class="string">"{encoding}_fontmap_failed_to_load"</span>)),
-<a href=#6872 id=6872 data-nosnippet>6872</a>      multichar: arena::pin(<span class="macro">s!</span>(<span class="string">"{encoding}_fontmap_multichar"</span>)),
-<a href=#6873 id=6873 data-nosnippet>6873</a>    };
-<a href=#6874 id=6874 data-nosnippet>6874</a>    m.borrow_mut().insert(encoding.to_string(), keys);
-<a href=#6875 id=6875 data-nosnippet>6875</a>    keys
-<a href=#6876 id=6876 data-nosnippet>6876</a>  });
-<a href=#6877 id=6877 data-nosnippet>6877</a>  FONTMAP_KEY_LAST.with_borrow_mut(|last| <span class="kw">match </span>last {
-<a href=#6878 id=6878 data-nosnippet>6878</a>    <span class="comment">// Reuse the buffer: text and math glyphs alternate encodings (OT1, OML).
-<a href=#6879 id=6879 data-nosnippet>6879</a>    </span><span class="prelude-val">Some</span>((e, k)) =&gt; {
-<a href=#6880 id=6880 data-nosnippet>6880</a>      e.clear();
-<a href=#6881 id=6881 data-nosnippet>6881</a>      e.push_str(encoding);
-<a href=#6882 id=6882 data-nosnippet>6882</a>      <span class="kw-2">*</span>k = keys;
-<a href=#6883 id=6883 data-nosnippet>6883</a>    },
-<a href=#6884 id=6884 data-nosnippet>6884</a>    <span class="prelude-val">None </span>=&gt; <span class="kw-2">*</span>last = <span class="prelude-val">Some</span>((encoding.to_string(), keys)),
-<a href=#6885 id=6885 data-nosnippet>6885</a>  });
-<a href=#6886 id=6886 data-nosnippet>6886</a>  keys
-<a href=#6887 id=6887 data-nosnippet>6887</a>}
-<a href=#6888 id=6888 data-nosnippet>6888</a>
-<a href=#6889 id=6889 data-nosnippet>6889</a><span class="doccomment">/// The memoized `"{encoding}_{family}_fontmap"` and `"{encoding}_{family}_fontmap_multichar"` key symbols.
-<a href=#6890 id=6890 data-nosnippet>6890</a></span><span class="kw">pub fn </span>fontmap_family_key_syms(encoding: <span class="kw-2">&amp;</span>str, family: <span class="kw-2">&amp;</span>str) -&gt; (SymStr, SymStr) {
-<a href=#6891 id=6891 data-nosnippet>6891</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(syms) = FONTMAP_FAMILY_KEY_LAST.with_borrow(|last| {
-<a href=#6892 id=6892 data-nosnippet>6892</a>    last
-<a href=#6893 id=6893 data-nosnippet>6893</a>      .as_ref()
-<a href=#6894 id=6894 data-nosnippet>6894</a>      .filter(|(e, f, <span class="kw">_</span>)| e == encoding &amp;&amp; f == family)
-<a href=#6895 id=6895 data-nosnippet>6895</a>      .map(|(<span class="kw">_</span>, <span class="kw">_</span>, syms)| <span class="kw-2">*</span>syms)
-<a href=#6896 id=6896 data-nosnippet>6896</a>  }) {
-<a href=#6897 id=6897 data-nosnippet>6897</a>    <span class="kw">return </span>syms;
-<a href=#6898 id=6898 data-nosnippet>6898</a>  }
-<a href=#6899 id=6899 data-nosnippet>6899</a>  <span class="kw">let </span>syms = FONTMAP_FAMILY_KEY_MEMO.with(|m| {
-<a href=#6900 id=6900 data-nosnippet>6900</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(syms) = m.borrow().get(<span class="kw-2">&amp;</span>(encoding.to_string(), family.to_string())) {
-<a href=#6901 id=6901 data-nosnippet>6901</a>      <span class="kw">return </span><span class="kw-2">*</span>syms;
-<a href=#6902 id=6902 data-nosnippet>6902</a>    }
-<a href=#6903 id=6903 data-nosnippet>6903</a>    <span class="kw">let </span>syms = (
-<a href=#6904 id=6904 data-nosnippet>6904</a>      arena::pin(<span class="macro">s!</span>(<span class="string">"{encoding}_{family}_fontmap"</span>)),
-<a href=#6905 id=6905 data-nosnippet>6905</a>      arena::pin(<span class="macro">s!</span>(<span class="string">"{encoding}_{family}_fontmap_multichar"</span>)),
-<a href=#6906 id=6906 data-nosnippet>6906</a>    );
-<a href=#6907 id=6907 data-nosnippet>6907</a>    m.borrow_mut()
-<a href=#6908 id=6908 data-nosnippet>6908</a>      .insert((encoding.to_string(), family.to_string()), syms);
-<a href=#6909 id=6909 data-nosnippet>6909</a>    syms
-<a href=#6910 id=6910 data-nosnippet>6910</a>  });
-<a href=#6911 id=6911 data-nosnippet>6911</a>  FONTMAP_FAMILY_KEY_LAST.with_borrow_mut(|last| <span class="kw">match </span>last {
-<a href=#6912 id=6912 data-nosnippet>6912</a>    <span class="prelude-val">Some</span>((e, f, k)) =&gt; {
-<a href=#6913 id=6913 data-nosnippet>6913</a>      e.clear();
-<a href=#6914 id=6914 data-nosnippet>6914</a>      e.push_str(encoding);
-<a href=#6915 id=6915 data-nosnippet>6915</a>      f.clear();
-<a href=#6916 id=6916 data-nosnippet>6916</a>      f.push_str(family);
-<a href=#6917 id=6917 data-nosnippet>6917</a>      <span class="kw-2">*</span>k = syms;
-<a href=#6918 id=6918 data-nosnippet>6918</a>    },
-<a href=#6919 id=6919 data-nosnippet>6919</a>    <span class="prelude-val">None </span>=&gt; <span class="kw-2">*</span>last = <span class="prelude-val">Some</span>((encoding.to_string(), family.to_string(), syms)),
-<a href=#6920 id=6920 data-nosnippet>6920</a>  });
-<a href=#6921 id=6921 data-nosnippet>6921</a>  syms
-<a href=#6922 id=6922 data-nosnippet>6922</a>}
-<a href=#6923 id=6923 data-nosnippet>6923</a>
-<a href=#6924 id=6924 data-nosnippet>6924</a><span class="doccomment">/// Clear the fontmap key-symbol memos. Companion to `arena::reset()` — the
-<a href=#6925 id=6925 data-nosnippet>6925</a>/// cached `SymStr`s dangle after a reset renumbers the arena.
-<a href=#6926 id=6926 data-nosnippet>6926</a></span><span class="kw">pub fn </span>reset_fontmap_key_memo() {
-<a href=#6927 id=6927 data-nosnippet>6927</a>  FONTMAP_KEY_MEMO.with(|m| m.borrow_mut().clear());
-<a href=#6928 id=6928 data-nosnippet>6928</a>  FONTMAP_FAMILY_KEY_MEMO.with(|m| m.borrow_mut().clear());
-<a href=#6929 id=6929 data-nosnippet>6929</a>  FONTMAP_KEY_LAST.set(<span class="prelude-val">None</span>);
-<a href=#6930 id=6930 data-nosnippet>6930</a>  FONTMAP_FAMILY_KEY_LAST.set(<span class="prelude-val">None</span>);
-<a href=#6931 id=6931 data-nosnippet>6931</a>}
-<a href=#6932 id=6932 data-nosnippet>6932</a>
-<a href=#6933 id=6933 data-nosnippet>6933</a><span class="kw">pub fn </span>load_font_map(encoding: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;Fontmap&gt; {
-<a href=#6934 id=6934 data-nosnippet>6934</a>  <span class="kw">let </span>keys = fontmap_key_syms(encoding);
-<a href=#6935 id=6935 data-nosnippet>6935</a>  <span class="kw">let _ </span>= preload_font_map_keyed(encoding, keys); <span class="comment">// infallible in practice; swallow Result
-<a href=#6936 id=6936 data-nosnippet>6936</a>  // with_value avoids the Stored::clone; the Fontmap extraction is a cheap
-<a href=#6937 id=6937 data-nosnippet>6937</a>  // Rc bump on the inner slice regardless.
-<a href=#6938 id=6938 data-nosnippet>6938</a>  </span>with_value_sym(keys.map, |v| v.and_then(|s| s.into()))
-<a href=#6939 id=6939 data-nosnippet>6939</a>}
-<a href=#6940 id=6940 data-nosnippet>6940</a><span class="kw">pub fn </span>preload_font_map(encoding: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-<a href=#6941 id=6941 data-nosnippet>6941</a>  preload_font_map_keyed(encoding, fontmap_key_syms(encoding))
-<a href=#6942 id=6942 data-nosnippet>6942</a>}
-<a href=#6943 id=6943 data-nosnippet>6943</a><span class="kw">fn </span>preload_font_map_keyed(encoding: <span class="kw-2">&amp;</span>str, keys: FontmapKeySyms) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-<a href=#6944 id=6944 data-nosnippet>6944</a>  <span class="comment">// This check is done as a "preload" step for mutability reasons.
-<a href=#6945 id=6945 data-nosnippet>6945</a>  </span><span class="kw">if </span>has_value_sym(keys.map) {
-<a href=#6946 id=6946 data-nosnippet>6946</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
-<a href=#6947 id=6947 data-nosnippet>6947</a>  }
-<a href=#6948 id=6948 data-nosnippet>6948</a>  <span class="kw">let </span>failed_flag = lookup_bool_sym(keys.fail);
-<a href=#6949 id=6949 data-nosnippet>6949</a>  <span class="kw">if </span>!failed_flag {
-<a href=#6950 id=6950 data-nosnippet>6950</a>    assign_value_sym(keys.fail, <span class="bool-val">true</span>, <span class="prelude-val">None</span>); <span class="comment">// Stop recursion?
-<a href=#6951 id=6951 data-nosnippet>6951</a>    </span><span class="kw">let _ </span>= input_definitions(<span class="kw-2">&amp;</span>encoding.to_lowercase(), InputDefinitionOptions {
-<a href=#6952 id=6952 data-nosnippet>6952</a>      extension: <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"fontmap"</span>)),
-<a href=#6953 id=6953 data-nosnippet>6953</a>      noerror: <span class="bool-val">true</span>,
-<a href=#6954 id=6954 data-nosnippet>6954</a>      ..InputDefinitionOptions::default()
-<a href=#6955 id=6955 data-nosnippet>6955</a>    });
-<a href=#6956 id=6956 data-nosnippet>6956</a>    <span class="kw">if </span>has_value_sym(keys.map) {
-<a href=#6957 id=6957 data-nosnippet>6957</a>      <span class="comment">// Got map?
-<a href=#6958 id=6958 data-nosnippet>6958</a>      </span>assign_value_sym(keys.fail, <span class="bool-val">false</span>, <span class="prelude-val">None</span>);
-<a href=#6959 id=6959 data-nosnippet>6959</a>    } <span class="kw">else </span>{
-<a href=#6960 id=6960 data-nosnippet>6960</a>      assign_value_sym(keys.fail, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
-<a href=#6961 id=6961 data-nosnippet>6961</a>    }
-<a href=#6962 id=6962 data-nosnippet>6962</a>  }
-<a href=#6963 id=6963 data-nosnippet>6963</a>  <span class="prelude-val">Ok</span>(())
-<a href=#6964 id=6964 data-nosnippet>6964</a>}
-<a href=#6965 id=6965 data-nosnippet>6965</a>
-<a href=#6966 id=6966 data-nosnippet>6966</a><span class="attr">#[cfg(test)]
-<a href=#6967 id=6967 data-nosnippet>6967</a></span><span class="kw">mod </span>declared_info_tests {
-<a href=#6968 id=6968 data-nosnippet>6968</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
-<a href=#6969 id=6969 data-nosnippet>6969</a>
-<a href=#6970 id=6970 data-nosnippet>6970</a>  <span class="doccomment">/// A standard-class derivative's read a panic unwinds out of leaves no entry: the next read is no derivative's.
-<a href=#6971 id=6971 data-nosnippet>6971</a>  </span><span class="attr">#[test]
-<a href=#6972 id=6972 data-nosnippet>6972</a>  </span><span class="kw">fn </span>a_derivative_read_a_panic_ends_is_popped() {
-<a href=#6973 id=6973 data-nosnippet>6973</a>    <span class="kw">let </span>unwound = std::panic::catch_unwind(|| {
-<a href=#6974 id=6974 data-nosnippet>6974</a>      <span class="kw">let </span>_read = StandardClassDerivativeRead::enter(HashSet::default());
-<a href=#6975 id=6975 data-nosnippet>6975</a>      <span class="macro">panic!</span>(<span class="string">"a binding's bug"</span>);
-<a href=#6976 id=6976 data-nosnippet>6976</a>    });
-<a href=#6977 id=6977 data-nosnippet>6977</a>    <span class="macro">assert!</span>(unwound.is_err());
-<a href=#6978 id=6978 data-nosnippet>6978</a>    <span class="macro">assert!</span>(STANDARD_CLASS_DERIVATIVE.with(|reads| reads.borrow().is_empty()));
-<a href=#6979 id=6979 data-nosnippet>6979</a>  }
-<a href=#6980 id=6980 data-nosnippet>6980</a>
-<a href=#6981 id=6981 data-nosnippet>6981</a>  <span class="doccomment">/// `\Provides…` text as latex.ltx's `\xdef` leaves it: the kernel's `\space` and `\ ` read as spaces
-<a href=#6982 id=6982 data-nosnippet>6982</a>  /// (cite.sty `[2015/02/27 \space v 5.5]`); a file's own macros (listings.sty:22-23 `\filedate\space\fileversion`,
-<a href=#6983 id=6983 data-nosnippet>6983</a>  /// vmargin's `\Vmargin`) give nothing.
-<a href=#6984 id=6984 data-nosnippet>6984</a>  </span><span class="attr">#[test]
-<a href=#6985 id=6985 data-nosnippet>6985</a>  </span><span class="kw">fn </span>declared_text_expands_like_xdef() {
-<a href=#6986 id=6986 data-nosnippet>6986</a>    <span class="macro">assert_eq!</span>(
-<a href=#6987 id=6987 data-nosnippet>6987</a>      expand_declared(<span class="string">"2015/02/27 \\space v 5.5"</span>).as_deref(),
-<a href=#6988 id=6988 data-nosnippet>6988</a>      <span class="prelude-val">Some</span>(<span class="string">"2015/02/27  v 5.5"</span>)
-<a href=#6989 id=6989 data-nosnippet>6989</a>    );
-<a href=#6990 id=6990 data-nosnippet>6990</a>    <span class="macro">assert_eq!</span>(
-<a href=#6991 id=6991 data-nosnippet>6991</a>      expand_declared(<span class="string">"2015/02/27\\ v5.5"</span>).as_deref(),
-<a href=#6992 id=6992 data-nosnippet>6992</a>      <span class="prelude-val">Some</span>(<span class="string">"2015/02/27 v5.5"</span>)
-<a href=#6993 id=6993 data-nosnippet>6993</a>    );
-<a href=#6994 id=6994 data-nosnippet>6994</a>    <span class="macro">assert_eq!</span>(
-<a href=#6995 id=6995 data-nosnippet>6995</a>      expand_declared(<span class="string">"2015/02/27\\  v5.5"</span>).as_deref(),
-<a href=#6996 id=6996 data-nosnippet>6996</a>      <span class="prelude-val">Some</span>(<span class="string">"2015/02/27 v5.5"</span>)
-<a href=#6997 id=6997 data-nosnippet>6997</a>    );
-<a href=#6998 id=6998 data-nosnippet>6998</a>    <span class="macro">assert_eq!</span>(
-<a href=#6999 id=6999 data-nosnippet>6999</a>      expand_declared(<span class="string">"2024/11/12 v2.9 Span multiple rows"</span>).as_deref(),
-<a href=#7000 id=7000 data-nosnippet>7000</a>      <span class="prelude-val">Some</span>(<span class="string">"2024/11/12 v2.9 Span multiple rows"</span>)
-<a href=#7001 id=7001 data-nosnippet>7001</a>    );
-<a href=#7002 id=7002 data-nosnippet>7002</a>    <span class="macro">assert_eq!</span>(
-<a href=#7003 id=7003 data-nosnippet>7003</a>      expand_declared(<span class="string">"\\filedate\\space\\fileversion\\space(Carsten Heinz)"</span>),
-<a href=#7004 id=7004 data-nosnippet>7004</a>      <span class="prelude-val">None
-<a href=#7005 id=7005 data-nosnippet>7005</a>    </span>);
-<a href=#7006 id=7006 data-nosnippet>7006</a>    <span class="macro">assert_eq!</span>(expand_declared(<span class="string">"\\Vmargin"</span>), <span class="prelude-val">None</span>);
-<a href=#7007 id=7007 data-nosnippet>7007</a>    <span class="macro">assert_eq!</span>(expand_declared(<span class="string">""</span>), <span class="prelude-val">None</span>);
-<a href=#7008 id=7008 data-nosnippet>7008</a>  }
-<a href=#7009 id=7009 data-nosnippet>7009</a>
-<a href=#7010 id=7010 data-nosnippet>7010</a>  <span class="doccomment">/// A `%` comment between the name and the bracket (multirow.sty:25-27); a match without a bracket goes on to the
-<a href=#7011 id=7011 data-nosnippet>7011</a>  /// next `\Provides`.
-<a href=#7012 id=7012 data-nosnippet>7012</a>  </span><span class="attr">#[test]
-<a href=#7013 id=7013 data-nosnippet>7013</a>  </span><span class="kw">fn </span>provided_text_skips_comments_before_the_bracket() {
-<a href=#7014 id=7014 data-nosnippet>7014</a>    <span class="kw">let </span>multirow =
-<a href=#7015 id=7015 data-nosnippet>7015</a>      <span class="string">"\\ProvidesPackage{multirow}%\n  % note\n  [2024/11/12 v2.9 Span multiple rows of a table]\n"</span>;
+<a href=#6707 id=6707 data-nosnippet>6707</a>        <span class="comment">// twoopt.sty:49-53 defines the command with `\newcommand#2#3[1][{#5}]`.
+<a href=#6708 id=6708 data-nosnippet>6708</a>        </span>testopt: <span class="bool-val">true</span>,
+<a href=#6709 id=6709 data-nosnippet>6709</a>        ..Parameter::default()
+<a href=#6710 id=6710 data-nosnippet>6710</a>      }
+<a href=#6711 id=6711 data-nosnippet>6711</a>      .init()<span class="question-mark">?</span>,
+<a href=#6712 id=6712 data-nosnippet>6712</a>    );
+<a href=#6713 id=6713 data-nosnippet>6713</a>    nargs = nargs.saturating_sub(<span class="number">1</span>);
+<a href=#6714 id=6714 data-nosnippet>6714</a>  }
+<a href=#6715 id=6715 data-nosnippet>6715</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(tks) = opt2 {
+<a href=#6716 id=6716 data-nosnippet>6716</a>    params.push(
+<a href=#6717 id=6717 data-nosnippet>6717</a>      Parameter {
+<a href=#6718 id=6718 data-nosnippet>6718</a>        name: <span class="macro">pin!</span>(<span class="string">"Optional"</span>),
+<a href=#6719 id=6719 data-nosnippet>6719</a>        spec: arena::pin(<span class="macro">s!</span>(<span class="string">"[Default:{}]"</span>, tks.clone().untex())),
+<a href=#6720 id=6720 data-nosnippet>6720</a>        extra: <span class="macro">vec!</span>[tks],
+<a href=#6721 id=6721 data-nosnippet>6721</a>        ..Parameter::default()
+<a href=#6722 id=6722 data-nosnippet>6722</a>      }
+<a href=#6723 id=6723 data-nosnippet>6723</a>      .init()<span class="question-mark">?</span>,
+<a href=#6724 id=6724 data-nosnippet>6724</a>    );
+<a href=#6725 id=6725 data-nosnippet>6725</a>    nargs = nargs.saturating_sub(<span class="number">1</span>);
+<a href=#6726 id=6726 data-nosnippet>6726</a>  }
+<a href=#6727 id=6727 data-nosnippet>6727</a>  <span class="kw">for _ in </span><span class="number">1</span>..=nargs {
+<a href=#6728 id=6728 data-nosnippet>6728</a>    params.push(
+<a href=#6729 id=6729 data-nosnippet>6729</a>      Parameter {
+<a href=#6730 id=6730 data-nosnippet>6730</a>        name: <span class="macro">pin!</span>(<span class="string">"Plain"</span>),
+<a href=#6731 id=6731 data-nosnippet>6731</a>        spec: <span class="macro">pin!</span>(<span class="string">"{}"</span>),
+<a href=#6732 id=6732 data-nosnippet>6732</a>        ..Parameter::default()
+<a href=#6733 id=6733 data-nosnippet>6733</a>      }
+<a href=#6734 id=6734 data-nosnippet>6734</a>      .init()<span class="question-mark">?</span>,
+<a href=#6735 id=6735 data-nosnippet>6735</a>    );
+<a href=#6736 id=6736 data-nosnippet>6736</a>  }
+<a href=#6737 id=6737 data-nosnippet>6737</a>  <span class="kw">if </span>params.is_empty() {
+<a href=#6738 id=6738 data-nosnippet>6738</a>    <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
+<a href=#6739 id=6739 data-nosnippet>6739</a>  } <span class="kw">else </span>{
+<a href=#6740 id=6740 data-nosnippet>6740</a>    <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Parameters::new(params)))
+<a href=#6741 id=6741 data-nosnippet>6741</a>  }
+<a href=#6742 id=6742 data-nosnippet>6742</a>}
+<a href=#6743 id=6743 data-nosnippet>6743</a>
+<a href=#6744 id=6744 data-nosnippet>6744</a><span class="doccomment">/// Decode a codepoint using the fontmap for a given font and/or encoding (Perl: FontDecode).
+<a href=#6745 id=6745 data-nosnippet>6745</a>/// Returns the decoded glyph (if any) and the possibly-adjusted font.
+<a href=#6746 id=6746 data-nosnippet>6746</a></span><span class="kw">pub fn </span>font_decode(
+<a href=#6747 id=6747 data-nosnippet>6747</a>  code: i32,
+<a href=#6748 id=6748 data-nosnippet>6748</a>  encoding_opt: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;,
+<a href=#6749 id=6749 data-nosnippet>6749</a>  font_opt: <span class="prelude-ty">Option</span>&lt;Rc&lt;Font&gt;&gt;,
+<a href=#6750 id=6750 data-nosnippet>6750</a>) -&gt; (<span class="prelude-ty">Option</span>&lt;char&gt;, <span class="prelude-ty">Option</span>&lt;Rc&lt;Font&gt;&gt;) {
+<a href=#6751 id=6751 data-nosnippet>6751</a>  <span class="kw">if </span>code &lt; <span class="number">0 </span>{
+<a href=#6752 id=6752 data-nosnippet>6752</a>    <span class="kw">return </span>(<span class="prelude-val">None</span>, font_opt);
+<a href=#6753 id=6753 data-nosnippet>6753</a>  }
+<a href=#6754 id=6754 data-nosnippet>6754</a>  <span class="kw">let </span>font = font_opt.unwrap_or_else(|| lookup_font().unwrap());
+<a href=#6755 id=6755 data-nosnippet>6755</a>  <span class="kw">let </span>encoding = <span class="kw">match </span>encoding_opt {
+<a href=#6756 id=6756 data-nosnippet>6756</a>    <span class="prelude-val">Some</span>(enc) =&gt; enc.to_string(),
+<a href=#6757 id=6757 data-nosnippet>6757</a>    <span class="prelude-val">None </span>=&gt; font
+<a href=#6758 id=6758 data-nosnippet>6758</a>      .get_encoding()
+<a href=#6759 id=6759 data-nosnippet>6759</a>      .map_or_else(|| <span class="string">"OT1"</span>.to_string(), |c| c.to_string()),
+<a href=#6760 id=6760 data-nosnippet>6760</a>  };
+<a href=#6761 id=6761 data-nosnippet>6761</a>  <span class="kw">let </span>map = load_font_map(<span class="kw-2">&amp;</span>encoding);
+<a href=#6762 id=6762 data-nosnippet>6762</a>  <span class="comment">// Check for family-specific map. Use with_value to avoid cloning the
+<a href=#6763 id=6763 data-nosnippet>6763</a>  // Stored envelope when the From&lt;&amp;Stored&gt;→Option&lt;Fontmap&gt; impl only
+<a href=#6764 id=6764 data-nosnippet>6764</a>  // needs the enum variant discriminant + an Rc bump.
+<a href=#6765 id=6765 data-nosnippet>6765</a>  </span><span class="kw">let </span>(effective_map, _effective_enc) = <span class="kw">if let </span><span class="prelude-val">Some</span>(family) = font.get_family() {
+<a href=#6766 id=6766 data-nosnippet>6766</a>    <span class="kw">let </span>fam_key = <span class="macro">s!</span>(<span class="string">"{}_{}_fontmap"</span>, encoding, family);
+<a href=#6767 id=6767 data-nosnippet>6767</a>    <span class="kw">let </span>fam_map: <span class="prelude-ty">Option</span>&lt;Fontmap&gt; = with_value(<span class="kw-2">&amp;</span>fam_key, |v| v.and_then(|s| s.into()));
+<a href=#6768 id=6768 data-nosnippet>6768</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(fm) = fam_map {
+<a href=#6769 id=6769 data-nosnippet>6769</a>      (<span class="prelude-val">Some</span>(fm), <span class="macro">s!</span>(<span class="string">"{}_{}"</span>, encoding, family))
+<a href=#6770 id=6770 data-nosnippet>6770</a>    } <span class="kw">else </span>{
+<a href=#6771 id=6771 data-nosnippet>6771</a>      (map, encoding)
+<a href=#6772 id=6772 data-nosnippet>6772</a>    }
+<a href=#6773 id=6773 data-nosnippet>6773</a>  } <span class="kw">else </span>{
+<a href=#6774 id=6774 data-nosnippet>6774</a>    (map, encoding)
+<a href=#6775 id=6775 data-nosnippet>6775</a>  };
+<a href=#6776 id=6776 data-nosnippet>6776</a>  <span class="kw">let </span>glyph = effective_map
+<a href=#6777 id=6777 data-nosnippet>6777</a>    .as_ref()
+<a href=#6778 id=6778 data-nosnippet>6778</a>    .and_then(|m| m.get(code <span class="kw">as </span>usize).copied().flatten());
+<a href=#6779 id=6779 data-nosnippet>6779</a>  <span class="comment">// In-math alphanumeric mathstyle handling is done in decodeMathChar instead
+<a href=#6780 id=6780 data-nosnippet>6780</a>  </span>(glyph, <span class="prelude-val">Some</span>(font))
+<a href=#6781 id=6781 data-nosnippet>6781</a>}
+<a href=#6782 id=6782 data-nosnippet>6782</a>
+<a href=#6783 id=6783 data-nosnippet>6783</a><span class="doccomment">/// Decode a string using the fontmap for a given encoding (Perl: FontDecodeString).
+<a href=#6784 id=6784 data-nosnippet>6784</a>/// If `implicit` is true, codepoints missing from the map decode to themselves.
+<a href=#6785 id=6785 data-nosnippet>6785</a></span><span class="kw">pub fn </span>font_decode_string(string: <span class="kw-2">&amp;</span>str, encoding_opt: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;, implicit: bool) -&gt; String {
+<a href=#6786 id=6786 data-nosnippet>6786</a>  <span class="kw">let </span>font = lookup_font().unwrap();
+<a href=#6787 id=6787 data-nosnippet>6787</a>  <span class="kw">let </span>encoding = <span class="kw">match </span>encoding_opt {
+<a href=#6788 id=6788 data-nosnippet>6788</a>    <span class="prelude-val">Some</span>(enc) =&gt; enc.to_string(),
+<a href=#6789 id=6789 data-nosnippet>6789</a>    <span class="prelude-val">None </span>=&gt; font
+<a href=#6790 id=6790 data-nosnippet>6790</a>      .get_encoding()
+<a href=#6791 id=6791 data-nosnippet>6791</a>      .map_or_else(|| <span class="string">"OT1"</span>.to_string(), |c| c.to_string()),
+<a href=#6792 id=6792 data-nosnippet>6792</a>  };
+<a href=#6793 id=6793 data-nosnippet>6793</a>  <span class="kw">let </span>map = load_font_map(<span class="kw-2">&amp;</span>encoding);
+<a href=#6794 id=6794 data-nosnippet>6794</a>  <span class="comment">// Check for family-specific map — same with_value motivation as above.
+<a href=#6795 id=6795 data-nosnippet>6795</a>  </span><span class="kw">let </span>effective_map = <span class="kw">if let </span><span class="prelude-val">Some</span>(family) = font.get_family() {
+<a href=#6796 id=6796 data-nosnippet>6796</a>    <span class="kw">let </span>fam_key = <span class="macro">s!</span>(<span class="string">"{}_{}_fontmap"</span>, encoding, family);
+<a href=#6797 id=6797 data-nosnippet>6797</a>    <span class="kw">let </span>fam_map: <span class="prelude-ty">Option</span>&lt;Fontmap&gt; = with_value(<span class="kw-2">&amp;</span>fam_key, |v| v.and_then(|s| s.into()));
+<a href=#6798 id=6798 data-nosnippet>6798</a>    fam_map.or(map)
+<a href=#6799 id=6799 data-nosnippet>6799</a>  } <span class="kw">else </span>{
+<a href=#6800 id=6800 data-nosnippet>6800</a>    map
+<a href=#6801 id=6801 data-nosnippet>6801</a>  };
+<a href=#6802 id=6802 data-nosnippet>6802</a>  <span class="kw">let </span>input_enc = lookup_string(<span class="string">"INPUT_ENCODING"</span>);
+<a href=#6803 id=6803 data-nosnippet>6803</a>  <span class="kw">let </span>map_max: usize = <span class="kw">if </span>input_enc == <span class="string">"utf8" </span>{ <span class="number">128 </span>} <span class="kw">else </span>{ <span class="number">256 </span>};
+<a href=#6804 id=6804 data-nosnippet>6804</a>  <span class="comment">// Also limit for short font maps
+<a href=#6805 id=6805 data-nosnippet>6805</a>  </span><span class="kw">let </span>map_max = <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>m) = effective_map {
+<a href=#6806 id=6806 data-nosnippet>6806</a>    <span class="kw">if </span>m.len() &lt; map_max { m.len() } <span class="kw">else </span>{ map_max }
+<a href=#6807 id=6807 data-nosnippet>6807</a>  } <span class="kw">else </span>{
+<a href=#6808 id=6808 data-nosnippet>6808</a>    map_max
+<a href=#6809 id=6809 data-nosnippet>6809</a>  };
+<a href=#6810 id=6810 data-nosnippet>6810</a>
+<a href=#6811 id=6811 data-nosnippet>6811</a>  <span class="kw">let </span><span class="kw-2">mut </span>result = String::new();
+<a href=#6812 id=6812 data-nosnippet>6812</a>  <span class="kw">for </span>ch <span class="kw">in </span>string.chars() {
+<a href=#6813 id=6813 data-nosnippet>6813</a>    <span class="kw">let </span>code = ch <span class="kw">as </span>usize;
+<a href=#6814 id=6814 data-nosnippet>6814</a>    <span class="kw">if </span>implicit {
+<a href=#6815 id=6815 data-nosnippet>6815</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>m) = effective_map {
+<a href=#6816 id=6816 data-nosnippet>6816</a>        <span class="kw">if </span>code &lt; map_max {
+<a href=#6817 id=6817 data-nosnippet>6817</a>          <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(glyph)) = m.get(code) {
+<a href=#6818 id=6818 data-nosnippet>6818</a>            result.push(<span class="kw-2">*</span>glyph);
+<a href=#6819 id=6819 data-nosnippet>6819</a>          }
+<a href=#6820 id=6820 data-nosnippet>6820</a>        } <span class="kw">else </span>{
+<a href=#6821 id=6821 data-nosnippet>6821</a>          result.push(ch);
+<a href=#6822 id=6822 data-nosnippet>6822</a>        }
+<a href=#6823 id=6823 data-nosnippet>6823</a>      } <span class="kw">else </span>{
+<a href=#6824 id=6824 data-nosnippet>6824</a>        result.push(ch);
+<a href=#6825 id=6825 data-nosnippet>6825</a>      }
+<a href=#6826 id=6826 data-nosnippet>6826</a>    } <span class="kw">else if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>m) = effective_map
+<a href=#6827 id=6827 data-nosnippet>6827</a>      &amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(glyph)) = m.get(code)
+<a href=#6828 id=6828 data-nosnippet>6828</a>    {
+<a href=#6829 id=6829 data-nosnippet>6829</a>      result.push(<span class="kw-2">*</span>glyph);
+<a href=#6830 id=6830 data-nosnippet>6830</a>    }
+<a href=#6831 id=6831 data-nosnippet>6831</a>  }
+<a href=#6832 id=6832 data-nosnippet>6832</a>  result
+<a href=#6833 id=6833 data-nosnippet>6833</a>}
+<a href=#6834 id=6834 data-nosnippet>6834</a>
+<a href=#6835 id=6835 data-nosnippet>6835</a><span class="comment">// Memoized key symbols for the per-encoding fontmap Value-table entries.
+<a href=#6836 id=6836 data-nosnippet>6836</a>// `decode_string` runs per digested character run and used to rebuild (format!
+<a href=#6837 id=6837 data-nosnippet>6837</a>// + arena probe) the `"{encoding}_fontmap"`-family keys on every call — ~1M
+<a href=#6838 id=6838 data-nosnippet>6838</a>// allocations on a 1.3 s paper (2026-08-23 audit R6, dhat). Encodings are few
+<a href=#6839 id=6839 data-nosnippet>6839</a>// (OT1/T1/OML/…), so the (encoding → key syms) maps stay tiny. Value lookups
+<a href=#6840 id=6840 data-nosnippet>6840</a>// still go through the state tables — only the key STRINGS are memoized.
+<a href=#6841 id=6841 data-nosnippet>6841</a>// Keyed by arena SymStr, so MUST be cleared with `arena::reset()`
+<a href=#6842 id=6842 data-nosnippet>6842</a>// (`reset_fontmap_key_memo`, called from `reset_thread_engine`).
+<a href=#6843 id=6843 data-nosnippet>6843</a></span><span class="macro">thread_local!</span> {
+<a href=#6844 id=6844 data-nosnippet>6844</a>  <span class="kw">static </span>FONTMAP_KEY_MEMO: std::cell::RefCell&lt;HashMap&lt;String, FontmapKeySyms&gt;&gt; =
+<a href=#6845 id=6845 data-nosnippet>6845</a>    std::cell::RefCell::new(HashMap::default());
+<a href=#6846 id=6846 data-nosnippet>6846</a>  <span class="kw">static </span>FONTMAP_FAMILY_KEY_MEMO: std::cell::RefCell&lt;HashMap&lt;(String, String), (SymStr, SymStr)&gt;&gt; =
+<a href=#6847 id=6847 data-nosnippet>6847</a>    std::cell::RefCell::new(HashMap::default());
+<a href=#6848 id=6848 data-nosnippet>6848</a>  <span class="doccomment">/// The last answers of the two memos: text decodes glyph after glyph in one font, a few probes per glyph
+<a href=#6849 id=6849 data-nosnippet>6849</a>  /// (2103.04797, 1704.02085), and a string compare is cheaper than a hash probe (the family one built two keys).
+<a href=#6850 id=6850 data-nosnippet>6850</a>  </span><span class="kw">static </span>FONTMAP_KEY_LAST: std::cell::RefCell&lt;<span class="prelude-ty">Option</span>&lt;(String, FontmapKeySyms)&gt;&gt; =
+<a href=#6851 id=6851 data-nosnippet>6851</a>    <span class="kw">const </span>{ std::cell::RefCell::new(<span class="prelude-val">None</span>) };
+<a href=#6852 id=6852 data-nosnippet>6852</a>  <span class="kw">static </span>FONTMAP_FAMILY_KEY_LAST: std::cell::RefCell&lt;<span class="prelude-ty">Option</span>&lt;(String, String, FamilyKeySyms)&gt;&gt; =
+<a href=#6853 id=6853 data-nosnippet>6853</a>    <span class="kw">const </span>{ std::cell::RefCell::new(<span class="prelude-val">None</span>) };
+<a href=#6854 id=6854 data-nosnippet>6854</a>}
+<a href=#6855 id=6855 data-nosnippet>6855</a>
+<a href=#6856 id=6856 data-nosnippet>6856</a><span class="doccomment">/// `fontmap_family_key_syms`' answer: the family map's key and its multichar table's.
+<a href=#6857 id=6857 data-nosnippet>6857</a></span><span class="kw">type </span>FamilyKeySyms = (SymStr, SymStr);
+<a href=#6858 id=6858 data-nosnippet>6858</a>
+<a href=#6859 id=6859 data-nosnippet>6859</a><span class="attr">#[derive(Clone, Copy)]
+<a href=#6860 id=6860 data-nosnippet>6860</a></span><span class="kw">pub struct </span>FontmapKeySyms {
+<a href=#6861 id=6861 data-nosnippet>6861</a>  <span class="doccomment">/// `"{encoding}_fontmap"`
+<a href=#6862 id=6862 data-nosnippet>6862</a>  </span><span class="kw">pub </span>map:       SymStr,
+<a href=#6863 id=6863 data-nosnippet>6863</a>  <span class="doccomment">/// `"{encoding}_fontmap_failed_to_load"`
+<a href=#6864 id=6864 data-nosnippet>6864</a>  </span><span class="kw">pub </span>fail:      SymStr,
+<a href=#6865 id=6865 data-nosnippet>6865</a>  <span class="doccomment">/// `"{encoding}_fontmap_multichar"`
+<a href=#6866 id=6866 data-nosnippet>6866</a>  </span><span class="kw">pub </span>multichar: SymStr,
+<a href=#6867 id=6867 data-nosnippet>6867</a>}
+<a href=#6868 id=6868 data-nosnippet>6868</a>
+<a href=#6869 id=6869 data-nosnippet>6869</a><span class="doccomment">/// The memoized key symbols for `encoding`'s fontmap Value-table entries.
+<a href=#6870 id=6870 data-nosnippet>6870</a></span><span class="kw">pub fn </span>fontmap_key_syms(encoding: <span class="kw-2">&amp;</span>str) -&gt; FontmapKeySyms {
+<a href=#6871 id=6871 data-nosnippet>6871</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(keys) = FONTMAP_KEY_LAST.with_borrow(|last| {
+<a href=#6872 id=6872 data-nosnippet>6872</a>    last
+<a href=#6873 id=6873 data-nosnippet>6873</a>      .as_ref()
+<a href=#6874 id=6874 data-nosnippet>6874</a>      .filter(|(e, <span class="kw">_</span>)| e == encoding)
+<a href=#6875 id=6875 data-nosnippet>6875</a>      .map(|(<span class="kw">_</span>, keys)| <span class="kw-2">*</span>keys)
+<a href=#6876 id=6876 data-nosnippet>6876</a>  }) {
+<a href=#6877 id=6877 data-nosnippet>6877</a>    <span class="kw">return </span>keys;
+<a href=#6878 id=6878 data-nosnippet>6878</a>  }
+<a href=#6879 id=6879 data-nosnippet>6879</a>  <span class="kw">let </span>keys = FONTMAP_KEY_MEMO.with(|m| {
+<a href=#6880 id=6880 data-nosnippet>6880</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(keys) = m.borrow().get(encoding) {
+<a href=#6881 id=6881 data-nosnippet>6881</a>      <span class="kw">return </span><span class="kw-2">*</span>keys;
+<a href=#6882 id=6882 data-nosnippet>6882</a>    }
+<a href=#6883 id=6883 data-nosnippet>6883</a>    <span class="kw">let </span>keys = FontmapKeySyms {
+<a href=#6884 id=6884 data-nosnippet>6884</a>      map:       arena::pin(<span class="macro">s!</span>(<span class="string">"{encoding}_fontmap"</span>)),
+<a href=#6885 id=6885 data-nosnippet>6885</a>      fail:      arena::pin(<span class="macro">s!</span>(<span class="string">"{encoding}_fontmap_failed_to_load"</span>)),
+<a href=#6886 id=6886 data-nosnippet>6886</a>      multichar: arena::pin(<span class="macro">s!</span>(<span class="string">"{encoding}_fontmap_multichar"</span>)),
+<a href=#6887 id=6887 data-nosnippet>6887</a>    };
+<a href=#6888 id=6888 data-nosnippet>6888</a>    m.borrow_mut().insert(encoding.to_string(), keys);
+<a href=#6889 id=6889 data-nosnippet>6889</a>    keys
+<a href=#6890 id=6890 data-nosnippet>6890</a>  });
+<a href=#6891 id=6891 data-nosnippet>6891</a>  FONTMAP_KEY_LAST.with_borrow_mut(|last| <span class="kw">match </span>last {
+<a href=#6892 id=6892 data-nosnippet>6892</a>    <span class="comment">// Reuse the buffer: text and math glyphs alternate encodings (OT1, OML).
+<a href=#6893 id=6893 data-nosnippet>6893</a>    </span><span class="prelude-val">Some</span>((e, k)) =&gt; {
+<a href=#6894 id=6894 data-nosnippet>6894</a>      e.clear();
+<a href=#6895 id=6895 data-nosnippet>6895</a>      e.push_str(encoding);
+<a href=#6896 id=6896 data-nosnippet>6896</a>      <span class="kw-2">*</span>k = keys;
+<a href=#6897 id=6897 data-nosnippet>6897</a>    },
+<a href=#6898 id=6898 data-nosnippet>6898</a>    <span class="prelude-val">None </span>=&gt; <span class="kw-2">*</span>last = <span class="prelude-val">Some</span>((encoding.to_string(), keys)),
+<a href=#6899 id=6899 data-nosnippet>6899</a>  });
+<a href=#6900 id=6900 data-nosnippet>6900</a>  keys
+<a href=#6901 id=6901 data-nosnippet>6901</a>}
+<a href=#6902 id=6902 data-nosnippet>6902</a>
+<a href=#6903 id=6903 data-nosnippet>6903</a><span class="doccomment">/// The memoized `"{encoding}_{family}_fontmap"` and `"{encoding}_{family}_fontmap_multichar"` key symbols.
+<a href=#6904 id=6904 data-nosnippet>6904</a></span><span class="kw">pub fn </span>fontmap_family_key_syms(encoding: <span class="kw-2">&amp;</span>str, family: <span class="kw-2">&amp;</span>str) -&gt; (SymStr, SymStr) {
+<a href=#6905 id=6905 data-nosnippet>6905</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(syms) = FONTMAP_FAMILY_KEY_LAST.with_borrow(|last| {
+<a href=#6906 id=6906 data-nosnippet>6906</a>    last
+<a href=#6907 id=6907 data-nosnippet>6907</a>      .as_ref()
+<a href=#6908 id=6908 data-nosnippet>6908</a>      .filter(|(e, f, <span class="kw">_</span>)| e == encoding &amp;&amp; f == family)
+<a href=#6909 id=6909 data-nosnippet>6909</a>      .map(|(<span class="kw">_</span>, <span class="kw">_</span>, syms)| <span class="kw-2">*</span>syms)
+<a href=#6910 id=6910 data-nosnippet>6910</a>  }) {
+<a href=#6911 id=6911 data-nosnippet>6911</a>    <span class="kw">return </span>syms;
+<a href=#6912 id=6912 data-nosnippet>6912</a>  }
+<a href=#6913 id=6913 data-nosnippet>6913</a>  <span class="kw">let </span>syms = FONTMAP_FAMILY_KEY_MEMO.with(|m| {
+<a href=#6914 id=6914 data-nosnippet>6914</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(syms) = m.borrow().get(<span class="kw-2">&amp;</span>(encoding.to_string(), family.to_string())) {
+<a href=#6915 id=6915 data-nosnippet>6915</a>      <span class="kw">return </span><span class="kw-2">*</span>syms;
+<a href=#6916 id=6916 data-nosnippet>6916</a>    }
+<a href=#6917 id=6917 data-nosnippet>6917</a>    <span class="kw">let </span>syms = (
+<a href=#6918 id=6918 data-nosnippet>6918</a>      arena::pin(<span class="macro">s!</span>(<span class="string">"{encoding}_{family}_fontmap"</span>)),
+<a href=#6919 id=6919 data-nosnippet>6919</a>      arena::pin(<span class="macro">s!</span>(<span class="string">"{encoding}_{family}_fontmap_multichar"</span>)),
+<a href=#6920 id=6920 data-nosnippet>6920</a>    );
+<a href=#6921 id=6921 data-nosnippet>6921</a>    m.borrow_mut()
+<a href=#6922 id=6922 data-nosnippet>6922</a>      .insert((encoding.to_string(), family.to_string()), syms);
+<a href=#6923 id=6923 data-nosnippet>6923</a>    syms
+<a href=#6924 id=6924 data-nosnippet>6924</a>  });
+<a href=#6925 id=6925 data-nosnippet>6925</a>  FONTMAP_FAMILY_KEY_LAST.with_borrow_mut(|last| <span class="kw">match </span>last {
+<a href=#6926 id=6926 data-nosnippet>6926</a>    <span class="prelude-val">Some</span>((e, f, k)) =&gt; {
+<a href=#6927 id=6927 data-nosnippet>6927</a>      e.clear();
+<a href=#6928 id=6928 data-nosnippet>6928</a>      e.push_str(encoding);
+<a href=#6929 id=6929 data-nosnippet>6929</a>      f.clear();
+<a href=#6930 id=6930 data-nosnippet>6930</a>      f.push_str(family);
+<a href=#6931 id=6931 data-nosnippet>6931</a>      <span class="kw-2">*</span>k = syms;
+<a href=#6932 id=6932 data-nosnippet>6932</a>    },
+<a href=#6933 id=6933 data-nosnippet>6933</a>    <span class="prelude-val">None </span>=&gt; <span class="kw-2">*</span>last = <span class="prelude-val">Some</span>((encoding.to_string(), family.to_string(), syms)),
+<a href=#6934 id=6934 data-nosnippet>6934</a>  });
+<a href=#6935 id=6935 data-nosnippet>6935</a>  syms
+<a href=#6936 id=6936 data-nosnippet>6936</a>}
+<a href=#6937 id=6937 data-nosnippet>6937</a>
+<a href=#6938 id=6938 data-nosnippet>6938</a><span class="doccomment">/// Clear the fontmap key-symbol memos. Companion to `arena::reset()` — the
+<a href=#6939 id=6939 data-nosnippet>6939</a>/// cached `SymStr`s dangle after a reset renumbers the arena.
+<a href=#6940 id=6940 data-nosnippet>6940</a></span><span class="kw">pub fn </span>reset_fontmap_key_memo() {
+<a href=#6941 id=6941 data-nosnippet>6941</a>  FONTMAP_KEY_MEMO.with(|m| m.borrow_mut().clear());
+<a href=#6942 id=6942 data-nosnippet>6942</a>  FONTMAP_FAMILY_KEY_MEMO.with(|m| m.borrow_mut().clear());
+<a href=#6943 id=6943 data-nosnippet>6943</a>  FONTMAP_KEY_LAST.set(<span class="prelude-val">None</span>);
+<a href=#6944 id=6944 data-nosnippet>6944</a>  FONTMAP_FAMILY_KEY_LAST.set(<span class="prelude-val">None</span>);
+<a href=#6945 id=6945 data-nosnippet>6945</a>}
+<a href=#6946 id=6946 data-nosnippet>6946</a>
+<a href=#6947 id=6947 data-nosnippet>6947</a><span class="kw">pub fn </span>load_font_map(encoding: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;Fontmap&gt; {
+<a href=#6948 id=6948 data-nosnippet>6948</a>  <span class="kw">let </span>keys = fontmap_key_syms(encoding);
+<a href=#6949 id=6949 data-nosnippet>6949</a>  <span class="kw">let _ </span>= preload_font_map_keyed(encoding, keys); <span class="comment">// infallible in practice; swallow Result
+<a href=#6950 id=6950 data-nosnippet>6950</a>  // with_value avoids the Stored::clone; the Fontmap extraction is a cheap
+<a href=#6951 id=6951 data-nosnippet>6951</a>  // Rc bump on the inner slice regardless.
+<a href=#6952 id=6952 data-nosnippet>6952</a>  </span>with_value_sym(keys.map, |v| v.and_then(|s| s.into()))
+<a href=#6953 id=6953 data-nosnippet>6953</a>}
+<a href=#6954 id=6954 data-nosnippet>6954</a><span class="kw">pub fn </span>preload_font_map(encoding: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#6955 id=6955 data-nosnippet>6955</a>  preload_font_map_keyed(encoding, fontmap_key_syms(encoding))
+<a href=#6956 id=6956 data-nosnippet>6956</a>}
+<a href=#6957 id=6957 data-nosnippet>6957</a><span class="kw">fn </span>preload_font_map_keyed(encoding: <span class="kw-2">&amp;</span>str, keys: FontmapKeySyms) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#6958 id=6958 data-nosnippet>6958</a>  <span class="comment">// This check is done as a "preload" step for mutability reasons.
+<a href=#6959 id=6959 data-nosnippet>6959</a>  </span><span class="kw">if </span>has_value_sym(keys.map) {
+<a href=#6960 id=6960 data-nosnippet>6960</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+<a href=#6961 id=6961 data-nosnippet>6961</a>  }
+<a href=#6962 id=6962 data-nosnippet>6962</a>  <span class="kw">let </span>failed_flag = lookup_bool_sym(keys.fail);
+<a href=#6963 id=6963 data-nosnippet>6963</a>  <span class="kw">if </span>!failed_flag {
+<a href=#6964 id=6964 data-nosnippet>6964</a>    assign_value_sym(keys.fail, <span class="bool-val">true</span>, <span class="prelude-val">None</span>); <span class="comment">// Stop recursion?
+<a href=#6965 id=6965 data-nosnippet>6965</a>    </span><span class="kw">let _ </span>= input_definitions(<span class="kw-2">&amp;</span>encoding.to_lowercase(), InputDefinitionOptions {
+<a href=#6966 id=6966 data-nosnippet>6966</a>      extension: <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"fontmap"</span>)),
+<a href=#6967 id=6967 data-nosnippet>6967</a>      noerror: <span class="bool-val">true</span>,
+<a href=#6968 id=6968 data-nosnippet>6968</a>      ..InputDefinitionOptions::default()
+<a href=#6969 id=6969 data-nosnippet>6969</a>    });
+<a href=#6970 id=6970 data-nosnippet>6970</a>    <span class="kw">if </span>has_value_sym(keys.map) {
+<a href=#6971 id=6971 data-nosnippet>6971</a>      <span class="comment">// Got map?
+<a href=#6972 id=6972 data-nosnippet>6972</a>      </span>assign_value_sym(keys.fail, <span class="bool-val">false</span>, <span class="prelude-val">None</span>);
+<a href=#6973 id=6973 data-nosnippet>6973</a>    } <span class="kw">else </span>{
+<a href=#6974 id=6974 data-nosnippet>6974</a>      assign_value_sym(keys.fail, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#6975 id=6975 data-nosnippet>6975</a>    }
+<a href=#6976 id=6976 data-nosnippet>6976</a>  }
+<a href=#6977 id=6977 data-nosnippet>6977</a>  <span class="prelude-val">Ok</span>(())
+<a href=#6978 id=6978 data-nosnippet>6978</a>}
+<a href=#6979 id=6979 data-nosnippet>6979</a>
+<a href=#6980 id=6980 data-nosnippet>6980</a><span class="attr">#[cfg(test)]
+<a href=#6981 id=6981 data-nosnippet>6981</a></span><span class="kw">mod </span>declared_info_tests {
+<a href=#6982 id=6982 data-nosnippet>6982</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
+<a href=#6983 id=6983 data-nosnippet>6983</a>
+<a href=#6984 id=6984 data-nosnippet>6984</a>  <span class="doccomment">/// A standard-class derivative's read a panic unwinds out of leaves no entry: the next read is no derivative's.
+<a href=#6985 id=6985 data-nosnippet>6985</a>  </span><span class="attr">#[test]
+<a href=#6986 id=6986 data-nosnippet>6986</a>  </span><span class="kw">fn </span>a_derivative_read_a_panic_ends_is_popped() {
+<a href=#6987 id=6987 data-nosnippet>6987</a>    <span class="kw">let </span>unwound = std::panic::catch_unwind(|| {
+<a href=#6988 id=6988 data-nosnippet>6988</a>      <span class="kw">let </span>_read = StandardClassDerivativeRead::enter(HashSet::default());
+<a href=#6989 id=6989 data-nosnippet>6989</a>      <span class="macro">panic!</span>(<span class="string">"a binding's bug"</span>);
+<a href=#6990 id=6990 data-nosnippet>6990</a>    });
+<a href=#6991 id=6991 data-nosnippet>6991</a>    <span class="macro">assert!</span>(unwound.is_err());
+<a href=#6992 id=6992 data-nosnippet>6992</a>    <span class="macro">assert!</span>(STANDARD_CLASS_DERIVATIVE.with(|reads| reads.borrow().is_empty()));
+<a href=#6993 id=6993 data-nosnippet>6993</a>  }
+<a href=#6994 id=6994 data-nosnippet>6994</a>
+<a href=#6995 id=6995 data-nosnippet>6995</a>  <span class="doccomment">/// `\Provides…` text as latex.ltx's `\xdef` leaves it: the kernel's `\space` and `\ ` read as spaces
+<a href=#6996 id=6996 data-nosnippet>6996</a>  /// (cite.sty `[2015/02/27 \space v 5.5]`); a file's own macros (listings.sty:22-23 `\filedate\space\fileversion`,
+<a href=#6997 id=6997 data-nosnippet>6997</a>  /// vmargin's `\Vmargin`) give nothing.
+<a href=#6998 id=6998 data-nosnippet>6998</a>  </span><span class="attr">#[test]
+<a href=#6999 id=6999 data-nosnippet>6999</a>  </span><span class="kw">fn </span>declared_text_expands_like_xdef() {
+<a href=#7000 id=7000 data-nosnippet>7000</a>    <span class="macro">assert_eq!</span>(
+<a href=#7001 id=7001 data-nosnippet>7001</a>      expand_declared(<span class="string">"2015/02/27 \\space v 5.5"</span>).as_deref(),
+<a href=#7002 id=7002 data-nosnippet>7002</a>      <span class="prelude-val">Some</span>(<span class="string">"2015/02/27  v 5.5"</span>)
+<a href=#7003 id=7003 data-nosnippet>7003</a>    );
+<a href=#7004 id=7004 data-nosnippet>7004</a>    <span class="macro">assert_eq!</span>(
+<a href=#7005 id=7005 data-nosnippet>7005</a>      expand_declared(<span class="string">"2015/02/27\\ v5.5"</span>).as_deref(),
+<a href=#7006 id=7006 data-nosnippet>7006</a>      <span class="prelude-val">Some</span>(<span class="string">"2015/02/27 v5.5"</span>)
+<a href=#7007 id=7007 data-nosnippet>7007</a>    );
+<a href=#7008 id=7008 data-nosnippet>7008</a>    <span class="macro">assert_eq!</span>(
+<a href=#7009 id=7009 data-nosnippet>7009</a>      expand_declared(<span class="string">"2015/02/27\\  v5.5"</span>).as_deref(),
+<a href=#7010 id=7010 data-nosnippet>7010</a>      <span class="prelude-val">Some</span>(<span class="string">"2015/02/27 v5.5"</span>)
+<a href=#7011 id=7011 data-nosnippet>7011</a>    );
+<a href=#7012 id=7012 data-nosnippet>7012</a>    <span class="macro">assert_eq!</span>(
+<a href=#7013 id=7013 data-nosnippet>7013</a>      expand_declared(<span class="string">"2024/11/12 v2.9 Span multiple rows"</span>).as_deref(),
+<a href=#7014 id=7014 data-nosnippet>7014</a>      <span class="prelude-val">Some</span>(<span class="string">"2024/11/12 v2.9 Span multiple rows"</span>)
+<a href=#7015 id=7015 data-nosnippet>7015</a>    );
 <a href=#7016 id=7016 data-nosnippet>7016</a>    <span class="macro">assert_eq!</span>(
-<a href=#7017 id=7017 data-nosnippet>7017</a>      provided_text(multirow, <span class="string">"multirow.sty"</span>).as_deref(),
-<a href=#7018 id=7018 data-nosnippet>7018</a>      <span class="prelude-val">Some</span>(<span class="string">"2024/11/12 v2.9 Span multiple rows of a table"</span>)
-<a href=#7019 id=7019 data-nosnippet>7019</a>    );
-<a href=#7020 id=7020 data-nosnippet>7020</a>    <span class="kw">let </span>twice = <span class="string">"\\ProvidesPackage{x}\n\\ProvidesPackage{x}[2020/01/01 v1]"</span>;
-<a href=#7021 id=7021 data-nosnippet>7021</a>    <span class="macro">assert_eq!</span>(
-<a href=#7022 id=7022 data-nosnippet>7022</a>      provided_text(twice, <span class="string">"x.sty"</span>).as_deref(),
-<a href=#7023 id=7023 data-nosnippet>7023</a>      <span class="prelude-val">Some</span>(<span class="string">"2020/01/01 v1"</span>)
-<a href=#7024 id=7024 data-nosnippet>7024</a>    );
-<a href=#7025 id=7025 data-nosnippet>7025</a>  }
-<a href=#7026 id=7026 data-nosnippet>7026</a>}
+<a href=#7017 id=7017 data-nosnippet>7017</a>      expand_declared(<span class="string">"\\filedate\\space\\fileversion\\space(Carsten Heinz)"</span>),
+<a href=#7018 id=7018 data-nosnippet>7018</a>      <span class="prelude-val">None
+<a href=#7019 id=7019 data-nosnippet>7019</a>    </span>);
+<a href=#7020 id=7020 data-nosnippet>7020</a>    <span class="macro">assert_eq!</span>(expand_declared(<span class="string">"\\Vmargin"</span>), <span class="prelude-val">None</span>);
+<a href=#7021 id=7021 data-nosnippet>7021</a>    <span class="macro">assert_eq!</span>(expand_declared(<span class="string">""</span>), <span class="prelude-val">None</span>);
+<a href=#7022 id=7022 data-nosnippet>7022</a>  }
+<a href=#7023 id=7023 data-nosnippet>7023</a>
+<a href=#7024 id=7024 data-nosnippet>7024</a>  <span class="doccomment">/// A `%` comment between the name and the bracket (multirow.sty:25-27); a match without a bracket goes on to the
+<a href=#7025 id=7025 data-nosnippet>7025</a>  /// next `\Provides`.
+<a href=#7026 id=7026 data-nosnippet>7026</a>  </span><span class="attr">#[test]
+<a href=#7027 id=7027 data-nosnippet>7027</a>  </span><span class="kw">fn </span>provided_text_skips_comments_before_the_bracket() {
+<a href=#7028 id=7028 data-nosnippet>7028</a>    <span class="kw">let </span>multirow =
+<a href=#7029 id=7029 data-nosnippet>7029</a>      <span class="string">"\\ProvidesPackage{multirow}%\n  % note\n  [2024/11/12 v2.9 Span multiple rows of a table]\n"</span>;
+<a href=#7030 id=7030 data-nosnippet>7030</a>    <span class="macro">assert_eq!</span>(
+<a href=#7031 id=7031 data-nosnippet>7031</a>      provided_text(multirow, <span class="string">"multirow.sty"</span>).as_deref(),
+<a href=#7032 id=7032 data-nosnippet>7032</a>      <span class="prelude-val">Some</span>(<span class="string">"2024/11/12 v2.9 Span multiple rows of a table"</span>)
+<a href=#7033 id=7033 data-nosnippet>7033</a>    );
+<a href=#7034 id=7034 data-nosnippet>7034</a>    <span class="kw">let </span>twice = <span class="string">"\\ProvidesPackage{x}\n\\ProvidesPackage{x}[2020/01/01 v1]"</span>;
+<a href=#7035 id=7035 data-nosnippet>7035</a>    <span class="macro">assert_eq!</span>(
+<a href=#7036 id=7036 data-nosnippet>7036</a>      provided_text(twice, <span class="string">"x.sty"</span>).as_deref(),
+<a href=#7037 id=7037 data-nosnippet>7037</a>      <span class="prelude-val">Some</span>(<span class="string">"2020/01/01 v1"</span>)
+<a href=#7038 id=7038 data-nosnippet>7038</a>    );
+<a href=#7039 id=7039 data-nosnippet>7039</a>  }
+<a href=#7040 id=7040 data-nosnippet>7040</a>}
 </code></pre></div></section></main></body></html>

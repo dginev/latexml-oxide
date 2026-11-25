@@ -19,18 +19,18 @@
 <a href=#19 id=19 data-nosnippet>19</a>        }
 <a href=#20 id=20 data-nosnippet>20</a>        <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[]);
 <a href=#21 id=21 data-nosnippet>21</a>      }
-<a href=#22 id=22 data-nosnippet>22</a>      define_twoopt(<span class="kw-2">&amp;</span>cs, nargs.value_of() <span class="kw">as </span>usize, opt1, opt2, body)<span class="question-mark">?</span>;
+<a href=#22 id=22 data-nosnippet>22</a>      define_twoopt(<span class="kw-2">&amp;</span>cs, nargs.value_of(), opt1, opt2, body)<span class="question-mark">?</span>;
 <a href=#23 id=23 data-nosnippet>23</a>    });
 <a href=#24 id=24 data-nosnippet>24</a>
 <a href=#25 id=25 data-nosnippet>25</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\renewcommandtwoopt OptionalMatch:* DefToken [Number][][]{}"</span>,
 <a href=#26 id=26 data-nosnippet>26</a>    sub[(_star, cs, nargs, opt1, opt2, body)] {
-<a href=#27 id=27 data-nosnippet>27</a>      define_twoopt(<span class="kw-2">&amp;</span>cs, nargs.value_of() <span class="kw">as </span>usize, opt1, opt2, body)<span class="question-mark">?</span>;
+<a href=#27 id=27 data-nosnippet>27</a>      define_twoopt(<span class="kw-2">&amp;</span>cs, nargs.value_of(), opt1, opt2, body)<span class="question-mark">?</span>;
 <a href=#28 id=28 data-nosnippet>28</a>    });
 <a href=#29 id=29 data-nosnippet>29</a>
 <a href=#30 id=30 data-nosnippet>30</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\providecommandtwoopt OptionalMatch:* DefToken [Number][][]{}"</span>,
 <a href=#31 id=31 data-nosnippet>31</a>    sub[(_star, cs, nargs, opt1, opt2, body)] {
 <a href=#32 id=32 data-nosnippet>32</a>      <span class="kw">if </span>!<span class="macro">IsDefinable!</span>(<span class="kw-2">&amp;</span>cs) { <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[]); }
-<a href=#33 id=33 data-nosnippet>33</a>      define_twoopt(<span class="kw-2">&amp;</span>cs, nargs.value_of() <span class="kw">as </span>usize, opt1, opt2, body)<span class="question-mark">?</span>;
+<a href=#33 id=33 data-nosnippet>33</a>      define_twoopt(<span class="kw-2">&amp;</span>cs, nargs.value_of(), opt1, opt2, body)<span class="question-mark">?</span>;
 <a href=#34 id=34 data-nosnippet>34</a>    });
 <a href=#35 id=35 data-nosnippet>35</a>});
 <a href=#36 id=36 data-nosnippet>36</a>
@@ -38,7 +38,7 @@
 <a href=#38 id=38 data-nosnippet>38</a>/// internal `\\cs` here reads both optional arguments and the rest itself (sect08.rs `define_optional_internal`).
 <a href=#39 id=39 data-nosnippet>39</a></span><span class="kw">fn </span>define_twoopt(
 <a href=#40 id=40 data-nosnippet>40</a>  cs: <span class="kw-2">&amp;</span>Token,
-<a href=#41 id=41 data-nosnippet>41</a>  nargs: usize,
+<a href=#41 id=41 data-nosnippet>41</a>  nargs: i64,
 <a href=#42 id=42 data-nosnippet>42</a>  opt1: <span class="prelude-ty">Option</span>&lt;Tokens&gt;,
 <a href=#43 id=43 data-nosnippet>43</a>  opt2: <span class="prelude-ty">Option</span>&lt;Tokens&gt;,
 <a href=#44 id=44 data-nosnippet>44</a>  body: Tokens,

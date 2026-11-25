@@ -109,7 +109,7 @@
 <a href=#109 id=109 data-nosnippet>109</a>  //     return AddToPreamble(T_CS('\newcolumntype'), $char, $nargs, $opt, $replacement); });
 <a href=#110 id=110 data-nosnippet>110</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\newcolumntype{}[Number][]{}"</span>, sub[(ch, nargs, opt, replacement)] {
 <a href=#111 id=111 data-nosnippet>111</a>    <span class="kw">let </span>ch_str = ch.to_string();
-<a href=#112 id=112 data-nosnippet>112</a>    <span class="kw">let </span>nargs_val = nargs.value_of() <span class="kw">as </span>usize;
+<a href=#112 id=112 data-nosnippet>112</a>    <span class="kw">let </span>nargs_val = nargs.value_of();
 <a href=#113 id=113 data-nosnippet>113</a>    <span class="kw">let </span>opt_clone = opt.clone();
 <a href=#114 id=114 data-nosnippet>114</a>    <span class="kw">let </span>replacement_toks: Tokens = replacement.revert().into();
 <a href=#115 id=115 data-nosnippet>115</a>    <span class="comment">// Define \NC@rewrite@&lt;char&gt; as a macro with the replacement

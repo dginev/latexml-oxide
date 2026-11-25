@@ -493,7 +493,7 @@
 <a href=#493 id=493 data-nosnippet>493</a>  // convert_latex_args from prelude
 <a href=#494 id=494 data-nosnippet>494</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\DeclareRobustCommand OptionalMatch:* SkipSpaces DefToken [Number][]{}"</span>,
 <a href=#495 id=495 data-nosnippet>495</a>  sub[(_star,cs,nargs,opt,body)] {
-<a href=#496 id=496 data-nosnippet>496</a>    <span class="kw">let </span>nargs = nargs.value_of() <span class="kw">as </span>usize;
+<a href=#496 id=496 data-nosnippet>496</a>    <span class="kw">let </span>nargs = nargs.value_of();
 <a href=#497 id=497 data-nosnippet>497</a>    <span class="kw">let </span>cs_args = convert_latex_args(nargs, opt)<span class="question-mark">?</span>;
 <a href=#498 id=498 data-nosnippet>498</a>    <span class="macro">DefMacro!</span>(cs, cs_args, body, robust =&gt; <span class="bool-val">true</span>);
 <a href=#499 id=499 data-nosnippet>499</a>  });
