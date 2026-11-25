@@ -81,6 +81,41 @@ mod single_binary_smoke {
     assert_eq!(output.status.code(), Some(1), "non-zero exit:\n{stderr}");
   }
 
+  /// A panic mid-run still leaves the log: the text logged so far, the panic's `Fatal:` line with its location, and
+  /// the status (issue 1011: a book that hit the string arena's ceiling aborted with no log).
+  #[test]
+  fn worker_panic_writes_the_log_so_far() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    std::fs::write(workdir.path().join("hello.tex"), HELLO_TEX).expect("write hello.tex");
+    let output = Command::new(bin)
+      .args(["hello.tex", "--dest=hello.xml"])
+      .env("LATEXML_INJECT_PANIC", "core_end")
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert_eq!(output.status.code(), Some(1), "non-zero exit:\n{stderr}");
+    assert!(
+      stderr.contains("Log written to hello.latexml.log"),
+      "names the log:\n{stderr}"
+    );
+    let log = std::fs::read_to_string(workdir.path().join("hello.latexml.log")).expect("the log");
+    let tail: Vec<&str> = log.lines().rev().take(3).collect();
+    assert_eq!(tail[2], "Conversion complete: No obvious problems", "{log}");
+    assert!(
+      tail[1].starts_with(
+        "Fatal:panic:caught LATEXML_INJECT_PANIC at the core's end at latexml_oxide/src/converter.rs:"
+      ),
+      "{log}"
+    );
+    assert_eq!(tail[0], "Status:conversion:3", "{log}");
+    assert!(
+      log.starts_with("(Loading TeX.pool") && log.contains("(Processing content "),
+      "the log from its start:\n{log}"
+    );
+  }
+
   #[test]
   fn binary_runs_without_source_tree() {
     let bin = env!("CARGO_BIN_EXE_latexml_oxide");

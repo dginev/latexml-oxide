@@ -3444,23 +3444,47 @@ fn load_tex_definitions(
   Ok(())
 }
 
-/// The state value listing the files read as the document's content ([`load_tex_content`]: the main file, each
-/// `\input`/`\include` of content, a `literal:` source as its text), parted by NUL: the document's own text, which
-/// the title-page check reads for the words the document wrote (latexml_engine
-/// `base_utilities::frontmatter::title_page_check`). Rust-only.
+/// The state mapping of the files read as the document's content ([`load_tex_content`]: the main file, each
+/// `\input`/`\include` of content, a `literal:` source as its text) to their reading order: the document's own text,
+/// which the title-page check reads for the words the document wrote (latexml_engine
+/// `base_utilities::frontmatter::title_page_check`). Rust-only. A mapping, so a book of thousands of files interns each
+/// path once (issue 1011: a list re-interned whole per file filled the arena).
 pub const CONTENT_FILES: &str = "lx_content_files";
+
+/// The document's content files ([`CONTENT_FILES`]), in the order they were first read.
+pub fn content_files() -> Vec<String> {
+  let mut files: Vec<(i64, SymStr)> = with_value(CONTENT_FILES, |files| match files {
+    Some(Stored::HashStored(files)) => files
+      .0
+      .iter()
+      .filter_map(|(path, order)| match order {
+        Stored::Int(order) => Some((*order, *path)),
+        _ => None,
+      })
+      .collect(),
+    _ => Vec::new(),
+  });
+  files.sort_unstable();
+  files
+    .into_iter()
+    .map(|(_, path)| arena::to_string(path))
+    .collect()
+}
 
 /// Note `path` as one of the document's content files ([`CONTENT_FILES`]), once.
 fn note_content_file(path: &str) {
-  let mut files = lookup_string(CONTENT_FILES);
-  if files.split('\0').any(|file| file == path) {
+  if lookup_mapping(CONTENT_FILES, path).is_some() {
     return;
   }
-  if !files.is_empty() {
-    files.push('\0');
-  }
-  files.push_str(path);
-  assign_value(CONTENT_FILES, files, Some(Scope::Global));
+  let order = with_value(CONTENT_FILES, |files| match files {
+    Some(Stored::HashStored(files)) => files.len(),
+    _ => 0,
+  });
+  assign_mapping(
+    CONTENT_FILES,
+    path,
+    Some(Stored::Int(i64::try_from(order).unwrap_or(i64::MAX))),
+  );
 }
 
 /// Whether `\everyeof` holds tokens: an `\input` under it feeds a reader of the file's tokens, so no binding answers
@@ -6975,6 +6999,32 @@ fn preload_font_map_keyed(encoding: &str, keys: FontmapKeySyms) -> Result<()> {
     }
   }
   Ok(())
+}
+
+#[cfg(test)]
+mod content_files_tests {
+  use super::*;
+
+  /// A content file costs the string arena its path once, however many came before (issue 1011: the list, re-interned
+  /// whole at every `\input`, grew with the square of the files, 61 MB at 1,000), and is noted once, in reading order.
+  #[test]
+  fn each_content_file_costs_the_arena_its_path_once() {
+    set_state(State::new(StateOptions::default()));
+    let path = |i: usize| s!("/book/chapters/chapter_{i:05}/sections/section_body.tex");
+    let before = arena::buffer_len();
+    for i in 0..200 {
+      note_content_file(&path(i));
+    }
+    note_content_file(&path(7));
+    let grown = arena::buffer_len() - before;
+    let each = path(0).len() + 1;
+    assert!(
+      grown <= 2 * 200 * each,
+      "{grown} bytes for 200 paths of {each}"
+    );
+    // The whole reading order, every path once.
+    assert_eq!(content_files(), (0..200).map(path).collect::<Vec<_>>());
+  }
 }
 
 #[cfg(test)]

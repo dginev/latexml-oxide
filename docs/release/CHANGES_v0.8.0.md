@@ -45,6 +45,14 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
 
 ### 0.8.0-rc5
 
+  - **Books of thousands of `\input`/`\subimport` files convert again (issue 1011).** Since rc1 every file read as
+    content re-stored the whole list of the document's content files (the list the title-page check reads), so the run's
+    strings grew with the square of the number of files: 1.5 GB for 5,000 files, and a 26,000-page book aborted with
+    "the string arena's buffer reached 2 GiB" and no log. Each file's path is now stored once (5,000 files: 3 MB of
+    strings, peak memory 3.6 → 2.1 GB). The string arena holds ~4 GiB again, as in 0.7.6 (rc1 had halved it), with no
+    silent symbol wrap past it; a run beyond it says it "interned about 4 GiB of distinct strings". Any crash now writes
+    the log so far, ending in a `Fatal:panic:caught` line that names where it happened and `Status:conversion:3`, and
+    prints where that log is, also in the release build that aborts.
   - **A conversion closing its `LaTeXML-oxide.cache` at the same moment as another no longer leaves
     `LaTeXML-oxide.cache-wal`/`-shm` behind,** also when the destination is reached through a symbolic link, as every
     macOS temporary folder is. SQLite removes them only when one close gets the file's exclusive lock on its single try;
