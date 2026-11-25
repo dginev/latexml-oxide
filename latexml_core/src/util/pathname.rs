@@ -577,8 +577,14 @@ pub fn is_raw(pathname: &str) -> bool {
   )
 }
 
-/// absolute paths start with the filesystem root - check if this is one
-pub fn is_absolute(path: &str) -> bool { Path::new(&canonical(path)).is_absolute() }
+/// Whether `path`, canonical (a leading `~` expanded), is absolute: Perl `pathname_is_absolute`, File::Spec's
+/// `file_name_is_absolute`. On Windows a rooted path without a drive (`/figs`, `\\figs`) counts, as
+/// `File::Spec::Win32` counts it, where `Path::is_absolute` asks for a drive; a drive-relative `C:figs` does not.
+pub fn is_absolute(path: &str) -> bool {
+  let canonical = canonical(path);
+  let path = Path::new(&canonical);
+  path.is_absolute() || path.has_root()
+}
 /// convert a (possibly relative) file path to an absolute one
 ///
 /// `std::fs::canonicalize` requires the path to exist; many callers hand

@@ -212,37 +212,46 @@ fn a_placeholder_bibitem_is_the_bibliography_width() {
   );
 }
 
-/// A `\graphicspath` or `svgpath` entry that is absolute as this platform reads it is searched as written, not joined
+/// A `\graphicspath` or `\svgpath` entry that is absolute as this platform reads it is searched as written, not joined
 /// under the source directory: Perl `graphics.sty.ltxml` L257 and `svg.sty.ltxml` L43
 /// `pathname_absolute(pathname_canonical($dir), $root)`. Red on Windows only (UTILDRY F4): a `C:/…` entry does not
-/// start with `/`, so it was joined under the source directory and the figure was missing. The figures lie outside the
-/// source directory, under the target's temporary directory (a runner's `%TEMP%` can hold an 8.3 `~1`); `_` and `~` are
-/// read as text.
+/// start with `/`, so it was joined under the source directory and the figure was missing. Each figure lies in its own
+/// folder outside the source directory, named only by its own path command, under the target's temporary directory (a
+/// runner's `%TEMP%` can hold an 8.3 `~1`); `_` and `~` are read as text. A figure is found when its `candidates` names
+/// it (written relative to the source directory, so only the file name is compared).
 #[test]
 fn an_absolute_graphics_path_is_searched_as_written() {
-  let figs = tempfile::tempdir_in(env!("CARGO_TARGET_TMPDIR")).expect("tempdir");
+  let tmp = env!("CARGO_TARGET_TMPDIR");
+  std::fs::create_dir_all(tmp).unwrap();
+  let (graphics, svgs) = (
+    tempfile::tempdir_in(tmp).expect("tempdir"),
+    tempfile::tempdir_in(tmp).expect("tempdir"),
+  );
   std::fs::write(
-    figs.path().join("f4_plot.pdf"),
+    graphics.path().join("f4_plot.pdf"),
     repro!("package-bindings/eps_as_pdf_one.pdf"),
   )
   .unwrap();
   std::fs::write(
-    figs.path().join("f4_icon.svg"),
+    svgs.path().join("f4_icon.svg"),
     "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"10\"><rect width=\"20\" height=\"10\"/></svg>\n",
   )
   .unwrap();
-  let dir = figs.path().to_string_lossy().replace('\\', "/");
+  let slashed = |dir: &tempfile::TempDir| dir.path().to_string_lossy().replace('\\', "/");
+  let (graphics_dir, svg_dir) = (slashed(&graphics), slashed(&svgs));
   let tex = format!(
     "\\documentclass{{article}}\n\\catcode`\\_=12 \\catcode`\\~=12\n\\usepackage{{graphicx}}\n\
-     \\usepackage[svgpath={{{dir}/}}]{{svg}}\n\\graphicspath{{{{{dir}/}}}}\n\\begin{{document}}\n\
+     \\usepackage{{svg}}\n\\svgpath{{{{{svg_dir}/}}}}\n\\graphicspath{{{{{graphics_dir}/}}}}\n\\begin{{document}}\n\
      \\includegraphics{{f4_plot}} \\includesvg{{f4_icon}}\n\\end{{document}}\n"
   );
   let (log, xml) = convert_files_with(&tex, &[], Some(PRELOAD));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   for figure in ["f4_plot.pdf", "f4_icon.svg"] {
-    assert!(
-      xml.contains(&format!("{dir}/{figure}\"")),
-      "{figure} not found under {dir}:\n{xml}"
-    );
+    let found = regex::Regex::new(&format!(
+      r#"candidates="([^"]*[/\\])?{}""#,
+      regex::escape(figure)
+    ))
+    .unwrap();
+    assert!(found.is_match(&xml), "{figure} not found:\n{xml}");
   }
 }
