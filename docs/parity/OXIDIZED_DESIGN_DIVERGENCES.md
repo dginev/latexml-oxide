@@ -24466,3 +24466,21 @@ directory is taken as written too, so the child of a `~one.html` page lies besid
 label is the document's text, not a path the user gave; expanding it writes outside the destination and leaks a
 filesystem path into the links. A candidate patch for Perl. **Guard**
 `split_nav_relations::split_label_names_stay_in_the_destination`.
+
+### 1165. A bundled stylesheet or script already in the destination is kept if non-empty; no date comparison (AR5IVCSS, DG 2026-11-25)
+
+**Perl behavior**: `copyResource` (XSLT.pm L117-118) copies a resource found on its search path with `pathname_copy`
+(Pathname.pm L266), which writes only when the destination is missing or OLDER than the source: a user's edited
+`LaTeXML.css` in the output folder survives until the next LaTeXML install makes the source newer, then is replaced.
+**Rust behavior**: the bundled resources are embedded, so they have no file date. `writer::needs_write` decides both
+branches of `xslt.rs` `copy_resource`: the embedded bytes are written only where the destination is missing or an
+empty regular file (issue 312's truncated leftover); a non-empty file there — the user's own, an edited copy, or an
+older version's — is used as-is, in every layout (`--dest`, `--split`, a `--sitedirectory` root) and for every bundled
+name (16 CSS, 2 JS, and the release-only `ar5iv.css`). A user's file found on the search path (next to the `.tex`, on
+`--path`) is still copied over the destination's, unchanged from Perl except that the date is not compared.
+**Why**: DG 2026-11-25. Comparing against the executable's date would replace a user's edit at the first run after an
+upgrade, and a zip unpacked west of UTC can date the binary hours ahead; keeping the file never loses a user's work.
+The cost: a reused output folder keeps an older version's `LaTeXML.css` until the user deletes it (USAGE, CHANGELOG
+"Upgrading from 0.7.6"). **Guards** `split_css_links::{css_already_in_place_is_used_as_is,
+css_in_a_separate_destination_is_used_as_is}`, `stale_css_overwrite::empty_css_in_dest_is_overwritten_with_bundled`,
+`tools/release_smoke.sh`.

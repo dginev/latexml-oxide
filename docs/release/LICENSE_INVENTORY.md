@@ -115,6 +115,7 @@ it, since `cargo package` cannot follow `../`. Paths below are current — distr
 | `resources/Profiles/` | 9 | Perl LaTeXML | PD (NIST) ≈ CC0 |
 | `latexml_post/resources/javascript/LaTeXML-maybeMathjax.js` | 1 | Perl LaTeXML | PD (NIST) ≈ CC0 |
 | `latexml_post/resources/javascript/relaxng-schema-rustdoc-theme.js` | 1 | ours | CC0 |
+| `resources/ar5iv-css/ar5iv.min.css` — release builds only (gitignored; `tools/ar5iv-css.pin`) | 1 | ar5iv-css `dist/ar5iv.min.css` | MIT (© 2021-2027 Deyan Ginev) — notice required: a banner prepended at embed time (`latexml_post/build.rs`) travels in every written `ar5iv.css`, full text in §2.4 |
 
 Perl LaTeXML is public domain (NIST, 17 U.S.C. §105; upstream `LICENSE` equates it
 to CC0) — CC0-compatible, no notice burden. `LaTeXML-maybeMathjax.js` only

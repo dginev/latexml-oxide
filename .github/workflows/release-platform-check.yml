@@ -39,12 +39,25 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       TAG_INPUT: ${{ inputs.tag }}
     steps:
+      - name: Resolve the release tag
+        id: tag
+        run: |
+          tag="${TAG_INPUT:-$(gh release list --repo "$GITHUB_REPOSITORY" --exclude-drafts --limit 1 --json tagName -q '.[0].tagName')}"
+          [ -n "$tag" ] || { echo "::error::no published release to check"; exit 1; }
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      # The tree of the tag under test, so its scripts and tools/ar5iv-css.pin match its binary (a dispatch on an older
+      # tag, or after a pin bump); a pull request checks out its own head, the scripts it changes.
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event_name != 'pull_request' && steps.tag.outputs.tag || '' }}
 
       - name: Download and verify the release binary
         id: bin
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
         run: |
-          tag="${TAG_INPUT:-$(gh release list --repo "$GITHUB_REPOSITORY" --exclude-drafts --limit 1 --json tagName -q '.[0].tagName')}"
+          tag="$TAG"
           asset="latexml-oxide-${tag}-${{ matrix.target }}.${{ matrix.ext }}"
           echo "release $tag, asset $asset"
           gh release download "$tag" --repo "$GITHUB_REPOSITORY" --pattern "$asset" --pattern "$asset.sha256" --dir dl
@@ -60,8 +73,31 @@ jobs:
           "$bin" --version
           echo "path=$bin" >> "$GITHUB_OUTPUT"
 
+      # The published binary converts with resources/ moved aside, and `--css=ar5iv.css --nodefaultresources` writes
+      # the bundled ar5iv.css beside the page (tools/release_smoke.sh, also run by every release leg before publishing).
+      # The tag's own script: an older one has no ar5iv checks (or no script), said as a notice.
+      # Not on a pull request: that checks the newest published release with the pull request's script.
+      - name: Conversion smoke and the bundled ar5iv.css
+        if: ${{ github.event_name != 'pull_request' }}
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          tag="$TAG"
+          if [ ! -f tools/release_smoke.sh ]; then
+            echo "::notice::$tag predates tools/release_smoke.sh (0.8.0-rc2): the conversion smoke is skipped"; exit 0
+          elif ! grep -q 'ar5iv' tools/release_smoke.sh; then
+            echo "::notice::$tag predates the bundled ar5iv.css: its release_smoke.sh has no ar5iv checks (skipped)"
+          fi
+          bash tools/release_smoke.sh "${{ steps.bin.outputs.path }}" latexml_oxide/tests/hello/hello.tex
+
       - name: Split document, fleet vs serial
-        run: bash tools/render_platform_check.sh "${{ steps.bin.outputs.path }}" "$RUNNER_TEMP/rpc"
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          if [ ! -f tools/render_platform_check.sh ]; then
+            echo "::notice::$TAG predates tools/render_platform_check.sh (0.8.0-rc3): skipped"; exit 0
+          fi
+          bash tools/render_platform_check.sh "${{ steps.bin.outputs.path }}" "$RUNNER_TEMP/rpc"
 
       - name: Keep the logs and sites
         if: failure()

@@ -72,6 +72,10 @@ pub mod writer;
 pub mod xmath;
 pub mod xslt;
 
+// `build.rs` pulls this in with `#[path] mod`; declared here under cfg(test) only, for its unit tests.
+#[cfg(test)]
+mod build_rerun;
+
 /// Shared helpers for the process-global state (`env`, `/tmp`) that this
 /// crate's multi-threaded unit tests contend over.
 #[cfg(test)]
