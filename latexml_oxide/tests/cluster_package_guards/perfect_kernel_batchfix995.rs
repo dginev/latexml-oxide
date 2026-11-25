@@ -147,40 +147,64 @@ fn pairs(list: &[(&str, &str)]) -> Vec<(String, String)> {
 }
 
 /// `--sitedirectory=..` from `parent/` keeps `../children/child_N/images/*.svg` and copies nothing (base: `x1..x3.svg`,
-/// the option ignored); without it the images are copied to `x1..x3.svg` inside `--dest`, as Perl does. Repro
-/// loader/image_subimport_sitedirectory.
+/// the option ignored); without it the images are copied to `x1..x3.svg` inside `--dest`, as Perl does. With one SVG
+/// in all three files each kept path stays its own, as Perl's (KEPTDEDUP; base: `child_1/images/A.svg` thrice), while
+/// the generated copies share `x1.svg` (OD #24). Repros loader/image_subimport_sitedirectory,
+/// loader/image_kept_path_same_bytes.
 #[test]
 fn batchfix995_sitedirectory_keeps_the_relative_image_path() {
-  let root = tempfile::tempdir().unwrap();
-  layout(root.path(), SITE);
-  let parent = root.path().join("parent");
-  let log = convert(
-    root.path(),
-    &["--sitedirectory=..", "--dest=index.html"],
-    None,
-  );
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  assert_eq!(
-    images_of(&parent.join("index.html")),
-    pairs(&[
-      ("../children/child_1/images/A.svg", "child_1/images/A"),
-      ("../children/child_2/images/A.svg", "child_2/images/A"),
-      ("../children/child_2/images/B.svg", "child_2/images/B"),
-    ])
-  );
-  assert_eq!(images_in(&parent), Vec::<String>::new(), "{log}");
+  for same in [false, true] {
+    let root = tempfile::tempdir().unwrap();
+    layout(root.path(), SITE);
+    let text = |image: &'static str| if same { "one" } else { image };
+    if same {
+      for image in ["child_1/images/A", "child_2/images/A", "child_2/images/B"] {
+        std::fs::write(
+          root.path().join(format!("children/{image}.svg")),
+          svg(text(image)),
+        )
+        .unwrap();
+      }
+    }
+    let parent = root.path().join("parent");
+    let log = convert(
+      root.path(),
+      &["--sitedirectory=..", "--dest=index.html"],
+      None,
+    );
+    assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+    assert_eq!(
+      images_of(&parent.join("index.html")),
+      pairs(&[
+        ("../children/child_1/images/A.svg", text("child_1/images/A")),
+        ("../children/child_2/images/A.svg", text("child_2/images/A")),
+        ("../children/child_2/images/B.svg", text("child_2/images/B")),
+      ])
+    );
+    assert_eq!(images_in(&parent), Vec::<String>::new(), "{log}");
 
-  let log = convert(root.path(), &["--dest=index.html"], None);
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  assert_eq!(
-    images_of(&parent.join("index.html")),
-    pairs(&[
-      ("x1.svg", "child_1/images/A"),
-      ("x2.svg", "child_2/images/A"),
-      ("x3.svg", "child_2/images/B"),
-    ])
-  );
-  assert_eq!(images_in(&parent), ["x1.svg", "x2.svg", "x3.svg"]);
+    let log = convert(root.path(), &["--dest=index.html"], None);
+    assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+    let (x2, x3) = if same {
+      ("x1.svg", "x1.svg")
+    } else {
+      ("x2.svg", "x3.svg")
+    };
+    assert_eq!(
+      images_of(&parent.join("index.html")),
+      pairs(&[
+        ("x1.svg", text("child_1/images/A")),
+        (x2, text("child_2/images/A")),
+        (x3, text("child_2/images/B")),
+      ])
+    );
+    let written: &[&str] = if same {
+      &["x1.svg"]
+    } else {
+      &["x1.svg", "x2.svg", "x3.svg"]
+    };
+    assert_eq!(images_in(&parent), written);
+  }
 }
 
 /// A destination outside `--sitedirectory` is Perl's Fatal, and nothing is written (base: converted, the option
@@ -1295,26 +1319,30 @@ fn batchfix995_a_deleted_cache_overwrites_no_other_documents_image() {
 /// A planted `_source_` that is a device, or a path out of the destination: the conversion ends promptly (round 4
 /// hashed `/dev/zero` for ever), reports the device once, and writes nothing out of the folder; a planted entry of
 /// an image's own is reported once. The files are said to be owned by images of this run with the same bytes
-/// (`figs/c.png`, `figs/d.png`), the only owners a file is shared with; a source whose name is not the file's is never
-/// read (round 6 hashed `../outside.png` before the name check). `Graphics::vouch`, `resource_cache::place`.
+/// (`../ext/c.png`, `../ext/d.png`), the only owners a file is shared with; a source whose name is not the file's is
+/// never read (round 6 hashed `../outside.png` before the name check). The sharers take generated names, as a copy
+/// keeping its path shares no file (KEPTDEDUP: this pin had `figs/d.png` on `figs/b.png`). `Graphics::vouch`,
+/// `resource_cache::place`.
 #[cfg(unix)]
 #[test]
 fn batchfix995_a_planted_source_is_never_read_for_ever() {
   let root = tempfile::tempdir().unwrap();
   let src = root.path().join("src");
+  let ext = root.path().join("ext");
   std::fs::create_dir_all(src.join("figs")).unwrap();
+  std::fs::create_dir_all(&ext).unwrap();
   std::fs::write(
     src.join("p.tex"),
     "\\documentclass{article}\\usepackage{graphicx}\\begin{document}\n\
-     Fig \\includegraphics{figs/a.png} \\includegraphics{figs/b.png}\n\
-     \\includegraphics{figs/c.png} \\includegraphics{figs/d.png}\n\\end{document}\n",
+     Fig \\includegraphics{figs/a.png} \\includegraphics{../ext/b.png}\n\
+     \\includegraphics{../ext/c.png} \\includegraphics{../ext/d.png}\n\\end{document}\n",
   )
   .unwrap();
   let (a, b) = (png(4, 4), png(4, 5));
   std::fs::write(src.join("figs/a.png"), &a).unwrap();
-  std::fs::write(src.join("figs/b.png"), &b).unwrap();
-  std::fs::write(src.join("figs/c.png"), &a).unwrap();
-  std::fs::write(src.join("figs/d.png"), &b).unwrap();
+  std::fs::write(ext.join("b.png"), &b).unwrap();
+  std::fs::write(ext.join("c.png"), &a).unwrap();
+  std::fs::write(ext.join("d.png"), &b).unwrap();
   let run = || {
     let output = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
       .args(["--nocomments", "--timeout=60", "--dest=p.html", "p.tex"])
@@ -1340,10 +1368,20 @@ fn batchfix995_a_planted_source_is_never_read_for_ever() {
       )
       .unwrap();
     for (image, name, source, owner) in [
-      ("figs/a.png", "evil.png", "/dev/zero", "figs/c.png"),
-      ("figs/b.png", "evil2.png", "../outside.png", "figs/d.png"),
+      (
+        src.join("figs/a.png"),
+        "evil.png",
+        "/dev/zero",
+        "../ext/c.png",
+      ),
+      (
+        ext.join("b.png"),
+        "evil2.png",
+        "../outside.png",
+        "../ext/d.png",
+      ),
     ] {
-      let h = digest(&src.join(image));
+      let h = digest(&image);
       for (key, value) in [
         (format!("_content_copy|{h}"), name.to_string()),
         (format!("_owner_{name}"), format!("copy|{owner}")),
@@ -1385,12 +1423,7 @@ fn batchfix995_a_planted_source_is_never_read_for_ever() {
     .into_iter()
     .map(|(url, _)| url)
     .collect();
-  assert_eq!(urls, [
-    "figs/c.png",
-    "figs/b.png",
-    "figs/c.png",
-    "figs/b.png"
-  ]);
+  assert_eq!(urls, ["x1.png", "x2.png", "x1.png", "x2.png"]);
   assert!(!src.join("evil.png").exists() && !src.join("evil2.png").exists());
   assert_eq!(std::fs::read(root.path().join("outside.png")).unwrap(), b);
 }

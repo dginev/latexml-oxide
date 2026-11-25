@@ -1,0 +1,20 @@
+% mechanism: latexml_package svg_sty.rs load-time `svgpath=` option: svg.sty:546-556 makes the (deprecated) key
+%   `\svgpath{{#1}}`, its value with one brace pair stripped as keyval strips it, so the option is one path read by
+%   `\svgpath`'s reading (svg_sty.rs `svgpath`). Perl's binding processes no package option (svg.sty.ltxml:41-44: a
+%   Gin key only).
+% witness: synthetic (row R SVGPATHOPT; 0 of the census's 314 svg users write the option, 4 use \svgpath)
+% layout:  main.tex (this file); figs/fig.svg any SVG
+% oracle:  pdflatex -no-shell-escape: svg.sty finds figs/fig.svg ("although `figs/fig.svg' was found", then 2 `!` for
+%          the Inkscape export it cannot run: fig_svg-tex.pdf, .pdf_tex); `svgpath={{a/}{b/}}` stores one path
+%          {a/}{b/} and finds no file in a/ or b/ ("File `x.svg' is missing")
+% engines: rust=GREEN perl=RED (2026-11-25; Perl ignores the option)
+% expect:  <graphics candidates="figs/fig.svg" ... graphic="fig"/>, 0 errors, 0 warnings (base INT081P: the path
+%          joined as "{figs/}", no candidates); svgpath=figs/ the same; svgpath={{a/}{b/}} no candidates, as pdflatex
+%          (the HTML post counts it: Warning:expected:source)
+% guard:   cluster_package_guards perfect_kernel_batch63::svg_setup_options
+% status:  GREEN
+\documentclass{article}
+\usepackage[svgpath={figs/}]{svg}
+\begin{document}
+\includesvg{fig}
+\end{document}

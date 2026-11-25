@@ -1,0 +1,22 @@
+% mechanism: latexml_post resource_cache.rs `place`: a copy that keeps its path (Perl Post/Graphics.pm L289-300) is
+%   named that path or, when another source owns it, a generated one; it never shares another source's file of the
+%   same bytes. Generated copies and conversions still share one file per content (OXIDIZED_DESIGN_DIVERGENCES #24).
+% witness: synthetic (row R KEPTDEDUP: identical figures in sibling folders, under --sitedirectory too)
+% layout:  main.tex (this file); figs/a.svg, figs/b.svg, figs/c.svg one SVG (the same bytes); cwd the file's folder
+% oracle:  pdflatex 0 errors with PNGs in place of the SVGs (pdflatex reads no SVG): three images
+% engines: rust=GREEN perl=GREEN (2026-11-25, latexmlc: figs/a.svg, figs/b.svg, figs/c.svg)
+% expect:  --format=html5 --dest=index.htm: data="figs/a.svg", "figs/b.svg", "figs/c.svg", 0 errors, 0 warnings, the
+%          same on a rerun into the folder (base INT081P: figs/a.svg thrice, a rerun too)
+% guard:   cluster_package_guards perfect_kernel_batchfix995::batchfix995_sitedirectory_keeps_the_relative_image_path
+%          (its same-bytes row: three kept ../children/... paths), latexml_post resource_cache
+%          a_shared_file_is_left_when_its_owner_changes (a cache that stored the shared name)
+% status:  GREEN
+\documentclass{article}
+\usepackage{graphicx}
+\begin{document}
+First \includegraphics{figs/a}
+
+Second \includegraphics{figs/b}
+
+Third \includegraphics{figs/c}
+\end{document}

@@ -140,17 +140,33 @@ LoadDefinitions!({
           rows.push(row);
         }
         rows.reverse(); // restore original order (remove_row pops from back)
-        if name == "FIRSTHEAD" || (name == "HEAD" && al.head_rows.is_empty()) {
-          al.head_rows = rows;
-          if let Some(caption) = lookup_value("LONGTABLE_CAPTIONS") {
-            assign_value("LONGTABLE_CAPTIONS", Stored::None, Some(Scope::Global));
-            assign_value("LONGTABLE_HEAD_CAPTIONS", caption, Some(Scope::Global));
+        // HTML shows the first head and the last foot: their group's rows, and their caption, else one another group
+        // of that part printed on the other pages. A group's captions never pass to the next: a `\endhead` after
+        // `\endfirsthead` gave its "(continued)" caption to the foot (LTCAPDUP; KNOWN_PERL_ERRORS #1333). Grabbed is
+        // Perl's `LONGTABLE_HEAD` set, rows or none (a first head of its caption alone has none, the row dropped).
+        let caption = lookup_value("LONGTABLE_CAPTIONS");
+        assign_value("LONGTABLE_CAPTIONS", Stored::None, Some(Scope::Global));
+        let free = |part: &str| lookup_value(part).is_none();
+        let group = match name.as_str() {
+          "FIRSTHEAD" => Some(("LONGTABLE_HEAD", "LONGTABLE_HEAD_CAPTIONS", true)),
+          "HEAD" => Some(("LONGTABLE_HEAD", "LONGTABLE_HEAD_CAPTIONS", free("LONGTABLE_HEAD"))),
+          "LASTFOOT" => Some(("LONGTABLE_FOOT", "LONGTABLE_FOOT_CAPTIONS", true)),
+          "FOOT" => Some(("LONGTABLE_FOOT", "LONGTABLE_FOOT_CAPTIONS", free("LONGTABLE_FOOT"))),
+          _ => None,
+        };
+        if let Some((part, captions, shown)) = group {
+          if shown {
+            if part == "LONGTABLE_HEAD" {
+              al.head_rows = rows;
+            } else {
+              al.foot_rows = rows;
+            }
+            assign_value(part, Stored::Bool(true), Some(Scope::Global));
           }
-        } else if name == "LASTFOOT" || (name == "FOOT" && al.foot_rows.is_empty()) {
-          al.foot_rows = rows;
-          if let Some(caption) = lookup_value("LONGTABLE_CAPTIONS") {
-            assign_value("LONGTABLE_CAPTIONS", Stored::None, Some(Scope::Global));
-            assign_value("LONGTABLE_FOOT_CAPTIONS", caption, Some(Scope::Global));
+          if let Some(caption) = caption
+            && (shown || lookup_value(captions).is_none())
+          {
+            assign_value(captions, caption, Some(Scope::Global));
           }
         }
       }

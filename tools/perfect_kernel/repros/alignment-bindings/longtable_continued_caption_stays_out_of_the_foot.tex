@@ -1,0 +1,61 @@
+% mechanism: latexml_package longtable_sty.rs `\lx@longtable@grab`: HTML shows the first head and the last foot, with
+%   their captions; a group's caption never passes to the next group (Perl longtable.sty.ltxml L101-120 left it in
+%   LONGTABLE_CAPTIONS for the next grab; KNOWN_PERL_ERRORS #1333). A head or foot already grabbed counts as grabbed
+%   with no rows (a first head holding only its caption, whose row is dropped).
+% witness: synthetic (row R LTCAPDUP; reach <= 788 papers: who_uses --cs endhead --cs endfoot --cs caption
+%          --env longtable --and)
+% oracle:  pdflatex 0 errors: Table 1: Main title once per table on its one page; table 3 prints "Continued on next
+%          page" (no \endlastfoot: the foot is the last foot too); table 4 prints its caption at the bottom
+% engines: rust=GREEN perl=RED (2026-11-25, latexml: tables 1-3 add a foot caption "Table n: Main title (continued)",
+%          table 4 heads with "(cont)" and foots with "Main title")
+% expect:  one <caption> per table, "Table n: Main title", above the tabular in tables 1-3, below it in table 4;
+%          rows: 1) A B, 1 2; 2) 1 2; 3) A B, 1 2, Continued on next page; 4) A B, 1 2; 0 errors, 0 warnings
+%          (base INT081P: tables 1-3 a second caption below, "Main title (continued)"; table 4 "Main title (cont)"
+%          above and "Main title" below)
+% status:  GREEN
+\documentclass{article}
+\usepackage{longtable}
+\begin{document}
+\begin{longtable}{cc}
+\caption{Main title}\label{t}\\ A & B\\
+\endfirsthead
+\caption[]{Main title (continued)}\\ A & B\\
+\endhead
+\multicolumn{2}{r}{Continued on next page}\\
+\endfoot
+\endlastfoot
+1 & 2\\
+\end{longtable}
+
+\begin{longtable}{cc}
+\caption{Main title}\\
+\endfirsthead
+\caption[]{Main title (continued)}\\
+\endhead
+\multicolumn{2}{r}{Continued on next page}\\
+\endfoot
+\endlastfoot
+1 & 2\\
+\end{longtable}
+
+\begin{longtable}{cc}
+\caption{Main title}\\ A & B\\
+\endfirsthead
+\caption[]{Main title (continued)}\\ A & B\\
+\endhead
+\multicolumn{2}{r}{Continued on next page}\\
+\endfoot
+1 & 2\\
+\end{longtable}
+
+\begin{longtable}{cc}
+A & B\\
+\endhead
+\caption{Main title}\\
+\endlastfoot
+\caption[]{Main title (cont)}\\
+\endfoot
+1 & 2\\
+\end{longtable}
+After TEXT.
+\end{document}

@@ -248,7 +248,10 @@ file's bytes (paired with the graphicx `options=` string), not by
 source path. Byte-identical sources with the same options produce a
 single conversion job and a single output file in the bundle; every
 `<ltx:graphics>` node that resolved to that content references the
-shared dest.
+shared dest. A copy that keeps its source-relative path (Perl
+`Post/Graphics.pm` L289-300) is the exception: it names its own file,
+as Perl's does, and shares none (`resource_cache.rs` `place`; guard
+`batchfix995_sitedirectory_keeps_the_relative_image_path`).
 
 **Perl behavior:** `LaTeXML::Post::Graphics::process` walks
 `<ltx:graphics>` nodes serially and calls
@@ -24629,7 +24632,8 @@ relative to the destination directory, its page, crop and turn, and the target t
 `_owner_<name>`, `_name_<owner>`, `_source_<name>` and `_holds_<name>` (the bytes it was last written with), make a
 name another source owns fall back to the next free `xN` (the claim covers the `.svg` a vector render may take beside a
 raster), and `_content_<bytes>` lets a source with the same bytes share that file while its owner is named in the
-same run with those bytes (the pages of one document); a source of another document takes a name of its own, as that
+same run with those bytes (the pages of one document), save a copy offered its kept path, which shares none (Perl
+L289-300: `figs/a.svg`, `figs/b.svg` of one SVG keep both paths); a source of another document takes a name of its own, as that
 document may later write other bytes into the file under a page this run does not rewrite, so
 neither split pages (Chapter One showed child_2's figure), nor two converted sources sharing a stem (`a/plot.eps`,
 `b/plot.eps`; witness 2401.00054, `Figures/ch2/qz.pdf` and `Figures/ch5/qz.pdf`), nor a converted `plot.png` and an
