@@ -9,6 +9,17 @@ top of its group.
 
 ### Unreleased
 
+  - **Rhai bindings: a register getter's or a `fontTest`'s `Fatal()` stops the conversion, a rewrite's keeps the
+    document, and ligature code may assign values.** A getter's Fatal was logged but dropped (the register read unset and
+    the whole document was built), and so was a `fontTest`'s Fatal raised while a `\footnote` closed the text before it;
+    each is now raised, printed once, by the core step after it, as Perl dies there: in digestion or the build it stops
+    the conversion; in a `DefRewrite` rule it ends the rewrites, and the document is post-processed with status 3 (a
+    rule's own `Fatal()` lost the whole document to an extra `Error:document:convert`). A `fontTest` or a math-ligature
+    matcher that assigns (`AssignValue`, `DefLigature`, `DefMathLigature`) panicked ("RefCell already borrowed",
+    "checkin_value should only be called after checkout_value") and lost the document (OXIDIZED_DESIGN_DIVERGENCES
+    #1028). Conversions without such a binding are unchanged: byte-identical, at most +0.06 % instructions (2103.04797,
+    math0211159). Guards: `30_script_bindings::a_rhai_fatal_is_logged_once`,
+    `perfect_kernel_batchw3rd::rhai_thin_wrappers`.
   - **Tests: guards read whole elements.** The shared test helpers (`latexml_oxide/src/util/test.rs`) gain
     `xml_elements`, `element_count`, `assert_all_elements`, `assert_no_element` and `markup_text`, which match an
     attribute at its start (`id="p1"` is not `xml:id="p1"`), skip comments, CDATA and processing instructions, and read

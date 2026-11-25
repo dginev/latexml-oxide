@@ -268,6 +268,8 @@ pub fn reset_conversion_state() {
   binding::content::reset_subfile_package_load();
   binding::kernel_autoload::reset_undefined_fallback();
   binding::kernel_autoload::reset_first_use_providers();
+  // A stashed Fatal (`stomach::stash_fatal`) is the conversion's: an LSP re-warm or a post release does not inherit it.
+  stomach::set_aside_stashed_fatal();
   #[cfg(feature = "token-locators")]
   token::clear_token_origins();
 }

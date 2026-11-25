@@ -3851,6 +3851,7 @@ fn def_ligature(pattern: &str, replacement: &str, opts: Map) -> RhaiResult<()> {
           Err(e) => contain("DefLigature fontTest", e, false),
         }
       });
+      latexml_core::ligature::note_script_ligature();
       Some(test)
     },
     None => None,

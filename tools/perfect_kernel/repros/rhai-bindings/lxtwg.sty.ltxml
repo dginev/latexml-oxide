@@ -1,0 +1,6 @@
+# Perl stand-in for lxtwg.sty.rhai (the Perl run).
+package LaTeXML::Package::Pool;
+use LaTeXML::Package;
+DefRegister('\lxtwa', Dimension(0), getter => sub { Fatal('unexpected', 'Internal', undef, "lxtwa gives up"); return Dimension('1pt'); });
+DefRegister('\lxtwb', Dimension(0), getter => sub { eval { Fatal('unexpected', 'Internal', undef, "lxtwb caught one"); }; return Dimension('2pt'); });
+1;

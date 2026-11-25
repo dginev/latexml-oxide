@@ -170,7 +170,11 @@ DefMacro("\\lxinfo", || {
 DefPrimitive("\\lxset", || { SetCounter("lxk", 5); Input("lxin"); });
 DefEnvironment("{lxlist}", "<ltx:itemize>#body</ltx:itemize>",
   #{properties: || BeginItemize("itemize", "@item")});
-DefLigature("lxq", "Q!", #{fontTest: |font| font.getFamily() != "typewriter"});
+DefLigature("lxq", "Q!", #{fontTest: |font| { AssignValue("lxq:tested", true, "global"); font.getFamily() != "typewriter" }});
+DefMathLigature(|node| {
+  if LookupValue("lxq:mlig") != true { AssignValue("lxq:mlig", true, "global"); DefMathLigature(":=", "≔", #{role: "RELOP", name: "assign"}); }
+  ()
+});
 "##;
 
 const LXTHIN_TEX: &str = r"\documentclass{article}
@@ -185,6 +189,8 @@ const LXTHIN_TEX: &str = r"\documentclass{article}
 \begin{lxlist}\item one\item two\end{lxlist}
 
 lxq \texttt{lxq}
+
+$x:=y$
 \end{document}
 ";
 
@@ -193,8 +199,11 @@ lxq \texttt{lxq}
 /// `AddToMacro`. p2: `IsEmpty` (braces are empty, a letter is not), `Equals` (`\let` to one meaning; not `\relax`;
 /// `"1"` and `1` as Perl's string compare), `CleanLabel`, `CleanID`, `UTF`, `roman`/`Roman`, `Explode`/`ExplodeText`,
 /// `LookupRegisterOrDefault`, `FindFile`, `DigestIf` of an undefined CS. p3: `Input`, `SetCounter`. The list:
-/// `BeginItemize`'s properties number the items. p5: the ligature applies outside typewriter only. `LoadPool`,
-/// `ProcessKeyOptions` and the font-map calls run clean (0 E / 0 W).
+/// `BeginItemize`'s properties number the items. p5: the ligature applies outside typewriter only; its `fontTest`
+/// assigns a value (RHBOR: the test ran with the state lent, "RefCell already borrowed" on 23ce8bc3c25). p6: a math
+/// ligature's matcher defines one, which joins `:=` as in Perl (the matchers ran checked out of the state on
+/// 23ce8bc3c25: "checkin_value should only be called after checkout_value"). `LoadPool`, `ProcessKeyOptions` and the
+/// font-map calls run clean (0 E / 0 W).
 #[test]
 fn rhai_thin_wrappers() {
   let (log, xml) = convert_files_with(
@@ -214,6 +223,10 @@ fn rhai_thin_wrappers() {
     (
       "p5",
       r#"<para xml:id="p5"><p>Q! <text font="typewriter">lxq</text></p></para>"#,
+    ),
+    (
+      "p6",
+      r#"<para xml:id="p6"><p><Math mode="inline" tex="x:=y" text="x assign y" xml:id="p6.m1"><XMath><XMApp><XMTok name="assign" role="RELOP">≔</XMTok><XMTok font="italic" role="UNKNOWN">x</XMTok><XMTok font="italic" role="UNKNOWN">y</XMTok></XMApp></XMath></Math></p></para>"#,
     ),
   ] {
     assert_element(&xml, "para", &[&format!("xml:id=\"{id}\"")], para);

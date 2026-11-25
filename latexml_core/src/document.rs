@@ -34,7 +34,7 @@ use crate::{
     resource::Resource,
     tag::{TagConstructionClosure, TagOptionName},
   },
-  ligature::Ligature,
+  ligature::{self, FontTestClosure, LigatureClosure, LigatureMatcher},
   list::List,
   pin, state,
   util::radix::radix_alpha,
@@ -3124,8 +3124,13 @@ impl Document {
     // point (a `^` float such as a footnote's `<ltx:note>` lifting to the paragraph) abandoned it unligated, and a
     // paragraph's text before a `\footnote` kept `‘‘a’’ b--c` (Perl and pdflatex “a” b–c). The error is libxml's
     // `set_content` on a live text node, as in every other close. Guard
-    // `perfect_kernel_batch60::text_before_a_footnote_is_ligatured`.
-    let _ = self.close_text_internal();
+    // `perfect_kernel_batch60::text_before_a_footnote_is_ligatured`. A `fontTest`'s Fatal stops the build's next step
+    // (Perl dies here; rhai-bindings/fonttest_fatal_closed_by_set_node.tex).
+    if let Err(e) = self.close_text_internal()
+      && e.is_logged_fatal()
+    {
+      crate::stomach::stash_fatal(e);
+    }
     // Perl Document.pm:setNode L77-87: if the candidate is a
     // DOCUMENT_FRAG_NODE, validate that it has exactly one child and
     // descend to that child. The original Rust port had this check
@@ -3641,21 +3646,47 @@ impl Document {
     let mut head = whole;
     let ocontent = head.split_off(start);
     let mut content = Cow::Borrowed(&ocontent);
-    state::with_value("TEXT_LIGATURES", |value_opt| -> Result<()> {
-      if let Some(Stored::VecDequeStored(ligatures)) = value_opt {
-        for stored_ligature in ligatures.iter() {
-          if let Stored::Ligature(ligature) = stored_ligature {
-            if let Some(ref font_test) = ligature.font_test
-              && !(font_test)(font)?
+    let mut apply = |font_test: Option<&FontTestClosure>, code: &LigatureClosure| -> Result<()> {
+      if let Some(font_test) = font_test
+        && !font_test(font)?
+      {
+        return Ok(()); // if the font test fails, skip the ligature
+      }
+      content = Cow::Owned(code(&content));
+      Ok(())
+    };
+    if ligature::script_ligatures() {
+      // (a script's `fontTest` may assign values: the closures are taken out of the state first, Perl
+      // Document.pm:1225-1228; rhai-bindings/fonttest_assigns_a_value.tex)
+      let ligatures = state::with_value("TEXT_LIGATURES", |value_opt| match value_opt {
+        Some(Stored::VecDequeStored(ligatures)) => ligatures
+          .iter()
+          .filter_map(|stored| match stored {
+            Stored::Ligature(ligature) => {
+              Some((ligature.font_test.clone(), ligature.code.clone()?))
+            },
+            _ => None,
+          })
+          .collect(),
+        _ => Vec::new(),
+      });
+      for (font_test, code) in &ligatures {
+        apply(font_test.as_ref(), code)?;
+      }
+    } else {
+      state::with_value("TEXT_LIGATURES", |value_opt| -> Result<()> {
+        if let Some(Stored::VecDequeStored(ligatures)) = value_opt {
+          for stored in ligatures {
+            if let Stored::Ligature(ligature) = stored
+              && let Some(code) = &ligature.code
             {
-              continue; // if the font test fails, skip the ligature
+              apply(ligature.font_test.as_ref(), code)?;
             }
-            content = Cow::Owned((ligature.code.as_ref().unwrap())(&content));
           }
         }
-      }
-      Ok(())
-    })?;
+        Ok(())
+      })?;
+    }
     if *content != ocontent {
       self.node.set_content(&format!("{head}{content}"))?;
     }
@@ -4122,42 +4153,41 @@ impl Document {
   // New strategy (but inefficient): apply ligatures until one succeeds,
   // then remove it, and repeat until ALL (remaining) fail.
   fn apply_math_ligatures(&mut self, node: &mut Node) -> Result<()> {
-    let checked_out_ligatures = state::checkout_value("MATH_LIGATURES");
-    if let Some(Stored::VecDequeStored(ref stored_ligatures)) = checked_out_ligatures {
-      let mut ligatures = stored_ligatures.iter().collect::<VecDeque<_>>();
-      while !ligatures.is_empty() {
-        let mut matched = false;
-        let mut next_ligatures = VecDeque::new();
-        while !ligatures.is_empty() {
-          let ligature_stored = ligatures.pop_front().unwrap();
-          if let Stored::Ligature(ligature) = ligature_stored {
-            if self.apply_math_ligature(node, ligature)? {
-              next_ligatures.append(&mut ligatures);
-              matched = true;
-              break;
-            }
-          } else {
-            next_ligatures.push_back(ligature_stored);
-          }
-        }
-        ligatures = next_ligatures;
-        if !matched {
-          if let Some(value) = checked_out_ligatures {
-            state::checkin_value("MATH_LIGATURES", value);
-          }
-          return Ok(());
-        }
-      }
-    }
-    if let Some(value) = checked_out_ligatures {
-      state::checkin_value("MATH_LIGATURES", value);
+    // (the matchers are taken out of the state first: a matcher may assign values or define ligatures, Perl
+    // Document.pm:1174 `lookupValue`; rhai-bindings/math_ligature_matcher_defines_one.tex)
+    let mut matchers = state::with_value("MATH_LIGATURES", |value| match value {
+      Some(Stored::VecDequeStored(ligatures)) => ligatures
+        .iter()
+        .filter_map(|stored| match stored {
+          Stored::Ligature(ligature) => ligature.matcher.clone(),
+          _ => None,
+        })
+        .collect(),
+      _ => Vec::new(),
+    });
+    // Apply the first that matches, drop it, and repeat until all the remaining ones fail (Perl Document.pm:1176-1183).
+    while let Some(at) = self.first_math_ligature_match(node, &matchers)? {
+      matchers.remove(at);
     }
     Ok(())
   }
 
+  fn first_math_ligature_match(
+    &mut self,
+    node: &mut Node,
+    matchers: &[LigatureMatcher],
+  ) -> Result<Option<usize>> {
+    for (at, matcher) in matchers.iter().enumerate() {
+      if self.apply_math_ligature(node, matcher)? {
+        return Ok(Some(at));
+      }
+    }
+    Ok(None)
+  }
+
   /// Apply ligature operation to `node`, presumed the last insertion into it's parent(?)
-  fn apply_math_ligature(&mut self, node: &mut Node, ligature: &Ligature) -> Result<bool> {
-    if let Some((nmatched, newstring, attr)) = (ligature.matcher.as_ref().unwrap())(self, node)? {
+  fn apply_math_ligature(&mut self, node: &mut Node, matcher: &LigatureMatcher) -> Result<bool> {
+    if let Some((nmatched, newstring, attr)) = matcher(self, node)? {
       let mut boxes = VecDeque::new();
       boxes.push_front(self.get_node_box(node).unwrap());
       node.get_first_child().unwrap().set_content(&newstring)?;

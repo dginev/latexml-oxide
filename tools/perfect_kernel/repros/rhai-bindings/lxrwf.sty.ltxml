@@ -1,0 +1,9 @@
+# Perl stand-in for lxrwf.sty.rhai (the Perl run; the register is read before openElement, which needs a font here).
+package LaTeXML::Package::Pool;
+use LaTeXML::Package;
+DefRegister('\lxrwf', Dimension(0), getter => sub { Fatal('unexpected', 'Internal', undef, "lxrwf gives up"); return Dimension('1pt'); });
+DefConstructor('\rwv{}', "<ltx:text class='victim'>#1</ltx:text>");
+DefRewrite(xpath => "descendant-or-self::ltx:text[\@class='victim']", replace => sub { my ($document, @nodes) = @_;
+  my $v = ToString(LookupRegister('\lxrwf'));
+  $document->openElement('ltx:text'); $document->absorb("[$v]"); $document->closeElement('ltx:text'); });
+1;

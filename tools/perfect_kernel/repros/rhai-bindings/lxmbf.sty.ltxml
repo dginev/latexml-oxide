@@ -1,0 +1,5 @@
+# Perl stand-in for lxmbf.sty.rhai (the Perl run).
+package LaTeXML::Package::Pool;
+use LaTeXML::Package;
+DefMacro('\lxmbf', sub { Fatal('unexpected', 'Internal', undef, 'lxmbf gives up'); return Tokens(T_OTHER('X')); });
+1;

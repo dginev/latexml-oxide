@@ -226,8 +226,14 @@ fn register_getter(
     let args: Vec<Dynamic> = args.into_iter().map(arg_value).collect();
     let ret = match call_deferred_body(&engine, &ast, &f, args) {
       Ok(ret) => ret,
-      // (`value_of` returns an Option, so a Fatal here is dropped: rhai-bindings/register_getter_fatal_continues_red.tex)
-      Err(e) => contain(&what, e, Dynamic::UNIT).ok()?,
+      Err(e) => match contain(&what, e, Dynamic::UNIT) {
+        Ok(neutral) => neutral,
+        // (`value_of` returns an Option: the next step raises it, rhai-bindings/register_getter_fatal_stops.tex)
+        Err(fatal) => {
+          latexml_core::stomach::stash_fatal(fatal);
+          return None;
+        },
+      },
     };
     let value = dynamic_to_register_value(&ret);
     if value.is_none() && !ret.is_unit() {

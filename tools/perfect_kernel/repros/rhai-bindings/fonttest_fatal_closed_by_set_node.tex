@@ -1,0 +1,20 @@
+% mechanism: a Rhai `Fatal()` raised in a `DefLigature` `fontTest` while `set_node` closes the open text (a
+%   `\footnote` entered right after bold text) stops the build at its next step: `latexml_core/src/document.rs`
+%   `set_node` returns no Result, so it stashes the Fatal (`stomach::stash_fatal`) and the build's `check_timeout`
+%   raises it (RHFAT; OD #1028). Perl's `setNode` (Document.pm:74) runs `closeText_internal`, which dies there
+% witness: synthetic (revRHFAT `p/ligb1.tex`; the binding lxlfn.sty.rhai, lxlfn.sty.ltxml for Perl, lxlfn.sty for pdflatex)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Plain qq. Before qq1 after qq. Second qq. 1 Note qq.";
+%   Perl 0.8.8: <p>Plain Q. <text font="bold">Before qq</text></p>, 1 fatal error
+% engines: INT081Y (23ce8bc3c25): 1 fatal error, 0 warnings, the whole document built through "Second Q." (dropped)
+%          RHODR: <p>Plain Q. <text font="bold">Before qq<note mark="1" role="footnote"/></text></p>, 1 fatal error,
+%          1 warning (the build stopped), status 3; the empty note is the element `set_node` was entering
+% expect:  1 fatal error; the build stops at the bold text (as without the footnote: 1 warning)
+% status:  GREEN (RHODR; guard 30_script_bindings::a_rhai_fatal_is_logged_once, row "a ligature fontTest, the text closed
+%   by set_node")
+\documentclass{article}
+\usepackage{lxlfn}
+\begin{document}
+Plain qq. {\bfseries Before qq\footnote{\mdseries Note qq.}} after qq.
+
+Second qq.
+\end{document}

@@ -1,0 +1,5 @@
+# Perl stand-in for lxfta.sty.rhai (the Perl run).
+package LaTeXML::Package::Pool;
+use LaTeXML::Package;
+DefLigature(qr{qq}, 'Q', fontTest => sub { AssignValue(lxfta_tested => 1, 'global'); return 1; });
+1;

@@ -1822,6 +1822,7 @@ pub(super) fn wire_math_ligature_matcher(
       Ok(Some((n, replacement, attr)))
     },
   );
+  latexml_core::ligature::note_script_ligature();
   latexml_core::state::unshift_value("MATH_LIGATURES", vec![Ligature {
     id:        latexml_core::state::generate_ligature_id(),
     matcher:   Some(rust_matcher),

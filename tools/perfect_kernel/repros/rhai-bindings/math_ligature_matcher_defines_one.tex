@@ -1,0 +1,21 @@
+% mechanism: a math ligature's matcher that defines a ligature (or assigns a value) panicked "checkin_value should only
+%   be called after checkout_value": `Document::apply_math_ligatures` checked MATH_LIGATURES out of the state while the
+%   matchers ran (and a matcher's error returned before the check-in, disabling them for the rest of the document); the
+%   matchers are now taken out first, as Perl reads the list with `lookupValue` (Document.pm:1174), and the first that
+%   matches is dropped and the rest retried (Document.pm:1176-1183)
+% witness: synthetic (revRHODR S2 `mlig.tex`; the binding lxmlm.sty.rhai, lxmlm.sty.ltxml for Perl, lxmlm.sty for
+%   pdflatex)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "First a. Then x := y."; Perl 0.8.8: 0 errors,
+%   <XMTok meaning="equals" name="assign" role="RELOP">≔</XMTok> (the `=` token's meaning kept: see the report)
+% engines: INT081Y (23ce8bc3c25) and RHODR round 1: Fatal:panic:caught … checkin_value should only be called after
+%          checkout_value, no document
+%          RHODR round 2: 0 errors, 0 warnings; <XMTok name="assign" role="RELOP">≔</XMTok>
+% expect:  0 errors, 0 warnings; `:=` joined as ≔ (role RELOP, name assign)
+% status:  GREEN (RHODR round 2; guard perfect_kernel_batchw3rd::rhai_thin_wrappers, p6)
+\documentclass{article}
+\usepackage{lxmlm}
+\begin{document}
+First $a$.
+
+Then $x:=y$.
+\end{document}

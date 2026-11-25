@@ -700,8 +700,15 @@ impl Rewrite {
             }
             document.set_node(&parent);
             let point_opt = parent.get_last_child();
-            if let RewritePattern::Closure(closure) = pattern {
-              closure(document, replaced.iter_mut().collect())?;
+            if let RewritePattern::Closure(closure) = pattern
+              && let Err(fatal) = closure(document, replaced.iter_mut().collect())
+            {
+              // (the siblings after the match are kept where Perl's `die` leaves them detached;
+              // rhai-bindings/rewrite_fatal_keeps_the_document.tex)
+              for mut fnode in following {
+                parent.add_child(&mut fnode)?;
+              }
+              return Err(fatal);
             }
             let mut ins_queue = VecDeque::new();
             let mut walk = parent.get_last_child();

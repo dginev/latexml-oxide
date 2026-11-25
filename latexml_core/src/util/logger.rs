@@ -639,6 +639,8 @@ fn hold_record(level: Level, painted_message: &str) -> bool {
 pub struct DiagnosticsHold {
   outer:       Option<Vec<(Level, String)>>,
   outer_stubs: Option<Vec<crate::token::Token>>,
+  // (the scope runs without the enclosing stashed Fatal, `stomach::stash_fatal`, and drops its own with a discard)
+  outer_stash: Option<crate::common::error::Error>,
   snapshot:    crate::common::error::DiagnosticGates,
   resolved:    bool,
 }
@@ -652,6 +654,7 @@ impl DiagnosticsHold {
     DiagnosticsHold {
       outer,
       outer_stubs,
+      outer_stash: crate::stomach::set_aside_stashed_fatal(),
       snapshot,
       resolved: false,
     }
@@ -794,6 +797,7 @@ impl DiagnosticsHold {
       crate::state::remove_error_stub(&stub);
     }
     let records = self.take_held();
+    crate::stomach::restore_stashed_fatal(self.outer_stash.take(), false);
     crate::common::error::restore_diagnostic_gates(self.snapshot.clone());
     Some(DeferredDiagnostics {
       records,
@@ -808,6 +812,7 @@ impl DiagnosticsHold {
     for stub in self.take_stubs() {
       note_held_stub(stub);
     }
+    crate::stomach::restore_stashed_fatal(self.outer_stash.take(), true);
     for (level, message) in self.take_held() {
       if !hold_record(level, &message) {
         write_record(level, message);
@@ -825,6 +830,7 @@ impl DiagnosticsHold {
       crate::state::remove_error_stub(&stub);
     }
     let dropped = self.take_held().len();
+    crate::stomach::restore_stashed_fatal(self.outer_stash.take(), false);
     crate::common::error::restore_diagnostic_gates(self.snapshot.clone());
     dropped
   }

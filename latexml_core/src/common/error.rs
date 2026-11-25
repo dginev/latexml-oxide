@@ -1531,6 +1531,12 @@ impl Error {
     let key = self.fatal_key();
     LAST_FATAL_LOGGED.with(|c| c.borrow().as_deref() == Some(key.as_str()))
   }
+  /// Record this already-printed Fatal as the last one logged, so a sink's `log_fatal` does not print it again (a
+  /// Fatal raised after others were logged since its line: `stomach::check_timeout`'s stashed one).
+  pub fn mark_logged_fatal(&self) {
+    let key = self.fatal_key();
+    LAST_FATAL_LOGGED.with(|c| *c.borrow_mut() = Some(key));
+  }
   pub fn todo() -> Self {
     Error::from(ErrorData {
       target:   ErrorTarget::Internal,

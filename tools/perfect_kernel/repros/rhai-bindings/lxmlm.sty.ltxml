@@ -1,0 +1,5 @@
+# Perl stand-in for lxmlm.sty.rhai (the Perl run).
+package LaTeXML::Package::Pool;
+use LaTeXML::Package;
+DefMathLigature(matcher => sub { if (!LookupValue('lxmlm_done')) { AssignValue(lxmlm_done => 1, 'global'); DefMathLigature(":=" => "\x{2254}", role => 'RELOP', name => 'assign'); } return; });
+1;

@@ -1,0 +1,21 @@
+% mechanism: a register getter's stashed Fatal is printed once though another Fatal is logged before its raise:
+%   `stomach::take_stashed_fatal` marks it as the last one printed (`Error::mark_logged_fatal`), so the sink's
+%   `log_fatal` does not print it again (`is_logged_fatal` remembers only the last line printed)
+% witness: synthetic (revRHODR S1 `twoget.tex`; the binding lxtwg.sty.rhai, lxtwg.sty.ltxml for Perl, lxtwg.sty for
+%   pdflatex)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Before 1.0pt2.0pt after. Second paragraph."; Perl 0.8.8:
+%   1 fatal error, 1 `Fatal:` line (its `die` in \lxtwa's getter: \lxtwb's never runs)
+% engines: INT081Y (23ce8bc3c25): 2 `Fatal:` lines (\lxtwa's dropped, \lxtwb's caught one), the text kept
+%          RHODR round 1 (71745e52eed): 3 `Fatal:` lines (\lxtwa's printed again at its raise), a 39-byte document
+%          RHODR round 2: 2 `Fatal:` lines, status 3, a 39-byte document (digest_fatal_keeps_text_before_red.tex)
+% expect:  2 `Fatal:` lines: \lxtwa's once, then \lxtwb's caught one (the getter returns and the step goes on, where
+%   Perl's `die` stops at once)
+% status:  GREEN (RHODR round 2; guard 30_script_bindings::a_rhai_fatal_is_logged_once, row "a register getter, then a
+%   caught Fatal in another before the raise")
+\documentclass{article}
+\usepackage{lxtwg}
+\begin{document}
+Before \edef\x{\the\lxtwa\the\lxtwb}\x\ after.
+
+Second paragraph.
+\end{document}
