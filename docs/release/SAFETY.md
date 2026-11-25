@@ -101,7 +101,7 @@ The 34 shipped sites, each with its contract (a `// SAFETY:` comment at the site
 | `latexml_core/src/common/arena.rs` | 1 | `resolve_unchecked` | category B | perf |
 | `latexml_oxide/bin/cortex_worker/exit_report.rs` | 2 | `sigaction` installation; the handler's chain call, `signal`, `raise` | async-signal-safe; the handler table is written once at start-up | 6 |
 | `latexml_oxide/bin/cortex_worker.rs` | 3 | `mmap(PROT_NONE)`, `std::alloc::alloc`, `raise(SIGSEGV)` | debug-assertion builds only (the harness tests' fault injection); `rustix::mm::mmap_anonymous` is itself `unsafe`, `raise` is thread-directed (`tgkill`), which `rustix` 1.1 lacks | stays |
-| `latexml_oxide/src/heap_trim.rs` | 3 | `mallinfo2` (`c_heap_mb`), `mi_collect` (`collect_rust_heap`), `malloc_trim` (`release_free_heap`) | allocator queries and trims, the only callers of these three; live allocations stay valid. mimalloc 0.1.52's safe `stats_json()` is `#[cfg(not(feature = "v2"))]` and we pin `v2`; the C heap is glibc's | 2 |
+| `latexml_oxide/src/heap_trim.rs` | 3 | `mallinfo2` (`c_heap_mb`), `mi_collect` (`collect_rust_heap`), `malloc_trim` (`release_free_heap`) | allocator queries and trims, the only shipped callers of these three (`tests/112_fragment_yield.rs` reads `mallinfo2` itself); live allocations stay valid. mimalloc 0.1.52's safe `stats_json()` is `#[cfg(not(feature = "v2"))]` and we pin `v2`; the C heap is glibc's | 2 |
 | `latexml_oxide/src/lsp_server/unix.rs` | 1 | `fork` | category G | stays |
 | `latexml_post/src/graphics.rs` | 1 | `pre_exec(setsid, setpgid, prctl(PR_SET_PDEATHSIG), getppid, _exit)` | category E | stays |
 | `latexml_post/src/xslt.rs` | 2 | `xsltMaxDepth`: its `extern` declaration and the `Once`-guarded write | category F | 4 |
@@ -115,8 +115,8 @@ raising a pin is an exception its commit argues.
 
 Major changes since the 2026-07-20 reconciliation (55 sites):
 - **2026-11-25 (issue #937 Phase 2, first step), 66 → 62 blocks (69 → 65 counting every `unsafe` keyword), no
-  behaviour change:** the allocator calls sit behind two safe functions in `heap_trim.rs`, which calls them once each:
-  `c_heap_mb()` (`mallinfo2`; the 3 streaming-spill diagnostics of `core_interface.rs` 3 → 0 and the render loop's
+  behaviour change:** the allocator calls sit behind two safe functions in `heap_trim.rs`, the one shipped caller of each:
+  `c_heap_mb()` (`mallinfo2`; the streaming spill trace and fragment telemetry, `core_interface.rs` 3 → 0, and the render loop's
   `LATEXML_POST_MEMDIAG` probe, `post.rs` 1 → 0) and `collect_rust_heap()` (`mi_collect`; `release_free_heap` and
   `streaming_restart.rs` 1 → 0). Their `cfg` gates are unchanged: `mallinfo2` on Linux, `mi_collect` off under
   `dhat-heap`. `heap_trim.rs` 2 → 3; `malloc_trim` stays where it was (Phase 2's next step measures it first).
