@@ -1310,7 +1310,7 @@ mod split_nav_relations {
   /// Every image reference (`src`, `data`; inline `data:` images left out) of every page of a split run, keyed as
   /// [`split_hrefs`].
   fn split_images(out: &Path) -> Vec<(String, Vec<String>)> {
-    split_links(out, r#"(?:src|data)="([^"]*)""#)
+    split_links(out, r#"\b(?:src|data)="([^"]*)""#)
   }
 
   fn split_links(out: &Path, pattern: &str) -> Vec<(String, Vec<String>)> {
@@ -1350,7 +1350,7 @@ mod split_nav_relations {
   /// split paths (the streamed default and the whole-DOM one) and with pages in folders (`idrelative`).
   #[test]
   fn split_navigation_ignores_an_ancestor_site_directory() {
-    // The figure is copied beside the pages at its own name in every layout (kept path, OXIDIZED_DESIGN_DIVERGENCES
+    // The figure is kept at its own name beside the pages in every layout (kept path, OXIDIZED_DESIGN_DIVERGENCES
     // #1081); a site named through a link once renamed it `x1.svg` (KNOWN_PERL_ERRORS #1334).
     const DOC: &str = "\\documentclass[12pt,oneside]{book}\n\\usepackage{graphicx}\n\\begin{document}\n\
                        \\title{Book}\\maketitle\n\\tableofcontents\n\\chapter{One}\n\\section{A}\n\
