@@ -471,6 +471,7 @@ mod omnibus_orcid_running_heads {
   const TEX: &str = "\\documentclass{someunknownjournal}\n\
     \\lefttitle{Left Running Head}\n\
     \\righttitle{Right Running Head}\n\
+    \\jyear{2021}\n\
     \\title{A Study of Things}\n\
     \\author{Ada Lovelace\\orcid{0000-0002-2709-7338}}\n\
     \\begin{document}\n\
@@ -496,8 +497,20 @@ mod omnibus_orcid_running_heads {
     for leaked in ["Left Running Head", "Right Running Head"] {
       assert!(
         !xml.contains(leaked),
-        "running-head {leaked:?} must be dropped, not emitted:\n{xml}",
+        "running head {leaked:?} must be dropped, not emitted:\n{xml}"
       );
     }
+    // sn-jnl's `\jyear{2021}` takes its year (sn-jnl.cls L479 `\def\jyear#1`, a required argument), so no paragraph
+    // precedes the first section: rc3 put the year in one, split across a `<text>` under a preload (`2<text>021`;
+    // ar5iv 353 and 301, 40 of 218 `\jyear` papers, 2103.04081).
+    let body = xml.find("<section").expect("a section");
+    assert!(
+      !xml[..body].contains("<para"),
+      "a paragraph before the first section:\n{xml}"
+    );
+    assert!(
+      !xml.contains("2021"),
+      "the year must be dropped, not emitted:\n{xml}"
+    );
   }
 }

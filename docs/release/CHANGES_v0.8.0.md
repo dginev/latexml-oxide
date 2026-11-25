@@ -56,6 +56,11 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     links as `x` does and `\label{/}` takes the page's id (OXIDIZED_DESIGN_DIVERGENCES #1164). As in Perl,
     `--splitnaming=labelrelative` drops a parent's label only before a `.`, `_` or `:` (`section` under `sec` was
     `tion`), and a run of `:` in a page name is one `_`.
+  - **A journal class's `\jyear{2021}` no longer prints its year as the first body paragraph.** The OmniBus fallback
+    (sn-jnl and other unbound journal classes) took `\jyear` with an optional argument, so `{2021}` stayed in the
+    preamble and opened the document early with a "2021" paragraph that pdflatex never prints; it now takes the
+    required argument every class defines (sn-jnl.cls L479, cjs-rcs-article.cls L751). 40 of 218 arXiv papers using
+    `\jyear` lose that paragraph and nothing else (ar5iv issues 353 and 301; witness 2103.04081).
 
 ### 0.8.0-rc3
 

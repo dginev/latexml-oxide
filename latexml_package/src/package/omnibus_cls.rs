@@ -414,7 +414,9 @@ LoadDefinitions!({
   // are non-conflicting. Same caution for `\affil` — already overloaded
   // by amsart and other classes; leaving it to specific class bindings.
   def_macro_noop("\\bibcommenthead")?;
-  def_macro_noop("\\jyear[]")?;
+  // sn-jnl.cls L479 `\def\jyear#1{\gdef\@jyear{#1}}`, TL's cjs-rcs-article.cls L751 `\newcommand*\jyear[1]`: a required
+  // argument, else `{2021}` is typed as a body paragraph (ar5iv 353: 2304.08167, 301: 2212.13695).
+  def_macro_noop("\\jyear{}")?;
   DefMacro!("\\resumen{}",         "\\lx@add@abstract{#1}");
   DefMacro!("\\ion{}{}",           "{#1 \\textsc{#2}}");
   Let!("\\fulladdresses", "\\address");
