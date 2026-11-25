@@ -23,7 +23,7 @@ pub fn release_free_heap() {
   collect_rust_heap();
 }
 
-/// Purge mimalloc's free pages (the Rust global allocator's; a no-op under `dhat-heap`, which replaces it).
+/// Purge mimalloc's free pages (skipped under `dhat-heap`).
 pub fn collect_rust_heap() {
   #[cfg(not(feature = "dhat-heap"))]
   // SAFETY: `mi_collect(true)` only purges unused mimalloc pages; live allocations remain valid.

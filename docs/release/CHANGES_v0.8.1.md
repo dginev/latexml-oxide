@@ -9,6 +9,10 @@ top of its group.
 
 ### Unreleased
 
+  - **Fewer `unsafe` blocks (issue 937, phase 2 step 1).** The glibc heap statistics (`mallinfo2`) and mimalloc's page
+    purge (`mi_collect`) are each called from one safe function in `heap_trim.rs` (`c_heap_mb`, `collect_rust_heap`);
+    their other call sites are safe code: 69 → 65 `unsafe` keywords. Output byte-identical; instructions and syscalls
+    unchanged.
   - **An `\item[label]` in `{thebibliography}` is an entry labelled as written,** as LaTeX prints it (asl.cls author
     groups, backref's `\item[\@biblabel{1}]`, `\item[]`, footnote marks): the label was printed twice ("[1] [[A1]] …")
     and each later entry, and its citations, numbered one too high, as in Perl (KNOWN_PERL_ERRORS #1335). Witnesses

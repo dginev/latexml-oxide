@@ -471,15 +471,18 @@ Rules that keep this file honest and mergeable:
     Done: phase 0 and part of 1 (PR 1000), phase 5 on int (UNSAFE5: the 3 `unsafe impl Send/Sync` markers dropped,
     `NO_PROPERTIES` a const empty map; ratchet 80 → 77 blocks, 83 → 80 keywords), phase 1 rest and phase 3 on int
     (UNSAFE6: log mirror, cause record, `getpid`, stderr through rustix; one `getrusage` helper; `--init` writes no
-    environment; 80 → 69 keywords, 77 → 66 blocks). Left: phase 2 allocator (7 sites, needs a fleet measurement), phase
-    4 libxslt (2 shipped; new crate versions, DG), phase 6 (signal handlers, macOS 4 / Windows 9 queries, `_exit`,
-    script bindings 4, tests 29 + test-utils 5); kept with contracts: `getrusage`, `sysconf(_SC_PHYS_PAGES)`,
-    `TEXMFROOT` (libkpathsea reads `environ`; written before a second thread unless a library host resolves before
-    `init_kpathsea()`), `fork`, `pre_exec`. Every batch shows no slowdown: user and kernel instructions, task-clock and
-    `strace -c` counts, base vs candidate (DG 2026-11-25). Known trade-off: the cortex worker's signal handler relies on
-    `OnceLock::get` being one acquire load (`exit_report.rs:212`); `rust-toolchain.toml` floats on nightly, so its
-    "re-check on a toolchain bump" has no trigger; kept, since a replacement needs a new `unsafe` (Gemini R4,
-    2026-11-25); 5
+    environment; 80 → 69 keywords, 77 → 66 blocks). Phase 2 step 1 on int (UNSAFE7: `mallinfo2` ×4 and `mi_collect` ×2
+    behind `heap_trim::c_heap_mb`/`collect_rust_heap`, one block each; 69 → 65 keywords, 66 → 62 blocks; byte-identical,
+    perf-neutral). Left: phase 2 `malloc_trim` (UNSAFE937.2, a fleet measurement first) and the test-only `mallinfo2` in
+    `tests/112_fragment_yield.rs` (a `c_heap_bytes` would take it, 65 → 64; phase 6), phase 4 libxslt (2 shipped;
+    rust-libxslt 0.1.6 `set_max_depth`, publish approved after both SHIPs, D-18), phase 6 (signal handlers, macOS 4 /
+    Windows 9 queries, `_exit`, script bindings 4, tests 29 + test-utils 5); kept with contracts: `getrusage`,
+    `sysconf(_SC_PHYS_PAGES)`, `TEXMFROOT` (libkpathsea reads `environ`; written before a second thread unless a library
+    host resolves before `init_kpathsea()`), `fork`, `pre_exec`. Every batch shows no slowdown: user and kernel
+    instructions, task-clock and `strace -c` counts, base vs candidate (DG 2026-11-25). Known trade-off: the cortex
+    worker's signal handler relies on `OnceLock::get` being one acquire load (`exit_report.rs:212`);
+    `rust-toolchain.toml` floats on nightly, so its "re-check on a toolchain bump" has no trigger; kept, since a
+    replacement needs a new `unsafe` (Gemini R4, 2026-11-25); 5
   - SECR — the Lua sandbox's residuals (#911, #924, #935; OD #1081): carry the Lua protocol over a socket pair
     (`UnixStream::pair()` via `Stdio::from`; `/proc/self/fd/N` cannot reopen a socket, ENXIO), closing the race where a
     chunk reads its own pipe and swallows its refusal record (records are best-effort today); a newline in a refused
