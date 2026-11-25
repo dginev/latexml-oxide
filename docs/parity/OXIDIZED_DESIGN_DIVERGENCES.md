@@ -19358,11 +19358,18 @@ processing, and a Fatal the binding deliberately catches may continue, as Perl's
 Fatal ends the conversion: a setter's as a body's, a `fontTest`'s as any build hook's (the build stops and keeps the
 document built so far, with its Warning). Where no `Result` reaches the caller — a register getter
 (`Definition::value_of` returns an `Option`), a `fontTest` run while `set_node` closes the open text (Perl's Document.pm:74
-dies there) — the Fatal is stashed (`stomach::stash_fatal`) and the next digestion or build step's `check_timeout` raises it
-(DG 2026-11-15; repros `rhai-bindings/register_getter_fatal_stops.tex`, `fonttest_fatal_closed_by_set_node.tex`). A
-digestion Fatal keeps no text where Perl keeps the text before it (`digest_fatal_keeps_text_before_red.tex`, post-merge).
+dies there) — the Fatal is stashed (`stomach::stash_fatal`) and raised, printed once, by the core step after it: the next
+digestion or build step's `check_timeout`, the digestion's end, or the end of the rewrite rule it ran in (DG 2026-11-15;
+repros `rhai-bindings/register_getter_fatal_stops.tex`, `fonttest_fatal_closed_by_set_node.tex`,
+`register_getter_fatal_printed_once.tex`). The stash is the core's: a speculative run (`DiagnosticsHold`) sets it aside
+and drops its own with a discard, and the core's end drops one no step raised, so post-processing never raises it. A Fatal
+in the rewrite phase ends the rewrites and keeps the document, which is finalized and post-processed, status 3, as Perl
+dies out of the rule loop (Core.pm:282-287) and post-processes the rescued document (LaTeXML.pm:277-283, 327-336);
+unlike Perl the math is still parsed and the siblings after a failed `replace` stay
+(`rewrite_fatal_keeps_the_document.tex`). A digestion Fatal keeps no text where Perl keeps the text before it
+(`digest_fatal_keeps_text_before_red.tex`, post-merge).
 **Guard**: `30_script_bindings::a_rhai_fatal_is_logged_once` (the caught-then-thrown, `fontTest`, `set_node`, setter and
-getter rows, every `<p>` whole).
+getter rows, every `<p>` whole; the rewrite rows post-processed).
 
 ### 1030. → KNOWN_PERL_ERRORS #1244 (Rhai glue arithmetic is TeX's `\advance`, not Perl's Glue.pm / MuGlue.pm)
 

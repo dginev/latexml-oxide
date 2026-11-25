@@ -1838,6 +1838,23 @@ fn a_rhai_fatal_is_logged_once() {
       0,
       &["<p>Before 1.0pt after.</p>", "<p>Second paragraph.</p>"],
     ),
+    (
+      // (the stashed Fatal is printed once though another is logged before its raise: 3 lines on 71745e52eed)
+      "a register getter, then a caught Fatal in another before the raise",
+      &[(
+        "wftop.sty.rhai",
+        r#"DefRegister("\\wfa", Dimension("0pt"), #{ getter: || { Fatal("unexpected", "Internal", "wfa gives up"); Dimension("1pt") } });
+DefRegister("\\wfb", Dimension("0pt"), #{ getter: || { try { Fatal("unexpected", "Internal", "wfb caught one"); } catch (e) { } Dimension("2pt") } });"#,
+      )],
+      "Before \\edef\\x{\\the\\wfa\\the\\wfb}\\x\\ after.\\par Second paragraph.",
+      &[
+        "Fatal:unexpected:Internal wfa gives up",
+        "Fatal:unexpected:Internal wfb caught one",
+      ],
+      0,
+      0,
+      &[],
+    ),
   ];
   let mut failures = Vec::new();
   for (name, files, body, messages, want_contained, want_warnings, paras) in rows {
@@ -1867,6 +1884,86 @@ fn a_rhai_fatal_is_logged_once() {
         "{name}: {} Fatal: lines (want those naming {messages:?}), status {code}, {contained} contained \
          Error:script: lines (want {want_contained}), {warnings} Warning: lines (want {want_warnings}), \
          paragraphs {found:#?} (want {want:#?}); fatals={fatals:#?}\n{xml}\n{log}",
+        fatals.len(),
+      ));
+    }
+  }
+  // A Fatal in the rewrites ends them and keeps the document, which is post-processed with no further diagnostic, as
+  // Perl's rescued one (LaTeXML.pm:277-283; rhai-bindings/rewrite_fatal_keeps_the_document.tex): post ran in the
+  // conversion's thread. (row name, the binding, the Fatal's message, every `<p>` of the page, whole)
+  let rewrite_rows: &[(&str, &str, &str, &str)] = &[
+    (
+      // (on 71745e52eed post raised the getter's stashed Fatal and stopped: the page held the core XML)
+      "a register getter in a rewrite",
+      r#"DefRegister("\\wfa", Dimension("0pt"), #{ getter: || { Fatal("unexpected", "Internal", "wfa gives up"); Dimension("1pt") } });
+DefRewrite(#{ select: "descendant-or-self::ltx:text[@class='victim']" }, |document, nodes| {
+  document.openElement("ltx:text"); document.absorbString("[" + ToString(LookupRegister("\\wfa")) + "]"); document.closeElement("ltx:text");
+});"#,
+      "wfa gives up",
+      r#"<p class="ltx_p">Before [] after.</p>"#,
+    ),
+    (
+      // (on 71745e52eed the absorb raised the stash in the rule, and the document was lost to `Error:document:convert`)
+      "a register getter in a rewrite, then an absorb",
+      r#"DefRegister("\\wfa", Dimension("0pt"), #{ getter: || { Fatal("unexpected", "Internal", "wfa gives up"); Dimension("1pt") } });
+DefRewrite(#{ select: "descendant-or-self::ltx:text[@class='victim']" }, |document, nodes| {
+  let v = ToString(LookupRegister("\\wfa")); document.absorb(Tokenize("[x]"));
+});"#,
+      "wfa gives up",
+      r#"<p class="ltx_p">Before  after.</p>"#,
+    ),
+    (
+      // (on 23ce8bc3c25 too: the document lost to `Error:document:convert`)
+      "a rewrite's own Fatal",
+      r#"DefRewrite(#{ select: "descendant-or-self::ltx:text[@class='victim']" }, |document, nodes| {
+  Fatal("unexpected", "Internal", "rewrite gives up");
+});"#,
+      "rewrite gives up",
+      r#"<p class="ltx_p">Before  after.</p>"#,
+    ),
+  ];
+  for (name, rhai, message, middle) in rewrite_rows {
+    let rhai = format!(
+      "DefConstructor(\"\\\\rwv{{}}\", \"<ltx:text class=\\\"victim\\\">#1</ltx:text>\");\n{rhai}"
+    );
+    let tex = "\\documentclass{article}\\usepackage{wftop}\\begin{document}First paragraph.\n\nBefore \\rwv{v} \
+               after.\n\nSecond paragraph.\\end{document}";
+    let files: &[(&str, &[u8])] = &[("wftop.sty.rhai", rhai.as_bytes())];
+    let (log, _xml, (html, post_log, code)) =
+      latexml::util::test::convert_bytes_files_then(tex.as_bytes(), files, None, |xml, _| {
+        let opts = latexml::post::PostOptions {
+          pmml: true,
+          stylesheet: latexml::post::default_stylesheet(Some("html5")),
+          is_html: Some(true),
+          default_resources: false,
+          graphicimages: false,
+          ..latexml::post::PostOptions::default()
+        };
+        let post = latexml::post::run_post_processing_logged(xml, &opts);
+        (post.html, post.log, post.status_code)
+      });
+    let log = format!("{log}{post_log}");
+    let fatals: Vec<&str> = log.lines().filter(|l| l.starts_with("Fatal:")).collect();
+    let errors = log.lines().filter(|l| l.starts_with("Error:")).count();
+    let found = latexml::util::test::xml_elements(&html, "p", &[]);
+    let want: Vec<String> = [
+      r#"<p class="ltx_p">First paragraph.</p>"#,
+      middle,
+      r#"<p class="ltx_p">Second paragraph.</p>"#,
+    ]
+    .iter()
+    .map(|p| latexml::util::test::normalize_markup(p))
+    .collect();
+    if fatals.len() != 1
+      || !fatals[0].contains(message)
+      || errors != 0
+      || code != 3
+      || log.contains("stopped")
+      || found != want
+    {
+      failures.push(format!(
+        "{name}: {} Fatal: lines (want 1 naming {message:?}), {errors} Error: lines, status {code}, paragraphs \
+         {found:#?} (want {want:#?})\n{html}\n{log}",
         fatals.len(),
       ));
     }

@@ -50,15 +50,44 @@ pub fn set_timeout(seconds: u64) {
 
 // A logged Fatal raised where no `Result` reaches the caller: [`check_timeout`] raises it at the next step (OD #1028).
 thread_local! {
-  static STASHED_FATAL: RefCell<Option<Error>> = const { RefCell::new(None) };
+  static STASHED_FATAL: Cell<Option<Error>> = const { Cell::new(None) };
+  // (whether one is stashed: a destructor-free read for the checkpoint's hot path)
+  static FATAL_STASHED: Cell<bool> = const { Cell::new(false) };
 }
 
 /// Keep `fatal` for the next digestion or build step to raise, as Perl's `die` stops there: a register getter's
 /// (`Definition::value_of` returns an `Option`), a `fontTest`'s in `Document::set_node`. The first one is kept.
 pub fn stash_fatal(fatal: Error) {
   STASHED_FATAL.with(|stashed| {
-    stashed.borrow_mut().get_or_insert(fatal);
+    let first = stashed.take();
+    stashed.set(first.or(Some(fatal)));
   });
+  FATAL_STASHED.with(|armed| armed.set(true));
+}
+
+/// Take the stashed Fatal out to raise it, marked as printed (its line is: a Fatal logged since must not make a sink
+/// print it again).
+pub fn take_stashed_fatal() -> Option<Error> {
+  let fatal = set_aside_stashed_fatal()?;
+  fatal.mark_logged_fatal();
+  Some(fatal)
+}
+
+/// Set the stashed Fatal aside for a speculative scope to run without it (`logger::DiagnosticsHold`).
+pub(crate) fn set_aside_stashed_fatal() -> Option<Error> {
+  if !FATAL_STASHED.with(|armed| armed.replace(false)) {
+    return None;
+  }
+  STASHED_FATAL.with(Cell::take)
+}
+
+/// Put an enclosing scope's stashed Fatal back: it stays the first; the scope's own is kept when `keep_scope` and
+/// there was none.
+pub(crate) fn restore_stashed_fatal(outer: Option<Error>, keep_scope: bool) {
+  let scope = set_aside_stashed_fatal().filter(|_| keep_scope);
+  if let Some(fatal) = outer.or(scope) {
+    stash_fatal(fatal);
+  }
 }
 
 /// Whether the conversion's deadline ([`set_timeout`]) has passed — for a reader that may never return to a digestion
@@ -439,7 +468,7 @@ pub fn resolve_rss_cap() -> Option<u64> {
 /// `panic="unwind"`. Sampling RSS here at well below the OS ulimit
 /// gives us a clean diagnostic and a unwound stack via `fatal!`.
 pub fn check_timeout() -> Result<()> {
-  if let Some(fatal) = STASHED_FATAL.with(|stashed| stashed.borrow_mut().take()) {
+  if let Some(fatal) = take_stashed_fatal() {
     return Err(fatal);
   }
   // Box-list cycle guard fired in `push_box_list` (which cannot unwind) —
@@ -810,7 +839,7 @@ pub fn initialize_stomach() {
   stomach.cycle_progress = 0;
   stomach.cycle_spans.reset();
   stomach.pending_cycle_fatal = None;
-  STASHED_FATAL.with(|stashed| stashed.borrow_mut().take());
+  set_aside_stashed_fatal();
 
   assign_value("BOUND_MODE", "vertical", Some(Scope::Global));
   assign_value("MODE", "vertical", Some(Scope::Global));

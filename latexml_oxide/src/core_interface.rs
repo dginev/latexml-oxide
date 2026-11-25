@@ -5,7 +5,7 @@ use latexml_core::{CharToken, Core, Debug, Error, Explode, Fatal, T_CS, T_SPACE,
 use latexml_core::{
   common::{
     DigestionMode, arena,
-    error::{self, Result, emit_info, emit_warn, note_begin, note_end},
+    error::{self, ErrorTarget, Result, emit_info, emit_warn, note_begin, note_end},
     model,
     store::Stored,
   },
@@ -355,7 +355,7 @@ fn digest_step_guarded(boxes: &mut Vec<Digested>) -> Result<bool> {
       // inflating canvas pass rates with empty conversions.
       // R35.A: ensure pathological inputs fail loudly (exit 1+)
       // rather than silently turning into a zero-byte HTML.
-      use latexml_core::common::error::{ErrorCategory, ErrorTarget};
+      use latexml_core::common::error::ErrorCategory;
       // NOTE the target discrimination on `MemoryBudget`, which is
       // deliberate rather than an oversight. `Timeout`-target is the RSS
       // fuse: real resident memory is already at the ceiling, so
@@ -625,6 +625,14 @@ fn load_source_latexml_rules() {
 /// the live SPINE — spilled fragments received the same phases fragment-by-
 /// fragment in `streaming_pass2` beforehand.
 fn finish_document(document: &mut Document) -> Result<()> {
+  let finished = finish_document_phases(document);
+  // (the core's end: a Fatal stashed past its last step is logged and counted, and post never raises it, as Perl
+  // post-processes the document after a core `die`, LaTeXML.pm:277-283, 327-336)
+  stomach::take_stashed_fatal();
+  finished
+}
+
+fn finish_document_phases(document: &mut Document) -> Result<()> {
   // Every reference is built (forward ones too, the eager and streaming paths alike): the diagnostics a held tag
   // deferred (an `\autoref` name, ruling 7e) are raised for the tags a reference prints.
   // (an empty held tag no target settled is tied to its owner's labels first, `settle_empty_held_tags`)
@@ -828,7 +836,16 @@ fn apply_rewrite_rules(
       let _ = std::io::stderr().flush();
     }
     let started = std::time::Instant::now();
-    rewrite_rule.invoke(document, root)?;
+    let invoked = rewrite_rule.invoke(document, root);
+    // A rule's Fatal (its own, or a register getter's stashed one) ends the rewrites and keeps the document, as Perl
+    // dies out of this loop (Core.pm:282-287) and post-processes the rescued one (LaTeXML.pm:277-283);
+    // rhai-bindings/rewrite_fatal_keeps_the_document.tex
+    if let Err(fatal) = invoked.and_then(|()| stomach::take_stashed_fatal().map_or(Ok(()), Err)) {
+      if fatal.is_logged_fatal() && !matches!(fatal.target, ErrorTarget::Timeout) {
+        return Ok(());
+      }
+      return Err(fatal);
+    }
     let elapsed = started.elapsed();
     if trace_all {
       eprintln!(
@@ -888,7 +905,7 @@ fn streaming_pass2(
   shared_labels: Option<Rc<rustc_hash::FxHashMap<String, String>>>,
   root_id: Option<String>,
 ) -> Result<()> {
-  use latexml_core::common::error::{ErrorCategory, ErrorData, ErrorTarget};
+  use latexml_core::common::error::{ErrorCategory, ErrorData};
   // A non-consuming snapshot of the rules: `finish_document` will consume the
   // live entry for the spine afterwards.
   let rules_opt = match state::lookup_value("DOCUMENT_REWRITE_RULES") {
@@ -1765,6 +1782,8 @@ impl DigestionAPI for Core {
       // Flat serialization was for the spill INTERMEDIATE only — the output
       // keeps its formatting.
       document.spill_flat = false;
+      // (the core's end, as `finish_document`'s)
+      stomach::take_stashed_fatal();
       return Ok(document);
     }
     // RDFa prefixes used inside spilled content: the finalize scan can no
@@ -2130,6 +2149,11 @@ impl DigestionAPI for Core {
           return Err(e);
         },
       }
+    }
+    // (a Fatal stashed in the last step is the digestion's, its boxes rescued as for any other)
+    if let Some(fatal) = stomach::take_stashed_fatal() {
+      hard_yank_processing(boxes);
+      return Err(fatal);
     }
     gullet::flush();
     Ok(Digested::from(List::new(boxes)))

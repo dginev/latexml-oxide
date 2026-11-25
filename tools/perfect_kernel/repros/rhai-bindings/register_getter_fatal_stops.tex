@@ -9,8 +9,8 @@
 %          RHODR: no paragraph, 1 fatal error, status 3 (a digestion Fatal keeps no text, as a body `Fatal()`:
 %          digest_fatal_keeps_text_before_red.tex)
 % expect:  1 fatal error; the text after the getter's read not built (as a body `Fatal()`)
-% status:  GREEN (RHODR; guard 30_script_bindings::a_rhai_fatal_is_logged_once, rows "a register getter" and its caught
-%   Fatal)
+% status:  GREEN for the stop (RHODR; guard 30_script_bindings::a_rhai_fatal_is_logged_once, rows "a register getter"
+%   and its caught Fatal); the text lost before it is DIGFATAL (digest_fatal_keeps_text_before_red.tex, post-merge)
 \documentclass{article}
 \usepackage{lxrgf}
 \begin{document}

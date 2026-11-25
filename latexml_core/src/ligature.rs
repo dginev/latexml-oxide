@@ -13,6 +13,18 @@ pub type FontTestClosure = Rc<dyn Fn(&Font) -> Result<bool>>;
 pub type LigatureMatcher =
   Rc<dyn Fn(&mut Document, &mut Node) -> Result<Option<(usize, String, MathLigatureOptions)>>>;
 
+// A script defined a `fontTest` or a math matcher: user code that may assign values, so the ligatures are taken out
+// of the state before they run (`Document`'s ligature passes). Sticky: a reset while the state still held them would panic.
+thread_local! {
+  static SCRIPT_LIGATURES: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// A script's ligature (a Rhai `fontTest` or math `matcher`) was defined.
+pub fn note_script_ligature() { SCRIPT_LIGATURES.with(|on| on.set(true)); }
+
+/// Whether a script's ligature was ever defined on this thread.
+pub fn script_ligatures() -> bool { SCRIPT_LIGATURES.with(std::cell::Cell::get) }
+
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct MathLigatureOptions {
   pub role:    Option<String>,
