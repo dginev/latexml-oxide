@@ -1,0 +1,24 @@
+% mechanism: as manyfoot_series_text_is_not_a_main_mark_text, with two series (arabic and roman) interleaved with main
+%   marks, texts and notes: each main text answers its main mark, each series text stays where it is, marked as printed
+% witness: synthetic (main-session sibling of probe hijack)
+% oracle:  pdflatex 0 `!`: "Main1 one1 twoi three." "Again2 four2 fiveii six3 ."; notes "1 MAIN-ONE-TEXT"
+%          "2 MAIN-TWO." "3 MAIN-THREE-TEXT", "1 A-ONE-TEXT" "2 A-TWO.", "i B-ONE-TEXT" "ii B-TWO-TEXT"
+% engines: rust INT081P 0 errors, 1 warning (`\endminipage`), the series texts inline text, A-TWO. after a plain-text
+%          mark; MANYFOOT 0 errors, 0 warnings, the main mark 1 holding A-ONE-TEXT and MAIN-ONE-TEXT unpaired
+% expect:  0 errors, 0 warnings; main notes 1-3 holding their texts, A-TWO. a footnote marked 2, the series texts
+%          footnotetexts marked i, 1 and ii
+% status:  RED (MANYFOOT) -> GREEN (MANYFOOT2); guard footnote_series::footnote_series_rows
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{manyfoot}
+\DeclareNewFootnote{A}
+\DeclareNewFootnote{B}[roman]
+\begin{document}
+Main\footnotemark{} one\footnotemarkA{} two\footnotemarkB{} three.
+\footnotetextB{B-ONE-TEXT}
+\footnotetextA{A-ONE-TEXT}
+\footnotetext{MAIN-ONE-TEXT}
+Again\footnote{MAIN-TWO.} four\footnoteA{A-TWO.} five\footnotemarkB{} six\footnotemark{}.
+\footnotetext{MAIN-THREE-TEXT}
+\footnotetextB{B-TWO-TEXT}
+\end{document}

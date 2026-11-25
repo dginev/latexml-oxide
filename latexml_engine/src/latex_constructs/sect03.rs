@@ -193,6 +193,7 @@ pub(crate) fn load() -> Result<()> {
   // line break `\@normalcr` whatever the surrounding `\\` is: a note in a `p` cell or a longtable caption row
   // (2201.11330's `\caption{…}\footnote{… seconds.\\ calls: …}` in {xltabular}) ended the row there, the table lost.
   before_digest => {
+    take_note_series()?;
     neutralize_font();
     Let!("\\\\", "\\@normalcr");
     digest(Tokens!(T_CS!("\\lx@note@reset")))?; },
@@ -212,8 +213,9 @@ pub(crate) fn load() -> Result<()> {
   reversion => "");
 
   DefConstructor!("\\lx@notemark[]{} OptionalUndigested",
-  "^<ltx:note role='#role' mark='#mark' _fnvalue='#fnvalue' _fngiven='#fngiven' _fncounted='#fncounted' _markunknown='#markunknown' xml:id='#id' inlist='#list'>#tags</ltx:note>",
+  "^<ltx:note role='#role' mark='#mark' _fnvalue='#fnvalue' _fngiven='#fngiven' _fncounted='#fncounted' _fnseries='#fnseries' _markunknown='#markunknown' xml:id='#id' inlist='#list'>#tags</ltx:note>",
   mode       => "text", enter_horizontal => true,
+  before_digest => { take_note_series()?; },
   sizer => sub[whatsit] { note_size_in_line(whatsit) },
   // In a class's title block the marks are its own (`enter_title_footnotes`, as the field begins); `[<n>]` is
   // `\thefootnote` at `<n>` (`numbered_footnote_mark`, latex.ltx:17678-17682); an unknown one none
@@ -248,11 +250,12 @@ pub(crate) fn load() -> Result<()> {
   // most of the 79-paper math-mode-first cluster (SHARED-FAILURE
   // classification in SYNC_STATUS — this is the surpass-Perl path).
   DefConstructor!("\\lx@notetext OptionalSemiverbatim {} OptionalUndigested {}",
-  "^<ltx:note role='#role' mark='#mark' _fnvalue='#fnvalue' _fngiven='#fngiven' _fncounted='#fncounted' _markunknown='#markunknown' xml:id='#id'>#4</ltx:note>",
+  "^<ltx:note role='#role' mark='#mark' _fnvalue='#fnvalue' _fngiven='#fngiven' _fncounted='#fncounted' _fnseries='#fnseries' _markunknown='#markunknown' xml:id='#id'>#4</ltx:note>",
   // Perl #2798: footnote text is an inline block — internal_vertical, no leaveHorizontal.
   mode       => "inline_internal_vertical",
   sizer      => sub[_whatsit] { Ok(out_of_line_size()) },
   before_digest => {
+    take_note_series()?;
     Let!("\\\\", "\\@normalcr"); // (`\@parboxrestore`, as `\lx@note`'s)
     digest(Tokens!(T_CS!("\\lx@note@reset")))?;
   },
@@ -285,6 +288,7 @@ pub(crate) fn load() -> Result<()> {
   "^<ltx:note role='#role' mark='#mark' _fnvalue='#fnvalue' _fngiven='#fngiven' _fncounted='#fncounted' xml:id='#id' inlist='#list'>#tags#body</ltx:note>",
   sizer => sub[whatsit] { note_size_in_line(whatsit) },
   before_digest => {
+    take_note_series()?;
     neutralize_font();
     begin_mode("inline_internal_vertical")?;
     Let!("\\\\", "\\@normalcr"); // (`\@parboxrestore`, as `\lx@note`'s)
@@ -306,9 +310,10 @@ pub(crate) fn load() -> Result<()> {
   reversion => "");
 
   DefConstructor!("\\lx@notetext@live OptionalSemiverbatim {} OptionalUndigested",
-  "^<ltx:note role='#role' mark='#mark' _fnvalue='#fnvalue' _fngiven='#fngiven' _fncounted='#fncounted' xml:id='#id'>#body</ltx:note>",
+  "^<ltx:note role='#role' mark='#mark' _fnvalue='#fnvalue' _fngiven='#fngiven' _fncounted='#fncounted' _fnseries='#fnseries' xml:id='#id'>#body</ltx:note>",
   sizer => sub[_whatsit] { Ok(out_of_line_size()) },
   before_digest => {
+    take_note_series()?;
     neutralize_font();
     begin_mode("inline_internal_vertical")?;
     Let!("\\\\", "\\@normalcr"); // (`\@parboxrestore`, as `\lx@note`'s)

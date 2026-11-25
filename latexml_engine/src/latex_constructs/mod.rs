@@ -1674,6 +1674,30 @@ fn footnote_number_digits(given: &Digested) -> Result<Option<Tokens>> {
   })
 }
 
+/// The note a binding sends to an insertion of its own, not `\footins`: `\lx@note@series` names it for the next
+/// footnote text (manyfoot's series, manyfoot.sty:45 `\MFL@insert#1`; manyfoot_sty.rs), taken as the text begins so its
+/// own notes are not (`take_note_series`). It stands for no footnote counter value and pairs only with its series'
+/// (`_fnseries`).
+const NOTE_SERIES: &str = "lx_note_series";
+
+/// `NOTE_SERIES` for the note beginning here (its constructor's `before_digest`), `\lx@note@series` spent.
+pub(crate) fn take_note_series() -> Result<()> {
+  let cs = T_CS!("\\lx@note@series");
+  let series = if lookup_definition(&cs)?.is_some() {
+    Expand!(Tokens!(cs)).to_string()
+  } else {
+    String::new()
+  };
+  if !series.is_empty() {
+    // (globally: the note's `before_digest` is in its own group, the binding's definition outside it)
+    Let!(cs, T_CS!("\\@empty"), Scope::Global);
+  }
+  assign_value(NOTE_SERIES, Stored::String(pin(series)), None);
+  Ok(())
+}
+
+fn note_series() -> Option<String> { Some(lookup_string(NOTE_SERIES)).filter(|s| !s.is_empty()) }
+
 /// A footnote's bookkeeping for `relocate_footnote`, kept on the note: the value of the footnote counter it stands for
 /// (`_fnvalue`: its `[<n>]`'s number, or the counter as it stepped or stands) — none for a minipage's notes, which
 /// count apart, and any other type —, and, in a class that sets the counter back after its `\maketitle`
@@ -1686,6 +1710,10 @@ pub(crate) fn footnote_pairing(
   given: Option<&Digested>,
   number: &FootnoteNumber,
 ) -> Result<()> {
+  if let Some(series) = note_series().filter(|_| note_type == "footnote") {
+    props.insert("fnseries", Stored::String(pin(series)));
+    return Ok(());
+  }
   if note_type != "footnote" || minipage_footnotes()? {
     return Ok(());
   }
@@ -1814,6 +1842,7 @@ pub fn make_note_tags(
 pub fn relocate_footnote(document: &mut Document, node: &mut Node) -> Result<()> {
   if let Some(caps) = NOTE_TEXT_END.captures(&node.get_attribute("role").unwrap_or_default()) {
     let notetype = caps.get(1).map_or("", |m| m.as_str());
+    let series = same_series(node);
     let mut paired = false;
     // (the marks of one text in creators: one note, OD #1059 — `crate::base_utilities::one_note`)
     let mut filled: Vec<Node> = Vec::new();
@@ -1823,7 +1852,7 @@ pub fn relocate_footnote(document: &mut Document, node: &mut Node) -> Result<()>
       // a body `\footnotetext[2]` is not its text, 2208.09944; 1304.5040, 2210.05617, 1812.11634)
       for mut marknote in document.findnodes(
         &format!(
-          ".//ltx:note[@role='{notetype}mark'][translate(@mark,' ','')='{key}'][not(@_namemark)][not(@_namekeys)]"
+          ".//ltx:note[@role='{notetype}mark'][translate(@mark,' ','')='{key}'][not(@_namemark)][not(@_namekeys)]{series}"
         ),
         None,
       ) {
@@ -1839,7 +1868,9 @@ pub fn relocate_footnote(document: &mut Document, node: &mut Node) -> Result<()>
     if !paired && let Some(value) = node.get_attribute(FOOTNOTE_VALUE) {
       let partner = title_block_partner(document, node);
       for mut marknote in document.findnodes(
-        &format!(".//ltx:note[@role='{notetype}mark'][@{FOOTNOTE_VALUE}='{value}']{partner}"),
+        &format!(
+          ".//ltx:note[@role='{notetype}mark'][@{FOOTNOTE_VALUE}='{value}']{partner}{series}"
+        ),
         None,
       ) {
         if is_descendant_or_self(&marknote, node)
@@ -1862,11 +1893,12 @@ pub fn relocate_footnote(document: &mut Document, node: &mut Node) -> Result<()>
     && node.get_attribute("_namekeys").is_none()
   {
     let notetype = caps.get(1).map_or("", |m| m.as_str());
+    let series = same_series(node);
     let mut paired = false;
     if let Some(mark) = node.get_attribute("mark") {
       let key = mark.replace(' ', "");
       for mut textnote in document.findnodes(
-        &format!(".//ltx:note[@role='{notetype}text'][translate(@mark,' ','')='{key}']"),
+        &format!(".//ltx:note[@role='{notetype}text'][translate(@mark,' ','')='{key}']{series}"),
         None,
       ) {
         if is_descendant_or_self(node, &textnote) || !same_count(document, node, &textnote, BY_MARK)
@@ -1880,7 +1912,9 @@ pub fn relocate_footnote(document: &mut Document, node: &mut Node) -> Result<()>
     if !paired && let Some(value) = node.get_attribute(FOOTNOTE_VALUE) {
       let partner = title_block_partner(document, node);
       for mut textnote in document.findnodes(
-        &format!(".//ltx:note[@role='{notetype}text'][@{FOOTNOTE_VALUE}='{value}']{partner}"),
+        &format!(
+          ".//ltx:note[@role='{notetype}text'][@{FOOTNOTE_VALUE}='{value}']{partner}{series}"
+        ),
         None,
       ) {
         if is_descendant_or_self(node, &textnote)
@@ -1893,6 +1927,15 @@ pub fn relocate_footnote(document: &mut Document, node: &mut Node) -> Result<()>
     }
   }
   Ok(())
+}
+
+/// `relocate_footnote`'s partners of a note: those of its series (`NOTE_SERIES`), or of none — a manyfoot series' text
+/// is not the text of the main `\footnotemark` printing the same number (review probe hijack).
+fn same_series(node: &Node) -> String {
+  match node.get_attribute("_fnseries") {
+    Some(series) => s!("[@_fnseries='{series}']"),
+    None => s!("[not(@_fnseries)]"),
+  }
 }
 
 /// A float set where it stands, not floated (`\lx@float@inplace`: `\captionof`'s wrapper, a class's title-page figure;

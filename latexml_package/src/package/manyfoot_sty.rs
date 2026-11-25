@@ -1,22 +1,35 @@
 //! manyfoot.sty (ncctools), which Perl LaTeXML does not bind: the raw package runs (its options, `\newfootnote`,
 //! `\DeclareNewFootnote` with its counter and `\thefootnote<X>` style, `\SelectFootnoteRule`, `\SetFootnoteHook`), and
 //! a declared series' notes are the kernel's footnotes marked as the series prints them, not insertions (the given
-//! marks nccfoots', `nccfoots_sty.rs`). Its begin-document code only places the series' insertions (the output routine,
-//! and LaTeX's minipage through `\g@addto@macro\endminipage`, manyfoot.sty:370-402, which warned on every load), so it
-//! is removed. Witnesses: 2511.01971 (chet.sty's `\footnotetextEEE` in `\author`, its text lost before), 2609.01974 (a
-//! copyright `\footnotetext<X>`), and loads that warned: 2205.09841 (sn-jnl), 2401.05860 (aamas), 2003.11645.
+//! marks nccfoots', `nccfoots_sty.rs`). Its begin-document code keeps what it defines, not its patches placing the
+//! series' insertions (the output routine, and LaTeX's minipage through `\g@addto@macro\endminipage`,
+//! manyfoot.sty:388-390, which warned on every load). Witnesses: 2511.01971 (chet.sty's `\footnotetextEEE` in
+//! `\author`, its text lost before), 2609.01974 (a copyright `\footnotetext<X>`), and loads that warned: 2205.09841
+//! (sn-jnl), 2401.05860 (aamas), 2003.11645.
 use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
   InputDefinitions!("manyfoot", noltxml => true, extension => Some(Cow::Borrowed("sty")));
-  // (the `para` option's begin-document code is under the same label)
-  RawTeX!(r"\RemoveFromHook{begindocument}[manyfoot]");
+  // The hook (with the `para` option's, :152-162, under the same label) is put back without its patches of the output
+  // routine and minipage (:377-385, :387-401): what it defines, which other packages read (`\MFL@fudgefactor`,
+  // dgruyter.sty:2379), is `\MFL@paraskip`, the series' skips (:371), `\defaultfootnoterule` (:372-376) and :386.
+  // (`para` ran if `\MFL@xparaskip` is defined: bigfoot defines `\MFL@processpara` without it, 2506.12575)
+  RawTeX!(r"\RemoveFromHook{begindocument}[manyfoot]
+\AddToHook{begindocument}[manyfoot]{%
+  \ifdefined\MFL@xparaskip\begingroup\footnotesize\@tempdima\footnotesep
+    \advance\@tempdima-\ht\strutbox\ifdim\@tempdima<\z@\@tempdima\z@\fi
+    \advance\@tempdima.5\normalbaselineskip\MFL@xparaskip\xdef\MFL@paraskip{\the\@tempdima\relax}\endgroup\fi
+  {\let\@elt\MFL@start\MFL@list}%
+  \@ifundefined{defaultfootnoterule}{\@ifundefined{pagefootnoterule}%
+    {\let\defaultfootnoterule\footnoterule}{\let\defaultfootnoterule\pagefootnoterule}}{}%
+  \MFL@floathook}");
 
   // manyfoot.sty:45, :68: `\Footnotetext<X>{<mark>}{<text>}`, which `\footnotetext<X>` calls, is nccfoots'
-  // `\Footnotetext` set as an insertion (`para` sets no mark unless one is given).
-  RawTeX!(r"\long\def\lx@mf@fnoteplain#1{\Footnotetext}
-\long\def\lx@mf@fnotepara#1{\let\@thefnmark\@empty\Footnotetext}
+  // `\Footnotetext` set in the series' insertion #1 (`\lx@note@series`, so it is no main `\footnotemark`'s text);
+  // `para` sets no mark unless one is given.
+  RawTeX!(r"\long\def\lx@mf@fnoteplain#1{\edef\lx@note@series{\expandafter\@gobble\string#1}\Footnotetext}
+\long\def\lx@mf@fnotepara#1{\let\@thefnmark\@empty\lx@mf@fnoteplain#1}
 \let\MFL@fnoteplain\lx@mf@fnoteplain
 \let\MFL@fnotepara\lx@mf@fnotepara");
 

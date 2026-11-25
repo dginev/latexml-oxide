@@ -7,7 +7,11 @@
 % engines: rust INT081P 0 errors, 1 warning (`\endminipage`), "beta1" plain text, both texts inline; MANYFOOT 0
 %          errors, 0 warnings, the main note and the B note both marked "*", the given text "¶"
 % expect:  0 errors, 0 warnings; the B note marked "1" holding "Text of B1.", a footnotetext marked "5"
-% status:  RED (INT081P, MANYFOOT)
+% not yet: printing a series' text mark as given (MANYFOOT2's first try) printed "0" on 2609.01974's copyright note,
+%          where nimeart.cls:2209 `\let\@makefntext\noindent` drops the mark (pdflatex: none; the `[0]` read as a
+%          number is `\@fnsymbol` of 0, nothing): the fix also reads whether the class's `\@makefntext` prints
+%          `\@makefnmark`, which the kernel's stub (latex_constructs/sect03.rs) does not model
+% status:  RED (INT081P, MANYFOOT, MANYFOOT2)
 % moves:   post-merge
 % preload: ar5iv.sty
 \documentclass{article}

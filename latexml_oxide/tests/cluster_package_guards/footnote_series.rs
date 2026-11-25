@@ -110,6 +110,69 @@ epsilon<note role="footnotetext" xml:id="footnotex5">Para text, no mark.</note><
     (0, 0),
     r#"<p xml:id="p1.1">Alpha*<note mark="*" role="footnotetext" xml:id="footnotex1">Starred note.</note> beta7 gamma<note mark="7" role="footnotetext" xml:id="footnotex2">Text of seven.</note></p>"#,
   ),
+  // manyfoot's begin-document code keeps what it defines (`\MFL@fudgefactor`, `\MFL@paraskip`,
+  // `\defaultfootnoterule`), which a package's own para text maker reads (dgruyter.sty:2379); MANYFOOT: 2 errors.
+  (
+    "manyfoot_para_text_reads_hook_definitions",
+    "manyfoot.sty",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/package-bindings/manyfoot_para_text_reads_hook_definitions.tex"
+    ),
+    (0, 0),
+    r#"<p xml:id="p1.1">Alpha<note mark="1" role="footnote" xml:id="footnotex1"><tags>
+          <tag>1</tag>
+          <tag role="refnum">1</tag>
+          <tag role="typerefnum">footnote 1</tag>
+        </tags>Para A note.</note> beta<text xml:id="p1.1.1"><text font="bold" xml:id="p1.1.1.1">1</text> Para A text.</text> gamma<text xml:id="p1.1.2"><text font="bold" xml:id="p1.1.2.1">z</text> Given z.</text></p>"#,
+  ),
+  // A series' text is not the text of the main `\footnotemark` of the same number (`_fnseries`); MANYFOOT: the
+  // main mark held SERIES-A-TEXT, MAIN-TEXT left unpaired.
+  (
+    "manyfoot_series_text_is_not_a_main_mark_text",
+    "manyfoot.sty",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/package-bindings/manyfoot_series_text_is_not_a_main_mark_text.tex"
+    ),
+    (0, 0),
+    r#"<p xml:id="p1.1">Main<note mark="1" role="footnote" xml:id="footnote1"><tags>
+          <tag>1</tag>
+          <tag role="refnum">1</tag>
+          <tag role="typerefnum">footnote 1</tag>
+        </tags>MAIN-TEXT</note> and series1 text.
+<note mark="1" role="footnotetext" xml:id="footnotex1">SERIES-A-TEXT</note></p>"#,
+  ),
+  // Two series interleaved with main marks, texts and notes; MANYFOOT: the main mark 1 held A-ONE-TEXT.
+  (
+    "manyfoot_interleaved_series_and_main_texts",
+    "manyfoot.sty",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/package-bindings/manyfoot_interleaved_series_and_main_texts.tex"
+    ),
+    (0, 0),
+    r#"<p xml:id="p1.1">Main<note mark="1" role="footnote" xml:id="footnote1"><tags>
+          <tag>1</tag>
+          <tag role="refnum">1</tag>
+          <tag role="typerefnum">footnote 1</tag>
+        </tags>MAIN-ONE-TEXT</note> one1 twoi three.
+<note mark="i" role="footnotetext" xml:id="footnotex1">B-ONE-TEXT</note>
+<note mark="1" role="footnotetext" xml:id="footnotex2">A-ONE-TEXT</note>
+
+Again<note mark="2" role="footnote" xml:id="footnote2"><tags>
+          <tag>2</tag>
+          <tag role="refnum">2</tag>
+          <tag role="typerefnum">footnote 2</tag>
+        </tags>MAIN-TWO.</note> four<note mark="2" role="footnote" xml:id="footnotex4"><tags>
+          <tag>2</tag>
+          <tag role="refnum">2</tag>
+          <tag role="typerefnum">footnote 2</tag>
+        </tags>A-TWO.</note> fiveii six<note mark="3" role="footnote" xml:id="footnote3"><tags>
+          <tag>3</tag>
+          <tag role="refnum">3</tag>
+          <tag role="typerefnum">footnote 3</tag>
+        </tags>MAIN-THREE-TEXT</note>.
+
+<note mark="ii" role="footnotetext" xml:id="footnotex6">B-TWO-TEXT</note></p>"#,
+  ),
 ];
 
 /// Every row converted once, in-process: the exact counts, a schema-valid document and the paragraph whole.

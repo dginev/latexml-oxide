@@ -8,6 +8,12 @@
 %          body "Body2" plain text and its note inline; MANYFOOT 0 errors, 0 warnings, `<pubnote>Title note.</pubnote>`
 %          (no mark) and the body note marked 1
 % expect:  0 errors, 0 warnings; the title's note marked 1, the body's 2
+% sibling: the article's own `\thanks` marks stay put beside a series note in `\author` (review probe fm3):
+%          `\author{Ann Author\thanks{Ann thanks.} \and Bob Writer\footnoteB{Bob B note.}\thanks{Bob thanks.}}` with
+%          `\DeclareNewFootnote{B}[alph]`, then `Body\footnote{Main body.} and\footnoteB{Body B.}`; pdflatex 0 `!`:
+%          "Ann Author∗", "Bob Writer†a" (the B note's text lost in the title's tabular), "Body1 andb"; MANYFOOT: the B
+%          note a `\thanks` marked "†", Bob's `\thanks` "‡", the body's B note "a"; expect Bob's `\thanks` "†", the
+%          B note marked "a" (its text kept), the body's "b"
 % status:  RED (INT081P, MANYFOOT)
 % moves:   post-merge
 % preload: ar5iv.sty

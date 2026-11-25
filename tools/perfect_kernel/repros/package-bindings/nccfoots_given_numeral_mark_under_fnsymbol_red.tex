@@ -1,0 +1,19 @@
+% mechanism: nccfoots' `\Footnote{<mark>}` and `\Footnotetext{<mark>}` print the mark as given (nccfoots.sty:28-38),
+%   but reach the kernel's main-series `\footnotetext` as `[<mark>]`, which it reads as a footnote NUMBER
+%   (latex_constructs/mod.rs `numbered_footnote_mark`): under `\fnsymbol` a numeral prints `\thefootnote` at it. The
+%   kernel has no "mark given, not a number" route to the main series (Perl's `\lx@notetext[<mark>]`,
+%   latex_constructs.pool.ltxml:486, is our id slot; its `_fnvalue` would pair it as the counter's)
+% witness: synthetic (MANYFOOT2 sibling of the review's given-mark finding)
+% oracle:  pdflatex 0 `!`: "Alpha5 beta2 gamma"; notes "5 Given five." "2 Given two."
+% engines: rust INT081P 0 errors, 0 warnings, both texts footnotetexts with no mark; MANYFOOT, MANYFOOT2 0 errors,
+%          0 warnings, marked "¶" and "†"
+% expect:  0 errors, 0 warnings; footnotetexts marked "5" and "2"
+% status:  RED (INT081P, MANYFOOT2)
+% moves:   post-merge
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{nccfoots}
+\renewcommand\thefootnote{\fnsymbol{footnote}}
+\begin{document}
+Alpha\Footnote{5}{Given five.} beta\Footnotemark{2} gamma\Footnotetext{2}{Given two.}
+\end{document}
