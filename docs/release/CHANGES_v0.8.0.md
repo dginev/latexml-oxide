@@ -57,6 +57,27 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     in the system temporary folder, never written into your project, and removed afterwards. Other platforms are
     unchanged. Guards `graphics::tests::a_figure_path_past_max_path_is_reached_through_a_short_alias`,
     `shared_figure_parallel_render::a_long_figure_name_converts_as_a_short_one`.
+  - **The release binaries bundle `ar5iv.css`.** `--css=ar5iv.css --nodefaultresources` writes the ar5iv-css
+    stylesheet beside the page, from the binary, as its only stylesheet; with the defaults kept, LaTeXML.css still
+    comes first and its unlayered rules win over ar5iv.css's layered ones. The copy is ar5iv-css 0.9.5
+    (`dist/ar5iv.min.css` at commit `cf36205fde48`), pinned with its SHA-256 in `tools/ar5iv-css.pin`, fetched by the
+    release pipeline only and never committed, with its MIT notice prepended (THIRD-PARTY-NOTICES 2.4). A build from
+    source does not have it: `--css=ar5iv.css` there gives one Warning, "ar5iv.css is bundled only in release builds;
+    pass a path to a local copy". Only the bare name `ar5iv.css` asks for the bundled copy: a path
+    (`nosuch/ar5iv.css`, `./ar5iv.css`) names the user's own file. Default output is unchanged. Guards:
+    `split_css_links::{bundled_ar5iv_css_follows_latexml_css, css_already_in_place_is_used_as_is}`,
+    `build_rerun::tests::tracks_only_what_exists`, and the `tools/release_smoke.sh` check on every release leg.
+
+  - **A stylesheet or script already in the destination is used as-is; only a missing or empty one is written from the
+    bundled copy.** Before, any file with a bundled name in the destination (e.g. your own `LaTeXML.css`, also at a
+    `--sitedirectory` root) was rewritten from the binary with no Warning
+    (a 41-byte user `LaTeXML.css` became 48,707 bytes). This holds for all 18 bundled CSS/JS names and `ar5iv.css`,
+    with or without `--split`/`--sitedirectory`; issue 312's empty leftover is still repaired. A user's file next to
+    the `.tex` is still copied into a separate destination, with its local `@import`s. The trade-off: after an upgrade,
+    a reused output folder keeps the `LaTeXML.css`/`ar5iv.css` an older version wrote; delete the file to get the new
+    one. Guards: `split_css_links::{css_already_in_place_is_used_as_is, css_in_a_separate_destination_is_used_as_is}`,
+    `stale_css_overwrite::empty_css_in_dest_is_overwritten_with_bundled`, `tools/release_smoke.sh`.
+
   - **Books of thousands of `\input`/`\subimport` files convert again (issue 1011).** Since rc1 every file read as
     content re-stored the whole list of the document's content files (the list the title-page check reads), so the run's
     strings grew with the square of the number of files: 1.5 GB for 5,000 files, and a 26,000-page book aborted with

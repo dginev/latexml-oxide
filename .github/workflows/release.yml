@@ -77,6 +77,12 @@ jobs:
         with:
           name: build-inputs
           path: .
+      # So the audit below sees the bundled ar5iv.css where the build legs embed it from.
+      - name: collect the bundled ar5iv.css
+        uses: actions/download-artifact@v6
+        with:
+          name: ar5iv-css
+          path: resources/ar5iv-css/
 
       # cargo-about only reads cargo metadata + crate files; it never compiles
       # the workspace, so this leg needs no libxml2/TeX/system deps.
@@ -106,6 +112,7 @@ jobs:
           f=THIRD-PARTY-NOTICES.dist
           for needle in \
             "2.2 SVG 1.1 RELAX NG schema" \
+            "2.4 ar5iv-css" \
             "World Wide Web Consortium" \
             "3.2 libkpathsea" \
             "3.3 libmarpa" \
@@ -227,6 +234,14 @@ jobs:
               fi
             done
           done
+
+      # The bundled ar5iv.css, fetched once by `prepare` (tools/ar5iv-css.pin); make_release.sh verifies its SHA-256
+      # and latexml_post/build.rs embeds it.
+      - name: collect the bundled ar5iv.css
+        uses: actions/download-artifact@v6
+        with:
+          name: ar5iv-css
+          path: resources/ar5iv-css/
 
       # Static, self-contained libkpathsea (in-process lookups, no runtime dep).
       # Sets KPATHSEA_LIB_DIR + KPATHSEA_STATIC for the build below.
@@ -367,6 +382,14 @@ jobs:
             done
           done
 
+      # The bundled ar5iv.css, fetched once by `prepare` (tools/ar5iv-css.pin); make_release.sh verifies its SHA-256
+      # and latexml_post/build.rs embeds it.
+      - name: collect the bundled ar5iv.css
+        uses: actions/download-artifact@v6
+        with:
+          name: ar5iv-css
+          path: resources/ar5iv-css/
+
       - name: build static libkpathsea from source
         run: bash tools/build_static_kpathsea.sh
       - name: build static libxml2 + libxslt from source
@@ -494,6 +517,14 @@ jobs:
               fi
             done
           done
+
+      # The bundled ar5iv.css, fetched once by `prepare` (tools/ar5iv-css.pin); make_release.sh verifies its SHA-256
+      # and latexml_post/build.rs embeds it.
+      - name: collect the bundled ar5iv.css
+        uses: actions/download-artifact@v6
+        with:
+          name: ar5iv-css
+          path: resources/ar5iv-css/
 
       - name: build static libkpathsea from source
         run: bash tools/build_static_kpathsea.sh
@@ -656,6 +687,14 @@ jobs:
               fi
             done
           done
+
+      # The bundled ar5iv.css, fetched once by `prepare` (tools/ar5iv-css.pin); make_release.sh verifies its SHA-256
+      # and latexml_post/build.rs embeds it.
+      - name: collect the bundled ar5iv.css
+        uses: actions/download-artifact@v6
+        with:
+          name: ar5iv-css
+          path: resources/ar5iv-css/
 
       # make_release.sh bundles THIRD-PARTY-NOTICES.dist when present, else it
       # silently falls back to the committed sections 1-4 (no Rust appendix).
@@ -873,6 +912,14 @@ jobs:
               fi
             done
           done
+
+      # The bundled ar5iv.css, fetched once by `prepare` (tools/ar5iv-css.pin); make_release.sh verifies its SHA-256
+      # and latexml_post/build.rs embeds it.
+      - name: collect the bundled ar5iv.css
+        uses: actions/download-artifact@v6
+        with:
+          name: ar5iv-css
+          path: resources/ar5iv-css/
 
       # Static, self-contained libkpathsea (in-process lookups, no runtime
       # libkpathsea6 dependency — dropping it from the .deb's $auto deps).

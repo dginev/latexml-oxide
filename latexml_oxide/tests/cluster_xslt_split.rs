@@ -1128,6 +1128,253 @@ mod split_css_links {
     }
   }
 
+  /// `--css=ar5iv.css` names the bundled ar5iv-css stylesheet, embedded only in release builds
+  /// (`tools/ar5iv-css.pin`). Embedded: it is written beside the page and linked after LaTeXML.css, and with
+  /// `--nodefaultresources` it is the page's only stylesheet. Not embedded (dev, CI): one Warning says so.
+  #[test]
+  fn bundled_ar5iv_css_follows_latexml_css() {
+    let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
+    let xml = "<?xml version=\"1.0\"?><document xmlns=\"http://dlmf.nist.gov/LaTeXML\">\
+               <resource src=\"LaTeXML.css\" type=\"text/css\"/><title>T</title><para><p>x</p></para></document>";
+    let css = ["ar5iv.css".to_string()];
+    let link = |name: &str| format!("<link rel=\"stylesheet\" href=\"{name}\" type=\"text/css\">");
+    let bundled = latexml_post::xslt::ar5iv_css_bundled().is_some();
+    for default_resources in [true, false] {
+      let dir = tempfile::tempdir().expect("tempdir");
+      let dest = dir.path().join("main.html").to_string_lossy().into_owned();
+      latexml_core::common::error::initialize_report();
+      let out = latexml::post::run_post_processing_logged(xml, &latexml::post::PostOptions {
+        destination: Some(&dest),
+        default_resources,
+        css_files: &css,
+        ..super::xslt_failure_is_fatal::post_options("LaTeXML-html5.xsl")
+      });
+      latexml_core::common::error::initialize_report();
+      assert_eq!(out.status_code, if bundled { 0 } else { 1 }, "{}", out.log);
+      let html = std::fs::read_to_string(dir.path().join("main.html")).unwrap();
+      let head = html.split("</head>").next().unwrap_or(&html);
+      let (base_at, ar5iv_at) = (
+        head.find(&link("LaTeXML.css")),
+        head.find(&link("ar5iv.css")),
+      );
+      assert!(ar5iv_at.is_some(), "{head}");
+      if default_resources {
+        assert!(
+          base_at < ar5iv_at && base_at.is_some(),
+          "LaTeXML.css first: {head}"
+        );
+      } else {
+        assert_eq!(base_at, None, "--nodefaultresources: {head}");
+      }
+      let written = std::fs::read_to_string(dir.path().join("ar5iv.css")).ok();
+      if bundled {
+        assert_eq!(out.log.matches("Warning:").count(), 0, "{}", out.log);
+        let written = written.expect("ar5iv.css written beside the page");
+        assert!(
+          written.starts_with("/*! ar5iv-css ")
+            && written.contains("MIT License")
+            && written.len() > 1000,
+          "{}",
+          &written[..written.len().min(200)]
+        );
+      } else {
+        assert_eq!(out.log.matches("Warning:").count(), 1, "{}", out.log);
+        assert_eq!(
+          out
+            .log
+            .matches("ar5iv.css is bundled only in release builds; pass a path to a local copy")
+            .count(),
+          1,
+          "{}",
+          out.log
+        );
+        assert_eq!(written, None);
+      }
+      assert_eq!(out.log.matches("Error:").count(), 0, "{}", out.log);
+    }
+    // A path the user wrote names their own file: missing, it keeps the plain message in every build, and nothing
+    // is written (the bundled copy answers the bare name only).
+    {
+      let dir = tempfile::tempdir().expect("tempdir");
+      let dest = dir.path().join("main.html").to_string_lossy().into_owned();
+      let css = ["nosuch/ar5iv.css".to_string()];
+      latexml_core::common::error::initialize_report();
+      let out = latexml::post::run_post_processing_logged(xml, &latexml::post::PostOptions {
+        destination: Some(&dest),
+        css_files: &css,
+        ..super::xslt_failure_is_fatal::post_options("LaTeXML-html5.xsl")
+      });
+      latexml_core::common::error::initialize_report();
+      assert_eq!(out.log.matches("Warning:").count(), 1, "{}", out.log);
+      assert_eq!(
+        out
+          .log
+          .matches("Couldn't find resource file nosuch/ar5iv.css")
+          .count(),
+        1,
+        "{}",
+        out.log
+      );
+      assert!(!dir.path().join("nosuch").exists(), "{}", out.log);
+    }
+  }
+
+  /// A stylesheet already in place in the destination, which is also the source directory (#312's same-file
+  /// branch), is used as-is under every spelling, our own older copy included (Perl `copyResource`, XSLT.pm:117-118);
+  /// only an empty leftover is rewritten from the embedded bytes. `ar5iv.css` rows hold in every build: without the
+  /// bundled copy an empty one stays empty.
+  #[test]
+  fn css_already_in_place_is_used_as_is() {
+    let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
+    let xml = "<?xml version=\"1.0\"?><document xmlns=\"http://dlmf.nist.gov/LaTeXML\">\
+               <resource src=\"LaTeXML.css\" type=\"text/css\"/><title>T</title><para><p>x</p></para></document>";
+    let bundled_css = latexml_post::xslt::ar5iv_css_bundled();
+    let own = "/* my own */ body{color:red}\n";
+    let glowup = "@import url(\"./ar5iv/part.css\");\nbody{color:red}\n";
+    let ours = "/*! ar5iv-css 0.0.1 (stale) | MIT License */\n.x{}\n";
+    for (spelling, file, before) in [
+      (None, "LaTeXML.css", own),
+      (None, "LaTeXML.css", ""),
+      (Some("ar5iv.css"), "ar5iv.css", own),
+      (Some("./ar5iv.css"), "ar5iv.css", own),
+      (Some("ar5iv.css"), "ar5iv.css", glowup),
+      (Some("./ar5iv.css"), "ar5iv.css", glowup),
+      (Some("ar5iv.css"), "ar5iv.css", ours),
+      (Some("ar5iv.css"), "ar5iv.css", ""),
+    ] {
+      let dir = tempfile::tempdir().expect("tempdir");
+      std::fs::write(dir.path().join(file), before).unwrap();
+      std::fs::create_dir(dir.path().join("ar5iv")).unwrap();
+      std::fs::write(dir.path().join("ar5iv/part.css"), "p{margin:0}\n").unwrap();
+      let dest = dir.path().join("main.html").to_string_lossy().into_owned();
+      let source = dir.path().to_string_lossy().into_owned();
+      let css: Vec<String> = spelling.into_iter().map(str::to_string).collect();
+      latexml_core::common::error::initialize_report();
+      let out = latexml::post::run_post_processing_logged(xml, &latexml::post::PostOptions {
+        destination: Some(&dest),
+        source_directory: Some(&source),
+        default_resources: true,
+        css_files: &css,
+        ..super::xslt_failure_is_fatal::post_options("LaTeXML-html5.xsl")
+      });
+      latexml_core::common::error::initialize_report();
+      let row = format!("{spelling:?} {file} {before:?}");
+      assert_eq!(out.status_code, 0, "{row}: {}", out.log);
+      assert_eq!(out.log.matches("Warning:").count(), 0, "{row}: {}", out.log);
+      let after = std::fs::read_to_string(dir.path().join(file)).unwrap();
+      match (before.is_empty(), file) {
+        (true, "LaTeXML.css") => assert!(
+          after.len() > 1000 && after.contains("ltx_"),
+          "{row}: {after}"
+        ),
+        (true, _) => assert_eq!(after, bundled_css.unwrap_or(""), "{row}"),
+        _ => assert_eq!(after, before, "{row}: the file in place was replaced"),
+      }
+      assert_eq!(
+        std::fs::read_to_string(dir.path().join("ar5iv/part.css")).unwrap(),
+        "p{margin:0}\n",
+        "{row}"
+      );
+      let html = std::fs::read_to_string(dir.path().join("main.html")).unwrap();
+      let head = html.split("</head>").next().unwrap_or(&html);
+      assert!(head.contains("href=\"LaTeXML.css\""), "{row}: {head}");
+      if spelling.is_some() {
+        assert!(head.contains("href=\"ar5iv.css\""), "{row}: {head}");
+      }
+    }
+  }
+
+  /// A stylesheet in a destination that is not the source directory (also a `--sitedirectory` root) is used as-is when
+  /// non-empty; only a missing or empty one (#312) is written from the embedded bytes. A user's file next to the source
+  /// is copied with its `@import`s. The bundled `ar5iv.css` rows run in release builds only.
+  #[test]
+  fn css_in_a_separate_destination_is_used_as_is() {
+    let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
+    let xml = "<?xml version=\"1.0\"?><document xmlns=\"http://dlmf.nist.gov/LaTeXML\">\
+               <resource src=\"LaTeXML.css\" type=\"text/css\"/><title>T</title><para><p>x</p></para></document>";
+    let latexml_css = include_str!("../../latexml_post/resources/CSS/LaTeXML.css");
+    let bundled = latexml_post::xslt::ar5iv_css_bundled().unwrap_or("");
+    let own = "/* my own */ body{color:red}\n";
+    let glowup = "@import url(\"./ar5iv/part.css\");\nbody{color:red}\n";
+    let part = "p{margin:0}\n";
+    // (layout, --css, the file, its bytes beforehand (None: absent), its bytes afterwards). Layouts: "dest"
+    // `out/main.html` beside an empty source directory; "site" `site/p1/main.html` under `--sitedirectory=site`, so the
+    // file is the site root's; "copy" `out/main.html` from `doc/`, which holds `ar5iv.css` (`glowup`).
+    let rows = [
+      ("dest", None, "LaTeXML.css", Some(own), own),
+      ("dest", None, "LaTeXML.css", Some(""), latexml_css),
+      ("dest", None, "LaTeXML.css", None, latexml_css),
+      ("site", None, "LaTeXML.css", Some(own), own),
+      ("copy", Some("ar5iv.css"), "ar5iv.css", None, glowup),
+      ("dest", Some("ar5iv.css"), "ar5iv.css", Some(own), own),
+      ("dest", Some("ar5iv.css"), "ar5iv.css", Some(""), bundled),
+      ("dest", Some("ar5iv.css"), "ar5iv.css", None, bundled),
+      ("site", Some("ar5iv.css"), "ar5iv.css", Some(own), own),
+    ];
+    let mut failed = Vec::new();
+    for (layout, css, file, before, after) in rows {
+      let row = format!("{layout} {css:?} {file} {before:?}");
+      if layout != "copy" && css.is_some() && bundled.is_empty() {
+        eprintln!(
+          "SKIP {row}: this build bundles no ar5iv.css (release builds only; tools/release_smoke.sh)"
+        );
+        continue;
+      }
+      let src = tempfile::tempdir().expect("tempdir");
+      let dir = tempfile::tempdir().expect("tempdir");
+      let (out, dest) = if layout == "site" {
+        (dir.path().to_path_buf(), dir.path().join("p1/main.html"))
+      } else {
+        (dir.path().join("out"), dir.path().join("out/main.html"))
+      };
+      std::fs::create_dir_all(dest.parent().unwrap()).unwrap();
+      if layout == "copy" {
+        std::fs::write(src.path().join("ar5iv.css"), glowup).unwrap();
+        std::fs::create_dir(src.path().join("ar5iv")).unwrap();
+        std::fs::write(src.path().join("ar5iv/part.css"), part).unwrap();
+      }
+      if let Some(before) = before {
+        std::fs::write(out.join(file), before).unwrap();
+      }
+      let (dest, source, site) = (
+        dest.to_string_lossy().into_owned(),
+        src.path().to_string_lossy().into_owned(),
+        dir.path().to_string_lossy().into_owned(),
+      );
+      let css: Vec<String> = css.into_iter().map(str::to_string).collect();
+      latexml_core::common::error::initialize_report();
+      let out_log = latexml::post::run_post_processing_logged(xml, &latexml::post::PostOptions {
+        destination: Some(&dest),
+        source_directory: Some(&source),
+        site_directory: (layout == "site").then_some(site.as_str()),
+        default_resources: true,
+        css_files: &css,
+        ..super::xslt_failure_is_fatal::post_options("LaTeXML-html5.xsl")
+      });
+      latexml_core::common::error::initialize_report();
+      if out_log.status_code != 0 || out_log.log.contains("Warning:") {
+        failed.push(format!("{row}: {}", out_log.log));
+      }
+      let got = std::fs::read_to_string(out.join(file)).unwrap();
+      if got != after {
+        failed.push(format!(
+          "{row}: {} bytes, expected {}",
+          got.len(),
+          after.len()
+        ));
+      }
+      if layout == "copy"
+        && std::fs::read_to_string(out.join("ar5iv/part.css"))
+          .ok()
+          .as_deref()
+          != Some(part)
+      {
+        failed.push(format!("{row}: ar5iv/part.css not copied"));
+      }
+    }
+    assert!(failed.is_empty(), "{failed:#?}");
+  }
+
   /// `my.css`, which `@import`s `base.css`.
   fn write_importing_css(dir: &Path) {
     std::fs::write(dir.join("my.css"), "@import \"base.css\";\n.x{color:red}\n").unwrap();

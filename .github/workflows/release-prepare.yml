@@ -2,9 +2,15 @@
 #   - the Rust nightly (`nightly-YYYY-MM-DD`, overriding rust-toolchain.toml; the newest one that ships
 #     every component and host toolchain the release and CI use, see tools/check_rc_reuse.sh --resolve-nightly);
 #   - `Cargo.lock` (consumed with `--locked` by every build and test leg);
-#   - `BUILD-INPUTS` (toolchain, lockfile SHA-256, tag, commit, the RC it reuses, `rustc -vV`).
+#   - `BUILD-INPUTS` (toolchain, lockfile SHA-256, the bundled ar5iv.css's tag, commit and SHA-256, tag, commit,
+#     the RC it reuses, `rustc -vV`).
 # The `build-inputs` artifact carries both to the run's other jobs; release.yml also attaches them to the
 # GitHub Release, where they never expire.
+#
+# The bundled ar5iv.css (tools/ar5iv-css.pin) is fetched here once, at the pinned commit, SHA-256-checked, and
+# carried by its own `ar5iv-css` artifact to the jobs that build a shipped binary only. It is not in `build-inputs`,
+# which the CI test legs download too: their builds must stay the dev build, without it. An RC's BUILD-INPUTS
+# records its SHA-256; a final reusing that RC's inputs refetches the same pinned commit and checks both match.
 #
 # On a final `X.Y.Z` whose diff since the latest green, published `X.Y.Z-rcN` touches only version pins and
 # docs (tools/check_rc_reuse.sh), it reuses that RC's nightly and `Cargo.lock` (only the workspace crates'
@@ -87,6 +93,10 @@ jobs:
             if ! rc_toolchain="$(bash tools/check_rc_reuse.sh --fetch-release-inputs "$RC_TAG" rc_inputs)"; then
               echo "::warning::could not fetch verified build inputs from ${RC_TAG}; falling back to full pipeline"
               reuse_ok=0
+            elif [ "$(sed -n 's/^AR5IV_CSS_SHA256=//p' rc_inputs/BUILD-INPUTS | head -n1)" != \
+                   "$(sed -n 's/^AR5IV_CSS_SHA256=//p' tools/ar5iv-css.pin | head -n1)" ]; then
+              echo "::warning::${RC_TAG} did not embed the ar5iv.css tools/ar5iv-css.pin names; falling back to full pipeline"
+              reuse_ok=0
             fi
 
             if [ "$reuse_ok" -eq 1 ]; then
@@ -129,9 +139,16 @@ jobs:
           git_sha="$(git rev-parse HEAD)"
           mkdir -p build-inputs
           cp Cargo.lock build-inputs/Cargo.lock
+          # Fails the release when the download fails or its SHA-256 is not the pin's.
+          bash tools/fetch_ar5iv_css.sh ar5iv-css
+          read -r ar5iv_tag ar5iv_commit < ar5iv-css/ar5iv-css.version
+          ar5iv_sha="$(sha256sum ar5iv-css/ar5iv.min.css | awk '{print $1}')"
           {
             printf 'TOOLCHAIN=%s\n' "$toolchain"
             printf 'CARGO_LOCK_SHA256=%s\n' "$lock_sha"
+            printf 'AR5IV_CSS_TAG=%s\n' "$ar5iv_tag"
+            printf 'AR5IV_CSS_COMMIT=%s\n' "$ar5iv_commit"
+            printf 'AR5IV_CSS_SHA256=%s\n' "$ar5iv_sha"
             printf 'GIT_TAG=%s\n' "$TAG"
             printf 'GIT_SHA=%s\n' "$git_sha"
             printf 'SOURCE_RC=%s\n' "${source_rc:-none}"
@@ -152,6 +169,7 @@ jobs:
             printf '| skip_tests | `%s` |\n' "$skip_tests"
             printf '| source RC | `%s` |\n' "${source_rc:-none}"
             printf '| Cargo.lock sha256 | `%s` |\n' "$lock_sha"
+            printf '| ar5iv.css | ar5iv-css `%s` (`%s`), sha256 `%s` |\n' "$ar5iv_tag" "$ar5iv_commit" "$ar5iv_sha"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: upload pinned build inputs
@@ -161,5 +179,15 @@ jobs:
           path: |
             build-inputs/BUILD-INPUTS
             build-inputs/Cargo.lock
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: upload the bundled ar5iv.css
+        uses: actions/upload-artifact@v5
+        with:
+          name: ar5iv-css
+          path: |
+            ar5iv-css/ar5iv.min.css
+            ar5iv-css/ar5iv-css.version
           retention-days: 7
           if-no-files-found: error

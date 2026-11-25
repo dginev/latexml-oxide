@@ -127,6 +127,9 @@ The highlights since 0.7.6 (2026-08-23). Every change, with its guard tests and 
   never Errors, Fatals or the final verdict; the log keeps everything.
 - `--dest`, `--sitedirectory` and `--sourcedirectory` expand a leading `~` and resolve `./` and `..` before use, as
   latexmlc does (issue 1006).
+- A stylesheet or script already in the destination is used as-is; only a missing or empty one is written from the
+  bundled copy. A reused output folder therefore keeps the `LaTeXML.css` an older version wrote: delete it to get the
+  new one, which the box sizes above need.
 - The cortex worker never loads a runtime `.rhai` binding shipped in a source, whatever its build features.
 - Under `ulimit -v`, set `MALLOC_ARENA_MAX=2` and `MIMALLOC_ARENA_RESERVE=128MiB`
   ([`docs/ENVIRONMENT.md`](docs/ENVIRONMENT.md)).

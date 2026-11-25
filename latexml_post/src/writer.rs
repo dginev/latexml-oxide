@@ -310,6 +310,13 @@ pub fn same_bytes(a: &Path, b: &Path) -> bool {
   }
 }
 
+/// Whether a bundled resource's embedded bytes are written to `dest`: only where it is missing or an empty regular file
+/// (#312's truncated leftover). A non-empty file in place is used as-is, a user's or an older release's; a directory
+/// still goes to the write and its error.
+pub fn needs_write(dest: &Path) -> bool {
+  !fs::metadata(dest).is_ok_and(|m| m.is_file() && m.len() > 0)
+}
+
 /// Whether `a` and `b` name the same existing file (by canonical path). A copy onto itself
 /// truncates the file: the destination directory on the resource search path made a stale
 /// resource its own only match (#312); a plain `!=` on two spellings (`./`, relative) misses it.

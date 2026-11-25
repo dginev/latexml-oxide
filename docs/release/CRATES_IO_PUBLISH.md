@@ -135,6 +135,13 @@ them buys nothing for the publish and entangles `release.yml`/`CI.yml` cache
 paths, the Dockerfile, `.gitignore`/`.gitattributes`, and `ini_tex.rs`'s
 `--init` write path. Left at the workspace root.
 
+#### `resources/ar5iv-css` — release-only, likewise outside the crates
+The bundled `ar5iv.css` (RELEASING.md "The bundled ar5iv.css") is fetched only by
+the release pipeline into the git-ignored `resources/ar5iv-css/`, so a crates.io
+install or a docs.rs build has none: `latexml_post/build.rs` tracks nothing outside
+the workspace and embeds `None`, and `--css=ar5iv.css` warns and asks for a path to
+a local copy.
+
 Rejected alternatives: a prepublish copy-and-path-rewrite script (fragile — the
 `include_str!` paths are compile-time literal), and per-crate symlinks into
 `../resources` (Windows-hostile, brittle).
