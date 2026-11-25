@@ -1303,84 +1303,169 @@ mod split_nav_relations {
     ]);
   }
 
-  /// A `--sitedirectory` above the destination moves no navigation link (issue 1006): with a relative `--dest`, Split
-  /// named its pages `./Ch1.html` beside the root's `index.html`, and the site-relative locations kept those two
-  /// spellings, so a chapter's `up` read `../index.html` and the root's `next` `./Ch1.html`. Perl names a page with
-  /// `pathname_make` (`Split.pm` L185-191): `Ch1.html`. Every page's head links match the run without the site
-  /// directory, on both split paths (the streamed default and the whole-DOM one) and with pages in folders
-  /// (`idrelative`).
+  /// Every `href` of every page of a split run, keyed by the page's path under `out` (stylesheets left out: a site
+  /// directory moves them to its root, as Perl does).
+  fn split_hrefs(out: &Path) -> Vec<(String, Vec<String>)> {
+    let href = regex::Regex::new(r#"href="([^"]*)""#).unwrap();
+    let mut pages: Vec<(String, Vec<String>)> = Vec::new();
+    let mut dirs = vec![out.to_path_buf()];
+    while let Some(dir) = dirs.pop() {
+      for entry in std::fs::read_dir(&dir).unwrap().flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+          dirs.push(path);
+        } else if path.extension().is_some_and(|e| e == "html") {
+          let html = std::fs::read_to_string(&path).unwrap();
+          let links = href
+            .captures_iter(&html)
+            .map(|c| c[1].to_string())
+            .filter(|h| !h.ends_with(".css") && !h.ends_with(".js"))
+            .collect();
+          let name = path
+            .strip_prefix(out)
+            .unwrap()
+            .to_string_lossy()
+            .replace('\\', "/");
+          pages.push((name, links));
+        }
+      }
+    }
+    pages.sort();
+    pages
+  }
+
+  /// A `--sitedirectory` or a `./`-spelled `--dest` moves no navigation link (issue 1006): Split named its pages
+  /// `./Ch1.html` beside a root `index.html`, so their site-relative locations had two spellings and a chapter's `up`
+  /// read `../index.html`; Perl names a page with `pathname_make` (`Split.pm` L185-191) and canonicalizes `--dest` and
+  /// `--sitedirectory` first (`Common/Config.pm` L395-397). Every page's links equal the plain run's, for `index.html`,
+  /// `./index.html` and `./out/index.html`, with no site directory, an ancestor, or the destination's own, on both
+  /// split paths (the streamed default and the whole-DOM one) and with pages in folders (`idrelative`).
   #[test]
   fn split_navigation_ignores_an_ancestor_site_directory() {
     const DOC: &str = "\\documentclass[12pt,oneside]{book}\n\\begin{document}\n\\title{my book}\\maketitle\n\
                        \\tableofcontents\n\\chapter{chapter 1}\n\\section{section 1}\n\\subsection{sub 1}\ntest\n\
                        \\section{section 2}\ntest\n\\end{document}\n";
+    #[derive(Clone, Copy, Debug)]
+    enum Site {
+      None,
+      Ancestor,
+      DestDir,
+    }
     for stream in ["1", "0"] {
       for naming in [None, Some("idrelative")] {
-        let pages = |site: bool| {
+        let run = |dest: &str, site: Site| {
           let work = tempfile::tempdir().expect("tempdir");
           let book = work.path().join("book");
           std::fs::create_dir_all(&book).unwrap();
           std::fs::write(book.join("index.tex"), DOC).unwrap();
-          let site_arg = format!("--sitedirectory={}", work.path().display());
+          let out = book.join(Path::new(dest).parent().unwrap());
+          let site_arg = match site {
+            Site::None => None,
+            Site::Ancestor => Some(format!("--sitedirectory={}", work.path().display())),
+            Site::DestDir => Some(format!("--sitedirectory={}", out.display())),
+          };
+          let dest_arg = format!("--dest={dest}");
+          let naming_arg = naming.map(|n| format!("--splitnaming={n}"));
           let mut args = vec![
             "index.tex",
             "--splitat=section",
             "--format=html5",
-            "--dest=index.html",
+            &dest_arg,
           ];
-          if site {
-            args.push(&site_arg);
-          }
-          let naming_arg = naming.map(|n| format!("--splitnaming={n}"));
-          if let Some(n) = naming_arg.as_deref() {
-            args.push(n);
-          }
-          let out = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+          args.extend(site_arg.as_deref());
+          args.extend(naming_arg.as_deref());
+          let output = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
             .args(&args)
             .env("LATEXML_POST_STREAM_SPLIT", stream)
             .current_dir(&book)
             .output()
             .expect("spawn latexml_oxide");
           assert!(
-            out.status.success(),
-            "conversion failed (site {site}, stream {stream}, {naming:?}):\n{}",
-            String::from_utf8_lossy(&out.stderr)
+            output.status.success(),
+            "conversion failed ({dest}, {site:?}, stream {stream}, {naming:?}):\n{}",
+            String::from_utf8_lossy(&output.stderr)
           );
-          let mut pages: Vec<(String, Vec<String>)> = Vec::new();
-          let mut dirs = vec![book.clone()];
-          while let Some(dir) = dirs.pop() {
-            for entry in std::fs::read_dir(&dir).unwrap().flatten() {
-              let path = entry.path();
-              if path.is_dir() {
-                dirs.push(path);
-              } else if path.extension().is_some_and(|e| e == "html") {
-                let name = path
-                  .strip_prefix(&book)
-                  .unwrap()
-                  .to_string_lossy()
-                  .replace('\\', "/");
-                pages.push((name, head_links(&std::fs::read_to_string(&path).unwrap())));
+          split_hrefs(&out)
+        };
+        let plain = run("index.html", Site::None);
+        let up = plain
+          .iter()
+          .find(|(page, _)| {
+            page
+              == if naming.is_none() {
+                "Ch1.html"
+              } else {
+                "Ch1/S1.html"
               }
-            }
-          }
-          pages.sort();
-          pages
-        };
-        let (plain, sited) = (pages(false), pages(true));
-        assert_eq!(sited, plain, "stream {stream}, {naming:?}");
-        let up = |page: &str, href: &str| {
-          let links = &plain.iter().find(|(name, _)| name == page).unwrap().1;
-          assert!(
-            links
-              .iter()
-              .any(|l| l.starts_with(&format!(r#"<link rel="up" href="{href}""#))),
-            "{page}: {links:?}"
+          })
+          .map(|(_, links)| links.clone())
+          .unwrap_or_default();
+        assert!(
+          up.iter().any(|h| h == "index.html"),
+          "stream {stream}, {naming:?}: {up:?}"
+        );
+        for (dest, site) in [
+          ("index.html", Site::Ancestor),
+          ("./index.html", Site::Ancestor),
+          ("./index.html", Site::DestDir),
+          ("./out/index.html", Site::None),
+          ("./out/index.html", Site::Ancestor),
+        ] {
+          assert_eq!(
+            run(dest, site),
+            plain,
+            "{dest}, {site:?}, stream {stream}, {naming:?}"
           );
-        };
-        match naming {
-          None => up("Ch1.html", "index.html"),
-          Some(_) => up("Ch1/S1.html", "index.html"),
         }
+      }
+    }
+  }
+
+  /// A page named after a label is written where the label says, inside the destination: no `~` expansion and no
+  /// leading `/` (OXIDIZED_DESIGN_DIVERGENCES #1164; Perl's `pathname_make` canonicalizes the name, so `\label{~one}`
+  /// becomes `$HOME`one, outside the site directory, and `\label{/x}` the absolute `/x.html`).
+  #[test]
+  fn split_label_names_stay_in_the_destination() {
+    const DOC: &str = "\\documentclass{article}\n\\begin{document}\n\\section{One}\\label{~one}\nA.\n\
+                       \\section{Two}\\label{/lzxrev}\nB.\n\\section{Three}\\label{three}\nC.\n\\end{document}\n";
+    for dest in ["index.html", "out/index.html"] {
+      let work = tempfile::tempdir().expect("tempdir");
+      let home = work.path().join("home");
+      std::fs::create_dir_all(&home).unwrap();
+      std::fs::write(work.path().join("doc.tex"), DOC).unwrap();
+      let output = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+        .args([
+          "doc.tex",
+          "--splitat=section",
+          "--splitnaming=label",
+          "--format=html5",
+          &format!("--dest={dest}"),
+        ])
+        .env("HOME", &home)
+        .current_dir(work.path())
+        .output()
+        .expect("spawn latexml_oxide");
+      assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+      );
+      let out = work.path().join(Path::new(dest).parent().unwrap());
+      for page in ["~one.html", "lzxrev.html", "three.html"] {
+        assert!(out.join(page).is_file(), "{dest}: no {page}");
+      }
+      assert_eq!(
+        std::fs::read_dir(&home).unwrap().count(),
+        0,
+        "{dest}: a page under HOME"
+      );
+      for (page, links) in split_hrefs(&out) {
+        assert!(
+          links
+            .iter()
+            .all(|h| !h.starts_with('/') && !h.contains("home")),
+          "{dest}, {page}: {links:?}"
+        );
       }
     }
   }

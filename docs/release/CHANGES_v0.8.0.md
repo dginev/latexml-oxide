@@ -43,6 +43,16 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
 
 ## Changes
 
+### 0.8.0-rc4
+
+  - **Split pages keep their navigation under `--sitedirectory` and a `./`-spelled `--dest`.** With a relative
+    `--dest=index.htm` and an ancestor `--sitedirectory`, a chapter's up/prev links read `../index.htm` and the root's
+    next `./Ch1.htm` (issue 1006); a `--dest=./out/index.html` broke the same links without a site directory. Split
+    named its pages `./Ch1.htm` beside the root, so the two spellings of one folder no longer matched; it now names a
+    page as Perl's `Split::getPageName` does (`pathname_make`), and post canonicalizes `--dest`, `--sitedirectory` and
+    `--sourcedirectory` first, as Perl's `Config.pm` does. A page named after a label stays inside the destination
+    (`\label{~x}`, `\label{/x}`; OXIDIZED_DESIGN_DIVERGENCES #1164).
+
 ### 0.8.0-rc3
 
   - **natbib reads an apalike label `[Author, Year]` as author and year.** A bare `\bibitem[Maes, 1995]{m}` label
