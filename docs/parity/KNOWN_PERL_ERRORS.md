@@ -22870,7 +22870,8 @@ latex.ltx's `\@item[#1]` prints `\makelabel{#1}` as the item's label and steps n
 `thebibliography` is a `\list`, so an `\item[label]` there is an entry labelled as written (asl.cls:5658 `\@bib@item`,
 backref users' `\item[\@biblabel{1}]`). Perl's `\item@in@bibliography` = `\save@bibitem{}`
 (latex_constructs.pool.ltxml:4069) ignores the bracket: the entry takes the next number as its tag, `[label]` stays at
-the head of its text, and every later entry's number is one too high. Minimal trigger:
+the head of its text, and every later entry's number is one too high for each labelled `\item` before it. Minimal
+trigger:
 
 ```tex
 \documentclass{article}\begin{document}See \cite{k}.
@@ -22880,5 +22881,5 @@ the head of its text, and every later entry's number is one too high. Minimal tr
 pdflatex prints "See [2]. [A1] First. [1] Second. [2] Third."; Perl 0.8.8 (same host) and the Rust port before the fix
 "See [3]. [1] [[A1]] First. [2] Second. [3] Third.". Fixed in Rust (sect11.rs `\item@in@bibliography`: `\@ifnextchar[`
 as latex.ltx's `\item`, then `\lx@bibitem@item`, whose tags are Perl's for any list's `\item[label]`,
-latex_constructs.pool.ltxml:1383-1390: `\makelabel{label}`, no refnum, `RefStepID`). Witnesses 1005.4193, 0705.0395
+latex_constructs.pool.ltxml:1380-1395: `\makelabel{label}`, no refnum, `RefStepID`). Witnesses 1005.4193, 0705.0395
 (asl.cls), 1211.3435 (backref); guard `perfect_kernel_batchga1::ROWS` row `item_label_in_thebibliography_is_the_entry_tag`.

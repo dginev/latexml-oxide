@@ -204,7 +204,9 @@ fn backref_document_bibitem_calls_br_backref() {
     Some("ar5iv.sty"),
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  // the `\item[\@biblabel{1}]` label is the entry's tag, typeset once (BIBITEMLABEL2: was also in the text, "[[1]]A.")
+  // the `\item[\@biblabel{1}]` label is the entry's tag, typeset once (BIBITEMLABEL2: was also in the text, "[[1]]A.");
+  // the empty autoref `<text/>` is the shared `\lx@make@tags` path's (any list's `\item[x]` under hyperref; Perl has
+  // none), dropped from the HTML
   assert_element(
     &xml,
     "bibitem",

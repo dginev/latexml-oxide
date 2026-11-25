@@ -646,7 +646,7 @@ pub(crate) fn load() -> Result<()> {
   def_macro_noop("\\vskip@in@bibliography Glue")?;
   // `\item[label]` is an entry printing `\makelabel{label}` as its label, stepping no counter, as latex.ltx's `\@item`
   // does (Perl's `\save@bibitem{}` left `[label]` in the text: KNOWN_PERL_ERRORS #1335; asl.cls 1005.4193, 0705.0395;
-  // backref's 1211.3435). Its tags are Perl's for any list's `\item[label]` (latex_constructs.pool.ltxml:1383-1390).
+  // backref's 1211.3435). Its tags are Perl's for any list's `\item[label]` (latex_constructs.pool.ltxml:1380-1395).
   DefMacro!("\\item@in@bibliography", "\\@ifnextchar[\\lx@bibitem@item{\\save@bibitem{}}");
   DefConstructor!("\\lx@bibitem@item OptionalUndigested",
     "<ltx:bibitem xml:id='#id' _labelled='true'>#tags<ltx:bibblock>",

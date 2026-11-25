@@ -73,7 +73,7 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (403 items on 2026-11-25 on `int/towards_v0_8_1`: 403 open, weight 897, 43 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (404 items on 2026-11-25 on `int/towards_v0_8_1`: 404 open, weight 898, 43 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
 
 
   - ODR6 — OD ruling 12 (recorded in OD #449): `dump_reader.rs`'s "add-only" docstrings (:365, :574) corrected, then a removal trial of the skip lists against CLAUDE.md rule 2; 1
@@ -951,21 +951,28 @@ Rules that keep this file honest and mergeable:
     closes abandoned raw-array groups (was a Fatal); 3
   - BINDRES — the binding fixes' residuals (REGFIXH, REGFIXI, REGFIXK, REGFIXL): no harvard binding (HARVARDCITE; Perl
     none; 17 IUCr papers; 2504.07452's `\citeasnoun` prints a bold "?", "[]" before every bibblock, keyless bibitems;
-    2505.20965; option: a thin binding routing `\citeasnoun`/`\citeyear` to the kernel cite); `\item[label]` in
-    `{thebibliography}` prints the label twice (BIBITEMLABEL2; `[[1]]`, since Oct 8); emulateapj's `\textwidth` is 345pt
-    where emulateapj.cls:334-335 sets 7.1in and `\columnsep` 0.3125in (EMULATEAPJWIDTH; 1612.09425's f1: pdflatex
-    ≈231pt, ours 155pt; 0812.1578; its own A/B, it moves every emulateapj paper's widths); `[epj]{svjour2}` papers never
-    get the EPJ panel page (SVJOUREPJPANEL; hep-ph0608235; svjour_cls.rs:82 `is_document_class("svjour")`); BINDFID's
-    audit list: aas_support (aas_macros, deluxetable), svproc (aas_macros), paspconf (aaspp), emulateapj's base class
-    aastex (the real one is REVTeX), sv_support's unconditional natbib (svjour3.cls:68 only under its option);
-    `\meaning\text` shows `\lx@text` where pdflatex shows `\protect \text  ` (OD #1104; robust needs the lock to hold
-    the inner `\text␣`, OD #568); `\bibitem[\lab]` with an argument-taking `\lab` (BIBLABELARG; pdflatex 2 errors, we 0
-    and cite `[L]`; mnras's `\citeauthoryear` label: pdflatex 2 errors, one per `\write`, we 1; `$\frac\text{a}{b}$`:
-    pdflatex 37 errors, we 0 with `tex="\frac{\text{}}{a}{b}"`); ulem's `\ul` runs through an `\end{…}`/`\endgroup` at
-    its depth and past a closing `$`, and a cell-end-closed line loses the cell's right border (pdflatex fatal; RED
-    repros under `loader/ulem_declaration_*`), and a document's own underline macro through `\useunder` in a
-    `\multicolumn` still errs; breakurl's `\burl` URLs print as sans text without a link, as pdflatex's `.bbl` fallback
-    since REGFIXU (2403.06633; a binding `\burl` = `\url` would be a surpass); 3
+    2505.20965; option: a thin binding routing `\citeasnoun`/`\citeyear` to the kernel cite); emulateapj's `\textwidth`
+    is 345pt where emulateapj.cls:334-335 sets 7.1in and `\columnsep` 0.3125in (EMULATEAPJWIDTH; 1612.09425's f1:
+    pdflatex ≈231pt, ours 155pt; 0812.1578; its own A/B, it moves every emulateapj paper's widths); `[epj]{svjour2}`
+    papers never get the EPJ panel page (SVJOUREPJPANEL; hep-ph0608235; svjour_cls.rs:82 `is_document_class("svjour")`);
+    BINDFID's audit list: aas_support (aas_macros, deluxetable), svproc (aas_macros), paspconf (aaspp), emulateapj's
+    base class aastex (the real one is REVTeX), sv_support's unconditional natbib (svjour3.cls:68 only under its
+    option); `\meaning\text` shows `\lx@text` where pdflatex shows `\protect \text ` (OD #1104; robust needs the lock to
+    hold the inner `\text␣`, OD #568); `\bibitem[\lab]` with an argument-taking `\lab` (BIBLABELARG; pdflatex 2 errors,
+    we 0 and cite `[L]`; mnras's `\citeauthoryear` label: pdflatex 2 errors, one per `\write`, we 1;
+    `$\frac\text{a}{b}$`: pdflatex 37 errors, we 0 with `tex="\frac{\text{}}{a}{b}"`); ulem's `\ul` runs through an
+    `\end{…}`/`\endgroup` at its depth and past a closing `$`, and a cell-end-closed line loses the cell's right border
+    (pdflatex fatal; RED repros under `loader/ulem_declaration_*`), and a document's own underline macro through
+    `\useunder` in a `\multicolumn` still errs; breakurl's `\burl` URLs print as sans text without a link, as pdflatex's
+    `.bbl` fallback since REGFIXU (2403.06633; a binding `\burl` = `\url` would be a surpass); 3
+  - BIBLISTRES — (BIBITEMLABEL2 review, all pre-existing; base the same or worse) thebibliography residuals: asl
+    citations print their keys ("[Ku:Book]" where the PDF prints "[Woo10A]"; 1005.4193, 0907.5495, 2108.03574) and a
+    custom `\my@lbibitem` writing `\bibcite` leaves its cites unresolved (1211.3435 "[Oseledets]", PDF "[Os]");
+    emulateapj's `\def\@biblabel#1{\relax}` entries get [1], [2] where the PDF prints none (1503.02542); mnras prints
+    labels 1/2/3 and "[1]" cites where the PDF has none and "(1)"; a bare `\item` after natbib's `\bibitem` is [2],
+    pdflatex [1]; math in a tag label is upright text and `\color` in it is lost (1609.04957, 2402.14816; lists alike);
+    a bibblock keeps the label's trailing space where `\@item` ends in `\ignorespaces`; 2108.03574 gains stray
+    asl-internal entries; 1
   - REGRES — the regression fixes' residuals: fdsymbol's ~165 `symNNN` glyphs, 6 extensible accents (2312.00399
     `\overlinesegment`) and `\ullcorner`/`\ulrcorner`; `\usepackage{amsmath}` after `\documentstyle{amsart}` does not
     restore the old-form error; natbib loaded before `\documentclass{elsarticle}` is only an Info (RED
