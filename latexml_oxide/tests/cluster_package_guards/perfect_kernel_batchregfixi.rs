@@ -204,14 +204,13 @@ fn backref_document_bibitem_calls_br_backref() {
     Some("ar5iv.sty"),
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  // (the doubled `[[1]]` is the pre-existing `\item[label]` in `{thebibliography}`, BIBITEMLABEL2, pinned here as it
-  // stands, not this guard's subject)
+  // the `\item[\@biblabel{1}]` label is the entry's tag, typeset once (BIBITEMLABEL2: was also in the text, "[[1]]A.")
   assert_element(
     &xml,
     "bibitem",
     &[],
-    "<bibitem xml:id=\"bib.bib1\"><tags><tag>[1]</tag><tag role=\"autoref\">1<text xml:id=\"bib.bib1.1\"/></tag><tag role=\"refnum\">1</tag></tags>\
-     <bibblock>[[1]]A. Author, Title.</bibblock></bibitem>",
+    "<bibitem xml:id=\"bib.bibx1\"><tags><tag>[1]</tag><tag role=\"autoref\"><text xml:id=\"bib.bibx1.1\"/></tag></tags>\
+     <bibblock>A. Author, Title.\n</bibblock></bibitem>",
   );
 }
 

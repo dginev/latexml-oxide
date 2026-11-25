@@ -1,0 +1,21 @@
+% mechanism: an `\item[label]` in `thebibliography` (asl.cls:5658 `\@bib@item`'s `\item[\@wrap@list{…}]`) is an entry
+%   printing `\makelabel{label}` as its label and stepping no counter (latex.ltx `\@item`); Perl's `\item@in@bibliography`
+%   = `\save@bibitem{}` (latex_constructs.pool.ltxml:4069) opened a numbered entry and left `[label]` in its text
+%   (KNOWN_PERL_ERRORS #1335). `\item` with no label is still the numbered entry.
+% witness: synthetic (GA1d; BIBITEMLABEL2); the shape of 1005.4193, 0705.0395 (asl.cls), 1211.3435 (backref)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: See [2]. [A1] First entry. B2 Second entry. [1] Third entry.
+%   [2] Fourth entry.
+% engines: perl 0.8.8 and rust int163a, GA1d, INT081T: 0 errors; tags [1]-[4], text "[[A1]] First entry." / "[B2]
+%   Second entry.", "See [4]."; BIBITEMLABEL2: as pdflatex
+% expect:  0 errors, 0 warnings; tags [A1], B2, [1], [2]; the entries' text without the labels; "See [2]."
+% status:  RED (int163a, GA1d, INT081T) -> GREEN (BIBITEMLABEL2; guard perfect_kernel_batchga1 ROWS)
+\documentclass{article}
+\begin{document}
+See \cite{k}.
+\begin{thebibliography}{9}
+\item[{[A1]}] First entry.
+\item [B2] Second entry.
+\item Third entry.
+\bibitem{k} Fourth entry.
+\end{thebibliography}
+\end{document}

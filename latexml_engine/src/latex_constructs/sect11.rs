@@ -644,7 +644,28 @@ pub(crate) fn load() -> Result<()> {
       }
     });
   def_macro_noop("\\vskip@in@bibliography Glue")?;
-  DefMacro!("\\item@in@bibliography", "\\save@bibitem{}");
+  // `\item[label]` is an entry printing `\makelabel{label}` as its label, stepping no counter, as latex.ltx's `\@item`
+  // does (Perl's `\save@bibitem{}` left `[label]` in the text: KNOWN_PERL_ERRORS #1335; asl.cls 1005.4193, 0705.0395;
+  // backref's 1211.3435). Its tags are Perl's for any list's `\item[label]` (latex_constructs.pool.ltxml:1383-1390).
+  DefMacro!("\\item@in@bibliography", "\\@ifnextchar[\\lx@bibitem@item{\\save@bibitem{}}");
+  DefConstructor!("\\lx@bibitem@item OptionalUndigested",
+    "<ltx:bibitem xml:id='#id' _labelled='true'>#tags<ltx:bibblock>",
+    enter_horizontal => true,
+    reversion => "\\item[#1]",
+    after_digest => sub[whatsit] {
+      let pruned_prev = prune_empty_entry_before()?;
+      let mut properties = if pruned_prev { RefCurrentID!("@bibitem")? } else { RefStepID!("@bibitem")? };
+      if let Some(label) = whatsit.get_arg(1) && !label.is_empty()? {
+        let mut tag_tokens = vec![T_BEGIN!(), T_CS!("\\let"), T_CS!("\\the@bibitem"), T_CS!("\\@empty"),
+          T_CS!("\\def"), T_CS!("\\fnum@@bibitem"), T_BEGIN!(), T_CS!("\\makelabel"), T_BEGIN!()];
+        tag_tokens.extend(Revert!(label));
+        tag_tokens.extend([T_END!(), T_END!()]);
+        tag_tokens.extend(Invocation!(T_CS!("\\lx@make@tags"), vec![T_OTHER!("@bibitem")]).unlist());
+        tag_tokens.push(T_END!());
+        properties.insert("tags", digest(tag_tokens)?.into());
+      }
+      whatsit.set_properties(properties);
+    });
 
   // If we hit a real \bibitem, put \par & \bibitem back to correct defn, and then \bibitem.
   // A bibitem with now key or label...
@@ -712,34 +733,7 @@ pub(crate) fn load() -> Result<()> {
     "<ltx:bibitem key='#key' xml:id='#id' _labelled='#labelled'>#tags<ltx:bibblock>",
     enter_horizontal => true,
     after_digest => sub[whatsit] {
-      // Perl #2409: prune previous \lx@bibitem whatsit if it was auto-opened
-      // with no tag/key body, and reuse its ID (avoids empty bibitem elements).
-      let pruned_prev = with_box_list(|list| {
-        if let Some(prev) = list.last()
-          && let DigestedData::Whatsit(prev_ws_cell) = prev.data() {
-            let prev_ws = prev_ws_cell.borrow();
-            let defn = prev_ws.get_definition();
-            let cs_str = defn.get_cs().to_string();
-            if cs_str == "\\lx@bibitem"
-              && prev_ws.get_arg(1).is_none()
-              && prev_ws.get_arg(2).is_none_or(|a| a.is_empty().unwrap_or(true))
-            {
-              return true;
-            }
-            // …and the recovery's own entry (`\lx@pseudo@bibitem`), empty when the box before this one: Perl's
-            // `\save@bibitem{}` was an `\lx@bibitem` this prune caught; pruned only later, at the bibliography's
-            // close, it is placed first, where it may not go (0801.2060).
-            if cs_str == "\\lx@pseudo@bibitem" {
-              return true;
-            }
-          }
-        false
-      });
-      if pruned_prev {
-        with_box_list_mut_vec(|list| { list.pop(); });
-        Info!("empty", "bibitem",
-          "Encountered an empty \\bibitem, likely auto-opened without need. Pruning and reusing its id.");
-      }
+      let pruned_prev = prune_empty_entry_before()?;
       let tag_opt = whatsit.get_arg(1);
       let key = if let Some(key) = whatsit.get_arg(2) {
         clean_bib_key(&key.to_string())
@@ -2228,6 +2222,38 @@ fn is_phantom_entry(document: &mut Document, entry: &Node) -> bool {
           })
         })
   })
+}
+
+/// Prunes the entry just opened before this one when it holds nothing (Perl #2409, latex_constructs.pool.ltxml:4089-4100):
+/// a keyless, labelless `\lx@bibitem`, or the recovery's own `\lx@pseudo@bibitem` — Perl's `\save@bibitem{}`, pruned
+/// here, not at the bibliography's close, where it is placed first (0801.2060). Its id is the caller's to reuse.
+fn prune_empty_entry_before() -> Result<bool> {
+  let pruned_prev = with_box_list(|list| {
+    list.last().is_some_and(|prev| match prev.data() {
+      DigestedData::Whatsit(prev_ws_cell) => {
+        let prev_ws = prev_ws_cell.borrow();
+        let cs_str = prev_ws.get_definition().get_cs().to_string();
+        (cs_str == "\\lx@bibitem"
+          && prev_ws.get_arg(1).is_none()
+          && prev_ws
+            .get_arg(2)
+            .is_none_or(|a| a.is_empty().unwrap_or(true)))
+          || cs_str == "\\lx@pseudo@bibitem"
+      },
+      _ => false,
+    })
+  });
+  if pruned_prev {
+    with_box_list_mut_vec(|list| {
+      list.pop();
+    });
+    Info!(
+      "empty",
+      "bibitem",
+      "Encountered an empty \\bibitem, likely auto-opened without need. Pruning and reusing its id."
+    );
+  }
+  Ok(pruned_prev)
 }
 
 /// A list auto-opened in the bibliography only for a phantom entry — the keyless `\save@bibitem{}` that a blank line or

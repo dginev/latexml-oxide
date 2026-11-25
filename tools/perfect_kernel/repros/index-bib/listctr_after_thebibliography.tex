@@ -5,9 +5,9 @@
 % oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: [1] First entry. [2] Second entry.
 % engines: perl 3 errors (Error:undefined:\c@, 2 × Error:unexpected:\the\c@), 5 warnings, [[0]]; rust int163a 0 errors,
 %   3 warnings (Counter '' was not defined; assuming 0), [[0]]; GA1d0 (GA1 alone) 3 errors, 5 warnings, [[0]]
-% expect:  0 errors, 0 warnings; [[1]]First entry. [[2]]Second entry. (the label staying in the entry's text is the
-%   separate item_label_in_thebibliography_is_the_entry_tag_red)
-% status:  RED (int163a, GA1d0) -> GREEN (GA1d)
+% expect:  0 errors, 0 warnings; tags [1], [2]; "First entry.", "Second entry." (the label left in the text as well,
+%   "[[1]]First entry.", until BIBITEMLABEL2: item_label_in_thebibliography_is_the_entry_tag)
+% status:  RED (int163a, GA1d0) -> GREEN (GA1d; the label as the tag only: BIBITEMLABEL2)
 \documentclass{article}
 \makeatletter
 \def\composelist{\addtocounter{\@listctr}{1}\the\value{\@listctr}}
