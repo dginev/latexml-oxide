@@ -1305,8 +1305,16 @@ mod split_nav_relations {
 
   /// Every `href` of every page of a split run, keyed by the page's path under `out` (stylesheets left out: a site
   /// directory moves them to its root, as Perl does).
-  fn split_hrefs(out: &Path) -> Vec<(String, Vec<String>)> {
-    let href = regex::Regex::new(r#"href="([^"]*)""#).unwrap();
+  fn split_hrefs(out: &Path) -> Vec<(String, Vec<String>)> { split_links(out, r#"href="([^"]*)""#) }
+
+  /// Every image reference (`src`, `data`; inline `data:` images left out) of every page of a split run, keyed as
+  /// [`split_hrefs`].
+  fn split_images(out: &Path) -> Vec<(String, Vec<String>)> {
+    split_links(out, r#"\b(?:src|data)="([^"]*)""#)
+  }
+
+  fn split_links(out: &Path, pattern: &str) -> Vec<(String, Vec<String>)> {
+    let href = regex::Regex::new(pattern).unwrap();
     let mut pages: Vec<(String, Vec<String>)> = Vec::new();
     let mut dirs = vec![out.to_path_buf()];
     while let Some(dir) = dirs.pop() {
@@ -1319,7 +1327,7 @@ mod split_nav_relations {
           let links = href
             .captures_iter(&html)
             .map(|c| c[1].to_string())
-            .filter(|h| !h.ends_with(".css") && !h.ends_with(".js"))
+            .filter(|h| !h.ends_with(".css") && !h.ends_with(".js") && !h.starts_with("data:"))
             .collect();
           let name = path
             .strip_prefix(out)
@@ -1342,15 +1350,23 @@ mod split_nav_relations {
   /// split paths (the streamed default and the whole-DOM one) and with pages in folders (`idrelative`).
   #[test]
   fn split_navigation_ignores_an_ancestor_site_directory() {
-    const DOC: &str = "\\documentclass[12pt,oneside]{book}\n\\begin{document}\n\\title{Book}\\maketitle\n\
-                       \\tableofcontents\n\\chapter{One}\n\\section{A}\n\\subsection{A1}\nText A.\n\
-                       \\section{B}\nText B.\n\\end{document}\n";
+    // The figure is kept at its own name beside the pages in every layout (kept path, OXIDIZED_DESIGN_DIVERGENCES
+    // #1081); a site named through a link once renamed it `x1.svg` (KNOWN_PERL_ERRORS #1334).
+    const DOC: &str = "\\documentclass[12pt,oneside]{book}\n\\usepackage{graphicx}\n\\begin{document}\n\
+                       \\title{Book}\\maketitle\n\\tableofcontents\n\\chapter{One}\n\\section{A}\n\
+                       \\subsection{A1}\nText A.\n\\includegraphics{pic.svg}\n\\section{B}\nText B.\n\\end{document}\n";
+    const PIC: &str = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"8\" height=\"8\"><rect width=\"8\" \
+                       height=\"8\"/></svg>\n";
     #[derive(Clone, Copy, Debug)]
     enum Site {
       None,
       Ancestor,
       AncestorSlash,
       DestDir,
+      // The ancestor named through a symbolic link, the conversion run from inside the link: the working directory
+      // is reported resolved and the site directory is not, as macOS's `/var` → `/private/var` in every temporary
+      // directory (KNOWN_PERL_ERRORS #1334; rc3 refused it as outside the site). An ordinary ancestor off Unix.
+      AncestorThroughLink,
     }
     for stream in ["1", "0"] {
       for naming in [None, Some("idrelative")] {
@@ -1359,13 +1375,27 @@ mod split_nav_relations {
           let book = work.path().join("book");
           std::fs::create_dir_all(&book).unwrap();
           std::fs::write(book.join("index.tex"), DOC).unwrap();
+          std::fs::write(book.join("pic.svg"), PIC).unwrap();
           let out = book.join(Path::new(dest).parent().unwrap());
+          let link = work.path().join("link");
+          let through_link = cfg!(unix) && matches!(site, Site::AncestorThroughLink);
+          let cwd = if through_link {
+            link.join("book")
+          } else {
+            book.clone()
+          };
           let site_arg = match site {
             Site::None => None,
             Site::Ancestor => Some(format!("--sitedirectory={}", work.path().display())),
             // The issue's own shape: `--sitedirectory=/mnt/g/public_html/`.
             Site::AncestorSlash => Some(format!("--sitedirectory={}/", work.path().display())),
             Site::DestDir => Some(format!("--sitedirectory={}", out.display())),
+            Site::AncestorThroughLink => {
+              #[cfg(unix)]
+              std::os::unix::fs::symlink(work.path(), &link).unwrap();
+              let site_dir = if through_link { &link } else { work.path() };
+              Some(format!("--sitedirectory={}", site_dir.display()))
+            },
           };
           let dest_arg = format!("--dest={dest}");
           let naming_arg = naming.map(|n| format!("--splitnaming={n}"));
@@ -1380,7 +1410,7 @@ mod split_nav_relations {
           let output = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
             .args(&args)
             .env("LATEXML_POST_STREAM_SPLIT", stream)
-            .current_dir(&book)
+            .current_dir(&cwd)
             .output()
             .expect("spawn latexml_oxide");
           assert!(
@@ -1388,10 +1418,11 @@ mod split_nav_relations {
             "conversion failed ({dest}, {site:?}, stream {stream}, {naming:?}):\n{}",
             String::from_utf8_lossy(&output.stderr)
           );
-          split_hrefs(&out)
+          (split_hrefs(&out), split_images(&out))
         };
         let plain = run("index.html", Site::None);
         let up = plain
+          .0
           .iter()
           .find(|(page, _)| {
             page
@@ -1407,6 +1438,14 @@ mod split_nav_relations {
           up.iter().any(|h| h == "index.html"),
           "stream {stream}, {naming:?}: {up:?}"
         );
+        assert!(
+          plain
+            .1
+            .iter()
+            .any(|(_, images)| images.iter().any(|i| i.ends_with("pic.svg"))),
+          "stream {stream}, {naming:?}: {:?}",
+          plain.1
+        );
         for (dest, site) in [
           ("index.html", Site::Ancestor),
           ("index.html", Site::AncestorSlash),
@@ -1414,6 +1453,8 @@ mod split_nav_relations {
           ("./index.html", Site::DestDir),
           ("./out/index.html", Site::None),
           ("./out/index.html", Site::Ancestor),
+          ("index.html", Site::AncestorThroughLink),
+          ("./out/index.html", Site::AncestorThroughLink),
         ] {
           assert_eq!(
             run(dest, site),

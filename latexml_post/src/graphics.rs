@@ -1652,8 +1652,12 @@ impl Graphics {
     // source OUTSIDE source_dir comes back as `../…`, never the raw absolute
     // path. A bare `strip_prefix` used to leak the absolute path for a graphic
     // reached through `\subimport*{../A/child/}` (issue #698 class).
+    // In the site as written or resolved: a relative `dest_dir` is completed from the working directory, which the OS
+    // reports resolved, so a site named through a link holds it only once both are resolved (KNOWN_PERL_ERRORS #1334).
+    use latexml_core::util::pathname::{is_contained, is_contained_resolved};
     let target = Self::copy_target(dest_dir, rel);
-    (latexml_core::util::pathname::is_contained(&target, site_dir).is_some()
+    ((is_contained(&target, site_dir).is_some()
+      || is_contained_resolved(&target, site_dir).is_some())
       && Self::resolves_inside_site_or_dest(&target, site_dir, dest_dir))
     .then(|| rel.to_string())
   }
