@@ -486,13 +486,15 @@ fn a_dump_built_from_another_tree_is_not_used() {
     ("LATEXML_NO_EMBEDDED_DUMP", String::from("1")),
     ("LATEXML_FORMAT_CACHE", cache.path().display().to_string()),
   ];
-  // The builds run off the conversion's `--timeout` (`watchdog::off_the_clock`), here 10 s, which they outlast. Red
+  // The builds run off the conversion's `--timeout` (`watchdog::off_the_clock`), here 10 s, which they outlast (about
+  // 25 s in the test profile on 16 cores; 30 s did not, so the guard must stay below the fastest build). Red
   // (0.8.0-rc4, Windows): the watchdog killed a build that did (exit 124) and counted it towards marking it failed.
+  const TIMEOUT: u32 = 10;
   let started = std::time::Instant::now();
-  let (ok, stderr, xml) = convert_cli_beside(tex, &own_copy, 10, &forced);
+  let (ok, stderr, xml) = convert_cli_beside(tex, &own_copy, TIMEOUT, &forced);
   assert!(ok, "the conversion exited non-zero:\n{stderr}");
   assert!(
-    started.elapsed().as_secs() >= 10,
+    started.elapsed().as_secs() >= u64::from(TIMEOUT),
     "the builds no longer outlast the timeout: lower it"
   );
   assert!(

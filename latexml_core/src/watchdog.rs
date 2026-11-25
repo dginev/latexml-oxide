@@ -12,7 +12,8 @@
 //! ([`EXIT_TIMEOUT`]). The process dies within `timeout + poll_interval`,
 //! regardless of what the main thread is doing, plus the time one-time setup
 //! spent [`off_the_clock`] (the format build): only its own bound ends that setup.
-//! `--timeout 0` arms no watchdog: no deadline, and no bound on the setup.
+//! `--timeout 0` arms no time guard: no deadline, and no bound on the setup (a non-zero `--max-memory` still starts
+//! the watchdog thread for its memory guard).
 //!
 //! # Design notes
 //!
@@ -985,8 +986,8 @@ pub fn deadline_passed(deadline: Instant, off_at_set: Duration) -> bool {
   now > deadline && now > deadline + time_off_the_clock().saturating_sub(off_at_set)
 }
 
-/// The running setup and its bound, once it has run past that bound.
-fn setup_past_bound() -> Option<(&'static str, Duration)> {
+/// The running setup and its bound, once it has run past that bound (what the watchdog's breach line names).
+pub fn setup_past_bound() -> Option<(&'static str, Duration)> {
   let (depth, what, bound) = *setup_running();
   let since = SETUP_SINCE_NS.load(Ordering::Acquire).checked_sub(1)?;
   let ran = Duration::from_nanos(nanos_since_epoch(Instant::now()).saturating_sub(since));

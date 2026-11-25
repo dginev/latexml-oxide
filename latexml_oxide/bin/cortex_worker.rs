@@ -1747,7 +1747,17 @@ fn write_exit_placeholder_zip(
   zip.start_file("status", options)?;
   zip.write_all(b"Status:conversion:3")?;
   zip.start_file("cortex.log", options)?;
-  let log = if exit_code == latexml_core::watchdog::EXIT_TIMEOUT {
+  let log = if exit_code == latexml_core::watchdog::EXIT_TIMEOUT
+    && let Some((what, bound)) = latexml_core::watchdog::setup_past_bound()
+  {
+    format!(
+      "Fatal:timeout:wallclock latexml-oxide: the {what} ran past its own bound of {}s (kept off the \
+       {timeout_secs}s timeout) converting {input_path}; the watchdog exited with code 124. No output \
+       produced.\n\
+       Status:conversion:3\n",
+      bound.as_secs()
+    )
+  } else if exit_code == latexml_core::watchdog::EXIT_TIMEOUT {
     format!(
       "Fatal:timeout:wallclock latexml-oxide hit the {timeout_secs}s \
        main-level wall-clock timeout converting {input_path}; the worker \
