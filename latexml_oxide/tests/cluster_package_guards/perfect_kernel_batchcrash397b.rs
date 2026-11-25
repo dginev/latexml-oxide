@@ -4,7 +4,7 @@
 //! `{\cs}` argument names its first non-space token, the rest its parameter text (`defined_cs`). One guard per path;
 //! each converts its repro and asserts the Error/Warning counts and the element the crash lost.
 
-use latexml::util::test::{error_count, warning_count};
+use latexml::util::test::{error_count, warning_count, xml_elements};
 
 use super::{
   perfect_kernel_batch78i::html_of, perfect_kernel_batch84b::text, perfect_kernel_batchz4::run,
@@ -16,32 +16,13 @@ macro_rules! repro {
   };
 }
 
-/// The `<tag …>…</tag>` elements of `xml`, whole.
-fn elements<'a>(xml: &'a str, tag: &str) -> Vec<&'a str> {
-  let (open, close) = (format!("<{tag}"), format!("</{tag}>"));
-  let mut found = Vec::new();
-  let mut rest = xml;
-  while let Some(at) = rest.find(&open) {
-    let after = &rest[at..];
-    let next = after.as_bytes().get(open.len()).copied();
-    if !matches!(next, Some(b' ' | b'>')) {
-      rest = &after[open.len()..];
-      continue;
-    }
-    let end = after.find(&close).map_or(after.len(), |e| e + close.len());
-    found.push(&after[..end]);
-    rest = &after[end..];
-  }
-  found
-}
-
 /// The titles of `xml`'s sections of kind `tag`, in order, as text.
 fn titles(xml: &str, tag: &str) -> Vec<String> {
-  elements(xml, tag)
-    .into_iter()
+  xml_elements(xml, tag, &[])
+    .iter()
     .map(|s| {
-      let title = elements(s, "title");
-      text(title.first().copied().unwrap_or(""))
+      let title = xml_elements(s, "title", &[]);
+      text(title.first().map_or("", String::as_str))
         .split_whitespace()
         .collect::<Vec<_>>()
         .join(" ")
@@ -62,10 +43,10 @@ fn counter_in_its_own_reset_list_is_reset_once() {
     log.contains("Counter 'subsubsection' is in a cycle of reset lists"),
     "{log}"
   );
-  let subsubsections = elements(&xml, "subsubsection");
+  let subsubsections = xml_elements(&xml, "subsubsection", &[]);
   assert_eq!(subsubsections.len(), 1, "{xml}");
   assert_eq!(titles(&xml, "subsubsection"), ["C"], "{xml}");
-  assert!(text(subsubsections[0]).contains("Text."), "{xml}");
+  assert!(text(&subsubsections[0]).contains("Text."), "{xml}");
 }
 
 /// The same cycle in TeX's own lists (`\@addtoreset{subsubsection}{subsubsection}` under article, whose
@@ -84,7 +65,7 @@ fn sectioning_step_into_a_reset_cycle_is_an_error() {
   assert_eq!(titles(&xml, "subsection"), ["1.1 B"], "{xml}");
   assert_eq!(titles(&xml, "subsubsection"), ["C"], "{xml}");
   assert!(
-    text(elements(&xml, "subsubsection")[0]).contains("Text."),
+    text(&xml_elements(&xml, "subsubsection", &[])[0]).contains("Text."),
     "{xml}"
   );
 }
@@ -119,7 +100,7 @@ fn stepcounter_of_a_counter_in_its_own_reset_list_terminates() {
   let (log, xml) = run(&tex);
   assert_eq!((error_count(&log), warning_count(&log)), (1, 2), "{log}");
   assert!(
-    text(elements(&xml, "subsubsection")[0]).contains("Text 1."),
+    text(&xml_elements(&xml, "subsubsection", &[])[0]).contains("Text 1."),
     "{xml}"
   );
 }
@@ -130,9 +111,9 @@ fn stepcounter_of_a_counter_in_its_own_reset_list_terminates() {
 fn amsrefs_records_under_an_active_at() {
   let (log, xml) = run(repro!("index-bib/amsrefs_records_under_an_active_at.tex"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  let entries = elements(&xml, "bibentry");
+  let entries = xml_elements(&xml, "bibentry", &[]);
   assert_eq!(entries.len(), 1, "{xml}");
-  let title = elements(entries[0], "bib-title");
+  let title = xml_elements(&entries[0], "bib-title", &[]);
   assert_eq!(title, ["<bib-title>Maple 2017.0</bib-title>"], "{xml}");
   assert!(
     entries[0].contains(r#"<bibentry key="maple" type="book""#),
@@ -161,7 +142,7 @@ fn declare_math_alphabet_command_after_a_space() {
     "fonts-nfss/declare_math_alphabet_command_after_a_space.tex"
   ));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  let tokens = elements(&xml, "XMTok");
+  let tokens = xml_elements(&xml, "XMTok", &[]);
   assert_eq!(tokens.len(), 1, "{xml}");
   assert!(
     tokens[0].contains(r#"font="caligraphic""#) && tokens[0].ends_with(">L</XMTok>"),
@@ -177,9 +158,9 @@ fn urldef_command_with_parameter_text() {
     "package-bindings/urldef_command_with_parameter_text.tex"
   ));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  let paras = elements(&xml, "para");
+  let paras = xml_elements(&xml, "para", &[]);
   assert_eq!(paras.len(), 1, "{xml}");
-  let words = text(paras[0])
+  let words = text(&paras[0])
     .split_whitespace()
     .collect::<Vec<_>>()
     .join(" ");
@@ -194,9 +175,9 @@ fn extractcolorspec_command_after_a_space() {
     "package-bindings/extractcolorspec_command_after_a_space.tex"
   ));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  let paras = elements(&xml, "para");
+  let paras = xml_elements(&xml, "para", &[]);
   assert_eq!(paras.len(), 1, "{xml}");
-  let words = text(paras[0])
+  let words = text(&paras[0])
     .split_whitespace()
     .collect::<Vec<_>>()
     .join(" ");

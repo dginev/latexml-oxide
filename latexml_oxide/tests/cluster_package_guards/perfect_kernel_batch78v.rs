@@ -4,7 +4,7 @@
 //! epsf's reset scope through `\input epsf.sty` and psfrag's epsf.sty, an `.eps` shipped only as `.pdf`. Each guard converts its repro under
 //! `tools/perfect_kernel/repros/` (pdflatex-checked) and asserts the diagnostics by count and whole elements.
 use latexml::util::test::{
-  assert_element, convert_files_with, convert_with, normalize_markup, xml_element,
+  assert_all_elements, assert_element, convert_files_with, convert_with, xml_elements,
 };
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
@@ -24,33 +24,18 @@ fn convert_clean(tex: &str) -> String {
   xml
 }
 
-/// Every `<tag>` element of `xml` in document order, whole.
-fn all_elements(xml: &str, tag: &str) -> Vec<String> {
-  let mut found = Vec::new();
-  let mut rest = xml;
-  let open = format!("<{tag}");
-  while let Some(element) = xml_element(rest, tag, &[]) {
-    found.push(element);
-    let at = rest.find(&open).unwrap();
-    rest = &rest[at + 1..];
-  }
-  found
-}
-
 /// Every `<creator …>` element in document order, whole, against `expected`, after 0 errors and 0 warnings.
 #[track_caller]
 fn assert_creators(tex: &str, expected: &[&str]) {
   let xml = convert_clean(tex);
-  let expected: Vec<String> = expected.iter().map(|e| normalize_markup(e)).collect();
-  assert_eq!(all_elements(&xml, "creator"), expected, "{xml}");
+  assert_all_elements(&xml, "creator", &[], expected);
 }
 
 /// Every `<caption>` element in document order, whole, against `expected`, after 0 errors and 0 warnings.
 #[track_caller]
 fn assert_captions(tex: &str, expected: &[&str]) {
   let xml = convert_clean(tex);
-  let expected: Vec<String> = expected.iter().map(|e| normalize_markup(e)).collect();
-  assert_eq!(all_elements(&xml, "caption"), expected, "{xml}");
+  assert_all_elements(&xml, "caption", &[], expected);
 }
 
 /// An address run after an affiliation that ends in a comma (`\IEEEauthorrefmark{1}Univ A,\\ \{ann, bob\}@a.edu;\\`)
@@ -147,7 +132,7 @@ fn epsfbox_input_sty_reads_the_shipped_copy() {
     "package-bindings/epsfbox_input_sty_reads_the_shipped_copy.tex"
   ));
   assert_eq!(
-    all_elements(&xml, "graphics"),
+    xml_elements(&xml, "graphics", &[]),
     [
       r#"<graphics graphic="a.eps" options="width=100.0pt" xml:id="S0.F1.sf1.g1"/>"#,
       r#"<graphics graphic="b.eps" options="width=100.0pt" xml:id="S0.F1.sf2.g1"/>"#,
@@ -165,7 +150,7 @@ fn epsfbox_psfrag_wrapper_resets_locally() {
     "package-bindings/epsfbox_psfrag_wrapper_resets_locally.tex"
   ));
   assert_eq!(
-    all_elements(&xml, "graphics"),
+    xml_elements(&xml, "graphics", &[]),
     [
       r#"<graphics graphic="a.eps" options="width=100.0pt" xml:id="S0.F1.sf1.g1"/>"#,
       r#"<graphics graphic="b.eps" options="width=100.0pt" xml:id="S0.F1.sf2.g1"/>"#,
@@ -225,7 +210,7 @@ fn includegraphics_eps_shipped_only_as_pdf_is_sized() {
     r#"<p xml:id="p1.1">width 100.375pt.</p>"#,
   );
   assert_eq!(
-    all_elements(&xml, "graphics"),
+    xml_elements(&xml, "graphics", &[]),
     [
       r#"<graphics candidates="eps_as_pdf_one.pdf" class="ltx_figure_panel" graphic="eps_as_pdf_one.eps" options="scale=0.5" panelwidth="0.291" xml:id="S0.F1.g1"/>"#,
       r#"<graphics candidates="eps_as_pdf_two.eps" class="ltx_figure_panel" cssstyle="width:4.015em; height:2.007em" graphic="eps_as_pdf_two.eps" panelwidth="0.116" xml:id="S0.F1.g2"/>"#,

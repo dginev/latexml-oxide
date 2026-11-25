@@ -7,7 +7,7 @@
 //! the class's, not amsaddr's; a `\restylefloat`ed table keeps float.sty's; ieeeaccess/ieeeoj/ieeetj names; algorithm2e's
 //! ": ". Each guard converts its pdflatex-checked repro under `tools/perfect_kernel/repros/class-bindings/` and asserts
 //! every `<caption>` whole, after 0 errors and 0 warnings.
-use latexml::util::test::{convert_files_with, normalize_markup, xml_element};
+use latexml::util::test::{assert_all_elements, convert_files_with};
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
 
@@ -38,15 +38,7 @@ fn assert_captions(tex: &str, expected: &[&str]) {
 fn assert_captions_with(tex: &str, files: &[(&str, &str)], preload: &str, expected: &[&str]) {
   let (log, xml) = convert_files_with(tex, files, Some(preload));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  let mut found = Vec::new();
-  let mut rest = xml.as_str();
-  while let Some(element) = xml_element(rest, "caption", &[]) {
-    found.push(element);
-    let at = rest.find("<caption").unwrap();
-    rest = &rest[at + 1..];
-  }
-  let expected: Vec<String> = expected.iter().map(|e| normalize_markup(e)).collect();
-  assert_eq!(found, expected, "{xml}");
+  assert_all_elements(&xml, "caption", &[], expected);
 }
 
 /// acmart's `manuscript` format is a journal one (acmart.cls:214-254): caption's AMS default ". " for every type,

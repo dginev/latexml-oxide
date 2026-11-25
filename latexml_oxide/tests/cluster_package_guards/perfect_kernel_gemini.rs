@@ -1,4 +1,4 @@
-use latexml::util::test::{check_requirements, loads};
+use latexml::util::test::{assert_no_element, check_requirements, loads};
 
 use super::perfect_kernel_batch46::{convert, error_count, warning_count};
 
@@ -1274,7 +1274,7 @@ Hello
   let (hyp_stderr, hyp_xml) = convert(hyp_tex, false);
   assert_eq!(error_count(&hyp_stderr), 0, "{hyp_stderr}");
   assert!(hyp_xml.contains("First Section"), "{hyp_xml}");
-  assert!(!hyp_xml.contains("<ltx:navigation"), "{hyp_xml}");
+  assert_no_element(&hyp_xml, "navigation", &[]);
 
   // 2. In bookmark.sty
   let bkm_tex = r"\documentclass{article}

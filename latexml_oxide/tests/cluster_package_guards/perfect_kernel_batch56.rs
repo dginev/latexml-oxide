@@ -1298,7 +1298,12 @@ Hello colored box.
   let (stderr, xml) = convert(tex, true);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert!(xml.contains("Hello colored box."), "{xml}");
-  assert!(xml.contains("<item"), "{xml}");
+  latexml::util::test::assert_element(
+    &xml,
+    "itemize",
+    &[],
+    "<itemize xml:id=\"S0.I1\"><item xml:id=\"S0.I1.i1\"><tags><tag>•</tag><tag role=\"autoref\">item\u{a0}</tag><tag role=\"typerefnum\">1st item</tag></tags><para xml:id=\"S0.I1.i1.p1\"><p>One</p></para></item></itemize>",
+  );
 }
 
 /// latex.ltx:9670 `\IfFileExists@` re-`\def`s the selected branch, halving

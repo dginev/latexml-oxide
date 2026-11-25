@@ -3,7 +3,7 @@
 //! item, a collcell macro handed the template's `\ignorespaces`, the OmniBus theorem set replacing an author's macro, a
 //! refused `\author` replayed half-way, ptephy's affiliation list copied into every author, and hyperref's
 //! letltxmacro. Repros under `tools/perfect_kernel/repros/`.
-use latexml::util::test::assert_element;
+use latexml::util::test::{assert_element, xml_elements};
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
 
@@ -17,22 +17,6 @@ fn convert_files_warned(tex: &str, files: &[(&str, &str)], warnings: usize) -> S
 }
 
 fn convert_clean(tex: &str) -> String { convert_files_warned(tex, &[], 0) }
-
-/// Every `<tag>` element of `xml` (`tag` without attributes, `<pubnote>`), whole, in document order.
-fn bare_elements(xml: &str, tag: &str) -> Vec<String> {
-  let open = format!("<{tag}>");
-  let close = format!("</{tag}>");
-  xml
-    .split(&open)
-    .skip(1)
-    .map(|rest| {
-      format!(
-        "{open}{}",
-        &rest[..rest.find(&close).expect("closed element") + close.len()]
-      )
-    })
-    .collect()
-}
 
 /// Every `<creator>` element of `xml`, whole, with the indentation between its tags removed.
 fn creators(xml: &str) -> Vec<String> {
@@ -260,7 +244,7 @@ fn ptephy_symbol_marks_and_legend_lines() {
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>C.\u{a0}Three</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id5\"><text font=\"italic\" xml:id=\"id5.1\">2</text></sup>University Two, City Two</contact></creator>",
   ]);
   // (P4b2b: the ids renumbered after the names' printed marks)
-  assert_eq!(bare_elements(&xml, "pubnote"), vec![
+  assert_eq!(xml_elements(&xml, "pubnote", &[]), vec![
     "<pubnote><sup xml:id=\"id6\"><text font=\"italic\" xml:id=\"id6.1\">∗</text></sup>Deceased, August 2020.</pubnote>",
     "<pubnote><sup xml:id=\"id7\"><text font=\"italic\" xml:id=\"id7.1\">†</text></sup>Deceased, April 2021.</pubnote>",
   ]);
@@ -312,7 +296,7 @@ fn ptephy_name_lines_after_break_stay_names() {
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>C.\u{a0}Three</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">1</text></sup>Univ A</contact></creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>D.\u{a0}Four</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\"><text font=\"italic\" xml:id=\"id4.1\">2</text></sup>Univ B</contact></creator>",
   ]);
-  assert!(bare_elements(&xml, "pubnote").is_empty(), "{xml}");
+  assert!(xml_elements(&xml, "pubnote", &[]).is_empty(), "{xml}");
 }
 
 /// A symbol mark nothing answers is shown on every author carrying it; a contact or note the author holds for another
@@ -342,7 +326,7 @@ fn ptephy_textsuperscript_legend_line() {
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>B.\u{a0}Two</personname><note mark=\"∗\" role=\"footnotemark\" xml:id=\"id2\"/><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">2</text></sup>Univ B</contact></creator>",
   ]);
   // (P4b2b: the ids renumbered after the names' printed marks)
-  assert_eq!(bare_elements(&xml, "pubnote"), vec![
+  assert_eq!(xml_elements(&xml, "pubnote", &[]), vec![
     "<pubnote><sup xml:id=\"id4\">*</sup>Deceased.</pubnote>"
   ]);
 }

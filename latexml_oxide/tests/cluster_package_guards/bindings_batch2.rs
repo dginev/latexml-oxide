@@ -1,7 +1,9 @@
 //! Guards for the second bindings batch of 2026-11-13 (issues #787, #773): one table-driven test per issue, each repro
 //! converted once in-process and checked whole, with exact Error/Warning counts.
 
-use latexml::util::test::{convert_with, error_count, kpse_has, warning_count};
+use latexml::util::test::{
+  assert_all_elements, convert_with, error_count, kpse_has, warning_count,
+};
 
 macro_rules! repro {
   ($dir:literal, $path:literal) => {
@@ -12,20 +14,6 @@ macro_rules! repro {
       $path
     ))
   };
-}
-
-/// Every element `<tag …>…</tag>` of `xml`, whole, in document order.
-fn elements(xml: &str, tag: &str) -> Vec<String> {
-  let (open, close) = (format!("<{tag}"), format!("</{tag}>"));
-  let mut found = Vec::new();
-  let mut rest = xml;
-  while let Some(at) = rest.find(&open) {
-    let tail = &rest[at..];
-    let end = tail.find(&close).map_or(tail.len(), |e| e + close.len());
-    found.push(tail[..end].to_string());
-    rest = &tail[end..];
-  }
-  found
 }
 
 /// Issue #787: caption's `justification=` is the caption's `text-align` (its body's last alignment command; `justify`
@@ -175,6 +163,6 @@ fn caption_justification_and_skip() {
       (errors, 0),
       "{log}"
     );
-    assert_eq!(elements(&xml, "caption"), expected, "{xml}");
+    assert_all_elements(&xml, "caption", &[], expected);
   }
 }

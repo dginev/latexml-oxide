@@ -1623,8 +1623,12 @@ fn biblatex_bbl_commands_do_not_shadow_list() {
 ";
   let (stderr, xml) = convert(tex, false);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert!(xml.contains("<itemize"), "{xml}");
-  assert!(xml.contains("<item"), "{xml}");
+  latexml::util::test::assert_element(
+    &xml,
+    "itemize",
+    &[],
+    r#"<itemize><item xml:id="S0.I1.i1"><tags><tag role="typerefnum">1st item</tag></tags><para xml:id="S0.I1.i1.p1"><p>one</p></para></item></itemize>"#,
+  );
 }
 
 /// fontspec-xetex.sty:755-767: `\newfontfamily\Foo{…}` DEFINES `\Foo` as a

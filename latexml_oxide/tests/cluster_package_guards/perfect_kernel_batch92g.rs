@@ -12,6 +12,8 @@
 //! Warning, and asserts every note (or contact) whole; two read the HTML: the note's role class, no name span.
 use std::{path::Path, process::Command};
 
+use latexml::util::test::xml_elements;
+
 use super::{
   perfect_kernel_batch46::{error_count, warning_count},
   perfect_kernel_batch84b::creators,
@@ -38,22 +40,6 @@ fn clean_both_ways(tex: &str) -> String {
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(eager, streamed);
   eager
-}
-
-/// Every element `<tag …>…</tag>` of `xml`, whole, in document order (`tag` holds no element of its own name).
-fn elements(xml: &str, tag: &str) -> Vec<String> {
-  let (open, close) = (format!("<{tag} "), format!("</{tag}>"));
-  let mut found = Vec::new();
-  let mut rest = xml;
-  while let Some(at) = rest.find(&open) {
-    let tail = &rest[at..];
-    let end = tail
-      .find(&close)
-      .map_or(tail.len(), |end| end + close.len());
-    found.push(tail[..end].to_string());
-    rest = &tail[end..];
-  }
-  found
 }
 
 /// Every start tag `<tag …>` of `xml`, in document order.
@@ -103,7 +89,7 @@ fn kernel_title_thanks_note_has_no_label() {
   let tex = repro!("kernel_title_thanks_note_has_no_label");
   let xml = clean_both_ways(tex);
   assert_eq!(
-    elements(&xml, "pubnote"),
+    xml_elements(&xml, "pubnote", &[]),
     vec![r#"<pubnote role="thanks">Funded by NSF grant 123.</pubnote>"#.to_string()],
     "{xml}"
   );
@@ -123,7 +109,7 @@ fn aa_notes_read_as_aa_prints_them() {
   let tex = repro!("aa_notes_read_as_aa_prints_them");
   let xml = clean_both_ways(tex);
   assert_eq!(
-    elements(&xml, "pubnote"),
+    xml_elements(&xml, "pubnote", &[]),
     vec![
       r#"<pubnote role="journal">Astronomy &amp; Astrophysics</pubnote>"#.to_string(),
       r#"<pubnote role="note">Research Note</pubnote>"#.to_string(),
@@ -152,7 +138,7 @@ fn aa_notes_read_as_aa_prints_them() {
 fn ieeetran_pubid_note_is_the_id_alone() {
   let xml = clean_both_ways(repro!("ieeetran_pubid_note_is_the_id_alone"));
   assert_eq!(
-    elements(&xml, "pubnote"),
+    xml_elements(&xml, "pubnote", &[]),
     vec!["<pubnote role=\"pubid\">0000–0000/24$31.00\u{a0}©\u{a0}2024 IEEE</pubnote>".to_string()],
     "{xml}"
   );

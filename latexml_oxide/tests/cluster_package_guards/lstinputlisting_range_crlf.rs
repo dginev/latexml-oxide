@@ -24,38 +24,14 @@
 //!    (9 green vs 69 black glyph groups); both LaTeXML engines painted the whole
 //!    snippet green.
 
+use latexml::util::test::{assert_all_elements, markup_text, xml_elements};
+
 /// CRLF on purpose — this is half of what is under test.
 const DATA_PY: &str = "# a comment line\r\nvalue = 1\r\nother = 2\r\nlast = 3\r\n";
 
 fn convert(tex: &str, data: &str) -> (String, String) {
   let (stderr, xml) = super::convert_files(tex, &[("data.py", data)]);
   (xml, stderr)
-}
-
-/// Collect the text of each `<listingline>`, in order.
-fn listing_lines(xml: &str) -> Vec<String> {
-  let mut out = Vec::new();
-  for chunk in xml.split("<listingline").skip(1) {
-    let Some(end) = chunk.find("</listingline>") else {
-      continue;
-    };
-    out.push(chunk[..end].to_string());
-  }
-  out
-}
-
-fn strip_tags(fragment: &str) -> String {
-  let mut text = String::new();
-  let mut in_tag = false;
-  for ch in fragment.chars() {
-    match ch {
-      '<' => in_tag = true,
-      '>' => in_tag = false,
-      c if !in_tag => text.push(c),
-      _ => {},
-    }
-  }
-  text
 }
 
 #[test]
@@ -79,20 +55,15 @@ fn lastline_shorter_than_file_does_not_swallow_the_document() {
     xml.contains("Text after the listing"),
     "content after the listing was swallowed:\n{xml}",
   );
-  let lines = listing_lines(&xml);
-  assert_eq!(
-    lines.len(),
-    3,
-    "expected exactly lines 1..3 of the file, got {}:\n{xml}",
-    lines.len()
-  );
+  // Exactly lines 1..3 of the file, whole: each source space is one `ltx_lst_space`.
+  assert_all_elements(&xml, "listingline", &[], &[
+    r#"<listingline xml:id="lstnumberx1">#<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">a</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">comment</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">line</text></listingline>"#,
+    r#"<listingline xml:id="lstnumberx2"><text class="ltx_lst_identifier">value</text><text class="ltx_lst_space"> </text>=<text class="ltx_lst_space"> </text>1</listingline>"#,
+    r#"<listingline xml:id="lstnumberx3"><text class="ltx_lst_identifier">other</text><text class="ltx_lst_space"> </text>=<text class="ltx_lst_space"> </text>2</listingline>"#,
+  ]);
+  // Line 4 is past lastline=3 and must not appear anywhere.
   assert!(
-    strip_tags(&lines[2]).contains("other = 2"),
-    "third listing line should be the file's line 3:\n{}",
-    strip_tags(&lines[2])
-  );
-  assert!(
-    !xml.contains("last = 3"),
+    !markup_text(&xml).contains("last = 3"),
     "line 4 is past lastline=3 and must not appear:\n{xml}",
   );
 }
@@ -113,7 +84,7 @@ fn crlf_line_comment_style_does_not_bleed_past_its_line() {
     !stderr.contains("Error:") && !stderr.contains("Fatal:"),
     "CRLF listing should convert cleanly, stderr had:\n{stderr}",
   );
-  let lines = listing_lines(&xml);
+  let lines = xml_elements(&xml, "listingline", &[]);
   assert_eq!(lines.len(), 4, "expected all 4 file lines:\n{xml}");
 
   assert!(

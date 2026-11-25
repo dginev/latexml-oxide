@@ -4,7 +4,9 @@
 //! #886, #337). Side item B (review rev78y2): ar5iv.sty's `classcaptionfonts` option, and float.sty's `\restylefloat`
 //! beside IEEEtran's caption format. Each guard converts its pdflatex-checked repro under `tools/perfect_kernel/repros/`
 //! and asserts the elements whole, after 0 errors and 0 warnings.
-use latexml::util::test::{assert_element, convert_bytes_files_then, convert_files_with};
+use latexml::util::test::{
+  assert_element, convert_bytes_files_then, convert_files_with, xml_elements,
+};
 
 use super::{
   perfect_kernel_batch46::{error_count, warning_count},
@@ -82,18 +84,6 @@ fn psfig_natural_panels_are_as_wide_as_their_bounding_box() {
   assert_eq!(float_rows(&xml, "S0.F1"), "A B | C", "{xml}");
 }
 
-/// Every `<caption>` element of `xml` in document order.
-fn captions(xml: &str) -> Vec<String> {
-  let mut found = Vec::new();
-  let mut rest = xml;
-  while let Some(element) = latexml::util::test::xml_element(rest, "caption", &[]) {
-    found.push(element);
-    let at = rest.find("<caption").unwrap();
-    rest = &rest[at + 1..];
-  }
-  found
-}
-
 /// `--preload=[classcaptionfonts]ar5iv.sty` sets the class caption fonts knob (caption_sty.rs `CLASS_CAPTION_FONTS`):
 /// acmart sigconf's captions carry their bold label and text (acmart.cls:960-961; pdflatex LinLibertineTB), with ar5iv's
 /// `ids` (`xml:id` on the texts); `noclasscaptionfonts`, or no option, leaves them unstyled. Red (int67a): the option
@@ -120,7 +110,11 @@ fn ar5iv_classcaptionfonts_option_sets_the_knob() {
       (0, 0),
       "{preload}: {log}"
     );
-    assert_eq!(captions(&xml), expected, "{preload}: {xml}");
+    assert_eq!(
+      xml_elements(&xml, "caption", &[]),
+      expected,
+      "{preload}: {xml}"
+    );
   }
 }
 
@@ -150,7 +144,7 @@ fn ar5iv_classcaptionfonts_option_keeps_ar5iv_options() {
     r#"<p xml:id="section1.p1.1">Hello.</p>"#,
   );
   assert_eq!(
-    captions(&xml),
+    xml_elements(&xml, "caption", &[]),
     // (paper.cls's `Fig.~\thefigure`, a no-break space)
     ["<caption><tag close=\": \">Fig.\u{a0}1</tag>Fig one.</caption>"],
     "{xml}"
@@ -171,7 +165,7 @@ fn caption_ruled_option_ruled_float_takes_caption_label_font() {
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(
-    captions(&xml),
+    xml_elements(&xml, "caption", &[]),
     [
       r#"<caption><tag close=": "><text font="italic" xml:id="program1.3">Program 1</text></tag>Prog one.</caption>"#,
       r#"<caption><tag close=": "><text font="italic" xml:id="snip1.3">Snip 1</text></tag>Snip one.</caption>"#,
