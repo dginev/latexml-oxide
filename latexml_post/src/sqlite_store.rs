@@ -21,6 +21,8 @@ pub struct SqliteStore {
   file:      Option<PathBuf>,
   schema:    &'static str,
   fell_back: bool,
+  /// Declared after `conn`, so dropped once the connection is closed.
+  wal_check: WalCheck,
 }
 
 /// How long a process waits for others holding the file, opening it or writing (as `object_db`): well inside a
@@ -48,7 +50,14 @@ impl SqliteStore {
     let fell_back = file.is_some() && conn.is_none();
     let file = conn.as_ref().and(file.map(Path::to_path_buf));
     let conn = conn.unwrap_or_else(|| Self::in_memory(schema));
-    SqliteStore { conn, file, schema, fell_back }
+    let wal_check = WalCheck(file.clone());
+    SqliteStore {
+      conn,
+      file,
+      schema,
+      fell_back,
+      wal_check,
+    }
   }
 
   /// [`Self::open_once`], again after a pause while another process holds the file, up to [`BUSY_TIMEOUT`]. A link is
@@ -240,6 +249,45 @@ impl SqliteStore {
   }
 }
 
+/// A store's file, looked at once its connection is closed. A close removes the `-wal` and `-shm` files only when its
+/// one try for the file's exclusive lock succeeds (`sqlite3WalClose`), so processes closing together can all leave
+/// them: while a `-wal` is there after a pause (another each time, so the processes part), the file is opened, read
+/// (which opens its WAL) and closed again, twice at most. A process still using the file keeps them, as SQLite means.
+struct WalCheck(Option<PathBuf>);
+
+impl Drop for WalCheck {
+  fn drop(&mut self) {
+    use std::hash::BuildHasher;
+    let Some(file) = &self.0 else { return };
+    let mut wal = file.as_os_str().to_owned();
+    wal.push("-wal");
+    if !Path::new(&wal).exists() {
+      return;
+    }
+    let random = std::collections::hash_map::RandomState::new();
+    for attempt in 0..2 {
+      std::thread::sleep(std::time::Duration::from_micros(
+        2000 + random.hash_one(attempt) % 3000,
+      ));
+      // Looked at again after the pause: a read of the file with no `-wal` would make one.
+      if !Path::new(&wal).exists() {
+        return;
+      }
+      // No `SQLITE_OPEN_CREATE`: a file removed meanwhile is not made again; nor is a link followed; nor a lock awaited.
+      let flags = rusqlite::OpenFlags::SQLITE_OPEN_READ_WRITE
+        | rusqlite::OpenFlags::SQLITE_OPEN_NOFOLLOW
+        | rusqlite::OpenFlags::SQLITE_OPEN_NO_MUTEX;
+      if let Ok(conn) = Connection::open_with_flags(file, flags)
+        && conn.busy_timeout(std::time::Duration::ZERO).is_ok()
+      {
+        let _ = conn.query_row("SELECT count(*) FROM sqlite_master", [], |row| {
+          row.get::<_, i64>(0)
+        });
+      }
+    }
+  }
+}
+
 enum OpenError {
   Sqlite(rusqlite::Error),
   /// The file holds this schema version, another than the store's.
@@ -381,6 +429,144 @@ mod tests {
         .collect();
       assert_eq!(outcomes, vec!["FILE"; 16]);
     }
+  }
+
+  /// Eight processes that open a new file together, write, and close it at the same moment leave no `-wal` or `-shm`,
+  /// none in memory, no Warning ([`WalCheck`]; base: 162-282 side files in 200 rounds on Linux; macOS CI run
+  /// 45645721304 left them in `batchfix995_concurrent_documents_in_one_folder_never_share_a_name`). Eight processes in
+  /// all, each running every round (`SQLITE_STORE_TEST_ROUNDS`, default 100), released by start files.
+  #[test]
+  fn simultaneous_closes_leave_no_side_files() {
+    const NAME: &str = "sqlite_store::tests::simultaneous_closes_leave_no_side_files";
+    const PROCESSES: usize = 8;
+    let wait_for = |path: &Path| {
+      let start = std::time::Instant::now();
+      while !path.exists() {
+        assert!(
+          start.elapsed() < std::time::Duration::from_secs(30),
+          "{}",
+          path.display()
+        );
+        std::thread::sleep(std::time::Duration::from_micros(100));
+      }
+    };
+    let rounds: usize =
+      std::env::var("SQLITE_STORE_TEST_ROUNDS").map_or(100, |n| n.parse().unwrap());
+    if let Ok(child) = std::env::var("SQLITE_STORE_TEST_CLOSE") {
+      use latexml_core::common::error::{LogStatus, get_status};
+      let (dir, k) = child.split_once('|').unwrap();
+      let dir = Path::new(dir);
+      for round in 0..rounds {
+        wait_for(&dir.join(format!("open{round}")));
+        let warnings = get_status(LogStatus::Warning);
+        let mut store = SqliteStore::open(Some(&dir.join(format!("c{round}.db"))), SCHEMA, 1);
+        store.immediate(|tx, _| tx.execute("INSERT INTO t(v) VALUES (1)", []));
+        let on_file = store.file().is_some();
+        std::fs::write(dir.join(format!("ready{round}.{k}")), b"").unwrap();
+        wait_for(&dir.join(format!("close{round}")));
+        drop(store);
+        let warnings = get_status(LogStatus::Warning) - warnings;
+        // Written whole before it is seen: the parent reads it once it exists.
+        let part = dir.join(format!("part{round}.{k}"));
+        std::fs::write(&part, format!("{} {warnings}", u8::from(!on_file))).unwrap();
+        std::fs::rename(part, dir.join(format!("done{round}.{k}"))).unwrap();
+      }
+      return;
+    }
+    let dir = tempfile::tempdir().unwrap();
+    let children: Vec<_> = (0..PROCESSES)
+      .map(|k| {
+        std::process::Command::new(std::env::current_exe().unwrap())
+          .args(["--exact", NAME, "--nocapture", "--test-threads=1"])
+          .env(
+            "SQLITE_STORE_TEST_CLOSE",
+            format!("{}|{k}", dir.path().display()),
+          )
+          .env("SQLITE_STORE_TEST_ROUNDS", rounds.to_string())
+          .stdout(std::process::Stdio::null())
+          .spawn()
+          .unwrap()
+      })
+      .collect();
+    let (mut left, mut memory, mut warnings) = (Vec::new(), 0, 0);
+    for round in 0..rounds {
+      std::fs::write(dir.path().join(format!("open{round}")), b"").unwrap();
+      (0..PROCESSES).for_each(|k| wait_for(&dir.path().join(format!("ready{round}.{k}"))));
+      std::fs::write(dir.path().join(format!("close{round}")), b"").unwrap();
+      for k in 0..PROCESSES {
+        let done = dir.path().join(format!("done{round}.{k}"));
+        wait_for(&done);
+        let counts: Vec<usize> = std::fs::read_to_string(&done)
+          .unwrap()
+          .split(' ')
+          .map(|n| n.parse().unwrap())
+          .collect();
+        memory += counts[0];
+        warnings += counts[1];
+      }
+      for side in ["-wal", "-shm"] {
+        if dir.path().join(format!("c{round}.db{side}")).exists() {
+          left.push(format!("c{round}.db{side}"));
+        }
+      }
+    }
+    children
+      .into_iter()
+      .for_each(|mut child| assert!(child.wait().unwrap().success()));
+    eprintln!(
+      "rounds {rounds}: side files left {}, in memory {memory}, warnings {warnings}",
+      left.len()
+    );
+    assert_eq!((left, memory, warnings), (Vec::<String>::new(), 0, 0));
+  }
+
+  /// [`WalCheck`] makes nothing: a file removed while another process keeps its `-wal` is not made again (no
+  /// `SQLITE_OPEN_CREATE`), a file it cannot write is left with no Warning, and a file in another journal mode, which
+  /// has no `-wal` (WAL refused: a network filesystem, WSL's `/mnt`), is not opened.
+  #[cfg(unix)]
+  #[test]
+  fn a_close_check_makes_no_file() {
+    use std::os::unix::fs::PermissionsExt;
+
+    use latexml_core::common::error::{LogStatus, get_status};
+    let side = |file: &Path, name: &str| {
+      let mut side = file.as_os_str().to_owned();
+      side.push(name);
+      PathBuf::from(side)
+    };
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("c.db");
+    let mut store = SqliteStore::open(Some(&file), SCHEMA, 1);
+    store.immediate(|tx, _| tx.execute("INSERT INTO t(v) VALUES (1)", []));
+    std::fs::remove_file(&file).unwrap();
+    assert!(side(&file, "-wal").exists());
+    drop(WalCheck(Some(file.clone())));
+    assert!(!file.exists());
+    drop(store);
+    assert!(!file.exists());
+
+    let warnings = get_status(LogStatus::Warning);
+    let file = dir.path().join("r.db");
+    let mut store = SqliteStore::open(Some(&file), SCHEMA, 1);
+    store.immediate(|tx, _| tx.execute("INSERT INTO t(v) VALUES (1)", []));
+    let holder = Connection::open(&file).unwrap();
+    holder
+      .query_row("SELECT count(*) FROM t", [], |row| row.get::<_, i64>(0))
+      .unwrap();
+    drop(store);
+    std::fs::set_permissions(&file, std::fs::Permissions::from_mode(0o444)).unwrap();
+    std::fs::set_permissions(dir.path(), std::fs::Permissions::from_mode(0o555)).unwrap();
+    drop(WalCheck(Some(file.clone())));
+    std::fs::set_permissions(dir.path(), std::fs::Permissions::from_mode(0o755)).unwrap();
+    assert_eq!(get_status(LogStatus::Warning) - warnings, 0);
+    drop(holder);
+
+    let file = dir.path().join("d.db");
+    let conn = Connection::open(&file).unwrap();
+    conn.execute_batch(SCHEMA).unwrap();
+    drop(conn);
+    drop(WalCheck(Some(file.clone())));
+    assert!(!side(&file, "-wal").exists() && !side(&file, "-shm").exists());
   }
 
   /// A file another process holds locked against readers (a `DELETE` journal under `BEGIN EXCLUSIVE` with a pending
