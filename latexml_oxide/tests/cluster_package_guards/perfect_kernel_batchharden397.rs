@@ -105,12 +105,8 @@ fn batchharden397_bigfoot_footnote_verb() {
     ),
     false,
   );
-  // The one Warning is manyfoot.sty:390's `\g@addto@macro\endminipage` (our \endminipage is not a macro).
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
-  assert!(
-    log.contains("\\endminipage is not an expandable control sequence"),
-    "{log}"
-  );
+  // (MANYFOOT: the manyfoot binding removes manyfoot.sty:390's `\g@addto@macro\endminipage`, its one Warning before)
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let notes: Vec<String> = xml
     .split("<note ")
     .skip(1)

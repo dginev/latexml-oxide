@@ -264,7 +264,7 @@ raw mode.
 | `ws-procs9x6` | `.cls` | contributed | *alias of* `ws-rv9x6.cls` |
 | `ws-rv9x6` | `.cls` | contributed |  |
 
-## Packages (688)
+## Packages (690)
 
 | Name | Kind | Support | Note |
 |---|---|---|---|
@@ -656,6 +656,7 @@ raw mode.
 | `lxtesttemplate` | `.sty` | contributed |  |
 | `makecell` | `.sty` | ported, raw + overrides |  |
 | `makeidx` | `.sty` | ported |  |
+| `manyfoot` | `.sty` | beyond Perl, raw + overrides |  |
 | `marginnote` | `.sty` | ported |  |
 | `marvosym` | `.sty` | ported |  |
 | `mathabx` | `.sty` | ported |  |
@@ -694,6 +695,7 @@ raw mode.
 | `nag` | `.sty` | contributed |  |
 | `nameref` | `.sty` | ported |  |
 | `natbib` | `.sty` | ported |  |
+| `nccfoots` | `.sty` | beyond Perl, raw + overrides |  |
 | `needspace` | `.sty` | contributed, raw + overrides |  |
 | `neurips` | `.sty` | ported |  |
 | `neurips_2019` | `.sty` | ported | *alias of* `neurips.sty` |

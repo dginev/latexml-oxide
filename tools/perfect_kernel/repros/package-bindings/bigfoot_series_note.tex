@@ -1,0 +1,15 @@
+% mechanism: bigfoot (which loads manyfoot) sets a series' text in its own boxes (bigfoot.sty:383-384, :411-
+%   `\FN@fnotecommon`, stepping perpage's sorted `FN@totalid`); the binding makes it manyfoot's note
+% witness: synthetic (bigfoot.sty, 10 census papers)
+% oracle:  pdflatex 0 `!`: "Alpha1 beta1 gamma"; notes "1 Series B note." "z Given z." "1 Main note."
+% engines: rust INT081P 0 errors, 2 warnings (`\endminipage`; "The control sequence \c@pchk@FN@totalid is not a
+%          register"), "Series B note." a `<block>` after the paragraph's text; Perl: no bigfoot binding
+% expect:  0 errors, 0 warnings; "Series B note." a footnote marked 1, "Given z." a footnotetext marked z
+% status:  RED (INT081P) -> GREEN (MANYFOOT); guard footnote_series::footnote_series_rows
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{bigfoot}
+\DeclareNewFootnote{B}
+\begin{document}
+Alpha\footnote{Main note.} beta\footnoteB{Series B note.} gamma\FootnotetextB{z}{Given z.}
+\end{document}

@@ -1,0 +1,22 @@
+% mechanism: a manyfoot series note in a title-block field: the series' `\footnote<X>` is the kernel `\footnote` with
+%   `\@mpfn` naming the series' counter (manyfoot_sty.rs), and the frontmatter digests a title's `\footnote` as its own
+%   note (`\lx@add@pubnote`, frontmatter/observer/emitter/calls.rs:780; an author's as the class's `\thanks`, marked "∗"
+%   in article), so the series' counter does not step there and the body's series marks run one short
+% witness: synthetic (found by MANYFOOT's sibling sweep; chet.sty's `\email` = `\footnoteE` in `\author`, 2511.01971)
+% oracle:  pdflatex 0 `!`: "Title1", "Body2"; notes "1 Title note." "2 Body note."
+% engines: rust INT081P 0 errors, 1 warning (`\endminipage`), the title "Title1" with "Title note." inline in it, the
+%          body "Body2" plain text and its note inline; MANYFOOT 0 errors, 0 warnings, `<pubnote>Title note.</pubnote>`
+%          (no mark) and the body note marked 1
+% expect:  0 errors, 0 warnings; the title's note marked 1, the body's 2
+% status:  RED (INT081P, MANYFOOT)
+% moves:   post-merge
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{manyfoot}
+\DeclareNewFootnote{B}
+\title{Title\footnoteB{Title note.}}
+\author{Ann Able}
+\begin{document}
+\maketitle
+Body\footnoteB{Body note.}
+\end{document}

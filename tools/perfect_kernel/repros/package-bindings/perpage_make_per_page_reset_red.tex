@@ -1,0 +1,19 @@
+% mechanism: perpage.sty:68-75 `\pp@makeperpage` defines `\c@pchk@<ctr>` as a MACRO and `\@addtoreset{pchk@<ctr>}{<ctr>}`,
+%   so LaTeX's `\stepcounter{<ctr>}` reset (`\@stpelt`: `\global\csname c@pchk@<ctr>\endcsname\z@`) runs perpage's page
+%   check (:105-115, `\pp@cl@begin` absorbs the `\global`); our `\stepcounter` resets each counter of `\cl@<ctr>` by a
+%   register assignment (Perl Package.pm:883-893 `ResetCounter` the same) and warns on the macro. A second mechanism
+%   to bigfoot's (bigfoot.sty:404 `\MakeSorted{FN@totalid}`), found by MANYFOOT
+% witness: synthetic (perpage: 16 census papers; manyfoot's `perpage` option, bigfoot)
+% oracle:  pdflatex 0 `!` (two runs): "Alpha1 beta2", notes "1 First note." "2 Second note."
+% engines: rust INT081P and MANYFOOT 0 errors, 2 warnings ("The control sequence \c@pchk@footnote is not a register"),
+%          the notes marked 1 and 2; Perl: no perpage binding (raw not loaded)
+% expect:  0 errors, 0 warnings; notes marked 1 and 2 (no pages here: the counter runs on, as footmisc's `perpage`)
+% status:  RED (INT081P, MANYFOOT)
+% moves:   post-merge
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{perpage}
+\MakePerPage{footnote}
+\begin{document}
+Alpha\footnote{Normal note.} beta\footnote{Second note.}
+\end{document}

@@ -1,0 +1,29 @@
+% mechanism: manyfoot.sty's declared series (`\DeclareNewFootnote{<X>}[<style>]`, :230-278) are footnotes: `\footnote<X>`
+%   steps the series' counter and marks the note `\thefootnote<X>` (`[<n>]` sets it); `\footnotetext<X>` is a footnote
+%   text marked as the series stands, `\Footnotetext<X>{<mark>}{<text>}` one marked as given (`\footnotemark<X>`
+%   prints its mark as text, as the kernel's `\@footnotemark`); a minipage's series note keeps the series' count.
+%   Loading manyfoot adds no `\endminipage` patch (manyfoot.sty:390)
+% witness: 2205.09841 (sn-jnl, `\DeclareNewFootnote{A}[gobble]`), 2401.05860 (aamas, `\footnotetext<X>`)
+% oracle:  pdflatex 0 `!`: "Alpha1 beta1 gamma2 deltai epsiloniv zeta∗ eta theta3 iota kappa", minipage "Insidea and4";
+%          notes "1 Main note." "1 First B." "2 Second B." "3 Text of B3." "x Given x." "4 B in minipage." "i Roman one."
+%          "iv Roman four." "∗ Symbol one." " Unmarked G." "a Minipage note."
+% engines: rust INT081P 0 errors, 1 warning ("\endminipage is not an expandable control sequence"), each series note
+%          its text inline (`<text fontsize="80%">`) after a plain-text mark; Perl: no manyfoot binding (undefined
+%          `\DeclareNewFootnote`, `\footnoteB`)
+% expect:  0 errors, 0 warnings; every `\footnote<X>` a `<note role="footnote">` with the PDF's mark, "theta3" then
+%          "Text of B3." a footnotetext marked 3, "Given x." one marked x
+% status:  RED (INT081P) -> GREEN (MANYFOOT); guard footnote_series::footnote_series_rows
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{manyfoot}
+\DeclareNewFootnote{B}
+\DeclareNewFootnote{R}[roman]
+\DeclareNewFootnote{S}[fnsymbol]
+\DeclareNewFootnote{G}[gobble]
+\begin{document}
+Alpha\footnote{Main note.} beta\footnoteB{First B.} gamma\footnoteB{Second B.}
+delta\footnoteR{Roman one.} epsilon\footnoteR[4]{Roman four.} zeta\footnoteS{Symbol one.}
+eta\footnoteG{Unmarked G.} theta\footnotemarkB{} iota\footnotetextB{Text of B3.}
+kappa\FootnotetextB{x}{Given x.}
+\begin{minipage}{4cm}Inside\footnote{Minipage note.} and\footnoteB{B in minipage.}\end{minipage}
+\end{document}

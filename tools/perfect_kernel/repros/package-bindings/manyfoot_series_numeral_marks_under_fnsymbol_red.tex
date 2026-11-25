@@ -1,0 +1,19 @@
+% mechanism: a manyfoot series' text forms (`\footnotetext<X>`, `\Footnotetext<X>{<mark>}`, `\footnotemark<X>`) and
+%   nccfoots' give the kernel's `\footnotetext`/`\footnotemark` the printed mark `\@thefnmark` as `[<mark>]`, which it
+%   reads as a footnote NUMBER (latex_constructs/mod.rs `numbered_footnote_mark`, latex.ltx:17678-17699): a numeral is
+%   printed as `\thefootnote` at it, so under `\fnsymbol` the series' "1" and the given "5" become "∗" and "¶"
+% witness: synthetic (found by MANYFOOT's sibling sweep)
+% oracle:  pdflatex 0 `!`: "Alpha∗ beta1 gamma delta"; notes "∗ Main." "1 Text of B1." "5 Given five."
+% engines: rust INT081P 0 errors, 1 warning (`\endminipage`), "beta1" plain text, both texts inline; MANYFOOT 0
+%          errors, 0 warnings, the main note and the B note both marked "*", the given text "¶"
+% expect:  0 errors, 0 warnings; the B note marked "1" holding "Text of B1.", a footnotetext marked "5"
+% status:  RED (INT081P, MANYFOOT)
+% moves:   post-merge
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{manyfoot}
+\DeclareNewFootnote{B}
+\renewcommand\thefootnote{\fnsymbol{footnote}}
+\begin{document}
+Alpha\footnote{Main.} beta\footnotemarkB{} gamma\footnotetextB{Text of B1.} delta\FootnotetextB{5}{Given five.}
+\end{document}
