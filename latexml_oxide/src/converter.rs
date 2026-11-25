@@ -1170,6 +1170,11 @@ impl Converter {
     // a fatal run reports "failed", never the self-contradictory "complete: N fatal
     // error". Success cases (status_code < 3) stay byte-identical.
     Note!(s!("{}", conversion_verdict(self.runtime.status_code)));
+    // The panic-log guard's trigger (`cluster_cli`): a panic with the core's log still unflushed.
+    #[cfg(any(debug_assertions, feature = "test-utils"))]
+    if std::env::var_os("LATEXML_INJECT_PANIC").is_some_and(|at| at == "core_end") {
+      panic!("LATEXML_INJECT_PANIC at the core's end");
+    }
     let log = self.flush_log();
     // self->sanitize($log) if ($$runtime{status_code} == 3);
 
