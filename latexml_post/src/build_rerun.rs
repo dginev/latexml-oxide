@@ -4,6 +4,7 @@
 //! The rule of `latexml_engine/src/build_rerun.rs` (#528, #676): NEVER return a path that does not exist (Cargo
 //! rebuilds on every build for a missing one), yet see the file appear and disappear, so a warm cache never keeps a
 //! stale embed. The committed `resources/` sees the directory's creation; the directory, its files coming and going.
+//! It is that file's twin, not a shared copy: a file shared across crates is not packaged for crates.io.
 
 use std::path::{Path, PathBuf};
 

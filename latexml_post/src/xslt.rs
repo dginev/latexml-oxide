@@ -508,11 +508,10 @@ impl XSLT {
     match find_resource_file(src, info, &search_paths) {
       Some(path) => {
         if crate::writer::same_file(&path, &dest) {
-          // The search-path match IS the destination file: copying it onto itself would truncate it (#312).
-          // A file in place is used as-is, as Perl's `copyResource` does (XSLT.pm:117-118), a stale copy of
-          // ours too (the user's to manage); only an empty leftover is rewritten from the embedded bytes.
+          // The search-path match IS the destination: it is used as-is (Perl skips the copy, XSLT.pm:118) unless
+          // it is #312's empty leftover, which the embedded bytes repair.
           if let Some(bytes) = embedded_resources::bundled(src, basename)
-            && fs::metadata(&path).is_ok_and(|m| m.len() == 0)
+            && crate::writer::needs_write(Path::new(&dest))
           {
             ensure_parent(&dest);
             note_resource_copy();
@@ -543,22 +542,23 @@ impl XSLT {
         }
       },
       None => {
-        // Not on disk — try the embedded table. CSS/JS assets are
-        // baked into the binary at build time; we materialize them
-        // straight to the destination, no temp dir round-trip.
+        // Not on disk — try the embedded table: CSS/JS assets baked into the binary, written straight to the
+        // destination unless a non-empty file is already there (a user's own, or an older release's, is kept).
         if let Some(bytes) = embedded_resources::bundled(src, basename) {
-          ensure_parent(&dest);
-          note_resource_copy();
-          if let Err(e) = crate::writer::write_atomic(Path::new(&dest), bytes) {
-            placed = false;
-            Warn!(
-              "I/O",
-              dest,
-              "Couldn't write embedded resource {} to {}: {}",
-              basename,
-              dest,
-              e
-            );
+          if crate::writer::needs_write(Path::new(&dest)) {
+            ensure_parent(&dest);
+            note_resource_copy();
+            if let Err(e) = crate::writer::write_atomic(Path::new(&dest), bytes) {
+              placed = false;
+              Warn!(
+                "I/O",
+                dest,
+                "Couldn't write embedded resource {} to {}: {}",
+                basename,
+                dest,
+                e
+              );
+            }
           }
         } else if src == embedded_resources::AR5IV_CSS_NAME {
           // The bare name only: a path the user wrote that is missing gets the plain message below.

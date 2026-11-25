@@ -56,13 +56,15 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     `split_css_links::{bundled_ar5iv_css_follows_latexml_css, css_already_in_place_is_used_as_is}`,
     `build_rerun::tests::tracks_only_what_exists`, and the `tools/release_smoke.sh` check on every release leg.
 
-  - **A stylesheet or script already in place in the destination (e.g. your own `LaTeXML.css`) is used as-is; only
-    an empty leftover is replaced.** Before, any file there with a bundled name was rewritten from the binary (a
-    41-byte user `LaTeXML.css` became 48,707 bytes, with no Warning). Perl's `copyResource` likewise leaves a file in
-    place (XSLT.pm:117-118); issue 312's empty leftover is still repaired. The trade-off: a stale but non-empty copy of
-    an older `LaTeXML.css` is now kept rather than refreshed; a file already there is the user's to manage. Guards:
-    `split_css_links::css_already_in_place_is_used_as_is`,
-    `stale_css_overwrite::empty_css_in_dest_is_overwritten_with_bundled`.
+  - **A stylesheet or script already in the destination, or next to the `.tex`, is used as-is; only a missing or
+    empty one is written from the bundled copy.** Before, any file with a bundled name in the destination (e.g. your
+    own `LaTeXML.css` or `ar5iv.css`, also at a `--sitedirectory` root) was rewritten from the binary with no Warning
+    (a 41-byte user `LaTeXML.css` became 48,707 bytes). This holds for all 18 bundled CSS/JS names and `ar5iv.css`,
+    with or without `--split`/`--sitedirectory`; issue 312's empty leftover is still repaired. A user's file next to
+    the `.tex` is still copied into a separate destination, with its local `@import`s. The trade-off: after an upgrade,
+    a reused output folder keeps the `LaTeXML.css`/`ar5iv.css` an older version wrote; delete the file to get the new
+    one. Guards: `split_css_links::{css_already_in_place_is_used_as_is, css_in_a_separate_destination_is_used_as_is}`,
+    `stale_css_overwrite::empty_css_in_dest_is_overwritten_with_bundled`, `tools/release_smoke.sh`.
 
   - **A conversion closing its `LaTeXML-oxide.cache` at the same moment as another no longer leaves
     `LaTeXML-oxide.cache-wal`/`-shm` behind,** also when the destination is reached through a symbolic link, as every

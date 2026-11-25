@@ -9,7 +9,8 @@
 # A second run, `--css=ar5iv.css --nodefaultresources`, must write the bundled ar5iv.css (tools/ar5iv-css.pin) from the
 # binary beside the page, its banner line followed by the pinned file's exact bytes (AR5IV_CSS_SHA256), and link it as
 # the page's only stylesheet. Two more runs, `--css=ar5iv.css` and `--css=./ar5iv.css` beside a user's own ar5iv.css
-# in the destination, must leave that file as it was.
+# in the destination, must leave that file as it was; in a destination apart from the source, a user's ar5iv.css must
+# be kept as well, and an empty one written from the binary.
 #
 # Runs under the bash of every release runner: GNU bash on Linux, Git Bash on Windows, and macOS's bash 3.2.
 set -uo pipefail
@@ -97,3 +98,22 @@ if [ "$status" -ne 0 ]; then
   exit 1
 fi
 echo "OK: --css=ar5iv.css and --css=./ar5iv.css keep a user's own ar5iv.css in the destination"
+
+# A destination apart from the source: a user's ar5iv.css there is kept too, and an empty one is written from the binary.
+for case in sep empty; do
+  d="$out/$case"
+  mkdir -p "$d"
+  if [ "$case" = sep ]; then printf '%s\n' "$own" > "$d/ar5iv.css"; else : > "$d/ar5iv.css"; fi
+  NO_COLOR=1 "$BIN" --css=ar5iv.css --nodefaultresources --destination="$(native "$d")/main.html" \
+    --log="$(native "$d")/main.latexml.log" "$(native "$TEX")" > "$out/log.$case" 2>&1
+  rc=$?
+  [ "$rc" -eq 0 ] || fail "--css=ar5iv.css into a separate destination ($case): latexml_oxide exited $rc"
+done
+[ "$(cat "$out/sep/ar5iv.css")" = "$own" ] || fail "--css=ar5iv.css replaced a user's ar5iv.css in a separate destination"
+got="$(tail -n +2 "$out/empty/ar5iv.css" 2> /dev/null | sha256)"
+[ "$got" = "$want" ] || fail "an empty ar5iv.css in the destination was not written from the bundled copy (sha256 $got)"
+if [ "$status" -ne 0 ]; then
+  sed "s/${esc}\\[[0-9;]*m//g" "$out/log.sep" "$out/log.empty" | tail -40
+  exit 1
+fi
+echo "OK: a user's ar5iv.css in a separate destination is kept, and an empty one is written from the bundled copy"

@@ -1284,6 +1284,94 @@ mod split_css_links {
     }
   }
 
+  /// A stylesheet in a destination that is not the source directory (also a `--sitedirectory` root) is used as-is when
+  /// non-empty; only a missing or empty one (#312) is written from the embedded bytes. A user's file next to the source
+  /// is copied with its `@import`s. The bundled `ar5iv.css` rows run in release builds only.
+  #[test]
+  fn css_in_a_separate_destination_is_used_as_is() {
+    let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
+    let xml = "<?xml version=\"1.0\"?><document xmlns=\"http://dlmf.nist.gov/LaTeXML\">\
+               <resource src=\"LaTeXML.css\" type=\"text/css\"/><title>T</title><para><p>x</p></para></document>";
+    let latexml_css = include_str!("../../latexml_post/resources/CSS/LaTeXML.css");
+    let bundled = latexml_post::xslt::ar5iv_css_bundled().unwrap_or("");
+    let own = "/* my own */ body{color:red}\n";
+    let glowup = "@import url(\"./ar5iv/part.css\");\nbody{color:red}\n";
+    let part = "p{margin:0}\n";
+    // (layout, --css, the file, its bytes beforehand (None: absent), its bytes afterwards). Layouts: "dest"
+    // `out/main.html` beside an empty source directory; "site" `site/p1/main.html` under `--sitedirectory=site`, so the
+    // file is the site root's; "copy" `out/main.html` from `doc/`, which holds `ar5iv.css` (`glowup`).
+    let rows = [
+      ("dest", None, "LaTeXML.css", Some(own), own),
+      ("dest", None, "LaTeXML.css", Some(""), latexml_css),
+      ("dest", None, "LaTeXML.css", None, latexml_css),
+      ("site", None, "LaTeXML.css", Some(own), own),
+      ("copy", Some("ar5iv.css"), "ar5iv.css", None, glowup),
+      ("dest", Some("ar5iv.css"), "ar5iv.css", Some(own), own),
+      ("dest", Some("ar5iv.css"), "ar5iv.css", Some(""), bundled),
+      ("dest", Some("ar5iv.css"), "ar5iv.css", None, bundled),
+      ("site", Some("ar5iv.css"), "ar5iv.css", Some(own), own),
+    ];
+    let mut failed = Vec::new();
+    for (layout, css, file, before, after) in rows {
+      let row = format!("{layout} {css:?} {file} {before:?}");
+      if layout != "copy" && css.is_some() && bundled.is_empty() {
+        continue;
+      }
+      let src = tempfile::tempdir().expect("tempdir");
+      let dir = tempfile::tempdir().expect("tempdir");
+      let (out, dest) = if layout == "site" {
+        (dir.path().to_path_buf(), dir.path().join("p1/main.html"))
+      } else {
+        (dir.path().join("out"), dir.path().join("out/main.html"))
+      };
+      std::fs::create_dir_all(dest.parent().unwrap()).unwrap();
+      if layout == "copy" {
+        std::fs::write(src.path().join("ar5iv.css"), glowup).unwrap();
+        std::fs::create_dir(src.path().join("ar5iv")).unwrap();
+        std::fs::write(src.path().join("ar5iv/part.css"), part).unwrap();
+      }
+      if let Some(before) = before {
+        std::fs::write(out.join(file), before).unwrap();
+      }
+      let (dest, source, site) = (
+        dest.to_string_lossy().into_owned(),
+        src.path().to_string_lossy().into_owned(),
+        dir.path().to_string_lossy().into_owned(),
+      );
+      let css: Vec<String> = css.into_iter().map(str::to_string).collect();
+      latexml_core::common::error::initialize_report();
+      let out_log = latexml::post::run_post_processing_logged(xml, &latexml::post::PostOptions {
+        destination: Some(&dest),
+        source_directory: Some(&source),
+        site_directory: (layout == "site").then_some(site.as_str()),
+        default_resources: true,
+        css_files: &css,
+        ..super::xslt_failure_is_fatal::post_options("LaTeXML-html5.xsl")
+      });
+      latexml_core::common::error::initialize_report();
+      if out_log.status_code != 0 || out_log.log.contains("Warning:") {
+        failed.push(format!("{row}: {}", out_log.log));
+      }
+      let got = std::fs::read_to_string(out.join(file)).unwrap();
+      if got != after {
+        failed.push(format!(
+          "{row}: {} bytes, expected {}",
+          got.len(),
+          after.len()
+        ));
+      }
+      if layout == "copy"
+        && std::fs::read_to_string(out.join("ar5iv/part.css"))
+          .ok()
+          .as_deref()
+          != Some(part)
+      {
+        failed.push(format!("{row}: ar5iv/part.css not copied"));
+      }
+    }
+    assert!(failed.is_empty(), "{failed:#?}");
+  }
+
   /// `my.css`, which `@import`s `base.css`.
   fn write_importing_css(dir: &Path) {
     std::fs::write(dir.join("my.css"), "@import \"base.css\";\n.x{color:red}\n").unwrap();
