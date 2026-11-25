@@ -21145,9 +21145,12 @@ it stays in the site directory (`--sitedirectory`, else `--dest`'s directory; le
 OD #1157). The copy is written at that lexical absolute path, as Perl's `pathname_copy` canonicalizes before it writes
 (`Util/Pathname.pm` L264-266): joined raw, the system resolved `out/../children` through a linked `out` and wrote
 outside both directories. Beyond Perl, which writes through a link, a path whose real directory (links resolved) lies
-in neither the real site directory nor the real destination directory takes an `xN` name too (`really_contained`:
+in neither the real site directory nor the real destination directory takes an `xN` name too (`resolves_inside_site_or_dest`:
 `out/sub` → `/elsewhere` in the site; Perl 0.8.8 writes `/elsewhere/d.png`). Guard
-`perfect_kernel_batchfix995::batchfix995_linked_destination_writes_nothing_outside_the_site_directory`. Under the luatex profile `\pdfextension <keyword>` (`pdftex.rs`
+`perfect_kernel_batchfix995::batchfix995_linked_destination_writes_nothing_outside_the_site_directory`. Both sides
+resolve alike (`pathname::is_contained_resolved`: a directory not made yet through its existing parent); a lexical
+fallback for a destination not made yet kept every image off its path on Windows (`RUNNER~1` against `runneradmin`,
+the rc3 release guards), guard `batchfix995_paths_spelled_through_a_link_keep_their_names`. Under the luatex profile `\pdfextension <keyword>` (`pdftex.rs`
 `read_pdfextension`) reads the operands of pdfTeX's `\pdf<keyword>`, with LuaTeX's additions (literal modes
 `text`/`raw`/`origin`, `lateliteral`, `obj … uncompressed`, `outline useobjnum`, `linkstate`; LuaTeX manual
 luatex-modifications.tex:592-907), through the same Rust readers and never through `\pdf<keyword>`, which

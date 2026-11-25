@@ -1547,11 +1547,7 @@ impl Graphics {
       Self::copy_target(&dirs.dest_dir, part),
       Self::copy_target(&dirs.dest_dir, &r.source),
     );
-    target == source
-      || matches!(
-        (Path::new(&target).canonicalize(), Path::new(&source).canonicalize()),
-        (Ok(target), Ok(source)) if target == source
-      )
+    target == source || latexml_core::util::pathname::same_file(&target, &source)
   }
 
   /// Whether the file at `path` holds what `r` writes there: a copy its source's bytes; a render (`raster`, else the
@@ -1658,7 +1654,7 @@ impl Graphics {
     // reached through `\subimport*{../A/child/}` (issue #698 class).
     let target = Self::copy_target(dest_dir, rel);
     (latexml_core::util::pathname::is_contained(&target, site_dir).is_some()
-      && Self::really_contained(&target, site_dir, dest_dir))
+      && Self::resolves_inside_site_or_dest(&target, site_dir, dest_dir))
     .then(|| rel.to_string())
   }
 
@@ -1669,36 +1665,15 @@ impl Graphics {
     latexml_core::util::pathname::absolute(&PathBuf::from(dest_dir).join(rel).to_string_lossy())
   }
 
-  /// Whether `target`'s real directory (symbolic links resolved) stays in the real site directory or the real
-  /// destination directory: a link inside the site directory would otherwise carry the copy out of both (Perl writes
-  /// through it; OXIDIZED_DESIGN_DIVERGENCES #1081).
-  fn really_contained(target: &str, site_dir: &str, dest_dir: &str) -> bool {
-    use latexml_core::util::pathname::{absolute, canonicalize, is_contained};
-    let real = |dir: &str| {
-      canonicalize(dir).map_or_else(|_| absolute(dir), |p| p.to_string_lossy().into_owned())
-    };
-    // The deepest directory that exists, resolved, plus the components still to be made.
-    let mut existing = Path::new(target).parent();
-    let mut rest: Vec<std::ffi::OsString> = Vec::new();
-    let parent = loop {
-      let Some(dir) = existing else {
-        return false;
-      };
-      if let Ok(resolved) = canonicalize(dir) {
-        break rest
-          .iter()
-          .rev()
-          .fold(resolved, |path, part| path.join(part));
-      }
-      let Some(name) = dir.file_name() else {
-        return false;
-      };
-      rest.push(name.to_os_string());
-      existing = dir.parent();
-    };
-    let parent = parent.to_string_lossy();
-    is_contained(&parent, &real(site_dir)).is_some()
-      || is_contained(&parent, &real(dest_dir)).is_some()
+  /// Whether `target`'s real directory (symbolic links resolved, 8.3 names expanded, a directory not made yet resolved
+  /// through its existing parent) stays in the real site directory or the real destination directory, both resolved
+  /// the same way: a link inside the site directory would otherwise carry the copy out of both (Perl writes through
+  /// it; OXIDIZED_DESIGN_DIVERGENCES #1081). Resolving only the target, a destination not made yet stayed lexical and
+  /// a Windows `RUNNER~1` destination held none of its own images.
+  fn resolves_inside_site_or_dest(target: &str, site_dir: &str, dest_dir: &str) -> bool {
+    use latexml_core::util::pathname::is_contained_resolved;
+    is_contained_resolved(target, site_dir).is_some()
+      || is_contained_resolved(target, dest_dir).is_some()
   }
 
   /// Copy `source` to `rel` in `dest_dir` ([`Self::copy_target`]), unless it is the source itself.

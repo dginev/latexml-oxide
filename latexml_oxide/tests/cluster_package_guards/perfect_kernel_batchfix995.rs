@@ -1169,6 +1169,67 @@ fn batchfix995_an_unusable_cache_overwrites_no_kept_path() {
   assert_eq!(images_in(&p2), Vec::<String>::new());
 }
 
+/// The same two documents with every path absolute and spelled through a link — the Unix stand-in for a Windows 8.3
+/// name (`RUNNER~1` for `runneradmin`), which the canonical form expands: `p1` keeps `figs/a.png`; the cache unusable,
+/// `p2` takes `x1.png` and `out/figs/a.png` stays `p1`'s; in place, `figs/a.png` is the source, with no copy. The rc3
+/// Windows release guards failed this test's twin above, `batchfix995_an_edited_image_keeps_its_name` and
+/// `sourcedirectory_relative_and_absolute_agree` alike: `Graphics::resolves_inside_site_or_dest` resolved the copy's directory
+/// through its existing parent but kept a site or destination directory not made yet as written, so the first
+/// document into a new folder kept no path (`x1.png`) and the next, the folder there, took `figs/a.png`.
+/// `pathname::is_contained_resolved`.
+#[cfg(unix)]
+#[test]
+fn batchfix995_paths_spelled_through_a_link_keep_their_names() {
+  let root = tempfile::tempdir().unwrap();
+  let (real, link) = (root.path().join("real"), root.path().join("link"));
+  for (doc, w) in [("p1", 3), ("p2", 5)] {
+    let dir = real.join(doc);
+    std::fs::create_dir_all(dir.join("figs")).unwrap();
+    std::fs::write(dir.join(format!("{doc}.tex")), KEPT_UNUSABLE).unwrap();
+    std::fs::write(dir.join("figs/a.png"), png(w, 2)).unwrap();
+  }
+  std::os::unix::fs::symlink(&real, &link).unwrap();
+  let run = |doc: &str, dest: &Path| {
+    let output = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+      .args([
+        "--nocomments",
+        "--timeout=110",
+        &format!("--dest={}", dest.display()),
+        &link.join(doc).join(format!("{doc}.tex")).to_string_lossy(),
+      ])
+      .current_dir(root.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "")
+  };
+  let shows = |page: &Path, url: &str, w: u32| {
+    assert_eq!(images_of(page), vec![(
+      url.to_string(),
+      format!("png {} bytes", png(w, 2).len())
+    )]);
+  };
+  let out = real.join("out");
+  let log = run("p1", &link.join("out/p1.html"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  shows(&out.join("p1.html"), "figs/a.png", 3);
+  let _ = std::fs::remove_file(out.join("LaTeXML-oxide.cache"));
+  std::fs::create_dir_all(out.join("LaTeXML-oxide.cache")).unwrap();
+  one_cache_warning(&run("p2", &link.join("out/p2.html")));
+  shows(&out.join("p2.html"), "x1.png", 5);
+  shows(&out.join("p1.html"), "figs/a.png", 3);
+  assert_eq!(
+    (
+      images_in(&out),
+      std::fs::read(out.join("figs/a.png")).unwrap()
+    ),
+    (vec!["x1.png".to_string()], png(3, 2))
+  );
+  let log = run("p2", &link.join("p2/p2.html"));
+  assert_eq!(error_count(&log), 0, "{log}");
+  shows(&real.join("p2/p2.html"), "figs/a.png", 5);
+  assert_eq!(images_in(&real.join("p2")), Vec::<String>::new());
+}
+
 /// Three documents into one folder (`x1.png`..`x3.png`; `d1`'s and `d2`'s images the same bytes), then the cache
 /// deleted, or emptied to 0 bytes and a fourth document keeping its path run first: `d2` takes `x4.png`, no name whose
 /// file the new store does not own, not even `x1.png` holding its bytes (round 7: `x1.png`, and once `d2`'s image was

@@ -1276,6 +1276,60 @@ pub fn is_contained(pathname: &str, base: &str) -> Option<String> {
   (!outside).then_some(rel)
 }
 
+/// `pathname` made absolute with every directory that exists named as the file system names it: symbolic links
+/// followed and, on Windows, 8.3 short names expanded (`RUNNER~1` → `runneradmin`) and letters cased as stored. The
+/// longest existing prefix is resolved and the components that do not exist yet are kept as written, so a directory
+/// about to be made resolves like one that is already there. Two paths in this form agree however each was obtained
+/// — `current_dir`, [`canonicalize`], a command-line argument — which a lexical comparison does not: the rc3 Windows
+/// release guards compared a destination not yet made, kept lexical (`C:/Users/RUNNER~1/…`), with the canonical
+/// form of its existing parent (`C:/Users/runneradmin/…`), so an image inside the document's folder looked outside it.
+pub fn resolved(pathname: &str) -> String {
+  let abs = PathBuf::from(absolute(pathname));
+  let mut tail: Vec<std::ffi::OsString> = Vec::new();
+  let mut dir: &Path = &abs;
+  loop {
+    if let Ok(real) = canonicalize(dir) {
+      let joined = tail.iter().rev().fold(real, |path, part| path.join(part));
+      return canonical(&joined.to_string_lossy());
+    }
+    match (dir.parent(), dir.file_name()) {
+      (Some(parent), Some(name)) => {
+        tail.push(name.to_os_string());
+        dir = parent;
+      },
+      _ => return canonical(&abs.to_string_lossy()),
+    }
+  }
+}
+
+/// `pathname`'s directory [`resolved`], its last component kept as written: a file that is itself a symbolic link
+/// keeps its own name, as a copy over it replaces the link and never writes through it.
+fn resolved_directory_of(pathname: &str) -> String {
+  let abs = PathBuf::from(absolute(pathname));
+  match (abs.parent(), abs.file_name()) {
+    (Some(parent), Some(name)) => {
+      let dir = resolved(&parent.to_string_lossy());
+      canonical(&Path::new(&dir).join(name).to_string_lossy())
+    },
+    _ => resolved(pathname),
+  }
+}
+
+/// [`is_contained`] whatever the spelling of either path: `pathname`'s directory and all of `base` [`resolved`] (both
+/// made absolute against the working directory first). A symbolic link inside `base` that leads out of it is outside.
+pub fn is_contained_resolved(pathname: &str, base: &str) -> Option<String> {
+  is_contained(&resolved_directory_of(pathname), &resolved(base))
+}
+
+/// Whether `a` and `b` name the same existing file (both [`canonicalize`]d, so links and spellings agree); false when
+/// either does not exist.
+pub fn same_file(a: impl AsRef<Path>, b: impl AsRef<Path>) -> bool {
+  match (canonicalize(a), canonicalize(b)) {
+    (Ok(ca), Ok(cb)) => ca == cb,
+    _ => false,
+  }
+}
+
 /// Find all matching files (like pathname_findall).
 /// Port of Perl's pathname_findall($pathname, %options).
 pub fn findall(pathname: &str, options: PathnameFindOptions) -> Vec<String> {
@@ -1459,6 +1513,62 @@ mod tests {
     assert!(is_contained(&abs("/s"), &abs("/s")).is_some());
     assert_eq!(is_contained(&abs("/s/../c/A.svg"), &abs("/s")), None);
     assert_eq!(is_contained(&abs("/p"), &abs("/p/sub")), None);
+  }
+
+  /// Two spellings of one directory contain alike: paths reached through a symbolic link (the Unix stand-in for a
+  /// Windows 8.3 name) against canonical ones, including a destination not made yet — the case behind the rc3
+  /// Windows release guards. A file that is a link keeps its name; a directory link that leads out is outside.
+  #[cfg(unix)]
+  #[test]
+  fn resolved_relates_two_spellings_of_one_directory() {
+    let root = env::temp_dir().join(format!("lx-resolved-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&root);
+    std::fs::create_dir_all(&root).unwrap();
+    let real = canonicalize(&root).unwrap().join("real");
+    std::fs::create_dir_all(real.join("src/figs")).unwrap();
+    std::fs::write(real.join("src/figs/a.png"), b"x").unwrap();
+    let link = real.parent().unwrap().join("link");
+    std::os::unix::fs::symlink(&real, &link).unwrap();
+    let (real_src, link_src) = (real.join("src"), link.join("src"));
+    let (real_img, link_img) = (real.join("src/figs/a.png"), link.join("src/figs/a.png"));
+    let s = |p: &Path| p.to_string_lossy().into_owned();
+    // The lexical relation leaves the folder; the resolved one stays in it.
+    assert_eq!(is_contained(&s(&real_img), &s(&link_src)), None);
+    assert_eq!(
+      is_contained_resolved(&s(&real_img), &s(&link_src)).as_deref(),
+      Some("figs/a.png")
+    );
+    assert_eq!(
+      is_contained_resolved(&s(&link_img), &s(&real_src)).as_deref(),
+      Some("figs/a.png")
+    );
+    // A destination not made yet, spelled through the link, against its own spelling: its existing parent resolves
+    // and so does the base's, so the copy is inside (lexical base against canonical parent was the rc3 failure).
+    let out = link_src.join("out");
+    assert_eq!(
+      is_contained_resolved(&s(&out.join("figs/b.png")), &s(&out)).as_deref(),
+      Some("figs/b.png")
+    );
+    assert_eq!(resolved(&s(&out)), canonical(&s(&real_src.join("out"))));
+    // A file that is itself a link keeps its name; a directory link that leads out of the base is outside.
+    let img_link = real.join("src/img.png");
+    std::os::unix::fs::symlink(real.join("src/figs/a.png"), &img_link).unwrap();
+    assert_eq!(
+      is_contained_resolved(&s(&img_link), &s(&link_src)).as_deref(),
+      Some("img.png")
+    );
+    let away = real.join("away");
+    std::fs::create_dir_all(&away).unwrap();
+    std::os::unix::fs::symlink(&away, real.join("src/gone")).unwrap();
+    assert_eq!(
+      is_contained_resolved(&s(&link_src.join("gone/c.png")), &s(&link_src)),
+      None
+    );
+    // No link: the resolved form is the lexical one.
+    assert_eq!(resolved(&s(&real_img)), canonical(&s(&real_img)));
+    assert!(same_file(&link_img, &real_img));
+    assert!(!same_file(&link_img, real.join("src/figs/missing.png")));
+    let _ = std::fs::remove_dir_all(&root);
   }
 
   #[test]
