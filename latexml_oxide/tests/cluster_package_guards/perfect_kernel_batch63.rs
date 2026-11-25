@@ -3,7 +3,10 @@
 //! arximspdf.
 use latexml::util::test::{assert_element, check_requirements, loads};
 
-use super::perfect_kernel_batch57::{RAW, assert_elements};
+use super::{
+  perfect_kernel_batch46::{error_count, warning_count},
+  perfect_kernel_batch57::{RAW, assert_elements},
+};
 
 /// 63a: arxbj.cls:930-958 makes `{longlist}` a `\list` counted `longlist` and labelled "(i)", "(ii)" (:1070); the
 /// binding's `\let\longlist\list` took the first `\item` as the label argument, every label `\item` again: an endless
@@ -2645,7 +2648,9 @@ fn jcappub_journal_macros() {
 }
 
 /// 63o: svg's `\svgsetup`/`\svgpath` (svg.sty:810, :814-823), and the `\setsvg` options reach `\includegraphics`
-/// expanded (2401.10458, 2402.15627). Repro graphics-tikz/svg_setup_options.
+/// expanded (2401.10458, 2402.15627). Repro graphics-tikz/svg_setup_options. FILL1 SVGPATHOPT: the option
+/// `svgpath={figs/}` is `\svgpath{{figs/}}` (svg.sty:546-556; base: the path "{figs/}", the SVG not found). Repro
+/// graphics-tikz/svg_svgpath_option_braced.
 #[test]
 fn svg_setup_options() {
   let tex =
@@ -2653,6 +2658,23 @@ fn svg_setup_options() {
   assert_eq!(
     hf3_element(tex, "graphics", "fig"),
     "<graphics graphic=\"fig\" options=\"inkscapelatex=false,inkscapelatex=false,width=85.35826pt,keepaspectratio=true\" xml:id=\"p1.g1\"/>"
+  );
+  let (log, xml) = latexml::util::test::convert_files_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/graphics-tikz/svg_svgpath_option_braced.tex"
+    ),
+    &[(
+      "figs/fig.svg",
+      "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"10\"/>\n",
+    )],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_element(
+    &xml,
+    "graphics",
+    &["graphic=\"fig\""],
+    "<graphics candidates=\"figs/fig.svg\" cssstyle=\"width:1.506em; height:0.753em\" graphic=\"fig\" xml:id=\"p1.g1\"/>",
   );
 }
 
