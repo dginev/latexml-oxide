@@ -554,14 +554,6 @@ pub struct CopyProvidesFrame {
   /// ([`leave_copy_provides_frame`]).
   pub assigned:  rustc_hash::FxHashSet<SymStr>,
 }
-// SAFETY: `State` holds `Rc`/`RefCell`/`libxml::tree::Node` (!Send). Marked
-// Send so callers can build it on one thread and then transition to another
-// thread before any use. After first use, State MUST NOT cross thread
-// boundaries (all `use_*_state()` helpers use a `#[thread_local]` switcher).
-// Violating this contract would race libxml2's reference counts → UAF/UB.
-// State is deliberately NOT Sync: no two threads may alias the same State.
-unsafe impl Send for State {}
-
 impl Default for State {
   fn default() -> Self {
     let top_frame = UndoFrame {

@@ -8,15 +8,14 @@ use regex::Regex;
 use crate::perfect_kernel_batche0::{assert_debts, lex_rust_with_tests, repo_path, rust_files};
 
 /// The sites per file (issue #937's inventory, `rg -n 'unsafe\s*\{|unsafe impl|unsafe fn' latexml_* -g '*.rs'`, comment
-/// lines excluded: 106 at its Phase 0 base; Phase 1's first Unix syscalls to `rustix`/`std` took it to 80).
+/// lines excluded: 106 at its Phase 0 base; Phase 1's first Unix syscalls to `rustix`/`std` took it to 80, Phase 5's
+/// removal of the 3 `unsafe impl Send/Sync` markers to 77).
 const UNSAFE_SITES: &[(&str, usize)] = &[
   ("latexml_contrib/src/script_bindings/engine.rs", 1),
   ("latexml_contrib/src/script_bindings/mod.rs", 3),
   ("latexml_contrib/src/script_bindings/tests.rs", 3),
   ("latexml_core/src/common/arena.rs", 1),
-  ("latexml_core/src/common/store.rs", 2),
   ("latexml_core/src/runtime_bindings_reentrancy_model.rs", 1),
-  ("latexml_core/src/state.rs", 1),
   ("latexml_core/src/util/logger.rs", 2),
   ("latexml_core/src/util/pathname.rs", 1),
   ("latexml_core/src/watchdog.rs", 18),

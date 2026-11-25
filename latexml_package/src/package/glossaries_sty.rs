@@ -376,11 +376,11 @@ LoadDefinitions!({
             // index-bib/glossary_sort_key_is_its_string.
             match digested {
               Some(value) if matches!(role.as_str(), "sort" | "parent") => {
-                document.absorb_string(&value.untex()?, &NO_PROPERTIES)?;
+                document.absorb_string(&value.untex()?, NO_PROPERTIES)?;
               },
               Some(value) => document.absorb(&value, None)?,
               None => {
-                document.absorb_string(&val_str, &NO_PROPERTIES)?;
+                document.absorb_string(&val_str, NO_PROPERTIES)?;
               },
             }
             document.close_element("ltx:glossaryphrase")?;

@@ -84,7 +84,7 @@ pub mod watchdog;
 /// A TeX-like digested Whatsit
 pub mod whatsit;
 
-use std::{borrow::Cow, fmt, rc::Rc, sync::LazyLock};
+use std::{borrow::Cow, fmt, rc::Rc};
 
 use libxml::tree::Node;
 /// Initialize libxml2 for thread safety. Must be called before any libxml2
@@ -287,7 +287,11 @@ use crate::{
   tokens::Tokens,
 };
 
-pub static NO_PROPERTIES: LazyLock<HashMap<Stored>> = LazyLock::new(HashMap::default);
+/// The empty property map of an object that has none. A `const` reference, not a `static`: a static needs `Sync`, which
+/// `Stored` (it holds `Rc`s and libxml nodes) is not; the empty map holds no `Stored`, so every thread may read it.
+pub const NO_PROPERTIES: &HashMap<Stored> = &common::arena::SymHashMap(
+  rustc_hash::FxHashMap::with_hasher(rustc_hash::FxBuildHasher),
+);
 
 /// The Core conversion runtime
 pub struct Core {
@@ -400,7 +404,7 @@ pub trait BoxOps: Object {
   /// deprecated: get the map of named properties. This can not be usable as long as we have any
   /// data behind a RefCell wrapper.
   /// Use `with_properties` instead.
-  fn get_properties(&self) -> &HashMap<Stored> { &NO_PROPERTIES }
+  fn get_properties(&self) -> &HashMap<Stored> { NO_PROPERTIES }
 
   /// execute a function using this object's named properties
   fn with_properties<R, FnR>(&self, caller: FnR) -> R
