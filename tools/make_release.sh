@@ -119,7 +119,7 @@ if [[ "${RELEASE_LOCKED:-0}" == "1" ]]; then
   locked_args=(--locked)
 fi
 # The bundled ar5iv.css (tools/ar5iv-css.pin), embedded from resources/ar5iv-css/ by latexml_post/build.rs. A release
-# run (RELEASE_LOCKED=1) gets it from the build-inputs artifact and only verifies it; a local run fetches it.
+# run (RELEASE_LOCKED=1) gets it from the `ar5iv-css` artifact and only verifies it; a local run fetches it.
 if [[ "${RELEASE_LOCKED:-0}" == "1" ]]; then
   bash tools/fetch_ar5iv_css.sh --verify
 else

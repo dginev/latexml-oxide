@@ -164,7 +164,7 @@ RUN set -ex \
 # needles pass over three 0-byte license texts. The crate count catches a section 5
 # that rendered nothing, which no line-count floor can (section 6 alone is 1341 lines).
 RUN set -ex; for f in /tmp/THIRD-PARTY-NOTICES.cli /tmp/THIRD-PARTY-NOTICES.worker; do \
-      for needle in "3.2 libkpathsea" "3.3 libmarpa" "5. RUST DEPENDENCY LICENSES" \
+      for needle in "2.4 ar5iv-css" "3.2 libkpathsea" "3.3 libmarpa" "5. RUST DEPENDENCY LICENSES" \
                     "6. COPYLEFT LICENSE TEXTS" "7. SOURCE PROVENANCE" \
                     "This License Agreement applies to any software library or other" \
                     "0. Additional Definitions." "16. Limitation of Liability."; do \
@@ -280,15 +280,17 @@ RUN set -ex \
  && strip --strip-all target/maxperf/latexml_oxide \
  && cp target/maxperf/latexml_oxide /usr/local/bin/latexml_oxide
 # Where docker.yml placed the bundled ar5iv.css (resources/ar5iv-css/, tools/ar5iv-css.pin), the binary must write
-# it from its embedded copy (the banner is added at embed time) and link it alone under --nodefaultresources.
+# it from its embedded copy (its banner line, then the placed file's exact bytes) and link it alone under
+# --nodefaultresources.
 RUN set -ex \
  && if [ -f resources/ar5iv-css/ar5iv.min.css ]; then \
-      mkdir /tmp/a5 \
-      && printf '\\documentclass{article}\n\\begin{document}\nHello.\n\\end{document}\n' > /tmp/a5.tex \
-      && latexml_oxide --css=ar5iv.css --nodefaultresources --dest=/tmp/a5/main.html /tmp/a5.tex \
-      && grep -q 'href="ar5iv.css"' /tmp/a5/main.html \
-      && head -c 16 /tmp/a5/ar5iv.css | grep -q '/\*! ar5iv-css' \
-      && rm -rf /tmp/a5 /tmp/a5.tex; \
+      mkdir -p /tmp/a5/out \
+      && printf '\\documentclass{article}\n\\begin{document}\nHello.\n\\end{document}\n' > /tmp/a5/a5.tex \
+      && (cd /tmp/a5 && latexml_oxide --css=ar5iv.css --nodefaultresources --dest=out/main.html a5.tex) \
+      && grep -q 'href="ar5iv.css"' /tmp/a5/out/main.html \
+      && head -n 1 /tmp/a5/out/ar5iv.css | grep -q '^/\*! ar5iv-css ' \
+      && tail -n +2 /tmp/a5/out/ar5iv.css | cmp - resources/ar5iv-css/ar5iv.min.css \
+      && rm -rf /tmp/a5; \
     fi
 
 FROM texbase AS cli

@@ -5,7 +5,8 @@
 # The pin is tools/ar5iv-css.pin (tag, commit, SHA-256); the file is fetched at the commit, unauthenticated (the
 # repository is public). Writes <dir>/ar5iv.min.css and <dir>/ar5iv-css.version ("<tag> <commit>", for the embedded
 # banner). A file already in place is checked, not fetched again; a SHA-256 that differs from the pin fails, as does
-# any download error. --verify only checks (no network): non-zero when the file is absent or differs.
+# any download error. --verify only checks, writing nothing (no network): non-zero when the file is absent or differs,
+# or when ar5iv-css.version is absent or not exactly "<tag> <commit>" of the pin.
 #
 # Release-only: release-prepare.yml fetches it once into the `ar5iv-css` artifact, and tools/make_release.sh and
 # docker.yml verify it where they build. Dev and CI builds never fetch it (the build script reads only what is on disk).
@@ -45,7 +46,13 @@ if [ -f "$css" ]; then
     echo "fetch_ar5iv_css: ${css} has sha256 ${got}, the pin wants ${want} (ar5iv-css ${tag}); remove it to refetch" >&2
     exit 1
   fi
-  printf '%s %s\n' "$tag" "$commit" > "${dir}/ar5iv-css.version"
+  stamp="${dir}/ar5iv-css.version"
+  if [ "$verify_only" -eq 0 ]; then
+    printf '%s %s\n' "$tag" "$commit" > "$stamp"
+  elif [ "$(cat "$stamp" 2> /dev/null)" != "${tag} ${commit}" ]; then
+    echo "fetch_ar5iv_css: ${stamp} is absent or not '${tag} ${commit}' (run tools/fetch_ar5iv_css.sh to rewrite it)" >&2
+    exit 1
+  fi
   echo "fetch_ar5iv_css: ${css} is ar5iv-css ${tag} (${commit}, sha256 ${got})"
   exit 0
 fi

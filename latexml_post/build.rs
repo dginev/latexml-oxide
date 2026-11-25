@@ -38,7 +38,7 @@ fn main() {
       };
       let staged = Path::new(&out_dir).join("ar5iv.css");
       let banner = format!(
-        "/*! ar5iv-css {release} | MIT License | Copyright (c) 2021 Deyan Ginev | github.com/dginev/ar5iv-css */\n"
+        "/*! ar5iv-css {release} | MIT License | Copyright (c) 2021-2027 Deyan Ginev | github.com/dginev/ar5iv-css */\n"
       );
       fs::write(&staged, banner + &text)
         .unwrap_or_else(|e| panic!("Failed to write {}: {e}", staged.display()));

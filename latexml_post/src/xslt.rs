@@ -508,13 +508,12 @@ impl XSLT {
     match find_resource_file(src, info, &search_paths) {
       Some(path) => {
         if crate::writer::same_file(&path, &dest) {
-          // The only search-path match IS the destination file itself — the dest
-          // dir is on the search path and a stale/empty resource from an earlier
-          // (possibly failed) run is shadowing the bundled copy (#312). A plain
-          // `fs::copy` here copies the file onto itself and TRUNCATES it to empty.
-          // Rewrite the embedded canonical bytes when we have them, repairing the
-          // stale/empty leftover; otherwise it is genuinely already in place.
-          if let Some(bytes) = embedded_resources::lookup(basename) {
+          // The search-path match IS the destination file: copying it onto itself would truncate it (#312).
+          // A file in place is used as-is, as Perl's `copyResource` does (XSLT.pm:117-118), a stale copy of
+          // ours too (the user's to manage); only an empty leftover is rewritten from the embedded bytes.
+          if let Some(bytes) = embedded_resources::bundled(src, basename)
+            && fs::metadata(&path).is_ok_and(|m| m.len() == 0)
+          {
             ensure_parent(&dest);
             note_resource_copy();
             if let Err(e) = crate::writer::write_atomic(Path::new(&dest), bytes) {
@@ -547,7 +546,7 @@ impl XSLT {
         // Not on disk — try the embedded table. CSS/JS assets are
         // baked into the binary at build time; we materialize them
         // straight to the destination, no temp dir round-trip.
-        if let Some(bytes) = embedded_resources::lookup(basename) {
+        if let Some(bytes) = embedded_resources::bundled(src, basename) {
           ensure_parent(&dest);
           note_resource_copy();
           if let Err(e) = crate::writer::write_atomic(Path::new(&dest), bytes) {
@@ -1265,16 +1264,21 @@ mod embedded_resources {
       .iter()
       .chain(JS_FILES.iter())
       .find_map(|(n, c)| (*n == basename).then_some(c.as_bytes()))
-      .or_else(|| {
-        AR5IV_CSS
-          .filter(|_| basename == AR5IV_CSS_NAME)
-          .map(str::as_bytes)
-      })
+  }
+
+  /// [`lookup`] for the resource `src` names, plus the bundled `ar5iv.css` for exactly that bare name: a path the
+  /// user wrote (`nosuch/ar5iv.css`) names their own file.
+  pub fn bundled(src: &str, basename: &str) -> Option<&'static [u8]> {
+    lookup(basename).or_else(|| {
+      AR5IV_CSS
+        .filter(|_| src == AR5IV_CSS_NAME)
+        .map(str::as_bytes)
+    })
   }
 }
 
-/// Whether this build embeds `ar5iv.css` (release builds; `tools/ar5iv-css.pin`), so `--css=ar5iv.css` needs no file.
-pub fn ar5iv_css_bundled() -> bool { embedded_resources::AR5IV_CSS.is_some() }
+/// The `ar5iv.css` this build embeds (release builds; `tools/ar5iv-css.pin`), so `--css=ar5iv.css` needs no file.
+pub fn ar5iv_css_bundled() -> Option<&'static str> { embedded_resources::AR5IV_CSS }
 
 // ======================================================================
 // File search helpers

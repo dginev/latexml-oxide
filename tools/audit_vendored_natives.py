@@ -561,7 +561,7 @@ AUDITED_RESOURCES = {
         "Gitignored build artifacts, so this prefix is usually empty outside a release."
     ),
     "resources/ar5iv-css/": (
-        "ar5iv-css's dist/ar5iv.min.css (MIT, (c) 2021 Deyan Ginev), the release-only bundled "
+        "ar5iv-css's dist/ar5iv.min.css (MIT, (c) 2021-2027 Deyan Ginev), the release-only bundled "
         "ar5iv.css: fetched at the commit tools/ar5iv-css.pin names by tools/fetch_ar5iv_css.sh, "
         "embedded by latexml_post/build.rs behind an MIT banner. Attributed in THIRD-PARTY-NOTICES 2.4. "
         "Gitignored, so this prefix is usually absent outside a release."
