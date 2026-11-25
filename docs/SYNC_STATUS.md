@@ -58,7 +58,9 @@ Rules that keep this file honest and mergeable:
   (issue 995's resource cache, the CLI options, the CLI hardening, the cortex worker's runtime-binding refusal, the
   `unsafe` ratchet) and rust-libxml 0.3.27, which removes 0.3.25's 2.1x slowdown on deeply nested TikZ pictures.
   **0.8.0-rc4** is cut from main on 2026-11-25: #1007 (a journal class's `\jyear{…}` printed as a body paragraph; ar5iv
-  issues 353 and 301) and #1008 (issue 1006: split pages' navigation under `--sitedirectory`). rc2 was re-issued on the large-document perf work (DG 2026-11-21): #970 (STRMWARN,
+  issues 353 and 301), #1008 (issue 1006: split pages' navigation under `--sitedirectory`) and #1009 (a site
+  directory named through a symbolic link, every macOS temporary directory, was refused since rc3; KNOWN_PERL_ERRORS
+  #1334). rc2 was re-issued on the large-document perf work (DG 2026-11-21): #970 (STRMWARN,
   CORELEAK, POSTPERF, CHAPLINKS, ALLOCTRIM, BIGSPLIT, mimalloc 2.3.2) and SERSTREAM (the core result serialized to
   disk; issue 777's whole book converts, 1,549 s on main 4a5aae128b2 against lualatex's 3,523 s for two passes). Main stays the release line until 0.8.0
   final; the reviewed post-release branches (COPYROUTE, ENCURL) merge after it. The ar5iv sync of the run's bundles (every month, then a cache flush) is running.
