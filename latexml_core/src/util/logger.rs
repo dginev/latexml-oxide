@@ -1,6 +1,10 @@
 use std::{
   cell::{Cell, RefCell},
-  sync::atomic::{AtomicBool, AtomicI32, AtomicU64, AtomicUsize, Ordering},
+  fs::File,
+  sync::{
+    PoisonError, RwLock,
+    atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering},
+  },
 };
 
 use log::{Level, LevelFilter, Metadata, Record, SetLoggerError, max_level};
@@ -86,78 +90,83 @@ static LOGGER: LatexmlLogger = LatexmlLogger;
 #[thread_local]
 static LOG_BUFFER: RefCell<Option<String>> = RefCell::new(None);
 
-/// A file descriptor that receives a copy of every text appended to a bound [`LOG_BUFFER`] (`-1` =
-/// none): the log of a conversion, kept on disk as it is written, for a process whose log buffer
-/// dies with it. `cortex_worker`'s harness children set it so the harness can return the partial
-/// log of a conversion the watchdog, an allocation failure or a signal ended. Process-global
-/// because those exits are taken from other threads than the converting one.
-static LOG_MIRROR_FD: AtomicI32 = AtomicI32::new(-1);
-/// Bytes written to [`LOG_MIRROR_FD`] since it was last emptied.
+/// A file that receives a copy of every text appended to a bound [`LOG_BUFFER`]: the log of a
+/// conversion, kept on disk as it is written, for a process whose log buffer dies with it.
+/// `cortex_worker`'s harness children set it so the harness can return the partial log of a
+/// conversion the watchdog, an allocation failure or a signal ended. Process-global because those
+/// exits are taken from other threads than the converting one.
+static LOG_MIRROR: RwLock<Option<&'static File>> = RwLock::new(None);
+/// Whether [`LOG_MIRROR`] is set: the lock-free test every logged text takes first.
+static LOG_MIRROR_ON: AtomicBool = AtomicBool::new(false);
+/// Bytes written to [`LOG_MIRROR`] since it was last emptied.
 static LOG_MIRROR_BYTES: AtomicU64 = AtomicU64::new(0);
 /// The size at which the mirror file is emptied and restarted, so it keeps the most recent text
 /// of a runaway log within this bound.
 static LOG_MIRROR_CAP: AtomicU64 = AtomicU64::new(0);
 
-/// Mirror the captured log into `fd` (a file opened for appending), emptying it whenever it
-/// would grow past `cap_bytes`; `None` stops mirroring. The caller owns the descriptor and keeps
-/// it open while it is set.
-pub fn set_log_mirror(fd: Option<i32>, cap_bytes: u64) {
+/// Mirror the captured log into `file` (opened for appending), emptying it whenever it would grow
+/// past `cap_bytes`; `None` stops mirroring.
+pub fn set_log_mirror(file: Option<&'static File>, cap_bytes: u64) {
   LOG_MIRROR_CAP.store(cap_bytes, Ordering::Release);
   LOG_MIRROR_BYTES.store(0, Ordering::Release);
-  LOG_MIRROR_FD.store(fd.unwrap_or(-1), Ordering::Release);
+  *LOG_MIRROR.write().unwrap_or_else(PoisonError::into_inner) = file;
+  LOG_MIRROR_ON.store(file.is_some(), Ordering::Release);
+}
+
+/// The log mirror's file, if one is set.
+fn log_mirror() -> Option<&'static File> {
+  if !LOG_MIRROR_ON.load(Ordering::Acquire) {
+    return None;
+  }
+  *LOG_MIRROR.read().unwrap_or_else(PoisonError::into_inner)
 }
 
 /// Empty the log mirror (a new conversion begins).
 pub fn reset_log_mirror() {
-  let fd = LOG_MIRROR_FD.load(Ordering::Acquire);
-  if fd >= 0 {
-    truncate_fd(fd);
+  if let Some(file) = log_mirror() {
+    truncate_file(file);
     LOG_MIRROR_BYTES.store(0, Ordering::Release);
   }
 }
 
 /// Copy `text` (just appended to a bound log buffer) to the log mirror, if one is set.
 fn mirror_log_text(text: &str) {
-  let fd = LOG_MIRROR_FD.load(Ordering::Acquire);
-  if fd < 0 || text.is_empty() {
+  if text.is_empty() {
     return;
   }
+  let Some(file) = log_mirror() else {
+    return;
+  };
   let len = text.len() as u64;
   let cap = LOG_MIRROR_CAP.load(Ordering::Acquire);
   if cap > 0 && LOG_MIRROR_BYTES.fetch_add(len, Ordering::AcqRel) + len > cap {
-    truncate_fd(fd);
+    truncate_file(file);
     LOG_MIRROR_BYTES.store(len, Ordering::Release);
   }
-  write_fd(fd, text.as_bytes());
+  write_file(file, text.as_bytes());
 }
 
+/// One `ftruncate(2)` to 0, a failure ignored: the mirror is best-effort and must never disturb
+/// the conversion.
 #[cfg(unix)]
-fn truncate_fd(fd: i32) {
-  // SAFETY: `ftruncate` on a descriptor the mirror's owner keeps open; a failure is ignored (the
-  // mirror is best-effort and must never disturb the conversion).
-  unsafe {
-    libc::ftruncate(fd, 0);
-  }
-}
+fn truncate_file(file: &File) { let _ = rustix::fs::ftruncate(file, 0); }
 #[cfg(not(unix))]
-fn truncate_fd(_fd: i32) {}
+fn truncate_file(_file: &File) {}
 
+/// `write(2)` until `bytes` are written, retried on EINTR, given up on any other error or a
+/// zero-length write.
 #[cfg(unix)]
-fn write_fd(fd: i32, mut bytes: &[u8]) {
+fn write_file(file: &File, mut bytes: &[u8]) {
   while !bytes.is_empty() {
-    // SAFETY: writes from a live slice to a descriptor the mirror's owner keeps open.
-    let n = unsafe { libc::write(fd, bytes.as_ptr().cast(), bytes.len()) };
-    if n < 0 && std::io::Error::last_os_error().kind() == std::io::ErrorKind::Interrupted {
-      continue;
+    match rustix::io::write(file, bytes) {
+      Err(rustix::io::Errno::INTR) => continue,
+      Ok(0) | Err(_) => return,
+      Ok(n) => bytes = &bytes[n..],
     }
-    if n <= 0 {
-      return;
-    }
-    bytes = &bytes[n as usize..];
   }
 }
 #[cfg(not(unix))]
-fn write_fd(_fd: i32, _bytes: &[u8]) {}
+fn write_file(_file: &File, _bytes: &[u8]) {}
 
 /// Does stderr currently sit at the start of a line?
 ///

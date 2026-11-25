@@ -294,7 +294,7 @@ OXIDIZED_DESIGN_DIVERGENCES #449.
 * **Build.** When no dump found matches, `latexml::format_dumps::ensure_format_dumps` (from
   `Converter::initialize_session`, once per process, before the format loads) builds it as `--init` does, on
   a thread of its own (fresh engine state, released after; `dump_paths::set_building_format` stands in for
-  `LATEXML_INI_MODE`) and with the cache directory as working directory (like fmtutil, a directory with no TeX
+  `--init`'s `dump_paths::set_ini_mode`) and with the cache directory as working directory (like fmtutil, a directory with no TeX
   files; the working directory is the process's, so this comes before any conversion), into
   `$LATEXML_FORMAT_CACHE`, else an absolute `$XDG_CACHE_HOME`/`~/.cache` `latexml-oxide/formats/`, else
   `$TMPDIR/latexml-oxide-formats-<uid>/` — one `<version>-<executable size/mtime>-<tree checksums>/` directory,

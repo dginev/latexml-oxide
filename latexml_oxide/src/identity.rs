@@ -61,9 +61,12 @@ pub fn executable_name() -> String {
 /// exactly as the engine's `\today`/date registers do (`tex_job.rs`), so a
 /// pinned epoch yields a deterministic banner; otherwise the local wall clock.
 fn start_time() -> DateTime<Local> {
-  if let Some(epoch) = std::env::var("SOURCE_DATE_EPOCH")
-    .ok()
-    .and_then(|e| e.trim().parse::<i64>().ok())
+  start_time_at(std::env::var("SOURCE_DATE_EPOCH").ok().as_deref())
+}
+
+/// [`start_time`] given the value of `SOURCE_DATE_EPOCH`.
+fn start_time_at(source_date_epoch: Option<&str>) -> DateTime<Local> {
+  if let Some(epoch) = source_date_epoch.and_then(|e| e.trim().parse::<i64>().ok())
     && let Some(utc) = DateTime::from_timestamp(epoch, 0)
   {
     return utc.with_timezone(&Local);
@@ -131,10 +134,7 @@ mod tests {
   /// 1969-12-31/1970-01-01 boundary depending on the tester's zone.
   #[test]
   fn source_date_epoch_pins_the_timestamp() {
-    // SAFETY: single-threaded test; no other thread reads the environment here.
-    unsafe { std::env::set_var("SOURCE_DATE_EPOCH", "0") };
-    let when = start_time().format("%Y-%m-%d").to_string();
-    unsafe { std::env::remove_var("SOURCE_DATE_EPOCH") };
+    let when = start_time_at(Some("0")).format("%Y-%m-%d").to_string();
     assert!(
       when == "1970-01-01" || when == "1969-12-31",
       "SOURCE_DATE_EPOCH=0 should render the epoch date, got {when:?}"

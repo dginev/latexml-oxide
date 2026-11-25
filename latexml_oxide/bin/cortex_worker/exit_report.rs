@@ -32,11 +32,10 @@ use std::{
   collections::BTreeSet,
   fs::{self, File, OpenOptions, TryLockError},
   io::{self, Read, Seek, SeekFrom, Write},
-  os::unix::io::AsRawFd,
   path::{Path, PathBuf},
   sync::{
     Mutex, OnceLock,
-    atomic::{AtomicI32, Ordering},
+    atomic::{AtomicBool, AtomicI32, Ordering},
   },
   thread,
   time::Duration,
@@ -72,9 +71,9 @@ const RECORDED_SIGNALS: [libc::c_int; 6] = [
 // Child side
 // ---------------------------------------------------------------------------------------------
 
-/// The claim's descriptor (`-1` outside a harness child), for the hooks and signal handlers that
-/// may neither allocate nor lock.
-static CLAIM_FD: AtomicI32 = AtomicI32::new(-1);
+/// Whether [`CLAIM`] takes `cause` lines (false outside a harness child and after a clean exit),
+/// for the hooks and signal handlers that may neither allocate nor lock.
+static CLAIM_ARMED: AtomicBool = AtomicBool::new(false);
 /// The pid that owns the claim: a process forked from it (a subprocess between `fork` and `exec`,
 /// which inherits the descriptor and the signal handlers) must not write the owner's cause.
 static CLAIM_OWNER: AtomicI32 = AtomicI32::new(0);
@@ -134,11 +133,11 @@ pub fn install_child(dir: &Path) -> io::Result<()> {
     .create(true)
     .open(&log_path)?;
   log_file.set_len(0)?;
-  latexml_core::util::logger::set_log_mirror(Some(log_file.as_raw_fd()), LOG_MIRROR_CAP_BYTES);
+  let claim = CLAIM.get_or_init(|| Claim { file, path, log_file, log_path });
+  latexml_core::util::logger::set_log_mirror(Some(&claim.log_file), LOG_MIRROR_CAP_BYTES);
   CLAIM_OWNER.store(pid as i32, Ordering::Release);
-  CLAIM_FD.store(file.as_raw_fd(), Ordering::Release);
+  CLAIM_ARMED.store(true, Ordering::Release);
   install_signal_recorders();
-  let _ = CLAIM.set(Claim { file, path, log_file, log_path });
   Ok(())
 }
 
@@ -199,7 +198,7 @@ fn end_task() {
 pub fn remove_child_claim() {
   if let Some(claim) = CLAIM.get() {
     latexml_core::util::logger::set_log_mirror(None, 0);
-    CLAIM_FD.store(-1, Ordering::Release);
+    CLAIM_ARMED.store(false, Ordering::Release);
     let _ = fs::remove_file(&claim.path);
     let _ = fs::remove_file(&claim.log_path);
     let _ = claim.log_file.set_len(0);
@@ -210,9 +209,13 @@ pub fn remove_child_claim() {
 /// Allocation-free and async-signal-safe (`write(2)` only), for the allocation-failure hook and
 /// the signal handlers; `number` is omitted when `None`.
 pub fn record_cause(kind: &[u8], number: Option<u64>) {
-  let fd = CLAIM_FD.load(Ordering::Acquire);
-  // SAFETY: `getpid` is async-signal-safe and cannot fail.
-  if fd < 0 || unsafe { libc::getpid() } != CLAIM_OWNER.load(Ordering::Acquire) {
+  // Async-signal-safe: `OnceLock::get` is one atomic load, `getpid` one system call.
+  let Some(claim) = CLAIM.get() else {
+    return;
+  };
+  if !CLAIM_ARMED.load(Ordering::Acquire)
+    || rustix::process::getpid().as_raw_nonzero().get() != CLAIM_OWNER.load(Ordering::Acquire)
+  {
     return;
   }
   let mut line = [0u8; 96];
@@ -242,11 +245,7 @@ pub fn record_cause(kind: &[u8], number: Option<u64>) {
   }
   line[len] = b'\n';
   len += 1;
-  // SAFETY: a write from a stack buffer to the claim descriptor, which stays open for the life of
-  // the process.
-  unsafe {
-    libc::write(fd, line.as_ptr().cast(), len);
-  }
+  let _ = rustix::io::write(&claim.file, &line[..len]);
 }
 
 /// Append a `cause panic <detail>` line (a panic that will abort the process). Allocates; for the

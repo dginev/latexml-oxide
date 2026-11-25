@@ -2273,17 +2273,17 @@ fn a_preloaded_session_invents_no_locator() {
 /// The cortex log mirror (the crash report's log, `exit_report::claim_task`) holds the session's log once: mirrored as
 /// it was logged, not again when the conversion's log opens with it (RHAIPOL review). The session's line is a
 /// `--preload`ed binding's `Info()`, unique to this test, as other tests' conversions may share the mirror. Unix only:
-/// the mirror is a raw descriptor that `logger.rs` writes only under `cfg(unix)` (cortex_worker is Unix-only).
+/// `logger.rs` writes the mirror only under `cfg(unix)` (cortex_worker is Unix-only).
 #[cfg(unix)]
 #[test]
 fn the_log_mirror_holds_the_session_log_once() {
-  use std::os::fd::AsRawFd;
   let dir = tempfile::tempdir().expect("tempdir");
   let rhai = "Info(\"mirrorprobe\", \"session\", \"preloaded once\");";
   std::fs::write(dir.path().join("mprobe.sty.rhai"), rhai).expect("write the binding");
   let preload = dir.path().join("mprobe.sty").to_string_lossy().into_owned();
   let mirror = std::fs::File::create(dir.path().join("mirror.log")).expect("the mirror file");
-  latexml_core::util::logger::set_log_mirror(Some(mirror.as_raw_fd()), 1 << 30);
+  // The mirror is a `&'static File`, as cortex_worker's claim (a `static`) holds it.
+  latexml_core::util::logger::set_log_mirror(Some(Box::leak(Box::new(mirror))), 1 << 30);
   let tex = "\\documentclass{article}\\begin{document}Hello.\\end{document}";
   let (log, _) = latexml::util::test::convert_files_with(tex, &[], Some(&preload));
   latexml_core::util::logger::set_log_mirror(None, 0);

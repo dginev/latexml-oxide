@@ -182,5 +182,5 @@ ones a contributor uses.
 
 | Variable | Set by | Effect if set by hand |
 |---|---|---|
-| `LATEXML_INI_MODE` | `latexml_oxide --init` | A normal conversion stops after the bootstrap pools. |
+| `LATEXML_INI_MODE` | nothing (`latexml_oxide --init` sets the same switch in process) | A normal conversion stops after the bootstrap pools. |
 | `LATEXML_RENDER_WORKER` | the render fleet, for its workers | `latexml_oxide` ignores its command line and waits as a render worker. |

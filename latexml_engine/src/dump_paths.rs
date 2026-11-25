@@ -451,9 +451,23 @@ pub fn format_build_failure() -> Option<&'static str> {
   FORMAT_BUILD_FAILURE.get().map(String::as_str)
 }
 
+/// `--init` (`latexml_oxide --init=<format>`): the formats stop after their bootstrap pools. Set in process by
+/// [`set_ini_mode`], not through the environment (issue #937: no environment write after start-up).
+static INI_MODE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// Puts the process in `--init` mode, before `prepare_session` loads a format.
+pub fn set_ini_mode() { INI_MODE.store(true, std::sync::atomic::Ordering::Release); }
+
+/// Whether the process builds a format (`--init`): [`set_ini_mode`] was called, or `LATEXML_INI_MODE` is set.
+pub fn ini_mode() -> bool {
+  static INI_MODE_ENV: std::sync::LazyLock<bool> =
+    std::sync::LazyLock::new(|| std::env::var_os("LATEXML_INI_MODE").is_some());
+  INI_MODE.load(std::sync::atomic::Ordering::Acquire) || *INI_MODE_ENV
+}
+
 thread_local! {
   /// Set on the thread that builds a format dump in process (`latexml::format_dumps`), as
-  /// `LATEXML_INI_MODE` is for `--init`: the format stops after its bootstrap.
+  /// [`ini_mode`] is for `--init`: the format stops after its bootstrap.
   static BUILDING_FORMAT: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
 }
 

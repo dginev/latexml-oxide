@@ -530,7 +530,9 @@ name reallocated `environ` under it. Witness: `--init=latex.ltx` exited 139 in
 `kpathsea-prewarm`; it failed `tools/make_formats.sh` and
 `dump_gate_init::latex_ltx_init_has_zero_errors`. Fix: the `set_var` moved to
 just after `Cli::parse()`, before `init_kpathsea()` and the spawn. Rule: every
-environment write in the binaries precedes the prewarm spawn.
+environment write in the binaries precedes the prewarm spawn. Since issue #937
+Phase 3 `--init` writes no environment at all: `dump_paths::set_ini_mode()` is an
+in-process flag (`LATEXML_INI_MODE` is still read).
 
 **Independent witness (PR 823, an external contributor)**: six 2–27 KB documents
 converted 90 times each by a shell loop on the 0.7.5 release binary (x86_64 Linux,

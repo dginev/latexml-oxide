@@ -5883,9 +5883,7 @@ const LINE_REGISTERS: [&str; 4] = ["\\textwidth", "\\columnwidth", "\\linewidth"
 /// A format is being built (`--init`, a dump): what the panel grid rule records of a document's lengths
 /// (`note_setlength`, `note_length_allocated`) is not recorded, so no dump holds it.
 fn building_a_format() -> bool {
-  static INI_MODE: LazyLock<bool> =
-    LazyLock::new(|| std::env::var_os("LATEXML_INI_MODE").is_some());
-  *INI_MODE || crate::dump_paths::building_format()
+  crate::dump_paths::ini_mode() || crate::dump_paths::building_format()
 }
 
 /// The state value in which a `\setlength` of a length register keeps what it stated (`note_setlength`), by the
