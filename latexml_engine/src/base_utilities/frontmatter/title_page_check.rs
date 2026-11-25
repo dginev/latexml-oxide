@@ -1570,8 +1570,8 @@ fn document_source_words() -> HashSet<String> {
       std::fs::canonicalize(file).is_ok_and(|path| path.starts_with(directory))
     })
   };
-  let files = lookup_string(CONTENT_FILES);
-  for file in files.split('\0').filter(|file| !file.is_empty()) {
+  for file in content_files() {
+    let file = file.as_str();
     let definitions = file.ends_with(".bbl");
     if let Some(text) = file.strip_prefix("literal:") {
       source_words(text, false, &mut words);
@@ -1697,7 +1697,7 @@ pub fn check_title_page_words(document: &Document) -> Result<()> {
   DebugFeature!(
     "frontmatter",
     "FRONT the check's source: the content files {} and the definitions files of {}",
-    lookup_string(CONTENT_FILES).replace('\0', ", "),
+    content_files().join(", "),
     lookup_string("SOURCEDIRECTORY")
   );
   let words_of = |text: &str| wanted_words(&resolver::base_letters(text).to_lowercase()).words;

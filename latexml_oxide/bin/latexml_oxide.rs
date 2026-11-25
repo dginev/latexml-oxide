@@ -5,6 +5,7 @@
 
 use std::{
   alloc::{Layout, set_alloc_error_hook},
+  cell::RefCell,
   error::Error,
   fs::File,
   io::prelude::*,
@@ -644,14 +645,73 @@ fn custom_alloc_error_hook(layout: Layout) {
 /// Under `panic = "abort"` (the maxperf distribution build) a panic ends the process without unwinding, so no
 /// guard removes the paths the run registered (`watchdog::remove_on_exit`: the post handoff beside the pages, the
 /// page-spill directory) and no guard stops a render worker: the panic hook does, as the exits that skip destructors
-/// do. An unwinding build leaves them to their guards, since a caught panic (a per-page `catch_unwind`) continues.
-fn install_panic_sweep(aborts: bool) {
-  if aborts {
-    let report = std::panic::take_hook();
-    std::panic::set_hook(Box::new(move |info| {
-      report(info);
+/// do, and writes the run's log ([`write_panic_log`]). An unwinding build leaves both to the conversion thread's
+/// catch, since a caught panic (a per-page `catch_unwind`) continues: the hook only keeps the panic's `Fatal:` line.
+fn install_panic_hook(aborts: bool) {
+  let report = std::panic::take_hook();
+  std::panic::set_hook(Box::new(move |info| {
+    report(info);
+    let location = info
+      .location()
+      .map(|at| format!(" at {at}"))
+      .unwrap_or_default();
+    let line = format!(
+      "Fatal:panic:caught {}{location}",
+      panic_reason(info.payload())
+    );
+    if aborts {
       latexml_core::watchdog::try_remove_registered_paths();
-    }));
+      write_panic_log(&line);
+    } else {
+      let _ = PANIC_LINE.try_with(|last| last.try_borrow_mut().map(|mut last| *last = Some(line)));
+    }
+  }));
+}
+
+/// A panic's message, as `panic!` leaves it.
+fn panic_reason(payload: &(dyn std::any::Any + Send)) -> &str {
+  payload
+    .downcast_ref::<&str>()
+    .copied()
+    .or_else(|| payload.downcast_ref::<String>().map(String::as_str))
+    .unwrap_or("non-string panic payload")
+}
+
+/// The run's log path (`--log`, or the default `<stem>.latexml.log`) and, once the core is done, its log: a panic
+/// ends the run before the log is written (issue 1011: an aborted book left none).
+static PANIC_LOG: std::sync::Mutex<Option<(String, String)>> = std::sync::Mutex::new(None);
+
+std::thread_local! {
+  /// The `Fatal:` line of this thread's last panic, for the conversion thread's catch in an unwinding build.
+  static PANIC_LINE: RefCell<Option<String>> = const { RefCell::new(None) };
+}
+
+/// Write the log a panic cut short: the core's log, this thread's unflushed log, `line` and the status. Reads only
+/// what it can take without waiting or panicking (the panic may hold the log buffer or the arena), and runs once.
+fn write_panic_log(line: &str) {
+  static WRITTEN: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+  if WRITTEN.swap(true, std::sync::atomic::Ordering::AcqRel) {
+    return;
+  }
+  let Some((path, core_log)) = PANIC_LOG.try_lock().ok().and_then(|mut armed| armed.take()) else {
+    return;
+  };
+  let mut log = core_log;
+  latexml_core::util::logger::try_with_log_text(|text| log.push_str(text));
+  if !log.is_empty() && !log.ends_with('\n') {
+    log.push('\n');
+  }
+  log.push_str(line);
+  log.push('\n');
+  log.push_str(&latexml_core::common::error::conversion_status_line(3));
+  log.push('\n');
+  match std::fs::write(&path, log) {
+    Ok(()) => {
+      latexml_core::watchdog::write_stderr_unlocked(format_args!("Log written to {path}\n"))
+    },
+    Err(e) => latexml_core::watchdog::write_stderr_unlocked(format_args!(
+      "Failed to write log '{path}': {e}\n"
+    )),
   }
 }
 
@@ -851,7 +911,7 @@ fn main() -> Result<(), Box<dyn Error>> {
   }
   // This binary serves the worker mode above, so a big split may spawn it.
   latexml::render_workers::enable_auto_jobs();
-  install_panic_sweep(cfg!(panic = "abort"));
+  install_panic_hook(cfg!(panic = "abort"));
 
   // Run all work on a worker thread with a 256 MB stack so deeply
   // nested math trees don't overflow the OS-default 8 MB main-thread
@@ -871,7 +931,16 @@ fn main() -> Result<(), Box<dyn Error>> {
       if std::env::var_os("LATEXML_NO_DEFAULT_PUSHBACK_LIMIT").is_none() {
         latexml_core::gullet::set_pushback_limit(Some(5_000_000));
       }
-      real_main().map_err(|e| e.to_string())
+      match std::panic::catch_unwind(std::panic::AssertUnwindSafe(real_main)) {
+        Ok(result) => result.map_err(|e| e.to_string()),
+        Err(payload) => {
+          let line = PANIC_LINE.with(|last| last.borrow_mut().take());
+          write_panic_log(
+            &line.unwrap_or_else(|| format!("Fatal:panic:caught {}", panic_reason(&*payload))),
+          );
+          std::panic::resume_unwind(payload)
+        },
+      }
     })
     .expect("spawn worker thread")
     .join();
@@ -888,11 +957,7 @@ fn main() -> Result<(), Box<dyn Error>> {
       // cortex_worker's `Fatal:panic:caught`. The worker's own REPORT and
       // log buffer died with its thread, so this is the main thread's
       // verdict: fatal, with the panic message as the reason.
-      let reason = payload
-        .downcast_ref::<&str>()
-        .map(|s| (*s).to_string())
-        .or_else(|| payload.downcast_ref::<String>().cloned())
-        .unwrap_or_else(|| String::from("non-string panic payload"));
+      let reason = panic_reason(&*payload);
       // The logger is initialised inside `real_main`; a panic before that
       // point (or on a thread that never reached it) must still print.
       let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
@@ -922,10 +987,11 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   let mut _dhat = Some(dhat::Profiler::new_heap());
 
   // Guard hook for the worker-panic verdict path (`cluster_cli`): a panic
-  // injected here must surface as `Fatal:panic:caught` + the final verdict.
+  // injected here must surface as `Fatal:panic:caught` + the final verdict
+  // (`=core_end` panics at the core's end instead, `Converter::finish_response`).
   // Gated off in release distribution builds so no env var can crash the CLI.
   #[cfg(any(debug_assertions, feature = "test-utils"))]
-  if std::env::var_os("LATEXML_INJECT_PANIC").is_some() {
+  if std::env::var_os("LATEXML_INJECT_PANIC").is_some_and(|at| at != "core_end") {
     panic!("LATEXML_INJECT_PANIC");
   }
   let wall_start = std::time::Instant::now();
@@ -1177,6 +1243,11 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   let external_log: Option<String> = cli_log
     .clone()
     .filter(|lp| !(is_archive_out && Path::new(lp).is_file()));
+  if let Some(path) = &external_log
+    && let Ok(mut armed) = PANIC_LOG.lock()
+  {
+    *armed = Some((path.clone(), String::new()));
+  }
 
   // Arm the watchdog before unpacking untrusted archives so zip/tar bombs
   // respect `--timeout` and `--max-memory` (and remove registered temp dirs).
@@ -1643,6 +1714,11 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     };
     let _ = &source_for_post; // keep alive for post-processing
     phase_status_max = phase_status_max.max(response.status_code);
+    if let Ok(mut armed) = PANIC_LOG.lock()
+      && let Some((_, core_log)) = armed.as_mut()
+    {
+      core_log.clone_from(&response.log);
+    }
     // Post-phase log (Graphics/MathML/XSLT) captured by
     // `run_post_processing_logged`; written after the core log into --log / the
     // archive log so BOTH conversion phases reach the persisted log (SYNC_STATUS
@@ -1990,6 +2066,9 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     {
       // Plain stderr, under `--quiet` too: it reports output that was not produced.
       eprintln!("Log not written: '{log_path}' exists and is kept");
+    }
+    if let Ok(mut armed) = PANIC_LOG.lock() {
+      armed.take();
     }
     if let Some(ref log_path) = external_log
       && (is_epub || !is_archive_out)
@@ -2505,8 +2584,9 @@ mod input_failure_tests {
 
 #[cfg(test)]
 mod panic_sweep_tests {
-  /// The hook an aborting build installs removes the run's registered paths (a test build unwinds, so the hook is
-  /// installed by hand and the panic caught by its thread's join). The hook claims the process's exit and kills its
+  /// The hook an aborting build installs removes the run's registered paths and writes the run's log, the core's
+  /// with the panic's `Fatal:` line (issue 1011); a test build unwinds, so the hook is installed by hand and the panic
+  /// caught by its thread's join. The hook claims the process's exit and kills its
   /// registered children, so the test reruns itself in a child process and leaves a `cargo test` process untouched.
   #[test]
   fn an_aborting_panic_removes_the_registered_paths() {
@@ -2528,11 +2608,24 @@ mod panic_sweep_tests {
     let handoff = dir.path().join("latexml-post-handoff-1.xml");
     std::fs::write(&handoff, "<document/>").expect("handoff written");
     let _guard = latexml_core::watchdog::remove_on_exit(&handoff);
-    super::install_panic_sweep(true);
+    let log = dir.path().join("paper.latexml.log");
+    *super::PANIC_LOG.lock().expect("unheld") = Some((
+      log.to_string_lossy().into_owned(),
+      "(Processing content paper.tex... )\n".to_owned(),
+    ));
+    super::install_panic_hook(true);
     let joined = std::thread::spawn(|| panic!("post")).join();
     let _ = std::panic::take_hook();
     assert!(joined.is_err());
     assert!(!handoff.exists(), "the handoff survived the panic");
+    let log = std::fs::read_to_string(&log).expect("the log written");
+    let lines: Vec<&str> = log.lines().collect();
+    assert_eq!(lines[0], "(Processing content paper.tex... )", "{log}");
+    assert!(
+      lines[1].starts_with("Fatal:panic:caught post at latexml_oxide/bin/latexml_oxide.rs:"),
+      "{log}"
+    );
+    assert_eq!(lines[2..], ["Status:conversion:3"], "{log}");
   }
 }
 

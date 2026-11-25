@@ -432,7 +432,8 @@ Defect (a soundness fix, not a lever): `arena::with` lent a `&str` from string-i
 while a re-entrant `pin` inside the closure took `&mut *ptr` through a cached raw pointer and could grow, and move,
 that `Vec` (a use-after-free; Miri rejected even a nested `with` or `get` under a lend). Fix (`latexml_core/src/common/arena.rs`):
 a lend holds a shared `RefCell` borrow; an intern while one is live goes to an overflow page of `Rc<str>` with symbols
-from `1 << 31` (the buffer refuses a string that would start at or past 2 GiB), deduplicated across both tiers (a later
+from `1 << 31` (the buffer refuses a string that would start at or past 2 GiB; issue 1011 moved the page to the top
+2^24 symbols, `u32::MAX - 2^24`, giving the buffer back 0.7.6's ~4 GiB), deduplicated across both tiers (a later
 pin outside any lend returns the overflow symbol); outside a lend an intern looks the string up in the buffer, on a
 miss on the page, and only then adds it to the buffer (ARENARb: the first version's 256 × 64-bit page filter cost
 0.14-0.37 % more instructions). `arena.rs` `unsafe` 10 → 1; `with_copy` folded back into
