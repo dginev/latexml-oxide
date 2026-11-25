@@ -1,0 +1,22 @@
+% mechanism: a Fatal raised while digesting (a Rhai body's `Fatal()`, a register setter's or getter's) ends the
+%   conversion with no text: `core_interface::digest_step_guarded` salvages the boxes digested before a Fatal only for
+%   the stomach guards, `TooManyErrors` and `Timeout:IfLimit`, so the paragraphs before it are lost. Perl's
+%   `hardYankProcessing` (Common/Error.pm:336-338) keeps them for every Fatal
+% witness: synthetic (RHODR; the binding lxmbf.sty.rhai, lxmbf.sty.ltxml for Perl, lxmbf.sty for pdflatex); the same
+%   ending for register_getter_fatal_stops.tex and 30_script_bindings::a_rhai_fatal_is_logged_once's "macro body",
+%   "a register setter" and "a register getter" rows
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "First paragraph. Before after. Second paragraph."; Perl 0.8.8:
+%   <p>First paragraph.</p> <p>Before </p>, 1 fatal error
+% engines: INT081Y (23ce8bc3c25) and RHODR: a 39-byte document, no paragraph, 1 fatal error, status 3
+% expect:  1 fatal error; <p>First paragraph.</p> <p>Before </p> kept, "after." and "Second paragraph." not built
+% status:  RED (RHODR)
+% moves:   post-merge (which Fatals the digestion salvage keeps: a binding's, or every one but the token-loop guards)
+\documentclass{article}
+\usepackage{lxmbf}
+\begin{document}
+First paragraph.
+
+Before \lxmbf\ after.
+
+Second paragraph.
+\end{document}

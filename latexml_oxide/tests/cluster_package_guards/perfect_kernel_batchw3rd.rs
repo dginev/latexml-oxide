@@ -170,7 +170,7 @@ DefMacro("\\lxinfo", || {
 DefPrimitive("\\lxset", || { SetCounter("lxk", 5); Input("lxin"); });
 DefEnvironment("{lxlist}", "<ltx:itemize>#body</ltx:itemize>",
   #{properties: || BeginItemize("itemize", "@item")});
-DefLigature("lxq", "Q!", #{fontTest: |font| font.getFamily() != "typewriter"});
+DefLigature("lxq", "Q!", #{fontTest: |font| { AssignValue("lxq:tested", true, "global"); font.getFamily() != "typewriter" }});
 "##;
 
 const LXTHIN_TEX: &str = r"\documentclass{article}
@@ -193,7 +193,8 @@ lxq \texttt{lxq}
 /// `AddToMacro`. p2: `IsEmpty` (braces are empty, a letter is not), `Equals` (`\let` to one meaning; not `\relax`;
 /// `"1"` and `1` as Perl's string compare), `CleanLabel`, `CleanID`, `UTF`, `roman`/`Roman`, `Explode`/`ExplodeText`,
 /// `LookupRegisterOrDefault`, `FindFile`, `DigestIf` of an undefined CS. p3: `Input`, `SetCounter`. The list:
-/// `BeginItemize`'s properties number the items. p5: the ligature applies outside typewriter only. `LoadPool`,
+/// `BeginItemize`'s properties number the items. p5: the ligature applies outside typewriter only; its `fontTest`
+/// assigns a value (RHBOR: the test ran with the state lent, "RefCell already borrowed" on 23ce8bc3c25). `LoadPool`,
 /// `ProcessKeyOptions` and the font-map calls run clean (0 E / 0 W).
 #[test]
 fn rhai_thin_wrappers() {

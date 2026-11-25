@@ -48,6 +48,19 @@ pub fn set_timeout(seconds: u64) {
   }
 }
 
+// A logged Fatal raised where no `Result` reaches the caller: [`check_timeout`] raises it at the next step (OD #1028).
+thread_local! {
+  static STASHED_FATAL: RefCell<Option<Error>> = const { RefCell::new(None) };
+}
+
+/// Keep `fatal` for the next digestion or build step to raise, as Perl's `die` stops there: a register getter's
+/// (`Definition::value_of` returns an `Option`), a `fontTest`'s in `Document::set_node`. The first one is kept.
+pub fn stash_fatal(fatal: Error) {
+  STASHED_FATAL.with(|stashed| {
+    stashed.borrow_mut().get_or_insert(fatal);
+  });
+}
+
 /// Whether the conversion's deadline ([`set_timeout`]) has passed — for a reader that may never return to a digestion
 /// loop (the gullet's token reads).
 pub fn conversion_deadline_passed() -> bool {
@@ -426,6 +439,9 @@ pub fn resolve_rss_cap() -> Option<u64> {
 /// `panic="unwind"`. Sampling RSS here at well below the OS ulimit
 /// gives us a clean diagnostic and a unwound stack via `fatal!`.
 pub fn check_timeout() -> Result<()> {
+  if let Some(fatal) = STASHED_FATAL.with(|stashed| stashed.borrow_mut().take()) {
+    return Err(fatal);
+  }
   // Box-list cycle guard fired in `push_box_list` (which cannot unwind) —
   // surface it here, the regular Result-returning digestion checkpoint.
   // (The `stomach_mut!` macro is defined textually below; use STOMACH
@@ -794,6 +810,7 @@ pub fn initialize_stomach() {
   stomach.cycle_progress = 0;
   stomach.cycle_spans.reset();
   stomach.pending_cycle_fatal = None;
+  STASHED_FATAL.with(|stashed| stashed.borrow_mut().take());
 
   assign_value("BOUND_MODE", "vertical", Some(Scope::Global));
   assign_value("MODE", "vertical", Some(Scope::Global));

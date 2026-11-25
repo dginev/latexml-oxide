@@ -9,6 +9,13 @@ top of its group.
 
 ### Unreleased
 
+  - **Rhai bindings: a register getter's or a `fontTest`'s `Fatal()` stops the conversion, and a `fontTest` may assign
+    values.** A getter's Fatal was logged but dropped (the register read unset and the whole document was built), and so
+    was a `fontTest`'s Fatal raised while a `\footnote` closed the text before it; each now stops the conversion at its
+    next digestion or build step, as Perl dies there (OXIDIZED_DESIGN_DIVERGENCES #1028). A `fontTest` that assigns
+    (`AssignValue`, `DefLigature`) panicked "RefCell already borrowed" and lost the document. Conversions without such
+    a binding are unchanged. Guards: `30_script_bindings::a_rhai_fatal_is_logged_once`,
+    `perfect_kernel_batchw3rd::rhai_thin_wrappers`.
   - **Tests: guards read whole elements.** The shared test helpers (`latexml_oxide/src/util/test.rs`) gain
     `xml_elements`, `element_count`, `assert_all_elements`, `assert_no_element` and `markup_text`, which match an
     attribute at its start (`id="p1"` is not `xml:id="p1"`), skip comments, CDATA and processing instructions, and read

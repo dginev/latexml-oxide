@@ -1,0 +1,16 @@
+% mechanism: a `DefLigature` `fontTest` that assigns a value (Rhai `AssignValue`) panicked "RefCell already borrowed":
+%   `Document::apply_text_ligatures` ran the tests inside `state::with_value("TEXT_LIGATURES", …)`, which lends the
+%   state while the test borrows it to assign; the ligature closures are now taken out first (Perl Document.pm:1225-1228
+%   reads the list and calls each test with nothing held)
+% witness: synthetic (RHBOR, revRHFAT's lost probe `ligsta.tex`; the binding lxfta.sty.rhai, lxfta.sty.ltxml for Perl,
+%   lxfta.sty for pdflatex)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Plain qq."; Perl 0.8.8: <p>Plain Q.</p>, 0 errors
+% engines: INT081Y (23ce8bc3c25): Fatal:panic:caught worker thread panicked: RefCell already borrowed, no document
+%          RHODR: <p>Plain Q.</p>, 0 errors, 0 warnings
+% expect:  0 errors, 0 warnings; <p>Plain Q.</p>
+% status:  GREEN (RHODR; guard perfect_kernel_batchw3rd::rhai_thin_wrappers, p5's `fontTest` assigns)
+\documentclass{article}
+\usepackage{lxfta}
+\begin{document}
+Plain qq.
+\end{document}

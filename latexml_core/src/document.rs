@@ -3124,8 +3124,13 @@ impl Document {
     // point (a `^` float such as a footnote's `<ltx:note>` lifting to the paragraph) abandoned it unligated, and a
     // paragraph's text before a `\footnote` kept `‘‘a’’ b--c` (Perl and pdflatex “a” b–c). The error is libxml's
     // `set_content` on a live text node, as in every other close. Guard
-    // `perfect_kernel_batch60::text_before_a_footnote_is_ligatured`.
-    let _ = self.close_text_internal();
+    // `perfect_kernel_batch60::text_before_a_footnote_is_ligatured`. A `fontTest`'s Fatal stops the build's next step
+    // (Perl dies here; rhai-bindings/fonttest_fatal_closed_by_set_node.tex).
+    if let Err(e) = self.close_text_internal()
+      && e.is_logged_fatal()
+    {
+      crate::stomach::stash_fatal(e);
+    }
     // Perl Document.pm:setNode L77-87: if the candidate is a
     // DOCUMENT_FRAG_NODE, validate that it has exactly one child and
     // descend to that child. The original Rust port had this check
@@ -3641,21 +3646,29 @@ impl Document {
     let mut head = whole;
     let ocontent = head.split_off(start);
     let mut content = Cow::Borrowed(&ocontent);
-    state::with_value("TEXT_LIGATURES", |value_opt| -> Result<()> {
+    // (the closures are taken out of the state first: a `fontTest` may assign values, Perl Document.pm:1225-1228)
+    let ligatures = state::with_value("TEXT_LIGATURES", |value_opt| {
+      let mut taken = Vec::new();
       if let Some(Stored::VecDequeStored(ligatures)) = value_opt {
-        for stored_ligature in ligatures.iter() {
-          if let Stored::Ligature(ligature) = stored_ligature {
-            if let Some(ref font_test) = ligature.font_test
-              && !(font_test)(font)?
-            {
-              continue; // if the font test fails, skip the ligature
-            }
-            content = Cow::Owned((ligature.code.as_ref().unwrap())(&content));
+        taken.reserve_exact(ligatures.len());
+        for stored in ligatures {
+          if let Stored::Ligature(ligature) = stored
+            && let Some(code) = &ligature.code
+          {
+            taken.push((ligature.font_test.clone(), code.clone()));
           }
         }
       }
-      Ok(())
-    })?;
+      taken
+    });
+    for (font_test, code) in ligatures {
+      if let Some(font_test) = font_test
+        && !font_test(font)?
+      {
+        continue; // if the font test fails, skip the ligature
+      }
+      content = Cow::Owned(code(&content));
+    }
     if *content != ocontent {
       self.node.set_content(&format!("{head}{content}"))?;
     }
