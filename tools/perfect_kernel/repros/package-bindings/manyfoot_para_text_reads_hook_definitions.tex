@@ -3,7 +3,8 @@
 %   `\defaultfootnoterule` (:372-376) — beside its output-routine and minipage patches; the binding keeps the
 %   definitions and drops the patches (manyfoot_sty.rs)
 % witness: synthetic, the shape of dgruyter.sty:2353-2381 (its own `\MFL@fnotepara` after manyfoot, reading
-%   `\MFL@fudgefactor` at :2379; review probe dgmini)
+%   `\MFL@fudgefactor` at :2379, as 2402.10535's copy does, though that paper never calls the series; review probe
+%   dgmini)
 % oracle:  pdflatex 0 `!`, no warning: "Alpha1 beta gamma"; notes "1 Para A note." "1 Para A text." "z Given z."
 % engines: rust INT081P 0 errors, 1 warning (manyfoot.sty:390's `\endminipage`); MANYFOOT 2 errors (`\MFL@fudgefactor`
 %          and `\MFL@paraskip` undefined), 6 warnings (5 "Missing number", the package's "No default footnote rule")

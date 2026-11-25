@@ -13,7 +13,8 @@ LoadDefinitions!({
   InputDefinitions!("manyfoot", noltxml => true, extension => Some(Cow::Borrowed("sty")));
   // The hook (with the `para` option's, :152-162, under the same label) is put back without its patches of the output
   // routine and minipage (:377-385, :387-401): what it defines, which other packages read (`\MFL@fudgefactor`,
-  // dgruyter.sty:2379), is `\MFL@paraskip`, the series' skips (:371), `\defaultfootnoterule` (:372-376) and :386.
+  // dgruyter.sty:2379, 2402.10535), is `\MFL@paraskip`, the series' skips (:371), `\defaultfootnoterule` (:372-376)
+  // and :386.
   // (`para` ran if `\MFL@xparaskip` is defined: bigfoot defines `\MFL@processpara` without it, 2506.12575)
   RawTeX!(r"\RemoveFromHook{begindocument}[manyfoot]
 \AddToHook{begindocument}[manyfoot]{%

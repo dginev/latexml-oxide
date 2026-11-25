@@ -185,7 +185,7 @@ pub(crate) fn load() -> Result<()> {
   def_macro_noop("\\lx@note@reset")?;
   def_macro_noop("\\ext@footnote")?;
   DefConstructor!("\\lx@note[]{} OptionalUndigested {}",
-  "^<ltx:note role='#role' mark='#mark' _fnvalue='#fnvalue' _fngiven='#fngiven' _fncounted='#fncounted' _markunknown='#markunknown' xml:id='#id' inlist='#list'>#tags#4</ltx:note>",
+  "^<ltx:note role='#role' mark='#mark' _fnvalue='#fnvalue' _fngiven='#fngiven' _fncounted='#fncounted' _fnseries='#fnseries' _markunknown='#markunknown' xml:id='#id' inlist='#list'>#tags#4</ltx:note>",
   // Perl #2798: footnotes are inline blocks — internal_vertical, no leaveHorizontal.
   mode         => "inline_internal_vertical",
   sizer        => sub[whatsit] { note_size_in_line(whatsit) },
@@ -285,7 +285,7 @@ pub(crate) fn load() -> Result<()> {
   reversion => "");
 
   DefConstructor!("\\lx@note@live OptionalSemiverbatim {} OptionalUndigested",
-  "^<ltx:note role='#role' mark='#mark' _fnvalue='#fnvalue' _fngiven='#fngiven' _fncounted='#fncounted' xml:id='#id' inlist='#list'>#tags#body</ltx:note>",
+  "^<ltx:note role='#role' mark='#mark' _fnvalue='#fnvalue' _fngiven='#fngiven' _fncounted='#fncounted' _fnseries='#fnseries' xml:id='#id' inlist='#list'>#tags#body</ltx:note>",
   sizer => sub[whatsit] { note_size_in_line(whatsit) },
   before_digest => {
     take_note_series()?;

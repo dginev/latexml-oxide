@@ -9,6 +9,13 @@ top of its group.
 
 ### Unreleased
 
+  - **manyfoot, nccfoots and bigfoot are bound.** A declared series' `\footnote<X>` is a footnote marked as the series
+    prints it (its counter and `\thefootnote<X>` style, `[<n>]`, a minipage too); `\footnotetext<X>` and
+    `\Footnotetext<X>{<mark>}` are footnote texts marked as given, never taken for the text of a main `\footnotemark` of
+    the same number; bigfoot's series too. The `\endminipage` Warning on every manyfoot or bigfoot load is gone, and
+    manyfoot's begin-document definitions (`\MFL@fudgefactor`, `\MFL@paraskip`, `\defaultfootnoterule`) are kept for the
+    packages that read them. Witnesses 2511.01971 (an e-mail line in `\author`, lost before), 2609.01974. Guard:
+    `footnote_series::footnote_series_rows`.
   - **Identical images keep their own paths.** Two `\includegraphics` of different files with the same bytes each
     link their own file, as Perl does (`Post/Graphics.pm` L289-300), also under `--sitedirectory`; before, both linked
     the first file's path, so a page silently depended on another folder's file. Converted images and generated `xN`

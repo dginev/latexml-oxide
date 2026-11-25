@@ -73,7 +73,7 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (396 items on 2026-11-25 on `int/towards_v0_8_1`: 396 open, weight 892, 43 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (403 items on 2026-11-25 on `int/towards_v0_8_1`: 403 open, weight 897, 43 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
 
 
   - ODR6 — OD ruling 12 (recorded in OD #449): `dump_reader.rs`'s "add-only" docstrings (:365, :574) corrected, then a removal trial of the skip lists against CLAUDE.md rule 2; 1
@@ -406,9 +406,38 @@ Rules that keep this file honest and mergeable:
     where the pushback runs out, or push it back with braces (VERBARG-NOBRACE); `\mbox{\verb|m| after}` pdflatex 1
     Error, ours 0 (VERB-MBOX); a `\verb` in a bigfoot minipage footnote pdflatex 5 `!`, ours 0, the leniency of
     fancyvrb's `\VerbatimFootnotes` (BIGFOOTMINIPAGE; defer); 3
-  - MANYFOOT — manyfoot has no binding: `\DeclareNewFootnote{B}\footnoteB{…}` is no `<note>` and "`\c@pchk@FN@totalid`
-    is not a register" (MANYFOOTSERIES); every manyfoot or bigfoot load warns "`\endminipage` is not an expandable
-    control sequence" (manyfoot.sty:390; MANYFOOTWARN): a small faithful binding; Reach (census 2026-11-24): 54/30k ≈ 5022 papers; 3
+  - PERPAGE — (from MANYFOOT) `\usepackage{perpage}\MakePerPage{footnote}` warns "`\c@pchk@footnote` is not a register"
+    at every step: perpage.sty:68-75 makes `\c@pchk@<ctr>` a macro that LaTeX's `\@stpelt` runs, and our `\stepcounter`
+    resets by register (Perl's `ResetCounter` alike). (a) a perpage binding with `\MakePerPage`/`\MakeSorted` as counter
+    no-ops, as footmisc's `perpage` option; or (b) a kernel reset that runs a macro `\c@` the way `\@stpelt` does. Repro
+    `perpage_make_per_page_reset_red.tex`; census 16 perpage, 14 `\MakePerPage` per 30k; 1
+  - MFTITLE — (from MANYFOOT) a series note in the title block: `\title{T\footnoteB{x}}` becomes a `<pubnote>`, so the
+    series counter does not step and the body's series marks run one short (pdflatex 1, then 2); a series note in
+    `\author` becomes a `\thanks` and shifts the article's own marks (Bob's `\thanks` "‡" where pdflatex prints "†").
+    The frontmatter honours `\@mpfn`, or series notes get a name it treats as a note but not the title's own. Repro
+    `manyfoot_series_note_in_title_block_red.tex`; 1
+  - MFNUMERAL — (from MANYFOOT; NCCNUMERAL) a given numeral mark is printed through the main `\thefootnote`
+    (`numbered_footnote_mark`, `latex_constructs/mod.rs`): under `\fnsymbol` a series text marked 1 shows "∗" and
+    nccfoots' `\Footnotetext{5}` shows "¶". It needs a kernel route for "a mark given, not a number", and for a series
+    whether the class's `\@makefntext` prints `\@makefnmark` (2609.01974: nimeart.cls:2209 `\let\@makefntext\noindent`;
+    a first attempt invented a "0" mark there). Repros `manyfoot_series_numeral_marks_under_fnsymbol_red.tex`,
+    `nccfoots_given_numeral_mark_under_fnsymbol_red.tex`; 1
+  - MFMATHMARK — a footnote text whose mark is set in math keeps the mark's TeX source as `mark` and gets no `<tags>`
+    (`mark="$\dagger$"`, the page shows "$\dagger$" where pdflatex shows "†"); kernel-wide and Perl alike
+    (`\renewcommand\thefootnote{$\dagger$}`, nccfoots' `\Footnote{$\dagger$}`). (a) deluxetable's `shown_mark` in
+    `make_note_tags` (a Perl divergence, KPE entry) or (b) `<tags>` for `\lx@notetext` built from its mark. Repro
+    `footnotetext_math_mark_shows_its_source_red.tex`; 1
+  - MFTOCSTEP — (MANYFOOT2 review, pre-existing) a series `\footnotemark<X>` in a `\caption` or section title steps the
+    series counter twice: `\lx@toc@copy@neutralize` neutralizes only the kernel's note constructors, so manyfoot's
+    `\MFL@makemark` `\stepcounter` runs again in the toc copy ("Cap2" over a toccaption "Cap1"; since MANYFOOT the next
+    `\footnotetextA` is marked "2"); pdflatex "Figure 1: Cap1", "1 SERIES-CAP". Any package mark macro that steps a
+    counter in a moving argument; needs a `_red.tex`; 1
+  - MFMARKSUP — (MANYFOOT2 review, base alike) a series `\footnotemark<X>` prints a plain baseline "1" (the kernel's
+    `\@footnotemark`) where the PDF sets a superscript, and nothing links it to its series text; 1
+  - FMTSIGNAL — after a first-run format build, a later SIGTERM/SIGHUP still exits 130, not the true signal status:
+    re-exec after the build, or build in a child process (Gemini's CLIHARD review, GEMINI_ARCHIVE_2026-11-25.md L367); 1
+  - XHTMLEXT — `--format=xhtml` without `--dest` gives `out_extension` "xml", not "xhtml" (`post.rs:1225-1234`; Perl
+    `Config.pm` L408-420; GEMINI_ARCHIVE_2026-11-25.md L316, L347-348); 1
   - LSTDISPLAYINIT — (LISTINLINE) display listings (`lstlisting`, `\lstinputlisting`, `\lstnewenvironment`) never run
     listings.sty's `\lst@Init`/`\lst@DeInit`: `\g@addto@macro\lst@DeInit{!}` then `\begin{lstlisting}x\end{lstlisting}`,
     pdflatex prints "!" after the listing, we drop it; touches every display listing (own A/B); no arXiv witness; 3
@@ -434,19 +463,23 @@ Rules that keep this file honest and mergeable:
   - ABS-ENV-OPEN — a `\begin{abstract}` never ended keeps the whole paper with its theorems and its Error
     (cond-mat9410055); net B covers command forms only; 3
   - UNSAFE937 — after v0.8.0 (DG 2026-11-20): move away from `unsafe` per issue #937 — 110 sites at #935 (~89 shipped,
-    ~21 test-only), almost all at OS/C-library boundaries. Phases: an unsafe-count ratchet; Unix syscalls → `rustix`
-    (a direct dependency since #935; `lsp_server/unix.rs`, `watchdog.rs`, getrusage/flock/geteuid/dup, `process_group(0)`
+    ~21 test-only), almost all at OS/C-library boundaries. Phases: an unsafe-count ratchet; Unix syscalls → `rustix` (a
+    direct dependency since #935; `lsp_server/unix.rs`, `watchdog.rs`, getrusage/flock/geteuid/dup, `process_group(0)`
     for `setsid`); glibc `malloc_trim`/`mallinfo` → the allocator's safe API; no process-env mutation after startup;
     safe libxml/libxslt wrappers upstream in our crates; `unsafe impl Send/Sync`; isolate the rest (signal handlers,
-    Windows/macOS queries). Target ≤ 15 shipped, 0 test-only; every PR byte-identical on a fleet A/B and perf-neutral. Done: phase 0 and part of 1 (PR 1000), phase 5
-    on int (UNSAFE5: the 3 `unsafe impl Send/Sync` markers dropped, `NO_PROPERTIES` a const empty map; ratchet 80 → 77
-    blocks, 83 → 80 keywords), phase 1 rest and phase 3 on int (UNSAFE6: log mirror, cause record, `getpid`, stderr
-    through rustix; one `getrusage` helper; `--init` writes no environment; 80 → 69 keywords, 77 → 66 blocks). Left:
-    phase 2 allocator (7 sites, needs a fleet measurement), phase 4 libxslt (2 shipped; new crate versions, DG),
-    phase 6 (signal handlers, macOS 4 / Windows 9 queries, `_exit`, script bindings 4, tests 29 + test-utils 5); kept
-    with contracts: `getrusage`, `sysconf(_SC_PHYS_PAGES)`, `TEXMFROOT` (libkpathsea reads `environ`; written before a
-    second thread unless a library host resolves before `init_kpathsea()`), `fork`, `pre_exec`. Every batch shows no
-    slowdown: user and kernel instructions, task-clock and `strace -c` counts, base vs candidate (DG 2026-11-25); 5
+    Windows/macOS queries). Target ≤ 15 shipped, 0 test-only; every PR byte-identical on a fleet A/B and perf-neutral.
+    Done: phase 0 and part of 1 (PR 1000), phase 5 on int (UNSAFE5: the 3 `unsafe impl Send/Sync` markers dropped,
+    `NO_PROPERTIES` a const empty map; ratchet 80 → 77 blocks, 83 → 80 keywords), phase 1 rest and phase 3 on int
+    (UNSAFE6: log mirror, cause record, `getpid`, stderr through rustix; one `getrusage` helper; `--init` writes no
+    environment; 80 → 69 keywords, 77 → 66 blocks). Left: phase 2 allocator (7 sites, needs a fleet measurement), phase
+    4 libxslt (2 shipped; new crate versions, DG), phase 6 (signal handlers, macOS 4 / Windows 9 queries, `_exit`,
+    script bindings 4, tests 29 + test-utils 5); kept with contracts: `getrusage`, `sysconf(_SC_PHYS_PAGES)`,
+    `TEXMFROOT` (libkpathsea reads `environ`; written before a second thread unless a library host resolves before
+    `init_kpathsea()`), `fork`, `pre_exec`. Every batch shows no slowdown: user and kernel instructions, task-clock and
+    `strace -c` counts, base vs candidate (DG 2026-11-25). Known trade-off: the cortex worker's signal handler relies on
+    `OnceLock::get` being one acquire load (`exit_report.rs:212`); `rust-toolchain.toml` floats on nightly, so its
+    "re-check on a toolchain bump" has no trigger; kept, since a replacement needs a new `unsafe` (Gemini R4,
+    2026-11-25); 5
   - SECR — the Lua sandbox's residuals (#911, #924, #935; OD #1081): carry the Lua protocol over a socket pair
     (`UnixStream::pair()` via `Stdio::from`; `/proc/self/fd/N` cannot reopen a socket, ENXIO), closing the race where a
     chunk reads its own pipe and swallows its refusal record (records are best-effort today); a newline in a refused
@@ -835,7 +868,7 @@ Rules that keep this file honest and mergeable:
     release guards, fixed by `pathname::is_contained_resolved` in `Graphics::resolves_inside_site_or_dest`, guard
     `batchfix995_paths_spelled_through_a_link_keep_their_names`; on Unix `getcwd()` resolves links, so only absolute
     paths spelled through a link reproduce the class, and Windows tests run on PRs only as `cargo check`. Backlog:
-    Gemini's U1–U3 study (GEMINI.md, 2026-11-24 20:25 and 20:28): real-vs-lexical sites (`content.rs` 332/2502/2759,
+    Gemini's U1–U3 study (GEMINI_ARCHIVE_2026-11-25.md L1309-1414): real-vs-lexical sites (`content.rs` 332/2502/2759,
     `title_page_check.rs` 1561-1591, `xslt.rs` 461/613/915, `post.rs` 952 `--sitedirectory`), Windows separator and
     drive-letter sites (`graphics_sty.rs` 633, `svg_sty.rs` 214, 12 `rsplit('/')` basenames), then byte-identical
     DRY steps (`radix`, hex, whitespace collapse, `Staged` into `util::fs`, XML escaping, number formatting), A/B-gated
@@ -1139,16 +1172,16 @@ Rules that keep this file honest and mergeable:
     `svg:g` chain. On arXiv 2605.19500 it makes 46.8 M node moves through a chain 9,642 deep (the final XML is 34 deep),
     about 46.5 M of them in Step 3 (`add_next_sibling` of every already-hoisted trailing group at every level), plus
     per-child attribute `HashMap`s. That cost is inside rc2's 916 G too, so fixing it can beat rc2 on heavy TikZ papers.
-    Design (Gemini Neon's sketch, GEMINI.md 2026-11-24 13:21; check it against the code first): collapse once at the
-    outermost `svg:g` close; the 11 COLLAPSIBLE keys as a bitmask read once per node; a post-order pass whose hoisted
-    leading and trailing runs move in O(1) while the masks allow, materialized in the DOM once. Verify the premise that
-    nothing between an inner and the outermost close reads the closed groups (`record_svg_ids` at the `svg:svg` close,
-    the `svg:foreignObject` cleanup at :1400). A hazard is confirmed in the code: `\lxSVG@closescope`
+    Design (Gemini Neon's sketch, GEMINI_ARCHIVE_2026-11-25.md L812-824; check it against the code first): collapse once
+    at the outermost `svg:g` close; the 11 COLLAPSIBLE keys as a bitmask read once per node; a post-order pass whose
+    hoisted leading and trailing runs move in O(1) while the masks allow, materialized in the DOM once. Verify the
+    premise that nothing between an inner and the outermost close reads the closed groups (`record_svg_ids` at the
+    `svg:svg` close, the `svg:foreignObject` cleanup at :1400). A hazard is confirmed in the code: `\lxSVG@closescope`
     (`pgfsys_latexml_def.rs:1528-1532`) closes `svg:g`s until one carries `_scopebegin`, and Step 5 (`tex_box.rs:647`)
     copies `_`-prefixed attributes (`_scopebegin` too) from a merged single child onto the group as it closes. A
-    deferred collapse would move where that loop stops, so collapse at once when the closing group's single child carries
-    `_scopebegin`, or keep the loop's check on the unmerged child. Bar: byte-identical output on every pgf/TikZ witness, plus the
-    instructions:u gain on 2605.19500 and a heavy-picture population; 3
+    deferred collapse would move where that loop stops, so collapse at once when the closing group's single child
+    carries `_scopebegin`, or keep the loop's check on the unmerged child. Bar: byte-identical output on every pgf/TikZ
+    witness, plus the instructions:u gain on 2605.19500 and a heavy-picture population; 3
 
 ---
 
