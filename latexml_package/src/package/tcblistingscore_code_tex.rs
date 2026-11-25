@@ -128,7 +128,7 @@ LoadDefinitions!({
     // was "undefined:\thetcbcounter" once the title was typeset).
     let box_name = cmd_tok.with_str(|s| s.trim_start_matches('\\').to_string());
     tcb_process_init(&init.map(|t| t.to_string()).unwrap_or_default(), &box_name);
-    let n: usize = n.value_of() as usize;
+    let n = latex_arg_count(n.value_of())?;
     let mut param_spec = String::new();
     if let Some(ref d) = default {
       param_spec.push_str(&format!("[Default:{d}]"));

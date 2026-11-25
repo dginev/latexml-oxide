@@ -493,7 +493,7 @@ LoadDefinitions!({
   // convert_latex_args from prelude
   DefPrimitive!("\\DeclareRobustCommand OptionalMatch:* SkipSpaces DefToken [Number][]{}",
   sub[(_star,cs,nargs,opt,body)] {
-    let nargs = nargs.value_of() as usize;
+    let nargs = nargs.value_of();
     let cs_args = convert_latex_args(nargs, opt)?;
     DefMacro!(cs, cs_args, body, robust => true);
   });

@@ -22576,3 +22576,30 @@ The same mix renamed an image the site keeps at its own path (`pic.png` became `
 which compare page links and image references with the run without a link; on macOS every ancestor row of the
 guard takes this path). Stylesheet URLs from such a site are still spelled through the link (`../../link/LaTeXML.css`,
 rc1 alike): row R PATHFAMILY.
+
+## 1336. Perl accepts a LaTeX argument count outside 0 to 9 without an error
+
+`convertLaTeXArgs` (Package.pm:240-251) builds one plain parameter per `1 .. $nargs`, so `\newcommand\foo[10]{…}`
+takes ten arguments and `\newcommand\foo[-1]{x}` none, both silently. latex.ltx:1276-1283 `\@yargd@f` writes the
+parameter text `#1`…`#9` followed by `#` and the count, so any count outside 0 to 9 is tex.web §476's "You already
+have nine parameters": TeX keeps nine parameters and drops the `#` and the count's first digit, so the ninth is
+delimited by the count's last digit (`\show`: `#1#2#3#4#5#6#7#8#90->`); a negative count also keeps nine.
+Minimal trigger:
+
+```latex
+\documentclass{article}
+\newcommand\foo[10]{(#1#9)}
+\begin{document}
+A[\foo abcdefghij] B
+\end{document}
+```
+
+pdflatex: "! You already have nine parameters.", then a runaway `\foo`. Perl (same host): 0 errors, "A[(ai)] B". The
+Rust port read the count as `usize`, so `[-1]` wrapped and exhausted memory (`Fatal:oom:alloc_failed`). Fixed in
+Rust: `content.rs` `latex_arg_count`, the one check the LaTeX declarators' counts go through (`convert_latex_args`,
+`convert_twoopt_args`, mathtools, listings, tcolorbox, `\lxDefMath`; not yet xargs' `\newcommandx`, which parses its
+own count, post-merge RED `package-bindings/xargs_argument_count_unparsed_red.tex`), raises the Error and recovers:
+`[10]` reads nine plain arguments and `[-1]` none, as Perl (TeX's own result is a runaway with no output to match).
+Repros
+`tools/perfect_kernel/repros/macro-state/newcommand_{negative_argument_count,argument_count_above_nine,nine_arguments}.tex`
+and `argument_count_out_of_range_every_declarator.tex`; guard rows in `error_boundary::perfect_kernel_error_boundary`.

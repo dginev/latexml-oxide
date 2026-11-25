@@ -1,0 +1,12 @@
+% witness: synthetic (INTW5; the upper side of newcommand_negative_argument_count.tex)
+% oracle:  pdflatex 4 `!`: "You already have nine parameters" (TeX keeps #1..#9, the ninth delimited by the count's
+%          last digit: `#1#2#3#4#5#6#7#8#90->`), then a runaway \foo
+% engines: Perl 0 errors, "A[(ai)] B" (ten arguments); rust base 0 errors, "A[(ai)] B"
+% expect:  1 error (misdefined:[10] You already have nine parameters), 0 warnings; "A[(ai)j] B" (nine plain arguments,
+%          a recovery: TeX's own output is a runaway)
+% status:  GREEN
+\documentclass{article}
+\newcommand\foo[10]{(#1#9)}
+\begin{document}
+A[\foo abcdefghij] B
+\end{document}

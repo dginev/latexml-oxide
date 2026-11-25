@@ -1,0 +1,10 @@
+% witness: synthetic (INTW5; a negative count wrapped to usize::MAX and the argument loop exhausted memory)
+% oracle:  pdflatex 4 `!`: "You already have nine parameters" (latex.ltx \@yargd@f, tex.web §476), then a runaway \foo
+% engines: Perl 0 errors, "A[x] B" (convertLaTeXArgs: an empty 1..-1); rust base Fatal:oom:alloc_failed (exit 137)
+% expect:  1 error (misdefined:[-1] You already have nine parameters), 0 warnings; "A[x] B" (the count read as 0)
+% status:  GREEN
+\documentclass{article}
+\newcommand\foo[-1]{x}
+\begin{document}
+A[\foo] B
+\end{document}
