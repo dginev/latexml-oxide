@@ -1515,11 +1515,25 @@ mod split_nav_relations {
     }
   }
 
-  /// The `Error:` and `Warning:` lines of a run's log.
-  fn error_warning_counts(stderr: &[u8]) -> (usize, usize) {
-    let log = String::from_utf8_lossy(stderr);
-    let count = |prefix: &str| log.lines().filter(|line| line.starts_with(prefix)).count();
-    (count("Error:"), count("Warning:"))
+  /// The `Error:` and `Warning:` lines of a run's log, in order.
+  fn error_warning_lines(stderr: &[u8]) -> Vec<String> {
+    String::from_utf8_lossy(stderr)
+      .lines()
+      .filter(|line| line.starts_with("Error:") || line.starts_with("Warning:"))
+      .map(str::to_string)
+      .collect()
+  }
+
+  /// The title of the section a split page holds, `""` for the root page.
+  fn page_heading(page: &Path) -> String {
+    let title = regex::Regex::new(
+      r#"<h\d class="ltx_title ltx_title_(?:sub)*section">(?:<span class="ltx_tag[^"]*">[^<]*</span>)?([^<]*)<"#,
+    )
+    .unwrap();
+    let html = std::fs::read_to_string(page).unwrap_or_else(|e| panic!("{}: {e}", page.display()));
+    title
+      .captures(&html)
+      .map_or(String::new(), |c| c[1].to_string())
   }
 
   /// A page named after a label is written where the label says, inside the destination, and so are its child pages
@@ -1533,8 +1547,9 @@ mod split_nav_relations {
   /// pdflatex 0 `!`, Perl 0 errors, esc.html outside; red: the same). For `label` and `labelrelative` naming, on both
   /// split paths, with a bare and a
   /// foldered destination under a site directory, the exact set of pages under a root holding `$HOME` beside the work
-  /// directory is asserted (a page written anywhere else is missing from it), the Error and Warning counts, and that
-  /// every page's relative links resolve.
+  /// directory is asserted (a page written anywhere else is missing from it), the section each page holds, the exact
+  /// Error and Warning lines (paths relative to the destination's directory), and that every page's relative links
+  /// resolve.
   #[test]
   fn split_label_names_stay_in_the_destination() {
     const DOC: &str = "\\documentclass{article}\n\\begin{document}\n\\section{One}\\label{~one}\nA.\n\
@@ -1550,35 +1565,57 @@ mod split_nav_relations {
     ] {
       let folder = dest.strip_suffix("index.html").unwrap();
       for stream in ["1", "0"] {
-        for (naming, warnings, expected) in [
-          ("label", 2, [
-            "S1.SS2.html",
-            "S5.html",
-            "S6.html",
-            "S7.html",
-            "S8.html",
-            "dot.html",
-            "index.html",
-            "leaf.html",
-            "lzxrev.html",
-            "three.html",
-            "two.html",
-            "~one.html",
-          ]),
-          ("labelrelative", 1, [
-            "S5/index.html",
-            "S5/leaf.html",
-            "S6/index.html",
-            "S8/index.html",
-            "dot/index.html",
-            "index.html",
-            "index/index.html",
-            "lzxrev/index.html",
-            "three/index.html",
-            "~one/SS2.html",
-            "~one/index.html",
-            "~one/two.html",
-          ]),
+        for (naming, messages, expected) in [
+          (
+            "label",
+            [
+              "Warning:unexpected:dot.html The page of label 'dot' would overwrite the page of label './dot' \
+               (dot.html); it is written to S6.html instead",
+              "Warning:unexpected:index.html The page of label 'index' would overwrite the document's own page \
+               (index.html); it is written to S7.html instead",
+              "Error:unexpected:../esc.html The page of label '../esc' (../esc.html) must be within the destination \
+               directory ({dir}); it is written to S8.html instead",
+            ]
+            .as_slice(),
+            [
+              ("S1.SS2.html", "Bare"),
+              ("S5.html", "Root"),
+              ("S6.html", "Twin"),
+              ("S7.html", "Index"),
+              ("S8.html", "Esc"),
+              ("dot.html", "Dot"),
+              ("index.html", ""),
+              ("leaf.html", "Leaf"),
+              ("lzxrev.html", "Two"),
+              ("three.html", "Three"),
+              ("two.html", "Sub"),
+              ("~one.html", "One"),
+            ],
+          ),
+          (
+            "labelrelative",
+            [
+              "Warning:unexpected:dot/index.html The page of label 'dot' would overwrite the page of label './dot' \
+               (dot/index.html); it is written to S6/index.html instead",
+              "Error:unexpected:../esc/index.html The page of label '../esc' (../esc/index.html) must be within the \
+               destination directory ({dir}); it is written to S8/index.html instead",
+            ]
+            .as_slice(),
+            [
+              ("S5/index.html", "Root"),
+              ("S5/leaf.html", "Leaf"),
+              ("S6/index.html", "Twin"),
+              ("S8/index.html", "Esc"),
+              ("dot/index.html", "Dot"),
+              ("index.html", ""),
+              ("index/index.html", "Index"),
+              ("lzxrev/index.html", "Two"),
+              ("three/index.html", "Three"),
+              ("~one/SS2.html", "Bare"),
+              ("~one/index.html", "One"),
+              ("~one/two.html", "Sub"),
+            ],
+          ),
         ] {
           let root = tempfile::tempdir().expect("tempdir");
           let (work, home) = (root.path().join("w"), root.path().join("home"));
@@ -1608,14 +1645,15 @@ mod split_nav_relations {
             "{case}: {}",
             String::from_utf8_lossy(&output.stderr)
           );
-          assert_eq!(
-            error_warning_counts(&output.stderr),
-            (1, warnings),
-            "{case}: {}",
-            String::from_utf8_lossy(&output.stderr)
-          );
-          let expected: Vec<String> = expected.iter().map(|f| format!("w/{folder}{f}")).collect();
-          assert_eq!(html_files(root.path()), expected, "{case}");
+          // Paths relative to the destination's directory, which is named as Perl's `$dir || '.'` (`Post.pm` L697).
+          let dir = folder.strip_suffix('/').unwrap_or(".");
+          let messages: Vec<String> = messages.iter().map(|m| m.replace("{dir}", dir)).collect();
+          assert_eq!(error_warning_lines(&output.stderr), messages, "{case}");
+          let files: Vec<String> = expected.iter().map(|(f, _)| format!("w/{folder}{f}")).collect();
+          assert_eq!(html_files(root.path()), files, "{case}");
+          for (file, heading) in expected {
+            assert_eq!(page_heading(&work.join(folder).join(file)), heading, "{case}, {file}");
+          }
           assert_split_links_resolve(&work, &case);
         }
       }
@@ -1623,7 +1661,16 @@ mod split_nav_relations {
     // The Error boundary, beside a foldered destination: `../esc` leaves it (an Error; the page is `out/S1.html`, which
     // `out`'s pages link; red: esc.html beside `out`, as Perl and rc3), `a/../b` stays in it (`out/b.html`, 0 errors;
     // Perl the same). pdflatex 0 `!` both.
-    for (label, errors, page) in [("../esc", 1, "S1.html"), ("a/../b", 0, "b.html")] {
+    for (label, messages, page) in [
+      (
+        "../esc",
+        ["Error:unexpected:../esc.html The page of label '../esc' (../esc.html) must be within the destination directory \
+          (out); it is written to S1.html instead"]
+        .as_slice(),
+        "S1.html",
+      ),
+      ("a/../b", [].as_slice(), "b.html"),
+    ] {
       let work = tempfile::tempdir().expect("tempdir");
       std::fs::write(
         work.path().join("doc.tex"),
@@ -1652,12 +1699,7 @@ mod split_nav_relations {
           "{case}: {}",
           String::from_utf8_lossy(&output.stderr)
         );
-        assert_eq!(
-          error_warning_counts(&output.stderr),
-          (errors, 0),
-          "{case}: {}",
-          String::from_utf8_lossy(&output.stderr)
-        );
+        assert_eq!(error_warning_lines(&output.stderr), messages, "{case}");
         let mut expected = vec![
           format!("out/{page}"),
           "out/index.html".into(),
@@ -1672,6 +1714,87 @@ mod split_nav_relations {
             links.iter().any(|h| h.starts_with(page)),
             "{case}, {from}: {links:?}"
           );
+        }
+        assert_split_links_resolve(work.path(), &case);
+      }
+    }
+    // Order and climbing (review of SPLITFIX). Pages are named in document order, each before its children (Perl
+    // `prenamePages`, `Split.pm` L87-93): `y` (A1) keeps `y.html` before `y/` (B), and the `FOO<n>` fallbacks count
+    // in that order (red: B in `y.html`, A1 in `S1.SS1.html`, `FOO1` E). A `labelrelative` child `../up` of a foldered
+    // page lies beside it, its pathname resolved so its links are made from it (red: 6 dead `../index.html`). An
+    // EPUB's messages name its pages as the package does (red: `/tmp/…/OPS/…`). pdflatex 0 `!` each.
+    for (repro, args, messages, pages) in [
+      (
+        include_str!("../../tools/perfect_kernel/repros/split-navigation/split_label_names_collide_in_document_order.tex"),
+        ["--splitat=subsection", "--splitnaming=label", "--format=html5", "--dest=index.html"].as_slice(),
+        [
+          "Warning:unexpected:y.html The page of label 'y/' would overwrite the page of label 'y' (y.html); it is \
+           written to S2.html instead",
+          "Warning:unexpected:x.html The page of label 'x/' would overwrite the page of label 'x' (x.html); it is \
+           written to S2.SS1.html instead",
+          "Warning:unexpected:S3.SS1.html The page of id 'S3.SS1' would overwrite the page of label 'S3.SS1' \
+           (S3.SS1.html); it is written to FOO1.html instead",
+          "Warning:unexpected:S5.html The page of id 'S5' would overwrite the page of label 'S5' (S5.html); it is \
+           written to FOO2.html instead",
+        ]
+        .as_slice(),
+        [
+          ("FOO1.html", "C1"),
+          ("FOO2.html", "E"),
+          ("S2.SS1.html", "B1"),
+          ("S2.html", "B"),
+          ("S3.SS1.html", "C"),
+          ("S5.html", "D"),
+          ("index.html", ""),
+          ("x.html", "A"),
+          ("y.html", "A1"),
+        ]
+        .as_slice(),
+      ),
+      (
+        include_str!("../../tools/perfect_kernel/repros/split-navigation/split_labelrelative_page_climbs_out_of_its_folder.tex"),
+        ["--splitat=subsection", "--splitnaming=labelrelative", "--format=html5", "--dest=out/index.html"].as_slice(),
+        [].as_slice(),
+        [
+          ("out/S1/index.html", "Five"),
+          ("out/index.html", ""),
+          ("out/six/index.html", "Six"),
+          ("out/up.html", "FiveA"),
+        ]
+        .as_slice(),
+      ),
+      (
+        include_str!("../../tools/perfect_kernel/repros/epub/split_label_collides_with_root.tex"),
+        ["--split", "--splitnaming=label", "--dest=doc.epub"].as_slice(),
+        ["Warning:unexpected:doc.xhtml The page of label 'doc' would overwrite the document's own page (doc.xhtml); \
+          it is written to S1.xhtml instead"]
+        .as_slice(),
+        [].as_slice(),
+      ),
+    ] {
+      for stream in ["1", "0"] {
+        let work = tempfile::tempdir().expect("tempdir");
+        // The EPUB repro's root is named after its label.
+        let tex = repro.replace("split_label_collides_with_root", "doc");
+        std::fs::write(work.path().join("doc.tex"), tex).unwrap();
+        let case = format!("{args:?}, stream {stream}");
+        let output = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+          .arg("doc.tex")
+          .args(args)
+          .env("LATEXML_POST_STREAM_SPLIT", stream)
+          .current_dir(work.path())
+          .output()
+          .expect("spawn latexml_oxide");
+        assert!(
+          output.status.success(),
+          "{case}: {}",
+          String::from_utf8_lossy(&output.stderr)
+        );
+        assert_eq!(error_warning_lines(&output.stderr), messages, "{case}");
+        let files: Vec<&str> = pages.iter().map(|(file, _)| *file).collect();
+        assert_eq!(html_files(work.path()), files, "{case}");
+        for (file, heading) in pages {
+          assert_eq!(page_heading(&work.path().join(file)), *heading, "{case}, {file}");
         }
         assert_split_links_resolve(work.path(), &case);
       }

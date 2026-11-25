@@ -22767,6 +22767,21 @@ Perl 0.8.8 (same host) converts and writes `index.html` beside `sub/`; `--sitedi
 Fatal ("The destination directory (.) must be within the siteDirectory"). Fixed in Rust (OXIDIZED_DESIGN_DIVERGENCES
 #1157): `pathname::is_contained` refuses `..` too; guard `pathname::tests::is_contained_is_underneath_only`.
 
+The function serves every containment check Perl makes (`Post.pm` L704, `Post/Graphics.pm` L298, `Post/XSLT.pm`
+L115, `LaTeXML.pm` L630); a bare `..` slips through where the tested path is a directory: the destination directory,
+which `new_internal` tests again for every split page. Under `--splitnaming=label`, `\label{../esc}` on a page leaves
+the site by one level unchecked:
+
+```sh
+# t.tex: \section{A}\label{../esc} A. \section{B}\label{b} B.
+latexmlc --splitat=section --splitnaming=label --format=html5 --dest=out/index.html t.tex
+```
+
+Perl 0.8.8 (same host, 2026-11-25) writes `esc.html` beside `out/` (the site directory, by default `out`) with no
+message, and `\label{../../esc}` is Fatal ("The destination directory (out/../..) must be within the siteDirectory
+(out)"). Rust names such a page inside the destination with an Error (OXIDIZED_DESIGN_DIVERGENCES #1164); guard
+`split_nav_relations::split_label_names_stay_in_the_destination`.
+
 ## 1330. Perl documents `--nonumbersections` as unnumbering titles and references; its code changes only the references
 
 latexmlc's help and POD say `--nonumbersections` disables "the inclusion of section numbers in titles, crossrefs"

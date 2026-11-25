@@ -1,0 +1,19 @@
+% mechanism: latexml_post split.rs PageNamer (OXIDIZED_DESIGN_DIVERGENCES #1164): a page name with a leading `..`
+%   climbs out of its parent's folder; its pathname is resolved lexically (no `~` expansion, no link followed), so
+%   the page's links are made from the place it is written to.
+% witness: synthetic (row R SPLITFIXR (c), review of SPLITFIX, probe edge.tex)
+% oracle:  pdflatex 0 errors: two sections, one subsection
+% engines: rust SPLITFIX = out/up.html written from out/S1/../up.html, its links one `../` too deep (10 of 29 dead:
+%   ../index.html, ../../six/index.html); 0 errors, 0 warnings
+% expect:  --splitat=subsection --splitnaming=labelrelative --dest=out/index.html: out/index.html, out/S1/index.html
+%   (Five), out/up.html (FiveA), out/six/index.html (Six); every link resolves; 0 errors, 0 warnings; both split paths
+% status:  GREEN (guard split_nav_relations::split_label_names_stay_in_the_destination, the order table)
+\documentclass{article}
+\begin{document}
+\section{Five}
+Text five, see \ref{../up}.
+\subsection{FiveA}\label{../up}
+Text five a, see \ref{six}.
+\section{Six}\label{six}
+Text six, see \ref{../up}.
+\end{document}

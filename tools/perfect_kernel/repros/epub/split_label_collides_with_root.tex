@@ -8,7 +8,9 @@
 %   the same loss and duplicate, nav on the first entry
 % expect:  0 errors, 1 warning; every page its own file (Split's name-collision rule, OD #1164: the section is
 %   S1.xhtml), one manifest entry each, nav on the root
-% status:  GREEN (SPLITFIX: the root's pathname is issued first; guard split_nav_relations, the `index` row)
+%   The Warning names the pages relative to OPS/ (SPLITFIX: /tmp/.tmpXXXX/OPS/… paths).
+% status:  GREEN (SPLITFIX: the root's pathname is issued first; SPLITFIX2: the message's paths; guard
+%   split_nav_relations::split_label_names_stay_in_the_destination, the order table)
 % run:     latexml_oxide --split --splitnaming=label --dest=split_label_collides_with_root.epub split_label_collides_with_root.tex
 \documentclass{article}
 \begin{document}

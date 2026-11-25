@@ -153,16 +153,14 @@ impl Split {
     tree: &mut PageEntry,
     haschildren: &HashMap<String, bool>,
   ) {
-    for i in 0..tree.children.len() {
-      let (parent_name, parent_node) = (tree.name.clone(), tree.node.clone());
-      let child = &tree.children[i];
-      let child_localname = child.node.get_name();
-      let recursive = haschildren.get(&child_localname).copied().unwrap_or(false);
-      let name = self.get_page_name(doc, &child.node, &parent_node, &parent_name, recursive);
-      tree.children[i].name = name;
-    }
-    // Recurse into children
+    let (parent_name, parent_node) = (tree.name.clone(), tree.node.clone());
+    // Each page before its children, so on a collision the earlier page in document order keeps the name.
     for child in &mut tree.children {
+      let recursive = haschildren
+        .get(&child.node.get_name())
+        .copied()
+        .unwrap_or(false);
+      child.name = self.get_page_name(doc, &child.node, &parent_node, &parent_name, recursive);
       self.prename_pages(doc, child, haschildren);
     }
   }
@@ -478,14 +476,14 @@ impl PageNamer {
     // The first pathname refused, the key that named it, and why.
     let mut refused: Option<(String, String, Refusal)> = None;
     loop {
-      let pathname = self.pathname(attr, &name, parent, parent_path, ext, recursive);
+      let (pathname, climbs) = self.pathname(attr, &name, parent, parent_path, ext, recursive);
       let key = pathname::absolute(&pathname);
       let by = match page.key(attr) {
         "" => format!("'{name}'"),
         key if attr == "labels" => format!("label '{key}'"),
         key => format!("id '{key}'"),
       };
-      let refusal = if name.split('/').next() == Some("..")
+      let refusal = if climbs
         && pathname::is_contained(&pathname::directory(&key), &self.destination_directory).is_none()
       {
         Some(Refusal::Outside)
@@ -498,35 +496,51 @@ impl PageNamer {
         continue;
       }
       self.issued.insert(key, Some(by));
-      match refused {
-        Some((refused, by, Refusal::Outside)) => Error!(
-          "unexpected",
-          &refused,
-          "The page of {} ({}) must be within the destination directory ({}); it is written to {} instead",
-          by,
-          refused,
-          self.destination_directory,
-          pathname
-        ),
-        Some((refused, by, Refusal::Taken(owner))) => Warn!(
-          "unexpected",
-          &refused,
-          "The page of {} would overwrite {} ({}); it is written to {} instead",
-          by,
-          owner.map_or_else(
-            || "the document's own page".to_string(),
-            |owner| format!("the page of {owner}")
+      if let Some((refused, by, refusal)) = refused {
+        // Paths relative to the destination's directory, as its pages see them.
+        let shown = |path: &str| {
+          pathname::relative(
+            &pathname::absolute(path),
+            &pathname::absolute(&self.destination_directory),
+          )
+        };
+        let (refused, written) = (shown(&refused), shown(&pathname));
+        match refusal {
+          Refusal::Outside => Error!(
+            "unexpected",
+            &refused,
+            "The page of {} ({}) must be within the destination directory ({}); it is written to {} instead",
+            by,
+            refused,
+            // Perl's `$dir || '.'` (`Post.pm` L697).
+            if self.destination_directory.is_empty() {
+              "."
+            } else {
+              &self.destination_directory
+            },
+            written
           ),
-          refused,
-          pathname
-        ),
-        None => {},
+          Refusal::Taken(owner) => Warn!(
+            "unexpected",
+            &refused,
+            "The page of {} would overwrite {} ({}); it is written to {} instead",
+            by,
+            owner.map_or_else(
+              || "the document's own page".to_string(),
+              |owner| format!("the page of {owner}")
+            ),
+            refused,
+            written
+          ),
+        }
       }
       return pathname;
     }
   }
 
-  /// The pathname of a page named `name` by `attr` (`Split.pm` L176-191).
+  /// The pathname of a page named `name` by `attr` (`Split.pm` L176-191), and whether the name climbs out of its
+  /// parent's folder (a leading `..`). Such a pathname is resolved, lexically (`out/FOO1/../up.html` is
+  /// `out/up.html`): the page's links are made from it.
   fn pathname(
     &self,
     attr: &str,
@@ -535,7 +549,7 @@ impl PageNamer {
     parent_path: &str,
     ext: &str,
     recursive: bool,
-  ) -> String {
+  ) -> (String, bool) {
     let mut name = name.to_string();
     let as_dir = match self.naming {
       SplitNaming::IdRelative | SplitNaming::LabelRelative => {
@@ -546,8 +560,24 @@ impl PageNamer {
       },
       _ => false,
     };
-    page_pathname(parent_path, &colons_to_underscore(&name), ext, as_dir)
+    let pathname = page_pathname(parent_path, &colons_to_underscore(&name), ext, as_dir);
+    if name.split('/').next() == Some("..") {
+      (lexical_pathname(&pathname), true)
+    } else {
+      (pathname, false)
+    }
   }
+}
+
+/// `pathname` with its `.` and empty segments dropped and each `name/..` pair collapsed, as [`page_name_segments`],
+/// its leading separators kept: no `~` expansion and no link resolved.
+fn lexical_pathname(pathname: &str) -> String {
+  let rest = pathname.trim_start_matches(std::path::is_separator);
+  format!(
+    "{}{}",
+    &pathname[..pathname.len() - rest.len()],
+    page_name_segments(rest)
+  )
 }
 
 /// A label as a page name: its path segments as Perl's `pathname_canonical` leaves them (`Pathname.pm` L126-128) — no
@@ -766,5 +796,13 @@ mod page_name_tests {
     assert_eq!(strip_parent_name("sec:", "sec"), None);
     assert_eq!(strip_parent_name("x", ""), None);
     assert_eq!(colons_to_underscore("sec:::1:a"), "sec_1_a");
+    for (pathname, resolved) in [
+      ("out/FOO1/../up.html", "out/up.html"),
+      ("/w/out/a/../../b/index.html", "/w/b/index.html"),
+      ("~one/../up.html", "up.html"),
+      ("../x/../../y.html", "../../y.html"),
+    ] {
+      assert_eq!(lexical_pathname(pathname), resolved, "{pathname}");
+    }
   }
 }
