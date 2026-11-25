@@ -716,9 +716,13 @@ mod tests {
       return;
     }
     let mut store = SqliteStore::open(Some(&file), SCHEMA, 1);
+    // The close check holds the path with its folder resolved (macOS's `/var` is a link to `/private/var`).
+    let resolved = PathBuf::from(latexml_core::util::pathname::resolved_directory_of(
+      file.to_str().unwrap(),
+    ));
     assert_eq!(
       (store.file(), store.wal_check.0.as_deref()),
-      (Some(file.as_path()), Some(file.as_path()))
+      (Some(file.as_path()), Some(resolved.as_path()))
     );
     let mut told = Vec::new();
     store.immediate(|tx, fell_back| {
