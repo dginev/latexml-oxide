@@ -49,6 +49,9 @@ RESULTS_TSV=""  # set below after OUTPUT_DIR is finalized
 WORKERS="${WORKERS:-8}"
 TIMEOUT_S="${TIMEOUT_S:-120}"
 MAX_RAM_KB="${MAX_RAM_KB:-8388608}"   # 8 GB in KB (for ulimit -v, per-worker)
+# The worker's --max-rss-mb (its watchdog, cooperative memory fuse and streaming watermarks) mirrors the fleet's
+# harness child: cortex_worker's --child-mem-limit-mb default 5632 - 256 MiB (child_memory_limits in cortex_worker.rs).
+MAX_RSS_MB="${MAX_RSS_MB:-5376}"
 # Aggregate memory guard (2026-06-02): the per-worker `ulimit -v $MAX_RAM_KB`
 # bounds ONE worker but NOT the sum — a cluster of heavy papers under -j N can
 # collectively exhaust system RAM, at which point the system-wide OOM-killer can
@@ -262,7 +265,7 @@ if (( STAGE > 0 )); then
 fi
 echo "Workers:   $WORKERS"
 echo "Timeout:   ${TIMEOUT_S}s per task"
-echo "RAM limit: $((MAX_RAM_KB / 1048576)) GB per task"
+echo "RAM limit: $((MAX_RAM_KB / 1048576)) GB per task (ulimit -v), --max-rss-mb $MAX_RSS_MB"
 echo "Disk:      ${AVAIL_GB} GB available, ~${ESTIMATED_GB} GB estimated output"
 echo "Binary:    $WORKER_BIN"
 
@@ -436,7 +439,7 @@ convert_one() {
   TMPDIR="$task_tmp" timeout --kill-after=10 "$TIMEOUT_S" \
     bash -c "ulimit -v $MAX_RAM_KB 2>/dev/null; exec \"\$@\"" -- \
     "$WORKER_BIN" --standalone --input "$input_zip" --output "$output_tmp" \
-    --timeout "$TIMEOUT_S" \
+    --timeout "$TIMEOUT_S" --max-rss-mb "$MAX_RSS_MB" \
     --path "$REPO_ROOT/ar5iv-bindings/originals" \
     2>"$log_tmp" || exit_code=$?
 
@@ -537,7 +540,7 @@ convert_one() {
 }
 
 export -f convert_one
-export OUTPUT_DIR WORKER_BIN TIMEOUT_S MAX_RAM_KB MAX_OUTPUT_MB RESULTS_TSV RUN_RESULTS TELEMETRY_JSONL REPO_ROOT
+export OUTPUT_DIR WORKER_BIN TIMEOUT_S MAX_RAM_KB MAX_RSS_MB MAX_OUTPUT_MB RESULTS_TSV RUN_RESULTS TELEMETRY_JSONL REPO_ROOT
 
 # ─── Run ──────────────────────────────────────────────────────────────────────
 

@@ -119,10 +119,10 @@ recheck_one() {
     fi
   fi
 
-  # --- reconvert ---
+  # --- reconvert ---  (--max-rss-mb: the fleet child's, --child-mem-limit-mb 5632 - 256; cortex_worker.rs child_memory_limits)
   local rc=0
   timeout $((timeout_s + 60)) "$worker" --standalone --input "$src" --output "$out" \
-    --timeout "$timeout_s" >"$dir/stdout.txt" 2>"$dir/stderr.txt" || rc=$?
+    --timeout "$timeout_s" --max-rss-mb 5376 >"$dir/stdout.txt" 2>"$dir/stderr.txt" || rc=$?
   if [[ $rc -ne 0 && ! -s "$out" ]]; then
     printf '%s\t-\t%s\t-\t-\t%s\t-\t-\tTIMEOUT\n' "$id" "$want" "$base"; return
   fi

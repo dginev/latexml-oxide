@@ -103,8 +103,8 @@ required-features = ["cortex"]
 default = ["runtime-bindings"]
 # Enable building the cortex_worker binary (ZMQ-based CorTeX dispatcher client).
 # Off by default because pericortex pulls in zmq + zeromq-src (C library build),
-# rand, chrono, tempdir, walkdir — ~15 minutes of CI compile time we don't pay
-# for the core latexml_oxide / latexmlmath_oxide / latexmlpost_oxide binaries.
+# rand, chrono, tempdir, walkdir — ~15 minutes of CI compile time, paid by CI's
+# `cortex` job alone, not by the core latexml_oxide / latexmlmath_oxide / latexmlpost_oxide builds.
 cortex = ["dep:pericortex", "dep:hostname", "dep:zmq"]
 # Use jemalloc instead of mimalloc as the global allocator in `cortex_worker`.
 # jemalloc returns freed memory to the OS via background decay, keeping a

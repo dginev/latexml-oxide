@@ -153,7 +153,12 @@ struct Cli {
   /// `Watchdog` exits with code 137 if RSS exceeds this, giving a clean
   /// `Fatal:oom:rss` artifact instead of relying solely on the external
   /// `ulimit -v` (which the OS enforces by failing an allocation, harder to
-  /// attribute). Defaults to 6 GiB, matching the sandbox `ulimit -v`.
+  /// attribute). Defaults to 6 GiB; the fleet's harness children run at 5376 MiB
+  /// and `tools/benchmark_canvas.sh` passes the same, under its 8 GiB `ulimit -v`. The same
+  /// value is the cooperative memory fuse (a located `Fatal`, polled during
+  /// digestion) and sets the streaming watermarks, in every mode; a harness
+  /// sets its children's to `--child-mem-limit-mb` − 256 MiB, else the harness's
+  /// own `--max-rss-mb`.
   #[arg(long, default_value = "6144")]
   max_rss_mb: u64,
 
@@ -195,7 +200,7 @@ struct Cli {
   /// (5.5 GiB) — chosen for a **per-worker ~4 GB RSS ceiling**: this bounds
   /// address space (VSZ), and with mimalloc VSZ runs ~1–1.5 GiB above true RSS,
   /// so a 5632 MiB VSZ cap clears a ~4 GB-RSS job and trips at ~4 GB resident.
-  /// The derived soft RSS guard sits at 5376 MiB (`child_mem_limit_mb - 256`) and
+  /// The derived soft RSS guard and cooperative fuse sit at 5376 MiB (`child_mem_limit_mb - 256`) and
   /// the recycle threshold at 1408 MiB (25%). This cap contains a **single**
   /// runaway job; the fleet-wide `--mem-pressure-floor-mb` governor contains the
   /// **aggregate** (a cluster of concurrently-heavy jobs). A breach makes the
@@ -235,7 +240,8 @@ struct Cli {
   /// single — even aberrant — paper, then retires once it has consumed a quarter of it). This
   /// keeps the fleet's aggregate RSS clear of the mem-pressure governor floor on a full-corpus
   /// sweep (~125 GB vs ~188 GB at 50%), so the governor does not shed workers and produce
-  /// transient `never_completed_with_retries` Fatals. A standalone worker leaves it 0.
+  /// transient `never_completed_with_retries` Fatals; with `--child-mem-limit-mb 0`, to 25% of
+  /// `--max-rss-mb`. A worker started without `--harness` (standalone or pool) leaves it 0.
   #[arg(long, default_value = "0")]
   allocation_limit_mb: u64,
 }
@@ -258,6 +264,30 @@ struct ConversionProfile {
 }
 
 impl ConversionProfile {
+  /// The profile `--profile` names (clap admits only `ar5iv` and `generic`), with the command line's limits.
+  fn of(cli: &Cli) -> Self {
+    let new = if cli.profile == "generic" {
+      Self::generic
+    } else {
+      Self::ar5iv
+    };
+    new(
+      &cli.preload,
+      cli.timeout,
+      cli.max_rss_mb,
+      cli.no_pmml,
+      cli.no_mathtex,
+    )
+  }
+
+  /// Set this thread's cooperative memory fuse from `--max-rss-mb`, and with it the streaming watermarks
+  /// (`streaming_restart::restart_watermark`, `stomach::spill_watermark_bytes`), as the CLI does from `--max-memory`
+  /// (`stomach::apply_memory_ceiling`). The fuse is thread-local, so each conversion arms it on its own thread; without
+  /// this a standalone or pool worker kept the 4.5 GB library default whatever its flag said (row R CORTEXRSS).
+  fn arm_memory_fuse(&self) {
+    latexml_core::stomach::set_memory_cap(Some(rss_fuse_bytes(self.max_rss_kb / 1024)));
+  }
+
   fn ar5iv(
     extra_preloads: &[String],
     timeout: u64,
@@ -355,11 +385,15 @@ impl LatexmlWorker {
     //   2. Cooperative stomach::set_timeout gives a graceful Err(Fatal) for the common case where
     //      digestion polls check_timeout.
     // Watchdog cancels automatically on drop at end of this function.
-    let _watchdog =
-      latexml_core::watchdog::Watchdog::with_limits(self.profile.timeout, self.profile.max_rss_kb);
+    let _watchdog = latexml_core::watchdog::Watchdog::with_limits(
+      self.profile.timeout,
+      self.profile.max_rss_kb,
+      Some("--max-rss-mb"),
+    );
     if self.profile.timeout > 0 {
       latexml_core::stomach::set_timeout(self.profile.timeout);
     }
+    self.profile.arm_memory_fuse();
     #[cfg(debug_assertions)]
     inject_test_fault()?;
 
@@ -1873,6 +1907,47 @@ fn main() -> Result<(), Box<dyn Error>> {
     .map_err(|s| s.into())
 }
 
+/// The cooperative memory fuse (bytes; `0` = off) of a worker whose `--max-rss-mb` is `max_rss_mb`: the watchdog's
+/// ceiling itself, so the fuse's graceful Fatal precedes the watchdog's exit only by its denser polling. One value for
+/// the harness's `LATEXML_RSS_CAP_BYTES` and the worker's own conversions ([`ConversionProfile::arm_memory_fuse`]).
+fn rss_fuse_bytes(max_rss_mb: u64) -> u64 { max_rss_mb.saturating_mul(1024 * 1024) }
+
+/// A harness child's `--max-rss-mb` and `--allocation-limit-mb` (MiB), from the harness's command line.
+fn child_memory_limits(cli: &Cli) -> (u64, u64) {
+  // Soft RSS guard ~256 MiB under the hard cap (or the user's value if no hard
+  // cap), so the in-process watchdog fires an attributable Fatal before ENOMEM.
+  let child_max_rss_mb = if cli.child_mem_limit_mb > 0 {
+    cli.child_mem_limit_mb.saturating_sub(256)
+  } else {
+    cli.max_rss_mb
+  };
+
+  // Memory-based recycle threshold: 25% of the per-child ceiling (validated default). After a
+  // clean conversion, a worker whose RSS has passed this exits and is re-forked fresh, reclaiming
+  // the engine's never-reset interner/arena by process replacement (the common case of light
+  // papers never trips it). A fresh worker keeps the full ceiling for any single (even aberrant)
+  // paper, then retires once it has consumed a quarter of it. `--allocation-limit-mb` overrides;
+  // 0 disables.
+  //
+  // Why 25% (=1408 MiB at the default 5632 MiB ceiling; measured at the then 8 GiB one, =2048 MiB) and not
+  // 50%: a full-corpus 10k sweep at the
+  // CPU-optimal 72 workers (see docs/performance/CORTEX_WORKER_HARNESS.md) peaks ~125 GB aggregate RSS at 25%
+  // vs ~188 GB at 50% on a 247 GiB box — and the 50% peak drops MemAvailable below the
+  // mem-pressure governor's floor, triggering ~25 worker sheds whose re-leased tasks can exhaust
+  // their retry budget and surface as `cortex:never_completed_with_retries` Fatals. 25% recycles
+  // ~2× more often (cheap: fork + dump-load) but stays clear of the floor → 0 sheds, and is
+  // *faster* in the fleet because it avoids the shed/pressure stall. (Measured 2026-06-18.)
+  let child_alloc_limit_mb = if cli.allocation_limit_mb > 0 {
+    cli.allocation_limit_mb
+  } else if cli.child_mem_limit_mb > 0 {
+    cli.child_mem_limit_mb / 4
+  } else {
+    cli.max_rss_mb / 4
+  };
+
+  (child_max_rss_mb, child_alloc_limit_mb)
+}
+
 /// Run the process-supervising harness (`--harness`): keep a fleet of
 /// single-conversion (`--pool-size 1`) worker child processes alive, each
 /// capped at `--child-mem-limit-mb` of address space via `setrlimit(RLIMIT_AS)`
@@ -1914,36 +1989,7 @@ fn run_harness(cli: &Cli) -> Result<(), Box<dyn Error>> {
     None => total_ram_bytes().map(|total| mem_limit_bytes.unwrap_or(0).max(total / 10)),
   };
 
-  // Soft RSS guard ~256 MiB under the hard cap (or the user's value if no hard
-  // cap), so the in-process watchdog fires an attributable Fatal before ENOMEM.
-  let child_max_rss_mb = if cli.child_mem_limit_mb > 0 {
-    cli.child_mem_limit_mb.saturating_sub(256)
-  } else {
-    cli.max_rss_mb
-  };
-
-  // Memory-based recycle threshold: 25% of the per-child ceiling (validated default). After a
-  // clean conversion, a worker whose RSS has passed this exits and is re-forked fresh, reclaiming
-  // the engine's never-reset interner/arena by process replacement (the common case of light
-  // papers never trips it). A fresh worker keeps the full ceiling for any single (even aberrant)
-  // paper, then retires once it has consumed a quarter of it. `--allocation-limit-mb` overrides;
-  // 0 disables.
-  //
-  // Why 25% (=1408 MiB at the default 5632 MiB ceiling; measured at the then 8 GiB one, =2048 MiB) and not
-  // 50%: a full-corpus 10k sweep at the
-  // CPU-optimal 72 workers (see docs/performance/CORTEX_WORKER_HARNESS.md) peaks ~125 GB aggregate RSS at 25%
-  // vs ~188 GB at 50% on a 247 GiB box — and the 50% peak drops MemAvailable below the
-  // mem-pressure governor's floor, triggering ~25 worker sheds whose re-leased tasks can exhaust
-  // their retry budget and surface as `cortex:never_completed_with_retries` Fatals. 25% recycles
-  // ~2× more often (cheap: fork + dump-load) but stays clear of the floor → 0 sheds, and is
-  // *faster* in the fleet because it avoids the shed/pressure stall. (Measured 2026-06-18.)
-  let child_alloc_limit_mb = if cli.allocation_limit_mb > 0 {
-    cli.allocation_limit_mb
-  } else if cli.child_mem_limit_mb > 0 {
-    cli.child_mem_limit_mb / 4
-  } else {
-    cli.max_rss_mb / 4
-  };
+  let (child_max_rss_mb, child_alloc_limit_mb) = child_memory_limits(cli);
 
   let exe = std::env::current_exe()?;
   let governor = match mem_pressure_floor_bytes {
@@ -2096,11 +2142,13 @@ fn run_harness(cli: &Cli) -> Result<(), Box<dyn Error>> {
     // producing a false `Fatal:Timeout:MemoryBudget RSS … > cap` cascade (observed
     // 2026-06-17). Raise it to the polled `--max-rss-mb` watchdog value so the
     // cooperative fuse fires only for a genuine single-paper runaway (just before
-    // the watchdog), and the fleet governor handles aggregate pressure.
+    // the watchdog), and the fleet governor handles aggregate pressure. The child's
+    // conversions set the same value from the `--max-rss-mb` forwarded below
+    // (`ConversionProfile::arm_memory_fuse`); this covers any thread that does not.
     if child_max_rss_mb > 0 {
       cmd.env(
         "LATEXML_RSS_CAP_BYTES",
-        child_max_rss_mb.saturating_mul(1024 * 1024).to_string(),
+        rss_fuse_bytes(child_max_rss_mb).to_string(),
       );
     }
     cmd
@@ -2218,24 +2266,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     return run_harness(&cli);
   }
 
-  // clap admits only `ar5iv` and `generic`.
-  let profile = if cli.profile == "generic" {
-    ConversionProfile::generic(
-      &cli.preload,
-      cli.timeout,
-      cli.max_rss_mb,
-      cli.no_pmml,
-      cli.no_mathtex,
-    )
-  } else {
-    ConversionProfile::ar5iv(
-      &cli.preload,
-      cli.timeout,
-      cli.max_rss_mb,
-      cli.no_pmml,
-      cli.no_mathtex,
-    )
-  };
+  let profile = ConversionProfile::of(&cli);
 
   let hostname = hostname::get()
     .unwrap_or_else(|_| OsString::from("localhost"))
@@ -2365,24 +2396,136 @@ fn real_main() -> Result<(), Box<dyn Error>> {
 
 #[cfg(test)]
 mod cli_tests {
-  use clap::Parser;
+  use clap::{CommandFactory, Parser};
+  use latexml::streaming_restart::restart_watermark;
+  use latexml_core::stomach::{resolve_rss_cap, set_memory_cap, spill_watermark_bytes};
 
-  use super::Cli;
+  use super::{Cli, ConversionProfile, child_memory_limits, rss_fuse_bytes};
+
+  const MIB: u64 = 1024 * 1024;
+
+  fn parse(args: &[&str]) -> Cli {
+    Cli::try_parse_from(std::iter::once("cortex_worker").chain(args.iter().copied())).unwrap()
+  }
+
+  /// What a conversion thread of the worker `args` starts its paper with: the fuse, the streaming-restart watermark
+  /// and the spill watermark (bytes), armed as `convert_archive` arms them.
+  fn armed(args: &[&str]) -> (Option<u64>, Option<u64>, Option<u64>) {
+    ConversionProfile::of(&parse(args)).arm_memory_fuse();
+    let armed = (
+      resolve_rss_cap(),
+      restart_watermark(),
+      spill_watermark_bytes(),
+    );
+    set_memory_cap(None);
+    armed
+  }
+
+  /// `--max-rss-mb` is the worker's one memory knob in every mode (row R CORTEXRSS): the cooperative fuse is its
+  /// value, the restart watermark nine tenths of it and the spill watermark a third. A standalone or pool worker kept
+  /// the 4.5 GB library default whatever its flag said; a harness child resolves the value the harness's
+  /// `LATEXML_RSS_CAP_BYTES` gave it before (`--child-mem-limit-mb` − 256 MiB, else `--max-rss-mb`).
+  #[test]
+  fn max_rss_mb_sets_the_fuse_and_the_watermarks_in_every_worker_mode() {
+    let limits = |mib: u64| {
+      let fuse = mib * MIB;
+      (Some(fuse), Some(fuse * 9 / 10), Some(fuse / 3))
+    };
+    // Standalone: the flag, and its 6144 MiB default.
+    assert_eq!(
+      armed(&["--standalone", "--input", "a.zip", "--max-rss-mb", "2048"]),
+      limits(2048)
+    );
+    assert_eq!(armed(&["--standalone", "--input", "a.zip"]), limits(6144));
+    // `0` turns the fuse and the restart watermark off, as it does the watchdog.
+    let off = armed(&["--standalone", "--input", "a.zip", "--max-rss-mb", "0"]);
+    assert_eq!((off.0, off.1), (None, None));
+    // A pool: the fuse is thread-local, so each conversion thread arms its own.
+    let pool = ["--pool-size", "4", "--max-rss-mb", "3000"];
+    std::thread::scope(|scope| {
+      let threads: Vec<_> = (0..2).map(|_| scope.spawn(|| armed(&pool))).collect();
+      for thread in threads {
+        assert_eq!(thread.join().unwrap(), limits(3000));
+      }
+    });
+    // A harness child: the fuse the harness's environment set (literal: the values before this row), now also from
+    // the `--max-rss-mb` the harness forwards.
+    for (harness, child_mib) in [
+      (&["--harness"][..], 5376),
+      (&["--harness", "--child-mem-limit-mb", "4096"], 3840),
+      (
+        &[
+          "--harness",
+          "--child-mem-limit-mb",
+          "0",
+          "--max-rss-mb",
+          "7000",
+        ],
+        7000,
+      ),
+    ] {
+      let (child_max_rss_mb, _) = child_memory_limits(&parse(harness));
+      assert_eq!(child_max_rss_mb, child_mib, "{harness:?}");
+      assert_eq!(
+        rss_fuse_bytes(child_max_rss_mb),
+        child_mib * MIB,
+        "{harness:?}: env"
+      );
+      let child = child_max_rss_mb.to_string();
+      assert_eq!(
+        armed(&["--pool-size", "1", "--max-rss-mb", &child]),
+        limits(child_mib),
+        "{harness:?}"
+      );
+    }
+  }
+
+  /// The memory flags' help states what the code derives: the fuse rides `--max-rss-mb`, and the recycle threshold
+  /// is a quarter of `--child-mem-limit-mb` (1408 MiB at its default), else of `--max-rss-mb`.
+  #[test]
+  fn the_memory_flags_help_states_the_derived_limits() {
+    let help = Cli::command().render_long_help().to_string();
+    // An option's help: its header line, up to the next option's (indented at most six columns).
+    let section = |flag: &str| {
+      let header = format!("--{flag} <");
+      let mut lines = help.lines().skip_while(|line| !line.contains(&header));
+      let first = lines.next().unwrap();
+      std::iter::once(first)
+        .chain(lines.take_while(|line| {
+          let text = line.trim_start();
+          !(text.starts_with('-') && line.len() - text.len() <= 6)
+        }))
+        .collect::<Vec<_>>()
+        .join(" ")
+    };
+    let (_, recycle_mib) = child_memory_limits(&parse(&["--harness"]));
+    assert_eq!(recycle_mib, 1408);
+    let allocation = section("allocation-limit-mb");
+    for text in [
+      "25% of `--child-mem-limit-mb`",
+      "1408 MiB",
+      "`--max-rss-mb`",
+    ] {
+      assert!(allocation.contains(text), "{text}:\n{allocation}");
+    }
+    let max_rss = section("max-rss-mb");
+    assert!(max_rss.contains("cooperative memory fuse"), "{max_rss}");
+  }
 
   /// `--input`/`--output` need `--standalone`: without it the worker would ignore them and lease tasks from the
   /// dispatcher on localhost. A profile is `ar5iv` or `generic`, never a silent fallback.
   #[test]
   fn standalone_files_and_the_profile_are_checked() {
-    let parse = |args: &[&str]| {
+    let try_parse = |args: &[&str]| {
       Cli::try_parse_from(std::iter::once("cortex_worker").chain(args.iter().copied()))
     };
     for args in [&["--input", "a.zip"][..], &["--output", "b.zip"], &[
       "--profile",
       "bogus",
     ]] {
-      assert!(parse(args).is_err(), "{args:?}");
+      assert!(try_parse(args).is_err(), "{args:?}");
     }
-    let cli = parse(&[
+    let cli = try_parse(&[
       "--standalone",
       "--input",
       "a.zip",

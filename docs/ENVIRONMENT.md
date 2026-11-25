@@ -100,7 +100,7 @@ tools (kpsewhich, ImageMagick, Ghostscript, mutool, pdftocairo, texlua).
 
 | Variable | Values | Default | Effect |
 |---|---|---|---|
-| `LATEXML_RSS_CAP_BYTES` | bytes; `0` = off | 4,500,000,000 | The cooperative memory fuse (a graceful Fatal). The `latexml_oxide` binary sets its own from `--max-memory` and ignores this. |
+| `LATEXML_RSS_CAP_BYTES` | bytes; `0` = off | 4,500,000,000 | The cooperative memory fuse (a graceful Fatal). The `latexml_oxide` binary sets its own from `--max-memory`, `cortex_worker` from `--max-rss-mb`; both ignore this. |
 | `LATEXML_NO_DEFAULT_PUSHBACK_LIMIT` | presence | a 5,000,000-token cap | Remove the pushback cap. |
 | `LATEXML_STACK_RED_ZONE_BYTES` | bytes | 262,144 | Remaining stack below which a new stack segment is allocated. |
 | `LATEXML_STACK_SEGMENT_BYTES` | bytes | 8,388,608 | The size of each new stack segment. |
@@ -130,7 +130,7 @@ document their variables in their headers.
 | `TMPDIR`, `MAGICK_TEMPORARY_PATH`, `MAGICK_TMPDIR` | a fresh directory per worker slot | Scratch space emptied between spawns. |
 | `MALLOC_ARENA_MAX`, `MIMALLOC_ARENA_RESERVE` | `2`, `128MiB` | The children run under an address-space limit (`--child-mem-limit-mb`); see "Under an address-space limit". |
 | `MALLOC_CONF`, `_RJEM_MALLOC_CONF` | `background_thread:true,dirty_decay_ms:500,muzzy_decay_ms:0` | Prompt return of freed memory in jemalloc builds. |
-| `LATEXML_RSS_CAP_BYTES` | `--child-mem-limit-mb` − 256 MiB, else (`--child-mem-limit-mb=0`) `--max-rss-mb` | The per-child memory fuse. |
+| `LATEXML_RSS_CAP_BYTES` | `--child-mem-limit-mb` − 256 MiB, else (`--child-mem-limit-mb=0`) `--max-rss-mb` | The per-child memory fuse: the child's `--max-rss-mb`, which its conversions set it from. |
 
 These replace any value of the same name in the worker's own environment. The worker loads no runtime `.rhai`
 binding in any build, nor do the children it spawns (each re-executes its `main`). The worker itself reads:
