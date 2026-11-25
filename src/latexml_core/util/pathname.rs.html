@@ -1304,7 +1304,7 @@
 <a href=#1304 id=1304 data-nosnippet>1304</a>
 <a href=#1305 id=1305 data-nosnippet>1305</a><span class="doccomment">/// `pathname`'s directory [`resolved`], its last component kept as written: a file that is itself a symbolic link
 <a href=#1306 id=1306 data-nosnippet>1306</a>/// keeps its own name, as a copy over it replaces the link and never writes through it.
-<a href=#1307 id=1307 data-nosnippet>1307</a></span><span class="kw">fn </span>resolved_directory_of(pathname: <span class="kw-2">&amp;</span>str) -&gt; String {
+<a href=#1307 id=1307 data-nosnippet>1307</a></span><span class="kw">pub fn </span>resolved_directory_of(pathname: <span class="kw-2">&amp;</span>str) -&gt; String {
 <a href=#1308 id=1308 data-nosnippet>1308</a>  <span class="kw">let </span>abs = PathBuf::from(absolute(pathname));
 <a href=#1309 id=1309 data-nosnippet>1309</a>  <span class="kw">match </span>(abs.parent(), abs.file_name()) {
 <a href=#1310 id=1310 data-nosnippet>1310</a>    (<span class="prelude-val">Some</span>(parent), <span class="prelude-val">Some</span>(name)) =&gt; {
