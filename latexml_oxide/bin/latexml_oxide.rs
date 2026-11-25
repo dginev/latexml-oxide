@@ -969,31 +969,12 @@ fn real_main() -> Result<(), Box<dyn Error>> {
       .exit(),
   };
 
-  // CRITICAL: must be set BEFORE `prepare_session`. `tex.rs` /
-  // `latex.rs`'s LoadFormat split (plain_bootstrap → plain_dump|base
-  // → plain_constructs and the latex equivalent) reads
-  // `LATEXML_INI_MODE` to decide whether to fully load the format
-  // or stop after the bootstrap pool. If it's not set yet,
-  // `prepare_session` pre-loads `plain_base` / `latex_base`, which
-  // pollutes the snapshot taken later in `ini_tex::dump_format` and
-  // silences the diff for everything raw plain.tex / latex.ltx defines
-  // (the `\countdef\allocationnumber=21` → `Stored::Register{...}`
-  // problem from 2026-04-26).
-  //
-  // It must also be set before the kpathsea-prewarm thread below exists. Set
-  // after it, glibc's `setenv` reallocates `environ` while that thread's
-  // `kpathsea_init_format` walks it in `getenv`: `--init` segfaulted in
-  // `getenv("TEXMF_kpsewhich")` in ~3.5% of runs (7/200, Linux aarch64,
-  // TL2023), failing `tools/make_formats.sh` and `dump_gate_init`. The same
-  // use-after-free as the `init_kpathsea` ordering below.
+  // Before `prepare_session`: `tex.rs`/`latex.rs`'s LoadFormat split stops after the bootstrap pool in `--init`, as
+  // pre-loading `plain_base`/`latex_base` would pollute `ini_tex::dump_format`'s snapshot (the
+  // `\countdef\allocationnumber=21` problem of 2026-04-26). An in-process flag, not `LATEXML_INI_MODE` in the
+  // environment: a `setenv` beside the prewarm thread's `getenv` segfaulted `--init` (7/200 runs, PR 812; issue #937).
   if cli.init.is_some() {
-    // SAFETY: no other thread reads the environment yet: the only other
-    // thread, `main`, is blocked joining this one, and the prewarm thread is
-    // spawned below. `prepare_session` and `ini_tex::dump_format` read the var
-    // but never mutate the environment.
-    unsafe {
-      std::env::set_var("LATEXML_INI_MODE", "1");
-    }
+    latexml_engine::dump_paths::set_ini_mode();
   }
 
   // Kick off kpathsea pre-init in a background thread. Force-runs
@@ -2143,7 +2124,7 @@ fn write_telemetry_record(
   telemetry::set_category(category);
   telemetry::set_exit_code(exit_code);
   telemetry::set_max_rss_kb(read_max_rss_kb());
-  let (cu, cs) = read_child_rusage_us();
+  let (cu, cs) = latexml_core::watchdog::children_cpu_time_us();
   telemetry::set_child_rusage_us(cu, cs);
 
   let record = telemetry::take();
@@ -2180,27 +2161,6 @@ fn read_max_rss_kb() -> u64 {
     })
     .unwrap_or(0)
 }
-
-/// Read accumulated child user/sys CPU time in microseconds via getrusage(2).
-/// Returns (0, 0) on failure or non-unix.
-#[cfg(unix)]
-fn read_child_rusage_us() -> (u64, u64) {
-  // SAFETY: getrusage(RUSAGE_CHILDREN, &ru) is async-signal-safe and
-  // populates the struct unconditionally on success.
-  unsafe {
-    let mut ru: libc::rusage = std::mem::zeroed();
-    if libc::getrusage(libc::RUSAGE_CHILDREN, &mut ru) == 0 {
-      let user = (ru.ru_utime.tv_sec as u64) * 1_000_000 + (ru.ru_utime.tv_usec as u64);
-      let sys = (ru.ru_stime.tv_sec as u64) * 1_000_000 + (ru.ru_stime.tv_usec as u64);
-      (user, sys)
-    } else {
-      (0, 0)
-    }
-  }
-}
-
-#[cfg(not(unix))]
-fn read_child_rusage_us() -> (u64, u64) { (0, 0) }
 
 use latexml::post::PostOptions;
 

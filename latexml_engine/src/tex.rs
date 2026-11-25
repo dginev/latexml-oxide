@@ -3,7 +3,6 @@ use std::sync::LazyLock;
 use crate::prelude::*;
 
 // Process-once cached env vars (see WISDOM #56 — getenv hot-path race).
-static INI_MODE: LazyLock<bool> = LazyLock::new(|| std::env::var_os("LATEXML_INI_MODE").is_some());
 static NODUMP: LazyLock<bool> = LazyLock::new(|| std::env::var_os("LATEXML_NODUMP").is_some());
 
 /// Perl: DefAutoload — define a macro that auto-loads a package on first use.
@@ -456,11 +455,11 @@ LoadDefinitions!({
   // plain_constructs would pollute the snapshot and silence the diff for
   // every register/macro plain.tex defines (e.g. `\countdef\allocationnumber=21`
   // → `Stored::Register{address:"\count21"}` then identical to itself).
-  // `LATEXML_INI_MODE=1` is set by `bin/latexml_oxide.rs` BEFORE
+  // `bin/latexml_oxide.rs` calls `dump_paths::set_ini_mode()` BEFORE
   // `prepare_session`, so this branch fires before tex.rs runs in init mode.
   // Mirrors Perl `Core.pm::iniTeX` default `mode='Base'`, which loads only
   // `Base.pool` (no LoadFormat) before `DumpFile`.
-  if !*INI_MODE && !crate::dump_paths::building_format() {
+  if !crate::dump_paths::ini_mode() && !crate::dump_paths::building_format() {
     // Perl `LoadFormat('plain')` strict split (mirrors latex.rs):
     //   if dump available: bootstrap → dump → constructs (NO base)
     //   else:              bootstrap → base → constructs (NO dump)

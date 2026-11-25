@@ -17,7 +17,6 @@ static DUMP_PATH: LazyLock<Option<String>> =
   LazyLock::new(|| std::env::var("LATEXML_DUMP_PATH").ok());
 static DUMP_DIR: LazyLock<Option<String>> =
   LazyLock::new(|| std::env::var("LATEXML_DUMP_DIR").ok());
-static INI_MODE: LazyLock<bool> = LazyLock::new(|| std::env::var_os("LATEXML_INI_MODE").is_some());
 static NODUMP: LazyLock<bool> = LazyLock::new(|| std::env::var_os("LATEXML_NODUMP").is_some());
 
 const DEV_DUMPS_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../resources/dumps");
@@ -96,9 +95,9 @@ LoadDefinitions!({
   // The same reasoning as in `tex.rs`'s plain branch: pre-loading
   // latex_dump / latex_base / latex_constructs pollutes the snapshot
   // and silences the diff for everything raw latex.ltx defines.
-  // `LATEXML_INI_MODE=1` is set by `bin/latexml_oxide.rs` BEFORE
+  // `bin/latexml_oxide.rs` calls `dump_paths::set_ini_mode()` BEFORE
   // `prepare_session`, so this branch fires before latex.rs runs.
-  if *INI_MODE || crate::dump_paths::building_format() {
+  if crate::dump_paths::ini_mode() || crate::dump_paths::building_format() {
     return Ok(());
   }
 

@@ -146,14 +146,34 @@ pub fn process_peak_rss_kb() -> Option<u64> {
 /// macOS: `getrusage(RUSAGE_SELF)`; `ru_maxrss` is in BYTES on Darwin.
 #[cfg(target_os = "macos")]
 pub fn process_peak_rss_kb() -> Option<u64> {
-  let mut usage: libc::rusage = unsafe { std::mem::zeroed() };
-  // SAFETY: getrusage fills the zeroed struct we own; a nonzero return is
-  // handled below.
-  if unsafe { libc::getrusage(libc::RUSAGE_SELF, &mut usage) } == 0 {
-    return Some(usage.ru_maxrss as u64 / 1024);
-  }
-  None
+  rusage(libc::RUSAGE_SELF).map(|usage| usage.ru_maxrss as u64 / 1024)
 }
+
+/// `getrusage(who)`, `None` when it fails. The one call site of `getrusage(2)`, which neither `std` nor `rustix`
+/// wraps (issue #937).
+#[cfg(unix)]
+fn rusage(who: libc::c_int) -> Option<libc::rusage> {
+  // SAFETY: a zeroed `rusage` is a valid value; getrusage writes only into the struct we own, read after success.
+  unsafe {
+    let mut usage: libc::rusage = std::mem::zeroed();
+    (libc::getrusage(who, &mut usage) == 0).then_some(usage)
+  }
+}
+
+/// The user and system CPU time of this process's waited-for children (`RUSAGE_CHILDREN`), in microseconds;
+/// `(0, 0)` when it cannot be read.
+#[cfg(unix)]
+pub fn children_cpu_time_us() -> (u64, u64) {
+  rusage(libc::RUSAGE_CHILDREN).map_or((0, 0), |ru| {
+    let user = (ru.ru_utime.tv_sec as u64) * 1_000_000 + (ru.ru_utime.tv_usec as u64);
+    let sys = (ru.ru_stime.tv_sec as u64) * 1_000_000 + (ru.ru_stime.tv_usec as u64);
+    (user, sys)
+  })
+}
+
+/// Other platforms: no children's CPU time.
+#[cfg(not(unix))]
+pub fn children_cpu_time_us() -> (u64, u64) { (0, 0) }
 
 /// Windows: `PeakWorkingSetSize` from the same `GetProcessMemoryInfo` call that
 /// backs [`process_rss_kb`].
@@ -806,7 +826,7 @@ pub fn enter_alloc_failure_hook() {
 /// running render reads: a render worker's SIGSEGV with ip == fault address in freed heap, on Nasser's
 /// 2,400-problem slice under concurrent load, issue #777, not reproduced). What
 /// must land is written first, unbuffered: the stderr line ([`write_stderr_unlocked`]), the log
-/// mirror (a raw descriptor), a pre-exit hook's file. Only a partial line still in stdout's
+/// mirror (an unbuffered `write(2)`), a pre-exit hook's file. Only a partial line still in stdout's
 /// line buffer is lost.
 pub fn exit_now(code: i32) -> ! {
   #[cfg(unix)]
@@ -847,10 +867,7 @@ pub fn write_stderr_unlocked(args: std::fmt::Arguments) {
     crate::util::logger::set_stderr_at_line_start(line.bytes[line.len - 1] == b'\n');
   }
   #[cfg(unix)]
-  // SAFETY: a write of `len` initialized bytes from a stack buffer to the standard error descriptor.
-  unsafe {
-    libc::write(2, line.bytes.as_ptr().cast(), line.len);
-  }
+  let _ = rustix::io::write(rustix::stdio::stderr(), &line.bytes[..line.len]);
   #[cfg(not(unix))]
   {
     use std::io::Write;

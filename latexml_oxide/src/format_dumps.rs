@@ -177,8 +177,7 @@ pub fn ensure_format_dumps() {
 }
 
 fn ensure() -> Result<(), String> {
-  if std::env::var_os("LATEXML_NODUMP").is_some() || std::env::var_os("LATEXML_INI_MODE").is_some()
-  {
+  if std::env::var_os("LATEXML_NODUMP").is_some() || dump_paths::ini_mode() {
     return Ok(());
   }
   let kinds: Vec<&'static str> = ["plain", "latex"]

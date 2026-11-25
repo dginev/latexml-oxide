@@ -21,9 +21,7 @@ cd "${LINT_ROOT:-$(dirname "$0")/..}"
 # file|VARIABLE|why it is sound
 ALLOW=(
   "latexml_core/src/util/pathname.rs|TEXMFROOT|select_kpaths, forced by init_kpathsea() on the converting thread before the kpathsea-prewarm spawn (both binaries)"
-  "latexml_oxide/bin/latexml_oxide.rs|LATEXML_INI_MODE|--init, set before init_kpathsea() and the kpathsea-prewarm spawn"
   "latexml_oxide/src/util/test.rs|LATEXML_RSS_CAP_BYTES|test-utils: under a Once at the top of each generated test, before any conversion"
-  "latexml_oxide/src/identity.rs|SOURCE_DATE_EPOCH|a #[test]"
   "latexml_post/src/graphics_cache.rs|LATEXML_GRAPHICS_CACHE_DIR|#[cfg(test)], under the binary-wide env_lock"
   "latexml_post/src/test_env.rs|*|#[cfg(test)] EnvGuard, under the binary-wide env_lock"
   "latexml_contrib/src/script_bindings/tests.rs|LATEXML_DISABLE_SHELL_ESCAPE|#[cfg(test)]"

@@ -2637,8 +2637,8 @@ all learned the hard way elsewhere in this port:
    pop that takes the format away while `LaTeX.pool_loaded` survives is the
    silent-infinite-loop shape of witness 2606.21610.
 
-And it must be inert where undefined CSes are *expected*: `LATEXML_INI_MODE`
-(dump-build — otherwise a previous run's dump leaks into the next one) and
+And it must be inert where undefined CSes are *expected*: `dump_paths::ini_mode()`
+(`--init`, dump-build — otherwise a previous run's dump leaks into the next one) and
 `SUPPRESS_UNDEFINED_ERRORS` (bulk raw loads with forward references).
 See `latexml_engine/src/latex_kernel.rs`; the defect it fixes is
 `KNOWN_PERL_ERRORS.md` #64.

@@ -624,7 +624,7 @@ impl LatexmlWorker {
       telemetry::set_exit_code(status_code as i32);
       telemetry::set_output_bytes(html.len() as u64);
       telemetry::set_max_rss_kb(read_max_rss_kb_proc());
-      let (cu, cs) = read_child_rusage_us_proc();
+      let (cu, cs) = latexml_core::watchdog::children_cpu_time_us();
       telemetry::set_child_rusage_us(cu, cs);
       // Snapshot Error!/Warn!/Fatal! counts from common::error::REPORT
       // (the canonical counter populated by note_status). Without this
@@ -805,27 +805,6 @@ fn read_max_rss_kb_proc() -> u64 {
     })
     .unwrap_or(0)
 }
-
-/// Read accumulated child user/sys CPU time in microseconds via getrusage(2).
-#[cfg(unix)]
-fn read_child_rusage_us_proc() -> (u64, u64) {
-  // SAFETY: `ru` points to a valid, zeroed `libc::rusage`; getrusage(2) only
-  // writes through it on success, and the `tv_sec`/`tv_usec` fields are read
-  // only after the `== 0` success check.
-  unsafe {
-    let mut ru: libc::rusage = std::mem::zeroed();
-    if libc::getrusage(libc::RUSAGE_CHILDREN, &mut ru) == 0 {
-      let user = (ru.ru_utime.tv_sec as u64) * 1_000_000 + (ru.ru_utime.tv_usec as u64);
-      let sys = (ru.ru_stime.tv_sec as u64) * 1_000_000 + (ru.ru_stime.tv_usec as u64);
-      (user, sys)
-    } else {
-      (0, 0)
-    }
-  }
-}
-
-#[cfg(not(unix))]
-fn read_child_rusage_us_proc() -> (u64, u64) { (0, 0) }
 
 /// Maximum number of *consecutive* caught panics before the worker process
 /// recycles (a clean exit, after returning the paper's Fatal result) for a fresh

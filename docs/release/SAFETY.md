@@ -80,14 +80,32 @@ see that section below.
 
 ## `unsafe` budget
 
-Reconciled **2026-11-25**: the workspace contains **77 `unsafe {}` blocks +
-0 `unsafe impl Send/Sync` + 0 `unsafe fn` = 77 non-comment sites**, plus 3 the ratchet also counts (it counts every
+Reconciled **2026-11-25** (issue #937 Phases 1 and 3): the workspace contains **66 `unsafe {}` blocks +
+0 `unsafe impl Send/Sync` + 0 `unsafe fn` = 66 non-comment sites**, plus 3 the ratchet also counts (it counts every
 `unsafe` keyword in code): two `unsafe extern "C"` blocks (`latexml_post/src/xslt.rs`,
-`latexml_oxide/src/util/test.rs`) and one `#[unsafe(link_section)]` (`util/test.rs`) — **80 in all** (54 `unsafe {}`
-outside test suites — including 3 `test-utils`-gated sites in
-`latexml_oxide/src/util/test.rs` — plus 23 test-only `unsafe {}` sites in
-`latexml_oxide/tests/`, `latexml_post/src/test_env.rs`, and
-`latexml_contrib/src/script_bindings/tests.rs`).
+`latexml_oxide/src/util/test.rs`) and one `#[unsafe(link_section)]` (`util/test.rs`) — **69 in all**: 38 in shipped
+code, 5 in the `test-utils`-gated `latexml_oxide/src/util/test.rs`, and 26 test-only (`latexml_oxide/tests/`,
+`latexml_post/src/test_env.rs`, `latexml_contrib/src/script_bindings/tests.rs`, the `#[cfg(test)]` code of
+`graphics_cache.rs`, `xslt.rs` and `runtime_bindings_reentrancy_model.rs`).
+
+The 38 shipped sites, each with its contract (a `// SAFETY:` comment at the site says it in context):
+
+| File | Sites | What | Contract / why no safe API | Phase |
+|---|---|---|---|---|
+| `latexml_core/src/watchdog.rs` | 1 | `getrusage` (`rusage`, for `children_cpu_time_us` and macOS's peak RSS) | writes only into a zeroed `rusage` it owns, read after success; neither `std` nor `rustix` 1.1 wraps it | stays |
+| | 1 | `sysconf(_SC_PHYS_PAGES)` (`total_memory_bytes`) | a pointer-free query, a negative return mapped to `None`; `rustix::system::sysinfo` is Linux-only, so macOS would keep the call | stays |
+| | 1 | `_exit` (`exit_now`) | takes no pointers, never returns; `std` has no exit that skips the atexit handlers and destructors | 6 |
+| | 6 | macOS `proc_pidinfo`, `host_statistics64` (with their zeroed structs) | fill at most the size passed into a zeroed struct we own | 6 |
+| | 7 | Windows `K32GetProcessMemoryInfo` ×2, `GlobalMemoryStatusEx` ×2 (with their zeroed structs), `GetDiskFreeSpaceExW` | a correctly sized struct with its size field set; a NUL-terminated path that outlives the call | 6 |
+| `latexml_core/src/util/pathname.rs` | 1 | `set_var("TEXMFROOT")` in `select_kpaths` | category D | stays |
+| `latexml_core/src/common/arena.rs` | 1 | `resolve_unchecked` | category B | perf |
+| `latexml_oxide/bin/cortex_worker/exit_report.rs` | 2 | `sigaction` installation; the handler's chain call, `signal`, `raise` | async-signal-safe; the handler table is written once at start-up | 6 |
+| `latexml_oxide/bin/cortex_worker.rs` | 3 | `mmap(PROT_NONE)`, `std::alloc::alloc`, `raise(SIGSEGV)` | debug-assertion builds only (the harness tests' fault injection); `rustix::mm::mmap_anonymous` is itself `unsafe`, `raise` is thread-directed (`tgkill`), which `rustix` 1.1 lacks | stays |
+| `latexml_oxide/src/{core_interface,heap_trim,post,streaming_restart}.rs` | 7 | `mallinfo2` ×4, `malloc_trim`, `mi_collect` ×2 | allocator queries and trims; live allocations stay valid | 2 |
+| `latexml_oxide/src/lsp_server/unix.rs` | 1 | `fork` | category G | stays |
+| `latexml_post/src/graphics.rs` | 1 | `pre_exec(setsid, setpgid, prctl(PR_SET_PDEATHSIG), getppid, _exit)` | category E | stays |
+| `latexml_post/src/xslt.rs` | 2 | `xsltMaxDepth`: its `extern` declaration and the `Once`-guarded write | category F | 4 |
+| `latexml_contrib/src/script_bindings/{engine,mod}.rs` | 4 | whatsit / document / properties pointers | category H | 6 |
 
 **The count may only fall** (issue #937 Phase 0): `unsafe_sites_ratchet::unsafe_sites_only_fall`
 (`latexml_oxide/tests/cluster_package_guards/unsafe_sites_ratchet.rs`, run by CI's workspace nextest) pins the sites
@@ -96,6 +114,16 @@ removes sites lowers its file's pin (the failure prints the table to paste); one
 raising a pin is an exception its commit argues.
 
 Major changes since the 2026-07-20 reconciliation (55 sites):
+- **2026-11-25 (issue #937 Phases 1 and 3, the rest), 77 → 66 blocks (80 → 69 counting every `unsafe` keyword), no
+  behaviour change:** `logger.rs` 2 → 0 (the log mirror is a `&'static File`, cortex_worker's claim's, behind a
+  lock-free on/off flag: `rustix::fs::ftruncate` and `rustix::io::write`, EINTR retried as before). `exit_report.rs`
+  4 → 2 (`rustix::process::getpid`; the `cause` line is a `rustix::io::write` to the claim's `File`, reached by
+  `OnceLock::get`, one atomic load, so still async-signal-safe). `watchdog.rs` 18 → 16 (`write_stderr_unlocked` by
+  `rustix::io::write(stderr())`; the macOS `getrusage` and the two binaries' `RUSAGE_CHILDREN` copies are one
+  `rusage` helper). `cortex_worker.rs` 4 → 3 and `latexml_oxide.rs` 2 → 0 (that helper; `--init` is
+  `dump_paths::set_ini_mode()`, an in-process flag, instead of `set_var("LATEXML_INI_MODE")`, which stays a read
+  input). `identity.rs` 2 → 0 (its test passes the epoch to `start_time_at` instead of setting
+  `SOURCE_DATE_EPOCH`). No shipped code writes the environment after start-up but `pathname.rs`'s `TEXMFROOT`.
 - **2026-11-25 (issue #937 Phase 5), 80 → 77 blocks/impls (83 → 80 counting every `unsafe` keyword), no behaviour
   change:** the 3 `unsafe impl Send/Sync` markers are gone (`common/store.rs` 2 → 0, `state.rs` 1 → 0); `State` and
   `Stored` are now `!Send + !Sync`, as their `Rc`s and libxml nodes make them. No `State` ever crossed a thread (each
@@ -172,19 +200,17 @@ new string could grow and move the buffer under that `&str` (a use-after-free; S
 `latexml_core::common::arena::tests::lend_survives_interning_many_new_strings` (failed under Miri on the old code at
 the re-entrant `&mut *ptr`).
 
-### D. Binary entry-point FFI — env + rusage + crash-handler (~7 sites)
+### D. Process start-up: the environment, rusage, a test crash trap (7 sites)
 
-In `latexml_oxide/bin/latexml_oxide.rs`, `latexml_oxide/bin/cortex_worker.rs`,
-and `latexml_oxide/src/util/test.rs`:
+In `latexml_core/src/util/pathname.rs`, `latexml_core/src/watchdog.rs` and `latexml_oxide/src/util/test.rs`:
 
 | Call | Why unsafe is unavoidable |
 |---|---|
-| `std::env::set_var("LATEXML_INI_MODE", …)` (latexml_oxide.rs) | Rust 2024 marked `set_var` `unsafe` by design — pre-thread-spawn env mutation isn't race-free in general. We call it before spawning anything. |
-| `libc::getrusage(RUSAGE_CHILDREN, …)` (latexml_oxide.rs, cortex_worker.rs) | C FFI to capture child user/sys CPU time. No stable safe wrapper in stdlib or `rustix` (1.1). |
+| `std::env::set_var("TEXMFROOT", …)` (pathname.rs `select_kpaths`) | The linked libkpathsea (C) reads `TEXMFROOT` from `environ` while it initializes; it has no other input for it, and the `kpsewhich`/`texlua` children inherit it. `init_kpathsea()` forces the write on the converting thread before any other thread runs (both binaries; `main` is blocked joining it), so no concurrent `getenv` walks the reallocated `environ` (STABILITY_WITNESSES Cluster J; `tools/lint_env_writes.sh`). A library host converting on several threads calls `init_kpathsea()` once first. |
+| `libc::getrusage(…)` (watchdog.rs `rusage`) | Child user/sys CPU time (`children_cpu_time_us`, both binaries' timing lines) and macOS's peak RSS. No safe wrapper in `std` or `rustix` (1.1); one call site. |
 | `libc::signal(SIGSEGV/SIGBUS/SIGABRT, handler)`, `mem::transmute(SIG_DFL)`, `raise(sig)` (util/test.rs) | A **test-only** SIGSEGV/SIGBUS/SIGABRT trap that dumps a backtrace to a per-pid file before the signal kills the test binary. `signal(3)` is `unsafe extern "C"`; the handler-reset path transmutes `SIG_DFL` to `sighandler_t`. |
 
-None can be refactored without losing the functionality (env mutation,
-rusage capture, signal-handler debugging).
+`--init` writes no environment since 2026-11-25 (`dump_paths::set_ini_mode()`, an in-process flag).
 
 ### E. Subprocess process-group lifecycle + test EnvGuard in graphics (~7 sites)
 
@@ -196,10 +222,11 @@ and a plain `Child::kill()` does not reap those.
 | Call | Why |
 |---|---|
 | `cmd.pre_exec(|| setsid(); setpgid(0,0); prctl(…))` | Runs post-`fork()`/pre-`exec()`; must be async-signal-safe. `setsid(2)` makes the child a process-group leader so the whole group is killable (signaling itself now uses safe `rustix::process` via `watchdog.rs`). |
-| `std::env::set_var`/`remove_var` in `EnvGuard` (graphics.rs) + a test `set_var` (graphics_cache.rs) | **Test-only.** `set_var`/`remove_var` are `unsafe` in Rust 2024 (concurrent env mutation races). `EnvGuard` is used only in test setup, but the default `cargo test` harness runs a binary's tests multi-threaded and other tests read the env — so the comment documents the invariant and keeps a `FIXME` proposing `serial_test` to make it airtight. The `graphics_cache.rs` test `set_var` is `OnceLock`-serialized. |
+| `std::env::set_var`/`remove_var` in `EnvGuard` (test_env.rs) + a test `set_var` (graphics_cache.rs) | **Test-only.** `set_var`/`remove_var` are `unsafe` in Rust 2024 (concurrent env mutation races). `EnvGuard` is used only in test setup, but the default `cargo test` harness runs a binary's tests multi-threaded and other tests read the env — so the comment documents the invariant and keeps a `FIXME` proposing `serial_test` to make it airtight. The `graphics_cache.rs` test `set_var` is `OnceLock`-serialized. |
 
-`Command::process_group` was stabilised but does not give us
-`setsid + killpg`, so the FFI path stays. (The prune lock's `flock` is `File::try_lock` since 2026-11-24.)
+`Command::process_group(0)` is `setpgid(0, 0)`, not `setsid()`: no new session, and the child keeps the controlling
+terminal; and `PR_SET_PDEATHSIG` can only be set between `fork` and `exec`. So the `pre_exec` stays. (The prune
+lock's `flock` is `File::try_lock` since 2026-11-24.)
 
 ### F. libxslt/libxml global config via FFI (2 sites)
 
