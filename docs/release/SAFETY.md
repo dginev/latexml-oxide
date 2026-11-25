@@ -80,15 +80,15 @@ see that section below.
 
 ## `unsafe` budget
 
-Reconciled **2026-11-25** (issue #937 Phases 1 and 3): the workspace contains **66 `unsafe {}` blocks +
-0 `unsafe impl Send/Sync` + 0 `unsafe fn` = 66 non-comment sites**, plus 3 the ratchet also counts (it counts every
+Reconciled **2026-11-25** (issue #937 Phases 1 and 3, and Phase 2's first step): the workspace contains **62 `unsafe {}`
+blocks + 0 `unsafe impl Send/Sync` + 0 `unsafe fn` = 62 non-comment sites**, plus 3 the ratchet also counts (it counts every
 `unsafe` keyword in code): two `unsafe extern "C"` blocks (`latexml_post/src/xslt.rs`,
-`latexml_oxide/src/util/test.rs`) and one `#[unsafe(link_section)]` (`util/test.rs`) — **69 in all**: 38 in shipped
+`latexml_oxide/src/util/test.rs`) and one `#[unsafe(link_section)]` (`util/test.rs`) — **65 in all**: 34 in shipped
 code, 5 in the `test-utils`-gated `latexml_oxide/src/util/test.rs`, and 26 test-only (`latexml_oxide/tests/`,
 `latexml_post/src/test_env.rs`, `latexml_contrib/src/script_bindings/tests.rs`, the `#[cfg(test)]` code of
 `graphics_cache.rs`, `xslt.rs` and `runtime_bindings_reentrancy_model.rs`).
 
-The 38 shipped sites, each with its contract (a `// SAFETY:` comment at the site says it in context):
+The 34 shipped sites, each with its contract (a `// SAFETY:` comment at the site says it in context):
 
 | File | Sites | What | Contract / why no safe API | Phase |
 |---|---|---|---|---|
@@ -101,7 +101,7 @@ The 38 shipped sites, each with its contract (a `// SAFETY:` comment at the site
 | `latexml_core/src/common/arena.rs` | 1 | `resolve_unchecked` | category B | perf |
 | `latexml_oxide/bin/cortex_worker/exit_report.rs` | 2 | `sigaction` installation; the handler's chain call, `signal`, `raise` | async-signal-safe; the handler table is written once at start-up | 6 |
 | `latexml_oxide/bin/cortex_worker.rs` | 3 | `mmap(PROT_NONE)`, `std::alloc::alloc`, `raise(SIGSEGV)` | debug-assertion builds only (the harness tests' fault injection); `rustix::mm::mmap_anonymous` is itself `unsafe`, `raise` is thread-directed (`tgkill`), which `rustix` 1.1 lacks | stays |
-| `latexml_oxide/src/{core_interface,heap_trim,post,streaming_restart}.rs` | 7 | `mallinfo2` ×4, `malloc_trim`, `mi_collect` ×2 | allocator queries and trims; live allocations stay valid | 2 |
+| `latexml_oxide/src/heap_trim.rs` | 3 | `mallinfo2` (`c_heap_mb`), `mi_collect` (`collect_rust_heap`), `malloc_trim` (`release_free_heap`) | allocator queries and trims, the only shipped callers of these three (`tests/112_fragment_yield.rs` reads `mallinfo2` itself); live allocations stay valid. mimalloc 0.1.52's safe `stats_json()` is `#[cfg(not(feature = "v2"))]` and we pin `v2`; the C heap is glibc's | 2 |
 | `latexml_oxide/src/lsp_server/unix.rs` | 1 | `fork` | category G | stays |
 | `latexml_post/src/graphics.rs` | 1 | `pre_exec(setsid, setpgid, prctl(PR_SET_PDEATHSIG), getppid, _exit)` | category E | stays |
 | `latexml_post/src/xslt.rs` | 2 | `xsltMaxDepth`: its `extern` declaration and the `Once`-guarded write | category F | 4 |
@@ -114,6 +114,12 @@ removes sites lowers its file's pin (the failure prints the table to paste); one
 raising a pin is an exception its commit argues.
 
 Major changes since the 2026-07-20 reconciliation (55 sites):
+- **2026-11-25 (issue #937 Phase 2, first step), 66 → 62 blocks (69 → 65 counting every `unsafe` keyword), no
+  behaviour change:** the allocator calls sit behind two safe functions in `heap_trim.rs`, the one shipped caller of each:
+  `c_heap_mb()` (`mallinfo2`; the streaming spill trace and fragment telemetry, `core_interface.rs` 3 → 0, and the render loop's
+  `LATEXML_POST_MEMDIAG` probe, `post.rs` 1 → 0) and `collect_rust_heap()` (`mi_collect`; `release_free_heap` and
+  `streaming_restart.rs` 1 → 0). Their `cfg` gates are unchanged: `mallinfo2` on Linux, `mi_collect` off under
+  `dhat-heap`. `heap_trim.rs` 2 → 3; `malloc_trim` stays where it was (Phase 2's next step measures it first).
 - **2026-11-25 (issue #937 Phases 1 and 3, the rest), 77 → 66 blocks (80 → 69 counting every `unsafe` keyword), no
   behaviour change:** `logger.rs` 2 → 0 (the log mirror is a `&'static File`, cortex_worker's claim's, behind a
   lock-free on/off flag: `rustix::fs::ftruncate` and `rustix::io::write`, EINTR retried as before). `exit_report.rs`

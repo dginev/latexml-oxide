@@ -11,7 +11,8 @@ use crate::perfect_kernel_batche0::{assert_debts, lex_rust_with_tests, repo_path
 /// lines excluded: 106 at its Phase 0 base; Phase 1's first Unix syscalls to `rustix`/`std` took it to 80, Phase 5's
 /// removal of the 3 `unsafe impl Send/Sync` markers to 77; counting every `unsafe` keyword, 80 then, and 69 after Phase
 /// 1's rest and Phase 3: the log mirror, the claim's `cause` write, `getpid` and stderr through `rustix`, one
-/// `getrusage`, and no environment write for `--init` or a test's `SOURCE_DATE_EPOCH`).
+/// `getrusage`, and no environment write for `--init` or a test's `SOURCE_DATE_EPOCH`; 65 after Phase 2's first step:
+/// `mallinfo2` and `mi_collect` called only from `heap_trim::c_heap_mb` and `heap_trim::collect_rust_heap`).
 const UNSAFE_SITES: &[(&str, usize)] = &[
   ("latexml_contrib/src/script_bindings/engine.rs", 1),
   ("latexml_contrib/src/script_bindings/mod.rs", 3),
@@ -22,11 +23,8 @@ const UNSAFE_SITES: &[(&str, usize)] = &[
   ("latexml_core/src/watchdog.rs", 16),
   ("latexml_oxide/bin/cortex_worker/exit_report.rs", 2),
   ("latexml_oxide/bin/cortex_worker.rs", 3),
-  ("latexml_oxide/src/core_interface.rs", 3),
-  ("latexml_oxide/src/heap_trim.rs", 2),
+  ("latexml_oxide/src/heap_trim.rs", 3),
   ("latexml_oxide/src/lsp_server/unix.rs", 1),
-  ("latexml_oxide/src/post.rs", 1),
-  ("latexml_oxide/src/streaming_restart.rs", 1),
   ("latexml_oxide/src/util/test.rs", 5),
   ("latexml_oxide/tests/112_fragment_yield.rs", 1),
   ("latexml_oxide/tests/117_post_2gib_handoff.rs", 4),
