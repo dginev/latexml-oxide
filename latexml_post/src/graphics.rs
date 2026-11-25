@@ -1728,6 +1728,11 @@ impl Graphics {
   /// is SIGKILLed, and oversized output is discarded — either way we fall
   /// through to the next converter, then to raster.
   fn convert_image_svg(source: &str, dest: &str, page: Option<u32>) -> bool {
+    let alias = Self::reachable_source(source);
+    let source = alias
+      .as_ref()
+      .and_then(|a| a.path().to_str())
+      .unwrap_or(source);
     // Try the two fast vector converters in order of measured speed +
     // gzip-compressibility on the canvas slow-tail. Each is gated by
     // `MAX_SVG_OUTPUT_BYTES`; pathological vector-heavy PDFs (e.g.
@@ -2545,12 +2550,31 @@ impl Graphics {
     installed
   }
 
+  /// On Windows, a short-named link (or copy) of `source` beside it when its full path reaches MAX_PATH (260): the
+  /// converters (ImageMagick, mutool, Ghostscript) cannot open such a path, and a figure name of ~220 characters in a
+  /// temp directory reaches it. Removed when dropped. Elsewhere, and for a shorter path, `None`.
+  fn reachable_source(source: &str) -> Option<crate::writer::Staged> {
+    let long = std::path::absolute(source).is_ok_and(|p| p.as_os_str().len() >= 260);
+    if !cfg!(windows) || !long {
+      return None;
+    }
+    let alias = crate::writer::Staged::beside(Path::new(source));
+    (std::fs::hard_link(source, alias.path()).is_ok()
+      || std::fs::copy(source, alias.path()).is_ok())
+    .then_some(alias)
+  }
+
   /// Convert a graphics file using ImageMagick's `convert` command.
   /// Perl: image_graphicx_complex via Image::Magick / convert CLI.
   /// `page` is 1-based (graphicx convention); converted to 0-based for ImageMagick.
   /// `dest` is the job's private staged file (`writer::Staged`), as for [`Self::convert_image_svg`]:
   /// the converters write and remove it freely, and the worker installs it.
   fn convert_image(source: &str, dest: &str, dpi: u32, page: Option<u32>) -> bool {
+    let alias = Self::reachable_source(source);
+    let source = alias
+      .as_ref()
+      .and_then(|a| a.path().to_str())
+      .unwrap_or(source);
     // A MetaPost figure that leaves its fonts to dvips is converted from a copy that holds them, as dvips would give
     // them (`postscript_fonts`, OXIDIZED_DESIGN #587; gr-qc0001079, math0102124).
     let with_fonts = crate::postscript_fonts::with_downloaded_fonts(source, dest);
