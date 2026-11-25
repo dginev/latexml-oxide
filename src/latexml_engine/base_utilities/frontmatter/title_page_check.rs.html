@@ -1570,8 +1570,8 @@
 <a href=#1570 id=1570 data-nosnippet>1570</a>      std::fs::canonicalize(file).is_ok_and(|path| path.starts_with(directory))
 <a href=#1571 id=1571 data-nosnippet>1571</a>    })
 <a href=#1572 id=1572 data-nosnippet>1572</a>  };
-<a href=#1573 id=1573 data-nosnippet>1573</a>  <span class="kw">let </span>files = lookup_string(CONTENT_FILES);
-<a href=#1574 id=1574 data-nosnippet>1574</a>  <span class="kw">for </span>file <span class="kw">in </span>files.split(<span class="string">'\0'</span>).filter(|file| !file.is_empty()) {
+<a href=#1573 id=1573 data-nosnippet>1573</a>  <span class="kw">for </span>file <span class="kw">in </span>content_files() {
+<a href=#1574 id=1574 data-nosnippet>1574</a>    <span class="kw">let </span>file = file.as_str();
 <a href=#1575 id=1575 data-nosnippet>1575</a>    <span class="kw">let </span>definitions = file.ends_with(<span class="string">".bbl"</span>);
 <a href=#1576 id=1576 data-nosnippet>1576</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(text) = file.strip_prefix(<span class="string">"literal:"</span>) {
 <a href=#1577 id=1577 data-nosnippet>1577</a>      source_words(text, <span class="bool-val">false</span>, <span class="kw-2">&amp;mut </span>words);
@@ -1697,7 +1697,7 @@
 <a href=#1697 id=1697 data-nosnippet>1697</a>  <span class="macro">DebugFeature!</span>(
 <a href=#1698 id=1698 data-nosnippet>1698</a>    <span class="string">"frontmatter"</span>,
 <a href=#1699 id=1699 data-nosnippet>1699</a>    <span class="string">"FRONT the check's source: the content files {} and the definitions files of {}"</span>,
-<a href=#1700 id=1700 data-nosnippet>1700</a>    lookup_string(CONTENT_FILES).replace(<span class="string">'\0'</span>, <span class="string">", "</span>),
+<a href=#1700 id=1700 data-nosnippet>1700</a>    content_files().join(<span class="string">", "</span>),
 <a href=#1701 id=1701 data-nosnippet>1701</a>    lookup_string(<span class="string">"SOURCEDIRECTORY"</span>)
 <a href=#1702 id=1702 data-nosnippet>1702</a>  );
 <a href=#1703 id=1703 data-nosnippet>1703</a>  <span class="kw">let </span>words_of = |text: <span class="kw-2">&amp;</span>str| wanted_words(<span class="kw-2">&amp;</span>resolver::base_letters(text).to_lowercase()).words;
