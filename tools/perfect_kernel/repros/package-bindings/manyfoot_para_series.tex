@@ -1,0 +1,19 @@
+% mechanism: manyfoot's `para` style (manyfoot.sty:58-163, :68 `\MFL@fnotepara`) and a `plain` series declared with
+%   `\newfootnote` (:192-207): `\Footnotetext<X>{<mark>}{<text>}` keeps the last `\@thefnmark` (plain) or none (para)
+%   when the mark is empty
+% witness: 2003.11645 (`[para*,ruled]{manyfoot}`, `\Footnotetextauthor{}{…}`, `\DeclareNewFootnote[para]{A}`)
+% oracle:  pdflatex 0 `!`: "Alpha1 beta2 gamma delta epsilon"; notes "1 Para A one." "2 Para A two." "Para text, no
+%          mark." "2 Author text, last mark." "y Marked y."
+% engines: rust INT081P 0 errors, 1 warning (`\endminipage`), the texts inline; Perl: no manyfoot binding
+% expect:  0 errors, 0 warnings; footnotes 1 and 2, footnotetexts marked 2, y and none
+% status:  RED (INT081P) -> GREEN (MANYFOOT); guard footnote_series::footnote_series_rows
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[para*,ruled]{manyfoot}
+\newfootnote{author}
+\DeclareNewFootnote[para]{A}
+\begin{document}
+Alpha\footnoteA{Para A one.} beta\footnoteA{Para A two.}
+gamma\Footnotetextauthor{}{Author text, last mark.} delta\Footnotetextauthor{y}{Marked y.}
+epsilon\FootnotetextA{}{Para text, no mark.}
+\end{document}

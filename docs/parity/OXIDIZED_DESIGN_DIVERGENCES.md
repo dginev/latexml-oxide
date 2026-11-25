@@ -15547,6 +15547,11 @@ is pdflatex's error recovery — RR.sty's `\xdef` of the accented theme name (`\
 `\@arabic` again when `\@RRnote` runs (:477). Residuals: the frontmatter digests the fields in the order the preamble
 set them, so a title `\thanks` set after the `\author` steps after the authors' (pdflatex: the title's first); the
 observer's fallback when the hook is undefined (a title-page class) is `\@fnsymbol`, where report and book print arabic.
+A text a binding sends to an insertion of its own (manyfoot's series, manyfoot.sty:45 `\MFL@insert#1`; the binding names
+it in `\lx@note@series`, which the next note spends) is not the footnote counter's: it carries no `_fnvalue` and pairs
+only with notes of its series (`_fnseries`, `same_series`), so a series' "1" is not the text of the main
+`\footnotemark` "1" (guard rows `footnote_series::footnote_series_rows` manyfoot_series_text_is_not_a_main_mark_text,
+manyfoot_interleaved_series_and_main_texts).
 Repros package-bindings/footmisc_symbol_numbered_footnotetext_pairs_with_its_mark, package-bindings/
 footnotemark_value_footnote_is_the_counter, package-bindings/footnotetext_by_number_pairs_only_across_the_title_block,
 package-bindings/title_counter_mark_keeps_to_the_title_block, package-bindings/

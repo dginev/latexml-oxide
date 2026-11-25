@@ -1,0 +1,16 @@
+% mechanism: nccfoots.sty:28-38 `\Footnote{<mark>}`, `\Footnotemark{<mark>}`, `\Footnotetext{<mark>}` set `\@thefnmark`
+%   to the mark given and print it, stepping no counter (`\Footnotemark` prints it as text, as the kernel's
+%   `\@footnotemark`)
+% witness: synthetic (nccfoots, loaded by manyfoot; 12 census papers call `\Footnote`/`\Footnotemark`/`\Footnotetext`)
+% oracle:  pdflatex 0 `!`: "Alpha* beta7 gamma"; notes "* Starred note." "7 Text of seven."
+% engines: rust INT081P 0 errors, 0 warnings, the in-text marks plain text and both texts footnotetexts marked 0 (the
+%          footnote counter's `\thefootnote`); Perl: no nccfoots binding
+% expect:  0 errors, 0 warnings; "Alpha*" then "Starred note." a footnotetext marked *, "beta7 gamma" then "Text of
+%          seven." one marked 7
+% status:  RED (INT081P) -> GREEN (MANYFOOT); guard footnote_series::footnote_series_rows
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{nccfoots}
+\begin{document}
+Alpha\Footnote{*}{Starred note.} beta\Footnotemark{7} gamma\Footnotetext{7}{Text of seven.}
+\end{document}

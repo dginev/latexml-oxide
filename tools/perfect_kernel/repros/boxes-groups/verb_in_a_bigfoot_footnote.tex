@@ -5,8 +5,8 @@
 % engines: rust MAIN922 1 error ("Script _ can only appear in math mode": the verb's text re-read with its `+`),
 %          HARDEN397 round 0 2 errors (+ "\verb illegal in argument"); Perl: no bigfoot binding, the raw package's
 %          footnotes give way to LaTeXML's argument-reading \footnote
-% expect:  0 errors, 1 warning (manyfoot.sty:390 `\g@addto@macro\endminipage`, our \endminipage not a macro); each
-%          note holds its `<verbatim>` (x_y, p{q}, u%v) between its text
+% expect:  0 errors, 0 warnings (MANYFOOT: the manyfoot binding drops manyfoot.sty:390's `\g@addto@macro\endminipage`,
+%          which warned before); each note holds its `<verbatim>` (x_y, p{q}, u%v) between its text
 % status:  RED (MAIN922, HARDEN397 round 0) -> GREEN; guard
 %          perfect_kernel_batchharden397::batchharden397_bigfoot_footnote_verb
 % preload: ar5iv.sty

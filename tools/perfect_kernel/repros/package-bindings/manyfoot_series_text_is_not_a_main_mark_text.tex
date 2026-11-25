@@ -1,0 +1,18 @@
+% mechanism: a series' `\footnotetext<X>` goes to its own insertion (manyfoot.sty:45 `\MFL@insert#1`), so it is not
+%   the text of the main `\footnotemark` printing the same number: the binding names the series (`\lx@note@series`,
+%   manyfoot_sty.rs) and `relocate_footnote` pairs a note only with its series' (latex_constructs/mod.rs `same_series`)
+% witness: synthetic (main-session probe hijack)
+% oracle:  pdflatex 0 `!`: "Main1 and series1 text."; notes "1 MAIN-TEXT" and, in the series' block, "1 SERIES-A-TEXT"
+% engines: rust INT081P 0 errors, 1 warning (`\endminipage`), the main note paired, SERIES-A-TEXT inline text;
+%          MANYFOOT 0 errors, 0 warnings, the main mark holding SERIES-A-TEXT and MAIN-TEXT an unpaired footnotetext
+% expect:  0 errors, 0 warnings; the main note 1 holding MAIN-TEXT, SERIES-A-TEXT a footnotetext marked 1 where it is
+% status:  RED (MANYFOOT) -> GREEN (MANYFOOT2); guard footnote_series::footnote_series_rows
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{manyfoot}
+\DeclareNewFootnote{A}
+\begin{document}
+Main\footnotemark{} and series\footnotemarkA{} text.
+\footnotetextA{SERIES-A-TEXT}
+\footnotetext{MAIN-TEXT}
+\end{document}

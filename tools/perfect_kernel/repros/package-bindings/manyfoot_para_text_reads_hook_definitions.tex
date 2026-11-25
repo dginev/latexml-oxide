@@ -1,0 +1,26 @@
+% mechanism: manyfoot's begin-document code (manyfoot.sty:370-402, the `para` option's :152-162) defines what other
+%   packages' text makers read — `\MFL@fudgefactor` (:386 `\MFL@floathook`, :143), `\MFL@paraskip`,
+%   `\defaultfootnoterule` (:372-376) — beside its output-routine and minipage patches; the binding keeps the
+%   definitions and drops the patches (manyfoot_sty.rs)
+% witness: synthetic, the shape of dgruyter.sty:2353-2381 (its own `\MFL@fnotepara` after manyfoot, reading
+%   `\MFL@fudgefactor` at :2379; review probe dgmini)
+% oracle:  pdflatex 0 `!`, no warning: "Alpha1 beta gamma"; notes "1 Para A note." "1 Para A text." "z Given z."
+% engines: rust INT081P 0 errors, 1 warning (manyfoot.sty:390's `\endminipage`); MANYFOOT 2 errors (`\MFL@fudgefactor`
+%          and `\MFL@paraskip` undefined), 6 warnings (5 "Missing number", the package's "No default footnote rule")
+% expect:  0 errors, 0 warnings; the A note a footnote marked 1, the two texts as the package sets them, inline
+% status:  RED (MANYFOOT) -> GREEN (MANYFOOT2); guard footnote_series::footnote_series_rows
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[para*,ruled]{manyfoot}
+\DeclareNewFootnote[para]{A}
+\makeatletter
+\def\MFL@fnotepara#1#2#3{\let\@thefnmark\@empty\NCC@makefnmark{#2}%
+  \MFL@insert#1{\setbox\@tempboxa\hbox{\ifx\@thefnmark\@empty\else\textbf{\@thefnmark}\enskip\fi
+      \ignorespaces#3\unskip\strut}%
+    \dp\@tempboxa\z@\ht\@tempboxa\MFL@fudgefactor\wd\@tempboxa\box\@tempboxa}}
+\AtBeginDocument{\skip@\MFL@paraskip
+  \@ifundefined{defaultfootnoterule}{\PackageWarning{test}{No default footnote rule}}{}}
+\makeatother
+\begin{document}
+Alpha\footnoteA{Para A note.} beta\footnotetextA{Para A text.} gamma\FootnotetextA{z}{Given z.}
+\end{document}

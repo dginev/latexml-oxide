@@ -9,4 +9,6 @@ LoadDefinitions!({
   // so `\verb` is legal there (pdflatex: 0 errors); the locked LaTeXML constructors take the kernel's live-body
   // variant instead. Witness 2310.18996 (saclaymocks.tex:45, three `\verb+…+` URLs in footnotes).
   RawTeX!(r"\lx@VerbatimFootnotes");
+  // bigfoot.sty:383-384 sets a series' text in its own boxes; it is the note manyfoot's binding makes.
+  RawTeX!(r"\let\MFL@fnoteplain\lx@mf@fnoteplain\let\MFL@fnotepara\lx@mf@fnotepara");
 });

@@ -1,0 +1,19 @@
+% mechanism: a footnote text whose mark is set in math keeps the mark's TeX source as its `mark` (a digested box's
+%   attribute form, Perl's too) and, unlike a footnote, no `<tags>`, so the page prints "$\dagger$" where pdflatex
+%   prints "†": the kernel's own `\footnotetext` under a math `\thefootnote`, and nccfoots' given marks
+%   (`\Footnote{$\star$}`, `\Footnotetext{$^{a}$}`, nccfoots.sty:28-38). deluxetable's `shown_mark`
+%   (deluxetable_sty.rs) is the binding-local form of the fix
+% witness: synthetic (review probe marks; the kernel shape found by MANYFOOT2)
+% oracle:  pdflatex 0 `!`: "Alpha beta⋆ gamma delta"; notes "† Kernel text." "⋆ Star note." "a Given a."
+% engines: rust INT081P 0 errors, 0 warnings, marks "$\dagger$", "0", "0"; MANYFOOT2 0 errors, 0 warnings, `mark`s
+%          "$\dagger$", "$\star$", "${}^{a}$", printed so on the page (`ltx_note_mark`); Perl the kernel's the same
+% expect:  0 errors, 0 warnings; the texts' marks "†", "⋆" and "a" in the page's note marks
+% status:  RED (INT081P, MANYFOOT2)
+% moves:   post-merge
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{nccfoots}
+\begin{document}
+{\renewcommand\thefootnote{$\dagger$}Alpha\footnotetext{Kernel text.}}
+beta\Footnote{$\star$}{Star note.} gamma\Footnotemark{$^{a}$} delta\Footnotetext{$^{a}$}{Given a.}
+\end{document}

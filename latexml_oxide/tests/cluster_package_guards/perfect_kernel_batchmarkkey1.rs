@@ -580,6 +580,8 @@ fn the_mark_components_only_shrink() {
     "_fngiven",
     "_fnmark",
     "_fnpart",
+    // (MANYFOOT2, OD #851: a manyfoot series' text pairs only with its series' notes, never a main mark of its number)
+    "_fnseries",
     "_fntext",
     "_fnvalue",
   ];
@@ -599,6 +601,8 @@ fn the_mark_components_only_shrink() {
     "lx_frontmatter_requested_marks",
     "lx_late_abstract_mark_pending",
     "lx_late_abstract_marks",
+    // (MANYFOOT2: the series a note begins in, spent by the next note, latex_constructs `take_note_series`)
+    "lx_note_series",
     "lx_store_label_noted_",
     "lx_title_counts_footnotes",
     "lx_title_footnote_given_marks_only",
