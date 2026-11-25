@@ -1,0 +1,20 @@
+% mechanism: latexml_post resource_cache.rs `place`, graphics.rs Graphics::resolve_names: a copy's kept path the store
+%   does not know is checked on disk like a stem or a generated name; a cache that cannot be used (the run in memory)
+%   gives a kept path whose file holds other bytes than the image writes a generated name instead, and a kept path
+%   that is the source itself (converting in place) stays
+% witness: issue 995 review round 7, probe kp_none (p1/p1.tex and p2/p2.tex each \includegraphics{figs/a.png}, other
+%   bytes, both --dest=../out/; p1 run, out/LaTeXML-oxide.cache made unreadable, p2 run: p2 wrote out/figs/a.png
+%   over p1's, and p1.html showed p2's picture)
+% layout:  p1/p1.tex (this file) with p1/figs/a.png, p2/p2.tex the same with another p2/figs/a.png; cwd p1/ and p2/
+% oracle:  pdflatex 0 errors, one picture per document
+% engines: rust=GREEN perl=Fatal internal:db on an unreadable file (tie fails, Post.pm L1537-1546)
+% expect:  --dest=../out/p1.html: figs/a.png; the cache made unusable (a directory of its name), --dest=../out/p2.html:
+%          x1.png (p2's picture), one Warning:I/O:cache, out/figs/a.png still p1's; p1 again: figs/a.png, its own;
+%          in place (--dest=p2.html, its cache unusable): figs/a.png, the source, no copy; 0 errors
+%          (round 7: p2.html figs/a.png, written over p1's)
+% status:  GREEN
+\documentclass{article}
+\usepackage{graphicx}
+\begin{document}
+P \includegraphics{figs/a.png}
+\end{document}

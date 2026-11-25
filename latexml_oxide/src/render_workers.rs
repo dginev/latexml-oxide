@@ -20,7 +20,8 @@
 //! `latexml_oxide` binary renders a split of `MIN_PAGES_FOR_PARALLEL` pages
 //! or more on min(available cores, `AUTO_JOBS_MAX`) workers; every other
 //! embedder (the library, `cortex_worker`) stays serial. The pages are
-//! byte-identical either way; a worker that fails to spawn, cannot set up, or
+//! byte-identical either way (the parent names every page's images before the render and
+//! the workers look the names up, issue 995); a worker that fails to spawn, cannot set up, or
 //! dies without its status report sends the whole document back to the serial
 //! render at once, stopping the rest of the fleet (an Info; a Warning for a
 //! worker killed by a signal, a crash).
@@ -113,6 +114,7 @@ impl From<PageOpts> for latexml_post::document::PostDocumentOptions {
       searchpaths:           o.searchpaths,
       validate:              o.validate,
       nocache:               o.nocache,
+      cache:                 None,
     }
   }
 }
@@ -129,7 +131,7 @@ pub struct PageJob {
 
 /// Everything a page-render worker needs to rebuild the pass-B processor set
 /// exactly as the parent would have, plus its page range. Written as
-/// `render-manifest-{i}.json` beside the saved `render.db`.
+/// `render-manifest-{i}.json` beside the saved `LaTeXML-render.db`.
 #[derive(Serialize, Deserialize, Clone, Default)]
 pub struct RenderManifest {
   /// The saved ObjectDB (SQLite, attached readonly by each worker).
@@ -160,6 +162,9 @@ pub struct RenderManifest {
   /// The resolved stylesheet/resource search paths the parent's `XSLT::new`
   /// received.
   pub searchpaths:               Vec<String>,
+  /// Run the SVG processor before MathML (the parent's `svg`).
+  pub svg:                       bool,
+  /// Serialize the pages as HTML (Perl `is_html`).
   pub is_html_out:               bool,
   pub schemadocs:                bool,
   /// [`latexml_post::extract::Whatsout`] as its canonical CLI tag
@@ -175,6 +180,15 @@ pub struct RenderManifest {
   /// holds none (MathML's `<mpadded>` widths read `NOMINAL_FONT_SIZE`).
   #[serde(default)]
   pub post_values:               latexml_core::PostStateValues,
+  /// The names the parent gave every page's images before the render (`Graphics::plan_names`): (destination
+  /// directory, key, destination, vector render). A worker looks them up, so a page's names never depend on which
+  /// worker renders it (issue 995).
+  #[serde(default)]
+  pub resource_names:            Vec<(String, String, String, Option<String>)>,
+  /// The parent's stderr verbosity (`LevelFilter` name: `ERROR` under `--quiet`, `DEBUG` under `--verbose`). The
+  /// worker logs at it, never below `Info`, so its folded log is the serial render's.
+  #[serde(default)]
+  pub log_level:                 String,
 }
 
 /// The parent-side result of a parallel render in which workers were actually
@@ -501,7 +515,7 @@ pub(crate) fn parallel_render(
       return None;
     },
   };
-  let dbfile = spill_dir.join("render.db");
+  let dbfile = spill_dir.join("LaTeXML-render.db");
   if let Err(e) = db.save_as(&dbfile) {
     Info!(
       "post",
@@ -739,7 +753,7 @@ pub(crate) fn parallel_render(
           // The child's stderr was piped, so nothing reached the live
           // stderr yet — forward it now, then fold the same text + counts
           // into the captured log and the REPORT tally.
-          eprint!("{}", report.log);
+          eprint!("{}", stderr_share(&report.log));
         }
         replay_captured(CapturedDiagnostics {
           log:    report.log,
@@ -827,6 +841,48 @@ fn print_status_report(written: &[String], discard: bool) -> i32 {
   if status < 3 { 0 } else { 1 }
 }
 
+/// The lines of a worker's log the parent's stderr shows: its records at the parent's verbosity (`--quiet` hides
+/// `Info` and `Warning`, only `--verbose` shows `Debug`), each with its continuation lines; `Error`/`Fatal` always,
+/// as the logger prints them (OXIDIZED_DESIGN_DIVERGENCES #1158).
+fn stderr_share(log: &str) -> String {
+  stderr_share_at(log, latexml_core::util::logger::stderr_admits)
+}
+
+/// [`stderr_share`] at the verbosity `admits`. A line that opens no record is either a progress note (an `Info`)
+/// or an unindented continuation of a multi-line message, which the log cannot tell apart: it is shown when either
+/// would be, so a shown record keeps every line (a note after it may show under `--quiet`).
+fn stderr_share_at(log: &str, admits: impl Fn(log::Level) -> bool) -> String {
+  use log::Level;
+  let mut shown = String::with_capacity(log.len());
+  let mut admitted = true;
+  let mut record_admitted = false;
+  for line in log.split_inclusive('\n') {
+    let level = [
+      ("Error:", Level::Error),
+      ("Fatal:", Level::Error),
+      ("Warning:", Level::Warn),
+      ("Info:", Level::Info),
+      ("Debug:", Level::Debug),
+      ("Trace:", Level::Trace),
+    ]
+    .into_iter()
+    .find_map(|(head, level)| line.starts_with(head).then_some(level));
+    match level {
+      Some(level) => {
+        admitted = level == Level::Error || admits(level);
+        record_admitted = admitted;
+      },
+      // An indented line (`\tat …`, a blank line) goes with the line before it.
+      None if line.starts_with(char::is_whitespace) => {},
+      None => admitted = record_admitted || admits(Level::Info),
+    }
+    if admitted {
+      shown.push_str(line);
+    }
+  }
+  shown
+}
+
 /// A worker that could not set up (its manifest or db unreadable) has rendered
 /// nothing and its failure is not the document's: no status report, so the
 /// parent renders serially, and this line names why (an Info there).
@@ -879,6 +935,8 @@ pub fn worker_main(manifest_path: &str) -> i32 {
         latexml_core::stomach::set_memory_cap(Some(manifest.max_rss_kb.saturating_mul(1024)));
       }
       manifest.post_values.restore();
+      let level = manifest.log_level.parse().unwrap_or(log::LevelFilter::Info);
+      latexml_core::util::logger::init(level.max(log::LevelFilter::Info)).ok();
       let watchdog_kb = manifest.max_rss_kb;
       #[cfg(feature = "test-utils")]
       let watchdog_kb = if test_fault().as_deref() == Some("rss") {
@@ -952,15 +1010,21 @@ fn render_manifest_pages(m: RenderManifest) -> Result<(Vec<String>, bool), Strin
   if let Some(navtoc) = m.navigation_toc.as_deref() {
     crossref.set_navigation_toc(navtoc);
   }
+  // The worker's own handle on the destination's cache (Perl's document cache), shared by its pages and Graphics.
+  let mut page_opts: latexml_post::document::PostDocumentOptions = m.page_opts.clone().into();
+  let cache = latexml_post::document::DocCache::new(page_opts.nocache);
+  page_opts.cache = Some(cache.clone());
   let graphics = m.graphicimages.then(|| {
     latexml_post::graphics::Graphics::new(None, true)
       .with_svg_threshold_kb(m.graphics_svg_threshold_kb)
+      .with_planned_names(m.resource_names.clone())
+      .with_doc_cache(cache.clone())
   });
   let post = latexml_post::Post::new();
   let mut processors: Vec<Box<dyn Processor>> = Vec::new();
   // Same chain as the in-process renderer (`post.rs`): SVG on the live page
   // DOM before MathML/XSLT for the HTML formats (Perl `LaTeXML.pm` order).
-  if m.is_html_out {
+  if m.svg {
     processors.push(Box::new(latexml_post::svg::SVG::new()));
   }
   let math_formats = crate::post::MathFormats {
@@ -991,10 +1055,10 @@ fn render_manifest_pages(m: RenderManifest) -> Result<(Vec<String>, bool), Strin
     }
   }
   let ctx = crate::post::PageRenderCtx {
-    page_opts:      m.page_opts.clone().into(),
-    is_html_out:    m.is_html_out,
-    schemadocs:     m.schemadocs,
-    whatsout:       latexml_post::extract::Whatsout::from_cli(&m.whatsout).unwrap_or_default(),
+    page_opts,
+    is_html_out: m.is_html_out,
+    schemadocs: m.schemadocs,
+    whatsout: latexml_post::extract::Whatsout::from_cli(&m.whatsout).unwrap_or_default(),
     remove_spilled: false,
   };
   let mut procs = crate::post::PageProcessors {
@@ -1049,6 +1113,28 @@ fn render_manifest_pages(m: RenderManifest) -> Result<(Vec<String>, bool), Strin
 mod tests {
   use super::*;
 
+  /// At the `Warn` level a Warning keeps its unindented continuation lines (a multi-line message); the notes after an
+  /// Info record stay hidden. The default verbosity shows every line; `--quiet` (`Error`) only the Error and the
+  /// Fatal, each with its continuation lines, and so does a console that admits nothing (OD #1158).
+  #[test]
+  fn stderr_share_keeps_a_records_continuation_lines() {
+    let log = "note before\nInfo:a:x one\nMathML[Presentation] S1.html processing\nWarning:b:y first line\nsecond \
+               line\n\tat loc\nInfo:c:z two\n\tIn here\npost-processing\nError:d:w bad\nits second line\n\tat \
+               loc2\nWarning:e:v late\nFatal:f:u end\n\tat loc3\n";
+    let errors = "Error:d:w bad\nits second line\n\tat loc2\nFatal:f:u end\n\tat loc3\n";
+    assert_eq!(
+      stderr_share_at(log, |level| level <= log::Level::Warn),
+      "Warning:b:y first line\nsecond line\n\tat loc\nError:d:w bad\nits second line\n\tat loc2\nWarning:e:v \
+       late\nFatal:f:u end\n\tat loc3\n"
+    );
+    assert_eq!(stderr_share_at(log, |level| level <= log::Level::Info), log);
+    assert_eq!(
+      stderr_share_at(log, |level| level <= log::Level::Error),
+      errors
+    );
+    assert_eq!(stderr_share_at(log, |_| false), errors);
+  }
+
   #[test]
   fn child_report_parses_status_lines_and_keeps_log() {
     let stderr_text = "Warning:post:x something odd\nInfo:post:y fine\nStatus:pages:41\nStatus:written:/d/S1.html\nStatus:discard:1\nStatus:counts:0,2,1,3,1\nStatus:conversion:3\n";
@@ -1093,10 +1179,11 @@ mod tests {
 
   #[test]
   fn child_report_parses_a_setup_failure() {
-    let r = parse_child_report("Status:setup-failed:cannot attach the render db /d/render.db\n");
+    let r =
+      parse_child_report("Status:setup-failed:cannot attach the render db /d/LaTeXML-render.db\n");
     assert_eq!(
       r.setup_failed.as_deref(),
-      Some("cannot attach the render db /d/render.db")
+      Some("cannot attach the render db /d/LaTeXML-render.db")
     );
     assert_eq!(r.status, None);
     assert!(r.log.is_empty());

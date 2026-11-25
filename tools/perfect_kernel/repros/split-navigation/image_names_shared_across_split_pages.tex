@@ -1,0 +1,24 @@
+% mechanism: latexml_post graphics.rs ResourceNames (Perl Post.pm L192-200 generateResourcePathname, its counter in
+%   the document cache every split page shares, L687-690): a generated xN name, and a converted image's stem name,
+%   is allocated once per run, not once per page.
+% witness: issue 995 (the "clobbering": Chapter One showed child_2's image)
+% layout:  parent/index.tex (this file), the children of loader/image_subimport_sitedirectory, and
+%          parent/a/plot.eps, parent/b/plot.eps (distinct drawings); cwd parent/
+% oracle:  latex (DVI) 0 errors with PNGs in place of the SVGs (pdflatex reads neither SVG nor EPS)
+% engines: rust=GREEN perl=GREEN (2026-11-24, the copied SVGs; Perl without Image::Magick converts no EPS)
+% expect:  --split --splitat=chapter --dest=index.html: Ch1 x1.svg (child_1 A) and plot.png (a/plot);
+%          Ch2 x3.svg, x4.svg (child_2 A, B) and x2.png (b/plot: a page names its conversions first);
+%          every file distinct; 0 errors
+%          (base: Ch1 and Ch2 both x1.svg holding child_2's A, and both plot.png holding b/plot)
+% status:  GREEN
+\documentclass{book}
+\usepackage{import}
+\usepackage{graphicx}
+\begin{document}
+\chapter{One}
+\subimport*{../children/child_1/}{index.tex}
+\includegraphics{a/plot}
+\chapter{Two}
+\subimport*{../children/child_2/}{index.tex}
+\includegraphics{b/plot}
+\end{document}

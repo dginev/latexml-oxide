@@ -1,0 +1,22 @@
+% mechanism: latexml_post resource_cache.rs: a name read from LaTeXML-oxide.cache is written to only when it is one
+%   the image could have been given (its kept path, its stem, a generated xN, or another source's name holding the
+%   same bytes), with the image's extension; else it is ignored with a Warning naming the cache (Perl writes only
+%   names it generates, Post/Graphics.pm L249-260 reuse an existing up-to-date file).
+% witness: issue 995 final review S1 (entries set to `Ch1.html||` and `.hidden/evil||`: a re-run wrote a PNG over
+%          Ch1.html and created .hidden/evil)
+% layout:  src/index.tex (this file), src/a.png, img/{b,c}.png; cwd src/
+% oracle:  pdflatex -no-shell-escape 0 errors
+% engines: rust=GREEN perl=n/a (its cache is a DB_File, written by Perl only)
+% expect:  --splitat=chapter --dest=index.html, the cache's image entries set to `Ch1.html||` and `.hidden/evil||`,
+%          run again: the same pages and images as the first run, Ch1.html a page, no .hidden; 2 Warnings
+%          (base 6ce90fffade: Ch1.html a PNG, .hidden/evil written)
+% status:  GREEN
+\documentclass{book}
+\usepackage{graphicx}
+\begin{document}
+\chapter{One}
+\includegraphics{a.png}
+\includegraphics{../img/b.png}
+\chapter{Two}
+\includegraphics{../img/c.png}
+\end{document}

@@ -19,7 +19,7 @@ The live worklists and the ship contract. Read these first when resuming.
 
 | Doc | What it is |
 |-----|------------|
-| [`GOAL_v_0_8_1.md`](GOAL_v_0_8_1.md) | **The current goal (DG 2026-11-23):** solve all planned tasks in SYNC_STATUS row R on `int/towards_v0_8_1`, then the open issues and PRs. The two timelines (v0.8.0 final on `main` by 2026-11-28; v0.8.1 on the integration branch), the order of work, what "solved" means, the bar for merging the branch, and the standards every change meets. |
+| [`GOAL_v_0_8_1.md`](GOAL_v_0_8_1.md) | **The current goal (DG 2026-11-23):** solve all planned tasks in SYNC_STATUS row R on `int/towards_v0_8_1`, then the open issues and PRs. The two timelines (v0.8.0 final on `main` by 2026-11-30; v0.8.1 on the integration branch), the order of work, what "solved" means, the bar for merging the branch, and the standards every change meets. |
 | [`SYNC_STATUS.md`](SYNC_STATUS.md) | **The brief actionable worklist for both targets.** Opens with *How to read this file* + **the task list (row R), the single entry for the work lists (DG 2026-11-12)**: DG's post-merge campaign (2026-11-14: open PRs/issues and the BM Q&A residuals → cutoff → sandbox reruns vs runs 375/376 → the arXiv reconversion → ar5iv), then the worklist one line per task, every BM Q&A row (QA01-QA93) catalogued; only the main session edits it (writers hand it a SYNC note). Then: a pointer to the silent-loss inventory (`perfect_kernel/SILENT_LOSS_INVENTORY.md`), Rust Error Fixes (titles), current status, standing policies, parked-family pointers, stable reference. Closed history moves to the month's `archive/SYNC_SESSIONS_YYYY-MM.md`: the 2026-11-14 reorg (the pre-merge table, the road, WIN1), SYNC3 (2026-11-12; the post-merge rows' detail whole in `perfect_kernel/OPEN_ROWS.md`) and SYNC1 (2026-11-09, verbatim copies of every row it touched) each under its own section of [`archive/SYNC_SESSIONS_2026-11.md`](archive/SYNC_SESSIONS_2026-11.md). |
 | [`LONG_TAIL.md`](LONG_TAIL.md) | **The arXiv long tail, v0.8.2 and later (DG 2026-11-23):** every task affecting fewer than 200 arXiv articles, or synthetic-only, moved out of SYNC_STATUS row R; same bullet format and ids; new long-tail findings are added here; out of scope for v0.8.0 and v0.8.1. |
 | [`perfect_kernel/MANUAL_REGRESSIONS.md`](perfect_kernel/MANUAL_REGRESSIONS.md) | **Worklist (2026-11-06), the branch's primary goal — met at #152 and held through the closing sweep #186; residual rows FNTN/GINS/TUZK in SYNC_STATUS row R (after the merge):** every regression on the TeX Live manuals since sweep #149, with clusters, first errors and how to re-measure. |
@@ -33,10 +33,10 @@ The live worklists and the ship contract. Read these first when resuming.
 | [`parity/DEFERRED_FAMILIES.md`](parity/DEFERRED_FAMILIES.md) | Parked deep families (`.bst`, xy-pic, mode-frame, …); several carry explicit "do NOT start". |
 | [`release/RELEASE_CRITERIA.md`](release/RELEASE_CRITERIA.md) | The "what must be true before a public 1.0" contract: gates, binary-size budget, portability, license audit, tail-latency/RSS signals. |
 | [`release/RELEASING.md`](release/RELEASING.md) | Tag-driven release procedure; the self-contained-binary requirement. |
-| [`release/CHANGES_v0.8.0.md`](release/CHANGES_v0.8.0.md) | Every change in 0.8.0 with its guards and design references, and the 198 new bindings; `CHANGELOG.md` holds the release summary. |
+| [`release/CHANGES_v0.8.0.md`](release/CHANGES_v0.8.0.md) | Every change in 0.8.0 with its guards and design references, and the 198 new bindings; [`CHANGELOG.md`](../CHANGELOG.md) holds the release summary. |
 | [`release/CRATES_IO_PUBLISH.md`](release/CRATES_IO_PUBLISH.md) | `cargo publish` + docs.rs + library-use story: bottom-up publish order, the per-release checklist, the resolved blockers and their durable traps (10 MiB cap, never an `-rc`), docs.rs metadata, `latexml::api` entrypoint. |
 | [`release/CODE_SIGNING_POLICY.md`](release/CODE_SIGNING_POLICY.md) | Windows code signing: status (unsigned; SignPath declined), the Microsoft Store plan, roles, privacy, system changes (issue 775). |
-| [`release/LICENSE_INVENTORY.md`](release/LICENSE_INVENTORY.md) | Living license inventory for the redistributable binary (scopes the CC0 claim). |
+| [`release/LICENSE_INVENTORY.md`](release/LICENSE_INVENTORY.md) | Living license inventory for the redistributable binary (scopes the CC0 claim); the notices themselves are [`THIRD-PARTY-NOTICES`](../THIRD-PARTY-NOTICES). |
 | [`release/SAFETY.md`](release/SAFETY.md) | Threat model and `unsafe` inventory. |
 | [`release/WINDOWS_COMPATIBILITY_PLAN.md`](release/WINDOWS_COMPATIBILITY_PLAN.md) | Windows port — **SHIPPED** (`0.7.4-rc2`, 2026-07-14): MSVC + vcpkg-static toolchain, the bring-up summary and a short REMAINING worklist; the suite on the current TeX Live 2026 (WIN1, #833) is in `archive/SYNC_SESSIONS_2026-11.md`. |
 | [`release/WINDOWS_SUITE_TRIAGE_2026-11-16.md`](release/WINDOWS_SUITE_TRIAGE_2026-11-16.md) | The Windows full suite on main f7e359fe7e1: 32 failures in 5 classes (26 are TL 2026's subcaption first aid meeting our caption binding, not Windows), each with its evidence, code site and fix plan — the brief for `fix/windows-suite`, which fixes all five. |
@@ -54,8 +54,10 @@ The user-facing guides behind the root [`README.md`](../README.md), which is the
 | [`INSTALL.md`](INSTALL.md) | Installing: prebuilt binaries per platform (Ubuntu/Debian, macOS, Windows), Docker, the system dependencies, `cargo install`, use as a library. |
 | [`USAGE.md`](USAGE.md) | The two binaries, the output formats, running from a checkout. |
 | [`ENVIRONMENT.md`](ENVIRONMENT.md) | Every environment variable we read or set: values, defaults, effects, who it is for. Also the rustdoc page `latexml::environment` (a copy in `latexml_oxide/src/`, guarded by `cluster_cli::environment_doc`). |
+| [`INTERMEDIATE_FILES.md`](INTERMEDIATE_FILES.md) | Every file a conversion writes besides the output you asked for: caches, scratch files, lock files and sidecars — where each lives, how long, who removes it, and how to clear the caches. Also the rustdoc page `latexml::intermediate_files` (guarded by `cluster_cli::intermediate_files_doc`). |
 | [`BUILDING.md`](BUILDING.md) | Building from source per platform, the format dumps, build profiles, development tips (hooks, test requirements and skips), Cargo features. |
 | [`SUPPORTED_PACKAGES.md`](SUPPORTED_PACKAGES.md) | Generated: every package and class binding — ported (Perl LaTeXML has it), beyond Perl, contributed (latexml_contrib), raw TeX with overrides — and the rule for the rest. |
+| [Rust API (rustdoc)](https://dginev.github.io/latexml-oxide/latexml/) | The crates' API documentation, including the Rhai binding interface and the Perl \| Rust \| Rhai cheat sheet. |
 
 ## 🎯 Target 1 — faithful Perl translation (`parity/`)
 
@@ -127,11 +129,11 @@ site) that have no Perl equivalent.
 | Directory | What it holds |
 |-----------|---------------|
 | [`archive/`](archive/README.md) | Completed/superseded snapshots and session logs (see its own `README.md`). |
-| `reproducers/` | Single-paper reproducers for tracked bugs. |
-| `out-of-scope/` | Cases intentionally out of scope (Perl also fails, no-DTD, …). |
-| `known_crashes/` | Crash reproducers and the intake index; resolved write-ups in `archive/known_crashes/`. |
-| `examples/` | Worked Rhai bindings with their documents, converted in CI (`30_script_bindings::docs_examples_convert_clean`). |
-| `scripts/` | One-off analysis helpers referenced by archived diagnostics (e.g. `bucket_callgrind_hot.py`). |
+| [`reproducers/`](reproducers/) | Single-paper reproducers for tracked bugs. |
+| [`out-of-scope/`](out-of-scope/README.md) | Cases intentionally out of scope (Perl also fails, no-DTD, …). |
+| [`known_crashes/`](known_crashes/README.md) | Crash reproducers and the intake index; resolved write-ups in [`archive/known_crashes/`](archive/known_crashes/). |
+| [`examples/`](examples/) | Worked Rhai bindings with their documents, converted in CI (`30_script_bindings::docs_examples_convert_clean`). |
+| [`scripts/`](scripts/) | One-off analysis helpers referenced by archived diagnostics (e.g. `bucket_callgrind_hot.py`). |
 
 ---
 

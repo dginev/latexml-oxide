@@ -15,8 +15,9 @@ use libxml::tree::Node;
 use rustc_hash::FxHashMap as HashMap;
 
 use crate::{
-  document::PostDocument,
+  document::{DocCache, PostDocument},
   processor::{ProcessResult, Processor},
+  resource_cache::{Output, Proposal, Request, ResourceName},
 };
 
 thread_local! {
@@ -162,6 +163,160 @@ impl Default for TypeProperties {
   }
 }
 
+/// One conversion to run (phase 2 of [`Graphics::process`]).
+#[derive(Clone)]
+struct ConvertJob {
+  job_id:       usize,
+  source:       String,
+  /// The source's content digest, read at planning: the cache keys come from it.
+  digest:       Option<crate::graphics_cache::SourceDigest>,
+  page:         Option<u32>,
+  rel_dest:     String,
+  abs_dest_str: String,
+  /// `Some((rel_svg, abs_svg_str))` when the worker should
+  /// first attempt the vector-SVG path and only fall back
+  /// to the raster `convert` path on failure. `None` means
+  /// the classic raster-only path.
+  svg_paths:    Option<(String, String)>,
+  /// A web-native raster that only needs its pixels cropped or turned:
+  /// copied to `abs_dest_str` rather than converted.
+  copy_source:  bool,
+  /// The ops to apply to the raster's pixels ([`Graphics::physical_ops`]).
+  ops:          Vec<GraphicxOp>,
+  /// The raster's pixels per bp: its own resolution for a copied raster
+  /// (72 dpi when it states none, as pdfTeX takes it), the render density
+  /// for a converted one.
+  px_per_bp:    f64,
+}
+
+/// What a conversion produced.
+#[derive(Clone)]
+struct ConvertOutcome {
+  job_id:   usize,
+  /// Path to write into `imagesrc`; `None` if both convert and copy-fallback failed.
+  imagesrc: Option<String>,
+  /// Raw (pre-transform) dimensions read from whichever file we ended up
+  /// with; after a crop, the cropped size (still before any turn).
+  raw_dims: Option<(u32, u32)>,
+}
+
+/// What phase 3 of [`Graphics::process`] does for one `ltx:graphics` node.
+enum Plan {
+  /// Apply the fallback on the main thread.
+  NotFound { idx: usize, graphic: String },
+  /// Point at a copy of the source (cheap, on the main thread).
+  Copy {
+    idx:     usize,
+    source:  String,
+    options: String,
+    /// The copy's destination, relative to the destination directory.
+    rel:     String,
+    /// Whether this page makes the copy (no earlier page of this process did).
+    copy:    bool,
+  },
+  /// Point at a conversion's outcome (run in parallel, or an earlier page's).
+  Convert {
+    idx:     usize,
+    options: String,
+    job_id:  usize,
+  },
+}
+
+/// The directories a page's images are placed by ([`Graphics::page_dirs`]).
+struct PageDirs {
+  search_paths: Vec<String>,
+  source_dir:   String,
+  dest_dir:     String,
+  site_dir:     String,
+  /// The page's destination directory, whose cache store holds its names (`None`: in memory).
+  cache_dir:    Option<String>,
+}
+
+/// Phase 1 of [`Graphics::process`] ([`Graphics::plan_page`]).
+struct PagePlan {
+  plans: Vec<Plan>,
+  /// The conversions this page runs.
+  jobs:  Vec<ConvertJob>,
+  /// The outcomes an earlier page's conversions produced.
+  known: Vec<ConvertOutcome>,
+}
+
+/// What one `ltx:graphics` node needs ([`Graphics::describe`]).
+enum NodeDesc {
+  NotFound(String),
+  Copy {
+    source:  String,
+    options: String,
+    request: Box<Request>,
+  },
+  Convert(Box<ConvertDesc>),
+}
+
+/// A node whose image is converted, or a raster whose pixels change (cropped, turned).
+struct ConvertDesc {
+  source:           String,
+  options:          String,
+  digest:           Option<crate::graphics_cache::SourceDigest>,
+  page:             Option<u32>,
+  needs_conversion: bool,
+  ops:              Vec<GraphicxOp>,
+  /// Whether the source is a raster (its own pixels, else the render density).
+  raster:           bool,
+  request:          Request,
+}
+
+impl NodeDesc {
+  fn request(&self) -> Option<&Request> {
+    match self {
+      NodeDesc::NotFound(_) => None,
+      NodeDesc::Copy { request, .. } => Some(request.as_ref()),
+      NodeDesc::Convert(desc) => Some(&desc.request),
+    }
+  }
+}
+
+/// The run's resource names ([`crate::resource_cache`] over Perl's document cache, which every split page shares,
+/// `Post.pm` L192-200, L687-690, persisted as `LaTeXML-oxide.cache`) and what this process did with them. Per page,
+/// Ch1 and Ch2 each wrote `x1.svg` (issue 995).
+#[derive(Default)]
+struct ResourceNames {
+  /// Perl's `resource_prefix` (`x` unless set).
+  prefix:    Option<String>,
+  /// The run's cache ([`Graphics::with_doc_cache`]), else each page's own.
+  cache:     Option<DocCache>,
+  /// (destination directory, key) → the name planned before the render ([`Graphics::plan_names`]); a render worker
+  /// gets the parent's.
+  planned:   HashMap<(String, String), ResourceName>,
+  /// The planned pages' requests, not named yet.
+  pending:   Vec<PendingPage>,
+  /// Whether the run named its images before the render, so a name handed out while rendering is a gap.
+  planning:  bool,
+  /// (destination directory, destination) → the URL a copy took once this process copied it.
+  copies:    HashMap<(String, String), String>,
+  /// (destination directory, destination) → the conversion made into it, and its outcome once it succeeded in this
+  /// process: Perl's `cacheLookup($key)` reuses a converted image on every later page (`Post/Graphics.pm` L249-260).
+  converted: HashMap<(String, String), (ConvertJob, Option<ConvertOutcome>)>,
+  /// Source → its content digest, read once per run.
+  digests:   HashMap<String, Option<crate::graphics_cache::SourceDigest>>,
+}
+
+/// A planned page: its cache, its directories and the requests that name its images.
+struct PendingPage {
+  cache:    DocCache,
+  dirs:     PageDirs,
+  requests: Vec<Request>,
+}
+
+impl ResourceNames {
+  fn digest(&mut self, source: &str) -> Option<crate::graphics_cache::SourceDigest> {
+    self
+      .digests
+      .entry(source.to_string())
+      .or_insert_with(|| Graphics::digest_file_content(source))
+      .clone()
+  }
+}
+
 /// Graphics post-processor.
 ///
 /// Port of `LaTeXML::Post::Graphics`.
@@ -186,6 +341,7 @@ pub struct Graphics {
   /// so a caller can guarantee its conversions actually run — see
   /// [`crate::graphics_cache::CachePolicy`] and `with_cache_policy`.
   cache_policy:     crate::graphics_cache::CachePolicy,
+  names:            ResourceNames,
 }
 
 impl Graphics {
@@ -279,7 +435,15 @@ impl Graphics {
       background: "#FFFFFF".to_string(),
       svg_threshold_kb: 0,
       cache_policy: crate::graphics_cache::CachePolicy::default(),
+      names: ResourceNames::default(),
     }
+  }
+
+  /// Name generated resources `<prefix>N` instead of `xN` (Perl's `resource_prefix` option, `Post.pm` L195).
+  #[must_use]
+  pub fn with_resource_prefix(mut self, prefix: &str) -> Self {
+    self.names.prefix = Some(prefix.to_string());
+    self
   }
 
   /// Choose whether conversions may be served from the shared,
@@ -685,60 +849,6 @@ impl Graphics {
     crate::graphics_cache::SourceDigest::of_file(Path::new(path))
   }
 
-  /// Derive the destination stem for a CONVERTED graphic.
-  ///
-  /// The first job for a given source keeps the source's basename stem, for
-  /// readable output URLs (`figures/mock1/plot.pdf` → `plot.png`). But two
-  /// *different* sources that share a basename must NOT collapse onto one output
-  /// file: `figures/mock1/plot.pdf` and `figures/jackpot/plot.pdf` would both
-  /// claim `plot.png`, and the first write would silently replace one figure
-  /// with the other. When the stem-based destination is already claimed by
-  /// another source (`used_dests`), or this source already produced a job
-  /// (`page=`/subsequent), fall back to a unique `xN` — mirroring Perl's
-  /// `generateResourcePathname` (`Graphics.pm` L299/L319), which never collapses
-  /// distinct sources. `used_dests` keys on the full `stem.ext`, so `plot.png`
-  /// and `plot.svg` (different *primary* output files) don't count as a
-  /// collision. The `xN` fallback is likewise registered and skips any already
-  /// claimed name, so a source literally named `xN` and a generated `xN` can't
-  /// clobber each other. (A PDF's opt-in vector-SVG *alternate* `{stem}.svg` is
-  /// not tracked here — a separate, pre-existing edge, not this collision.)
-  /// Witness arXiv 2606.30620 (arXiv/html_feedback#6922): Figures 2/4/5 all used
-  /// `figures/{mock1,mock3,jackpot}/chi2_residuals.pdf`.
-  fn assign_dest_name(
-    source: &str,
-    dest_type: &str,
-    has_page: bool,
-    prior_source_jobs: u32,
-    used_dests: &mut HashMap<String, String>,
-    resource_counter: &mut u32,
-  ) -> String {
-    let stem = Path::new(source)
-      .file_stem()
-      .and_then(|s| s.to_str())
-      .unwrap_or("image");
-    let stem_dest = format!("{}.{}", stem, dest_type);
-    let stem_taken = used_dests
-      .get(&stem_dest)
-      .is_some_and(|owner| owner != source);
-    if has_page || prior_source_jobs > 0 || stem_taken {
-      // Advance to a counter name whose output file isn't already claimed by
-      // another source, and register it — else a real source named `xK` (which
-      // took the stem branch) could be silently overwritten by this fallback.
-      loop {
-        *resource_counter += 1;
-        let name = format!("x{}", resource_counter);
-        let dest = format!("{}.{}", name, dest_type);
-        if let std::collections::hash_map::Entry::Vacant(slot) = used_dests.entry(dest) {
-          slot.insert(source.to_string());
-          return name;
-        }
-      }
-    } else {
-      used_dests.insert(stem_dest, source.to_string());
-      stem.to_string()
-    }
-  }
-
   /// The graphicx ops that change a raster's pixels, in order: a
   /// `trim`/`viewport` crop and an `angle=` turn — Perl's non-trivial ops
   /// (`image_graphicx_is_trivial`, `Util/Image.pm` L282-284), less `page`,
@@ -894,64 +1004,690 @@ impl Graphics {
     Ok(crop.map(|(_, _, cw, ch)| (cw, ch)))
   }
 
-  /// Copy a source image to the destination directory, preserving relative paths.
-  /// Returns the destination path (relative to dest_dir).
-  fn copy_to_destination(
+  /// The directories a page's images are placed by: the search paths, the source directory, the destination's and
+  /// the site directory (Perl `Post.pm` L698-706: the destination's unless `--sitedirectory`).
+  fn page_dirs(&self, doc: &PostDocument) -> PageDirs {
+    let mut search_paths = self.find_graphics_paths(doc);
+    search_paths.extend(doc.get_search_paths().iter().cloned());
+    // Also add source directory
+    let source_dir = doc.get_source_directory().to_string();
+    if !source_dir.is_empty() && !search_paths.contains(&source_dir) {
+      search_paths.push(source_dir.clone());
+    }
+    // Add current directory as fallback
+    if !search_paths.iter().any(|p| p == ".") {
+      search_paths.push(".".to_string());
+    }
+    let dest_dir = doc.get_destination_directory().unwrap_or(".").to_string();
+    let site_dir = doc.get_site_directory().unwrap_or(&dest_dir).to_string();
+    PageDirs {
+      search_paths,
+      source_dir,
+      dest_dir,
+      site_dir,
+      cache_dir: doc.get_destination_directory().map(String::from),
+    }
+  }
+
+  /// Name the images of one page before any page is rendered, writing nothing; [`Self::commit_names`] then stores the
+  /// names of every planned page, in page order. The serial and the parallel render (`render_workers.rs`) both look
+  /// them up, so a page's names never depend on which process renders it, nor on CrossRef's copies of other pages'
+  /// titles into its navigation, which meet an image before its own page does (issue 995). Whether the page has
+  /// images to name.
+  pub fn plan_names(&mut self, doc: &PostDocument) -> bool {
+    let nodes = self.to_process(doc);
+    if nodes.is_empty() {
+      return false;
+    }
+    let dirs = self.page_dirs(doc);
+    let mut names = std::mem::take(&mut self.names);
+    let requests = self
+      .describe(doc, &nodes, &dirs, &mut names)
+      .iter()
+      .filter_map(|desc| desc.request().cloned())
+      .collect();
+    let cache = names.cache.clone().unwrap_or_else(|| doc.cache().clone());
+    names.pending.push(PendingPage { cache, dirs, requests });
+    names.planning = true;
+    self.names = names;
+    true
+  }
+
+  /// Whether a page's names were planned ([`Self::plan_names`]).
+  pub fn planned(&self) -> bool { self.names.planning }
+
+  /// Store the planned pages' names: one transaction per destination directory, so runs writing into one folder at
+  /// once never hand out one name twice.
+  pub fn commit_names(&mut self) {
+    let names = &mut self.names;
+    names.planning = true;
+    let pending = std::mem::take(&mut names.pending);
+    let prefix = names.prefix.clone().unwrap_or_else(|| "x".to_string());
+    let mut done: Vec<String> = Vec::new();
+    for first in &pending {
+      let dir = &first.dirs.dest_dir;
+      if done.contains(dir) {
+        continue;
+      }
+      done.push(dir.clone());
+      let pages: Vec<Vec<Request>> = pending
+        .iter()
+        .filter(|p| p.dirs.dest_dir == *dir)
+        .map(|p| p.requests.clone())
+        .collect();
+      let resolved = Self::resolve_names(
+        &first.cache,
+        &first.dirs,
+        &prefix,
+        &pages,
+        self.cache_policy,
+      );
+      for (requests, resolved) in pages.iter().zip(resolved) {
+        for (request, resolved) in requests.iter().zip(resolved) {
+          names
+            .planned
+            .insert((dir.clone(), request.key.clone()), resolved.name);
+        }
+      }
+    }
+  }
+
+  /// The planned names, as (destination directory, key, destination, vector render), for the render workers.
+  pub fn planned_names(&self) -> Vec<(String, String, String, Option<String>)> {
+    let mut list: Vec<_> = self
+      .names
+      .planned
+      .iter()
+      .map(|((dir, key), name)| {
+        (
+          dir.clone(),
+          key.clone(),
+          name.dest.clone(),
+          name.alt.clone(),
+        )
+      })
+      .collect();
+    list.sort();
+    list
+  }
+
+  /// A render worker's Graphics: the parent's planned names ([`Self::planned_names`]).
+  #[must_use]
+  pub fn with_planned_names(mut self, list: Vec<(String, String, String, Option<String>)>) -> Self {
+    self.names.planning = true;
+    self.names.planned = list
+      .into_iter()
+      .map(|(dir, key, dest, alt)| ((dir, key), ResourceName { dest, alt }))
+      .collect();
+    self
+  }
+
+  /// Name images in `cache`, the run's (every page's [`PostDocument::cache`] is the run's too, unless a page was made
+  /// apart from the run's options).
+  #[must_use]
+  pub fn with_doc_cache(mut self, cache: DocCache) -> Self {
+    self.names.cache = Some(cache);
+    self
+  }
+
+  /// What each node needs: its source, and the request that names its image (Perl `transformGraphic`'s key,
+  /// `Post/Graphics.pm` L240-245, with the source's content digest).
+  fn describe(
+    &self,
+    doc: &PostDocument,
+    nodes: &[Node],
+    dirs: &PageDirs,
+    names: &mut ResourceNames,
+  ) -> Vec<NodeDesc> {
+    let PageDirs {
+      search_paths,
+      source_dir,
+      dest_dir,
+      site_dir,
+      ..
+    } = dirs;
+    let mut descs = Vec::with_capacity(nodes.len());
+    for node in nodes {
+      let options = node.get_attribute("options").unwrap_or_default();
+      let Some(source) = self.find_graphic_file(doc, node, search_paths) else {
+        let graphic = node
+          .get_attribute("graphic")
+          .unwrap_or_else(|| "none".to_string());
+        descs.push(NodeDesc::NotFound(graphic));
+        continue;
+      };
+      let src_ext = Path::new(&source)
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("")
+        .to_lowercase();
+      // A single-page format has no page to select, as pdfTeX ignores `page=` on a PNG: copied as it is (#791, OD #1026).
+      const SINGLE_PAGE: &[&str] = &["svg", "png", "jpg", "jpeg"];
+      let page =
+        Self::parse_page_option(&options).filter(|_| !SINGLE_PAGE.contains(&src_ext.as_str()));
+      let props = self.type_properties.get(&src_ext).cloned();
+      // Robustness guard (surpass-Perl; user directive 2026-06-22). A source
+      // type with no explicit `destination_type` defaults to a WEB-NATIVE
+      // target: keep web-native sources (svg/png/gif/jpg/jpeg) as-is, but
+      // rasterize anything else to `png`. This guarantees a non-web-native
+      // source is ALWAYS routed through Plan::Convert and never Plan::Copy'd
+      // verbatim — closing the hole for the unmapped `.postscript` graphics
+      // type (and any future addition) where a raw .ps/.eps/.pdf/.ai could
+      // otherwise reach the web. Perl defaults dest_type to srctype here
+      // (Graphics.pm:244, `$type = $properties{destination_type} || $srctype`),
+      // which would copy such a source raw; we deliberately diverge so the web
+      // output is never a raw .eps/.ps/.pdf the browser can't render.
+      const WEB_NATIVE: &[&str] = &["svg", "png", "gif", "jpg", "jpeg"];
+      let dest_type = props
+        .as_ref()
+        .and_then(|p| p.destination_type.as_ref())
+        .cloned()
+        .unwrap_or_else(|| {
+          if WEB_NATIVE.contains(&src_ext.as_str()) {
+            src_ext.clone()
+          } else {
+            "png".to_string()
+          }
+        });
+      let needs_conversion = dest_type != src_ext;
+      let has_page = page.is_some();
+      // A raster whose pixels are cropped (`trim`/`viewport`) or turned
+      // (`angle=`) gets a file of its own, as Perl gives a complex transform a
+      // new resource name (`Post/Graphics.pm` L318-323): transforming the plain
+      // copy in place changed every other use of the same source (2510.17772: ten
+      // `trim=…,clip` figures). A non-raster source keeps Perl's refusal
+      // (warned in `Plan::Copy` below).
+      let raster = props.as_ref().and_then(|p| p.raster).unwrap_or(true);
+      let ops = if needs_conversion || raster {
+        Self::physical_ops(&options)
+      } else {
+        Vec::new()
+      };
+      let transform = !ops.is_empty();
+      // What the file's bytes depend on besides the source, its page and type: the crop and the turn. A scale or a
+      // size (`width=0.5\textwidth`) sizes the `<img>` only, so two widths share one file, and a width edited keeps it.
+      let made = if transform {
+        format!("{ops:?}")
+      } else {
+        String::new()
+      };
+      // Perl's key (`ref($self):reldir/name.srctype.type|transform`) and the content the destination holds: one
+      // file per content, a changed image a new key. Unreadable, a source is known by its path.
+      let rel = latexml_core::util::pathname::relative(&source, source_dir);
+      // The source as the names it owns record it: relative to the destination, so a moved folder keeps them.
+      let owned_source = {
+        use latexml_core::util::pathname::{absolute, relative};
+        relative(&absolute(&source), &absolute(dest_dir))
+      };
+      let digest = names.digest(&source);
+      let identity = digest.as_ref().map_or_else(
+        || format!("path:{source}"),
+        |d| d.content().iter().map(|b| format!("{b:02x}")).collect(),
+      );
+      let key = format!("LaTeXML::Post::Graphics:{rel}.{dest_type}|{options}|{identity}");
+      if needs_conversion || has_page || transform {
+        // A vector render is cropped through its `viewBox` (`crop_svg_inplace`); only a turn needs the raster. The
+        // vector-SVG path is tried for small PDFs only (`should_try_svg_path`), into `<name>.svg` beside the raster.
+        let turned = ops.iter().any(|op| matches!(op, GraphicxOp::Rotate(_)));
+        let svg_alt = !turned && Self::should_try_svg_path(&source, self.svg_threshold_kb);
+        // The first conversion of a source keeps its stem, for readable URLs (`figures/mock1/plot.pdf` →
+        // `plot.png`; witness 2606.30620, arXiv/html_feedback#6922: Figures 2/4/5 all used
+        // `figures/{mock1,mock3,jackpot}/chi2_residuals.pdf`); a page or a transform is a generated name, as Perl's
+        // every conversion is (`Post/Graphics.pm` L318-319).
+        let stem = Path::new(&source)
+          .file_stem()
+          .and_then(|s| s.to_str())
+          .unwrap_or("image")
+          .to_string();
+        let page_key = page.map_or(String::new(), |p| p.to_string());
+        let request = Request {
+          key,
+          bytes: format!("{dest_type}|{identity}|{page_key}|{made}"),
+          owner: format!("{dest_type}|{page_key}|{made}|{owned_source}"),
+          source: owned_source,
+          identity,
+          proposal: if has_page || transform {
+            Proposal::Generated
+          } else {
+            Proposal::Stem(stem)
+          },
+          ext: dest_type,
+          svg_alt,
+          copy: false,
+          output: if transform {
+            Output::Made
+          } else {
+            Output::Render(page)
+          },
+        };
+        descs.push(NodeDesc::Convert(Box::new(ConvertDesc {
+          source,
+          options,
+          digest,
+          page,
+          needs_conversion,
+          ops,
+          raster,
+          request,
+        })));
+      } else {
+        let ext = Path::new(&source)
+          .extension()
+          .map(|ext| ext.to_string_lossy().into_owned())
+          .unwrap_or_default();
+        let request = Request {
+          key,
+          bytes: format!("copy|{identity}"),
+          owner: format!("copy|{owned_source}"),
+          source: owned_source,
+          identity,
+          proposal: Self::kept_path(&rel, dest_dir, site_dir)
+            .map_or(Proposal::Generated, Proposal::Kept),
+          ext,
+          svg_alt: false,
+          copy: true,
+          output: Output::Source,
+        };
+        descs.push(NodeDesc::Copy {
+          source,
+          options,
+          request: Box::new(request),
+        });
+      }
+    }
+    descs
+  }
+
+  /// The names of a page's requests: the planned ones, else named now (a gap when the run planned, warned: the name
+  /// then depends on the page render order).
+  fn names_for(
+    doc: &PostDocument,
+    descs: &[NodeDesc],
+    dirs: &PageDirs,
+    names: &mut ResourceNames,
+    policy: crate::graphics_cache::CachePolicy,
+  ) -> Vec<Option<ResourceName>> {
+    let mut out: Vec<Option<ResourceName>> = descs
+      .iter()
+      .map(|desc| {
+        let request = desc.request()?;
+        names
+          .planned
+          .get(&(dirs.dest_dir.clone(), request.key.clone()))
+          .cloned()
+      })
+      .collect();
+    let misses: Vec<usize> = (0..descs.len())
+      .filter(|&i| out[i].is_none() && descs[i].request().is_some())
+      .collect();
+    if misses.is_empty() {
+      return out;
+    }
+    let requests: Vec<Request> = misses
+      .iter()
+      .filter_map(|&i| descs[i].request().cloned())
+      .collect();
+    let planning = names.planning;
+    let prefix = names.prefix.clone().unwrap_or_else(|| "x".to_string());
+    let cache = names.cache.clone().unwrap_or_else(|| doc.cache().clone());
+    let resolved = Self::resolve_names(&cache, dirs, &prefix, &[requests], policy)
+      .into_iter()
+      .next()
+      .unwrap_or_default();
+    for (&i, resolved) in misses.iter().zip(resolved) {
+      if planning && resolved.allocated {
+        Warn!(
+          "unexpected",
+          "resource_name",
+          "Graphics: {} was not named before the pages were rendered; {} depends on the render order",
+          descs[i].request().map_or("", |r| r.key.as_str()),
+          resolved.name.dest
+        );
+      }
+      out[i] = Some(resolved.name);
+    }
+    out
+  }
+
+  /// Phase 1 of [`Processor::process`]: each node's image, named by the resource cache, and the conversions to run.
+  /// It writes nothing.
+  fn plan_page(
+    &self,
+    doc: &PostDocument,
+    nodes: &[Node],
+    dirs: &PageDirs,
+    names: &mut ResourceNames,
+  ) -> PagePlan {
+    let descs = self.describe(doc, nodes, dirs, names);
+    let resolved = Self::names_for(doc, &descs, dirs, names, self.cache_policy);
+    let dest_dir = &dirs.dest_dir;
+    let mut plans: Vec<Plan> = Vec::with_capacity(nodes.len());
+    let mut convert_jobs: Vec<ConvertJob> = Vec::new();
+    // A job id per conversion this page runs or reuses; the page's own repeats share one.
+    let mut next_job_id = 0usize;
+    let mut convert_job_ids: HashMap<String, usize> = HashMap::default();
+    // Outcomes an earlier page's conversion already produced (`ResourceNames::converted`).
+    let mut known: Vec<ConvertOutcome> = Vec::new();
+    for (idx, (desc, name)) in descs.into_iter().zip(resolved).enumerate() {
+      let name = name.unwrap_or_else(|| ResourceName {
+        dest: String::new(),
+        alt:  None,
+      });
+      match desc {
+        NodeDesc::NotFound(graphic) => plans.push(Plan::NotFound { idx, graphic }),
+        NodeDesc::Copy { source, options, .. } => {
+          // One copy per destination file: a byte-identical source points at the same one.
+          let memo = (dest_dir.clone(), name.dest.clone());
+          let (rel, copy) = match names.copies.get(&memo) {
+            Some(rel) => (rel.clone(), false),
+            None => {
+              names.copies.insert(memo, name.dest.clone());
+              (name.dest, true)
+            },
+          };
+          plans.push(Plan::Copy {
+            idx,
+            source,
+            options,
+            rel,
+            copy,
+          });
+        },
+        NodeDesc::Convert(desc) => {
+          let ConvertDesc {
+            source,
+            options,
+            digest,
+            page,
+            needs_conversion,
+            ops,
+            raster,
+            ..
+          } = *desc;
+          let memo = (dest_dir.clone(), name.dest.clone());
+          let job_id = if let Some(&job_id) = convert_job_ids.get(&name.dest) {
+            job_id
+          } else {
+            let job_id = next_job_id;
+            next_job_id += 1;
+            convert_job_ids.insert(name.dest.clone(), job_id);
+            match names.converted.get(&memo) {
+              // An earlier page made this image: it again (Perl's `cacheLookup`).
+              Some((_, Some(outcome))) => known.push(ConvertOutcome { job_id, ..outcome.clone() }),
+              // An earlier page's conversion failed: tried again, into the same file.
+              Some((job, None)) => convert_jobs.push(ConvertJob { job_id, ..job.clone() }),
+              None => {
+                let abs = |rel: &str| {
+                  PathBuf::from(dest_dir)
+                    .join(rel)
+                    .to_string_lossy()
+                    .to_string()
+                };
+                let svg_paths = name
+                  .alt
+                  .as_ref()
+                  .map(|rel_svg| (rel_svg.clone(), abs(rel_svg)));
+                // The source's own pixels when it is a raster (a `page=` on a PNG,
+                // or a TIFF converted to PNG, keeps them: `-density` does not
+                // resample a raster); the render density for a vector source.
+                let px_per_bp = if raster {
+                  latexml_core::util::image::raster_resolution_dpi(&source).map_or(72.0, |(x, _)| x)
+                    / 72.0
+                } else {
+                  Self::raster_density_for_source(&source) as f64 / 72.0
+                };
+                let job = ConvertJob {
+                  job_id,
+                  copy_source: !needs_conversion && page.is_none(),
+                  source,
+                  digest,
+                  page,
+                  abs_dest_str: abs(&name.dest),
+                  rel_dest: name.dest.clone(),
+                  svg_paths,
+                  ops,
+                  px_per_bp,
+                };
+                names.converted.insert(memo, (job.clone(), None));
+                convert_jobs.push(job);
+              },
+            }
+            job_id
+          };
+          plans.push(Plan::Convert { idx, options, job_id });
+        },
+      }
+    }
+    PagePlan {
+      plans,
+      jobs: convert_jobs,
+      known,
+    }
+  }
+
+  /// Name `pages` in `cache`'s store of the destination directory, in one transaction ([`crate::resource_cache`]).
+  fn resolve_names(
+    cache: &DocCache,
+    dirs: &PageDirs,
+    prefix: &str,
+    pages: &[Vec<Request>],
+    policy: crate::graphics_cache::CachePolicy,
+  ) -> Vec<Vec<crate::resource_cache::Resolved>> {
+    let cache_file = Path::new(&dirs.dest_dir)
+      .join(crate::document::CACHE_FILE)
+      .display()
+      .to_string();
+    let usable =
+      |name: &ResourceName| Self::kept_path(&name.dest, &dirs.dest_dir, &dirs.site_dir).is_some();
+    // Emitted once the transaction is done: one that fails runs again in memory and meets the same entries.
+    let warnings = std::cell::RefCell::new(Vec::<String>::new());
+    let warn = |w: String| {
+      let mut warnings = warnings.borrow_mut();
+      if !warnings.contains(&w) {
+        warnings.push(w);
+      }
+    };
+    // Each file read once per call: a store in memory asks of every `xN` in the folder for every image.
+    let digests = Digests::default();
+    let vouch = |r: &Request, name: &ResourceName, source: &str| {
+      Self::vouch(r, name, source, dirs, &cache_file, &warn, &digests)
+    };
+    // The file a name writes is at its lexical path, as a copy is written (`copy_target`).
+    let file = |part: &str| PathBuf::from(Self::copy_target(&dirs.dest_dir, part));
+    let present = |part: &str| std::fs::symlink_metadata(file(part)).is_ok();
+    // A store on its file knows the files it named: any other in the folder is not `r`'s (a document's whose cache was
+    // deleted; an author's, converting in place), but a copy's kept path that is its source (in place).
+    let not_owned = |r: &Request, name: &ResourceName| {
+      std::iter::once(&name.dest).chain(&name.alt).any(|part| {
+        present(part) && !(r.copy && part == &name.dest && Self::is_source(r, part, dirs))
+      })
+    };
+    // A store in memory in place of its file does not: a file of the name holding what `r` writes is the one an
+    // earlier run wrote for it, which a rerun takes again.
+    let holds_other = |r: &Request, name: &ResourceName| {
+      std::iter::once(&name.dest).chain(&name.alt).any(|part| {
+        present(part)
+          && !Self::holds_output(r, &file(part), part == &name.dest, dirs, policy, &digests)
+      })
+    };
+    let names = cache.with_store(dirs.cache_dir.as_deref(), |store| {
+      let on_file = store.wants_file();
+      // Whether the store runs in memory is known only inside the transaction: a file that fails in it is
+      // replaced by memory, and the names are planned again there.
+      store.immediate(|tx, fell_back| {
+        warnings.borrow_mut().clear();
+        let on_disk: Option<crate::resource_cache::OnDisk> = if fell_back {
+          Some(&holds_other)
+        } else if on_file {
+          Some(&not_owned)
+        } else {
+          None
+        };
+        let checks = crate::resource_cache::Checks {
+          prefix,
+          usable: &usable,
+          vouch: &vouch,
+          on_disk,
+          cache: &cache_file,
+          warn: &warn,
+        };
+        crate::resource_cache::resolve(tx, &checks, pages)
+      })
+    });
+    for w in warnings.into_inner() {
+      Warn!("unexpected", "cache", "{}", w);
+    }
+    // A transaction that failed in memory too (reported, an Error) names nothing: each page asks again as it renders.
+    names.unwrap_or_default()
+  }
+
+  /// Whether `part` in the destination directory is `r`'s source itself (a copy's kept path, converting in place).
+  fn is_source(r: &Request, part: &str, dirs: &PageDirs) -> bool {
+    let (target, source) = (
+      Self::copy_target(&dirs.dest_dir, part),
+      Self::copy_target(&dirs.dest_dir, &r.source),
+    );
+    target == source || latexml_core::util::pathname::same_file(&target, &source)
+  }
+
+  /// Whether the file at `path` holds what `r` writes there: a copy its source's bytes; a render (`raster`, else the
+  /// vector `.svg` beside it) the graphics cache's entry for its source. A cropped or turned image is never known.
+  fn holds_output(
+    r: &Request,
+    path: &Path,
+    raster: bool,
+    dirs: &PageDirs,
+    policy: crate::graphics_cache::CachePolicy,
+    digests: &Digests,
+  ) -> bool {
+    use latexml_core::util::pathname::absolute;
+    let Some(held) = digests.content(path) else {
+      return false;
+    };
+    let source = absolute(&Path::new(&dirs.dest_dir).join(&r.source).to_string_lossy());
+    match r.output {
+      Output::Source => hex(&held) == r.identity,
+      Output::Render(page) => {
+        let key = crate::graphics_cache::RenderKey {
+          page,
+          density: if raster {
+            Self::raster_density_for_source(&source)
+          } else {
+            0
+          },
+          ext: if raster {
+            ext_from_path(&path.to_string_lossy())
+          } else {
+            "svg"
+          },
+        };
+        let digest = digests.of(Path::new(&source));
+        crate::graphics_cache::cached_output(policy, &source, digest.as_ref(), key)
+          .and_then(|cached| digests.content(&cached))
+          .is_some_and(|cached| cached == held)
+      },
+      Output::Made => false,
+    }
+  }
+
+  /// Whether `name`, stored for the source at `source` (relative to the destination directory), is the name that
+  /// source takes (its kept path, or its stem) and the source holds `r`'s bytes, so `r` may share its file. The name
+  /// is matched first, and only then is a relative path to a regular file (a link followed to one) read: an absolute
+  /// path, which no run stores, or a device or a FIFO, whose read may never end, is reported once (Warning). A source
+  /// is not bound to the source directory: a converted image's may lie outside it (issue 995, `\subimport{../A/}`).
+  fn vouch(
+    r: &Request,
+    name: &ResourceName,
     source: &str,
-    source_dir: &str,
-    dest_dir: &str,
-    used_dests: &mut HashMap<String, String>,
-    resource_counter: &mut u32,
-  ) -> Option<String> {
-    // Relativize like Perl's pathname_relative (→ File::Spec->abs2rel): a
+    dirs: &PageDirs,
+    cache_file: &str,
+    warn: &dyn Fn(String),
+    digests: &Digests,
+  ) -> bool {
+    use latexml_core::util::pathname::{absolute, relative};
+    if source.is_empty() {
+      return false;
+    }
+    let relative_path = Path::new(source).components().all(|part| {
+      matches!(
+        part,
+        std::path::Component::Normal(_) | std::path::Component::ParentDir
+      )
+    });
+    let abs = absolute(&Path::new(&dirs.dest_dir).join(source).to_string_lossy());
+    let unusable = || {
+      warn(format!(
+        "The cache {cache_file} gives {} the source {source}, not a file relative to the destination; it is ignored",
+        name.dest
+      ));
+      false
+    };
+    if !relative_path {
+      return unusable();
+    }
+    let its_name = if r.copy {
+      relative(&abs, &absolute(&dirs.source_dir)) == name.dest
+    } else {
+      Path::new(&abs)
+        .file_stem()
+        .is_some_and(|stem| format!("{}.{}", stem.to_string_lossy(), r.ext) == name.dest)
+    };
+    if !its_name {
+      return false;
+    }
+    match std::fs::metadata(&abs).map(|meta| meta.is_file()) {
+      Ok(false) => unusable(),
+      Ok(true) => digests
+        .content(Path::new(&abs))
+        .is_some_and(|d| hex(&d) == r.identity),
+      Err(_) => false,
+    }
+  }
+
+  /// A copy's path relative to `dest_dir` when it keeps the source's path relative to the source directory: taken
+  /// from the destination directory, it must stay in the site directory (Perl `Post/Graphics.pm` L292-300:
+  /// `--sitedirectory`, else `--dest`'s; OXIDIZED_DESIGN_DIVERGENCES #1081, issue 995). Else a generated `xN`.
+  fn kept_path(rel: &str, dest_dir: &str, site_dir: &str) -> Option<String> {
+    // `rel` is relative like Perl's pathname_relative (→ File::Spec->abs2rel): a
     // source OUTSIDE source_dir comes back as `../…`, never the raw absolute
     // path. A bare `strip_prefix` used to leak the absolute path for a graphic
     // reached through `\subimport*{../A/child/}` (issue #698 class).
-    let mut rel = latexml_core::util::pathname::relative(source, source_dir);
-    // Perl `Post/Graphics.pm` L298-300: a path that would leave the destination
-    // (`..`, a root or drive) takes a generated `xN` name instead (OXIDIZED_DESIGN_DIVERGENCES #1081).
-    let contained = Path::new(&rel).components().all(|part| {
-      matches!(
-        part,
-        std::path::Component::Normal(_) | std::path::Component::CurDir
-      )
-    });
-    if !contained {
-      let ext = Path::new(source)
-        .extension()
-        .map(|ext| ext.to_string_lossy().into_owned())
-        .unwrap_or_default();
-      rel = loop {
-        *resource_counter += 1;
-        let name = if ext.is_empty() {
-          format!("x{resource_counter}")
-        } else {
-          format!("x{resource_counter}.{ext}")
-        };
-        if let std::collections::hash_map::Entry::Vacant(slot) = used_dests.entry(name.clone()) {
-          slot.insert(source.to_string());
-          break name;
-        }
-      };
-    }
-    let rel_path = Path::new(&rel);
+    let target = Self::copy_target(dest_dir, rel);
+    (latexml_core::util::pathname::is_contained(&target, site_dir).is_some()
+      && Self::resolves_inside_site_or_dest(&target, site_dir, dest_dir))
+    .then(|| rel.to_string())
+  }
 
-    // Build absolute destination path
-    let abs_dest = PathBuf::from(dest_dir).join(rel_path);
+  /// Where a copy named `rel` is written: the absolute lexical path, as Perl's `pathname_absolute` and
+  /// `pathname_copy` make it (`Util/Pathname.pm` L264-266). Joined raw, the system resolved `out/../children`
+  /// through a linked `out`.
+  fn copy_target(dest_dir: &str, rel: &str) -> String {
+    latexml_core::util::pathname::absolute(&PathBuf::from(dest_dir).join(rel).to_string_lossy())
+  }
 
-    // Create parent directories if needed
+  /// Whether `target`'s real directory (symbolic links resolved, 8.3 names expanded, a directory not made yet resolved
+  /// through its existing parent) stays in the real site directory or the real destination directory, both resolved
+  /// the same way: a link inside the site directory would otherwise carry the copy out of both (Perl writes through
+  /// it; OXIDIZED_DESIGN_DIVERGENCES #1081). Resolving only the target, a destination not made yet stayed lexical and
+  /// a Windows `RUNNER~1` destination held none of its own images.
+  fn resolves_inside_site_or_dest(target: &str, site_dir: &str, dest_dir: &str) -> bool {
+    use latexml_core::util::pathname::is_contained_resolved;
+    is_contained_resolved(target, site_dir).is_some()
+      || is_contained_resolved(target, dest_dir).is_some()
+  }
+
+  /// Copy `source` to `rel` in `dest_dir` ([`Self::copy_target`]), unless it is the source itself.
+  fn copy_file(source: &str, dest_dir: &str, rel: &str) -> Option<()> {
+    let abs_dest = PathBuf::from(Self::copy_target(dest_dir, rel));
     if let Some(parent) = abs_dest.parent() {
       std::fs::create_dir_all(parent).ok()?;
     }
-
     // Copy the file atomically (skip if same path) so parallel render workers
     // referencing the same image never race on a truncated destination.
     if !crate::writer::same_file(Path::new(source), &abs_dest) {
       crate::writer::copy_atomic(Path::new(source), &abs_dest).ok()?;
     }
-
-    // Return relative path for imagesrc attribute
-    Some(rel_path.to_string_lossy().to_string())
+    Some(())
   }
 
   /// Extract `page=N` from graphicx options string.
@@ -2214,6 +2950,27 @@ fn base64_prefix(data: &str, limit: usize) -> Vec<u8> {
   out
 }
 
+/// The content digests of the files one naming call reads, each read once.
+#[derive(Default)]
+struct Digests(std::cell::RefCell<HashMap<PathBuf, Option<crate::graphics_cache::SourceDigest>>>);
+
+impl Digests {
+  /// The digest of the file at `path` (`None`: unreadable).
+  fn of(&self, path: &Path) -> Option<crate::graphics_cache::SourceDigest> {
+    self
+      .0
+      .borrow_mut()
+      .entry(path.to_path_buf())
+      .or_insert_with(|| crate::graphics_cache::SourceDigest::of_file(path))
+      .clone()
+  }
+
+  /// The file's content digest.
+  fn content(&self, path: &Path) -> Option<[u8; 32]> { self.of(path).map(|d| d.content()) }
+}
+
+fn hex(digest: &[u8; 32]) -> String { digest.iter().map(|b| format!("{b:02x}")).collect() }
+
 /// Map a destination path to a `&'static str` extension suitable for
 /// `graphics_cache::RenderKey::ext`. Only common image targets need to
 /// round-trip through the cache; anything else collapses to `""` and
@@ -2265,24 +3022,16 @@ fn read_postscript_bounding_box(source: &str) -> Option<(f64, f64)> {
 impl Processor for Graphics {
   fn get_name(&self) -> &str { &self.name }
 
+  fn resource_prefix(&self) -> Option<&str> { self.names.prefix.as_deref() }
+
   fn to_process(&self, doc: &PostDocument) -> Vec<Node> {
     doc.findnodes("//ltx:graphics[not(@imagesrc)]")
   }
 
   fn process(&mut self, doc: PostDocument, nodes: Vec<Node>) -> ProcessResult {
-    let mut search_paths = self.find_graphics_paths(&doc);
-    search_paths.extend(doc.get_search_paths().iter().cloned());
-    // Also add source directory
-    let source_dir = doc.get_source_directory().to_string();
-    if !source_dir.is_empty() && !search_paths.contains(&source_dir) {
-      search_paths.push(source_dir.clone());
-    }
-    // Add current directory as fallback
-    if !search_paths.iter().any(|p| p == ".") {
-      search_paths.push(".".to_string());
-    }
-
-    let dest_dir = doc.get_destination_directory().unwrap_or(".").to_string();
+    let dirs = self.page_dirs(&doc);
+    let dest_dir = dirs.dest_dir.clone();
+    let source_dir = dirs.source_dir.clone();
     // Read DPI/magnify/zoomout from processing instructions (set by latexml.sty)
     let dpi = self
       .get_parameter(&doc, "DPI")
@@ -2296,15 +3045,15 @@ impl Processor for Graphics {
     let n_to_process = nodes.len();
     latexml_core::telemetry::set_graphics_assets(n_to_process as u32);
 
-    // Counter for generating unique resource names (like Perl's generateResourcePathname)
-    let mut resource_counter: u32 = 0;
+    // The run's resource names, handed back below: every page allocates from one sequence (issue 995).
+    let mut names = std::mem::take(&mut self.names);
 
     // Two-phase plan so the slow per-image `convert` subprocess and
     // `read_image_dimensions` calls can run in parallel without touching
     // the libxml DOM off-thread.
     //
-    // Phase 1 (serial): read each node's attributes, resolve source path,
-    // decide the conversion kind, and allocate resource-name counters.
+    // Phase 1 (serial, `plan_page`): read each node's attributes, resolve source path,
+    // decide the conversion kind, and allocate resource names.
     //   - `Plan::NotFound` — apply fallback on the main thread later
     //   - `Plan::Copy { .. }` — apply on the main thread later (cheap)
     //   - `Plan::Convert { .. }` — independent; run in parallel.
@@ -2312,222 +3061,11 @@ impl Processor for Graphics {
     // `Plan::Convert` entries. Produces `JobResult`s keyed by node index.
     // Phase 3 (serial): apply DOM mutations on the main thread in original
     // node order so attribute writes happen on the libxml-owning thread.
-    enum Plan {
-      NotFound {
-        idx:     usize,
-        graphic: String,
-      },
-      Copy {
-        idx:     usize,
-        source:  String,
-        options: String,
-      },
-      Convert {
-        idx:     usize,
-        options: String,
-        job_id:  usize,
-      },
-    }
-    struct ConvertJob {
-      job_id:       usize,
-      source:       String,
-      /// The source's content digest, read at planning: the cache keys come from it.
-      digest:       Option<crate::graphics_cache::SourceDigest>,
-      page:         Option<u32>,
-      rel_dest:     String,
-      abs_dest_str: String,
-      /// `Some((rel_svg, abs_svg_str))` when the worker should
-      /// first attempt the vector-SVG path and only fall back
-      /// to the raster `convert` path on failure. `None` means
-      /// the classic raster-only path.
-      svg_paths:    Option<(String, String)>,
-      /// A web-native raster that only needs its pixels cropped or turned:
-      /// copied to `abs_dest_str` rather than converted.
-      copy_source:  bool,
-      /// The ops to apply to the raster's pixels ([`Self::physical_ops`]).
-      ops:          Vec<GraphicxOp>,
-      /// The raster's pixels per bp: its own resolution for a copied raster
-      /// (72 dpi when it states none, as pdfTeX takes it), the render density
-      /// for a converted one.
-      px_per_bp:    f64,
-    }
-    struct ConvertOutcome {
-      job_id:   usize,
-      /// Path to write into `imagesrc`; `None` if both convert and copy-fallback failed.
-      imagesrc: Option<String>,
-      /// Raw (pre-transform) dimensions read from whichever file we ended up
-      /// with; after a crop, the cropped size (still before any turn).
-      raw_dims: Option<(u32, u32)>,
-    }
-
-    let mut plans: Vec<Plan> = Vec::with_capacity(n_to_process);
-    let mut convert_jobs: Vec<ConvertJob> = Vec::new();
-    // Dedup key uses content-hash when readable, else falls back to
-    // (source-path, page, options). Two byte-identical files with the
-    // same options share one conversion + one output bundle entry.
-    // The first-seen source's stem names the dest. Both <img> tags
-    // end up pointing to that same rel_dest.
-    #[derive(Hash, Eq, PartialEq)]
-    enum JobKey {
-      Hashed([u8; 32], Option<u32>, String),
-      Pathy(String, Option<u32>, String),
-    }
-    let mut convert_job_ids: HashMap<JobKey, usize> = HashMap::default();
-    // Plan::Copy uses the same (hash, options) dedup so byte-identical
-    // raster sources point at one output. A raster whose pixels change
-    // (crop, turn) is a Plan::Convert job with its own file.
-    #[derive(Hash, Eq, PartialEq)]
-    enum CopyKey {
-      Hashed([u8; 32], String),
-      Pathy(String, String),
-    }
-    let mut copy_dedup: HashMap<CopyKey, String> = HashMap::default();
-    let mut convert_source_counts: HashMap<String, u32> = HashMap::default();
-    // Maps a stem-based destination file (`stem.ext`) to the source that claimed
-    // it, so two different sources sharing a basename don't collide (#6922).
-    let mut used_dests: HashMap<String, String> = HashMap::default();
-    // Every source first, so a generated `xN` name (or a converted `fig.eps`'s
-    // `fig.png`) never lands on a file another node copies — an author's own
-    // `x1.png`, which a crop's output would otherwise overwrite.
-    let sources: Vec<Option<String>> = nodes
-      .iter()
-      .map(|node| self.find_graphic_file(&doc, node, &search_paths))
-      .collect();
-    for source in sources.iter().flatten() {
-      used_dests
-        .entry(latexml_core::util::pathname::relative(source, &source_dir))
-        .or_insert_with(|| source.clone());
-    }
-    for (idx, node) in nodes.iter().enumerate() {
-      let options = node.get_attribute("options").unwrap_or_default();
-      let Some(source) = sources[idx].clone() else {
-        let graphic = node
-          .get_attribute("graphic")
-          .unwrap_or_else(|| "none".to_string());
-        plans.push(Plan::NotFound { idx, graphic });
-        continue;
-      };
-      let src_ext = Path::new(&source)
-        .extension()
-        .and_then(|e| e.to_str())
-        .unwrap_or("")
-        .to_lowercase();
-      // A single-page format has no page to select, as pdfTeX ignores `page=` on a PNG: copied as it is (#791, OD #1026).
-      const SINGLE_PAGE: &[&str] = &["svg", "png", "jpg", "jpeg"];
-      let page =
-        Self::parse_page_option(&options).filter(|_| !SINGLE_PAGE.contains(&src_ext.as_str()));
-      let props = self.type_properties.get(&src_ext).cloned();
-      // Robustness guard (surpass-Perl; user directive 2026-06-22). A source
-      // type with no explicit `destination_type` defaults to a WEB-NATIVE
-      // target: keep web-native sources (svg/png/gif/jpg/jpeg) as-is, but
-      // rasterize anything else to `png`. This guarantees a non-web-native
-      // source is ALWAYS routed through Plan::Convert and never Plan::Copy'd
-      // verbatim — closing the hole for the unmapped `.postscript` graphics
-      // type (and any future addition) where a raw .ps/.eps/.pdf/.ai could
-      // otherwise reach the web. Perl defaults dest_type to srctype here
-      // (Graphics.pm:244, `$type = $properties{destination_type} || $srctype`),
-      // which would copy such a source raw; we deliberately diverge so the web
-      // output is never a raw .eps/.ps/.pdf the browser can't render.
-      const WEB_NATIVE: &[&str] = &["svg", "png", "gif", "jpg", "jpeg"];
-      let dest_type = props
-        .as_ref()
-        .and_then(|p| p.destination_type.as_ref())
-        .cloned()
-        .unwrap_or_else(|| {
-          if WEB_NATIVE.contains(&src_ext.as_str()) {
-            src_ext.clone()
-          } else {
-            "png".to_string()
-          }
-        });
-      let needs_conversion = dest_type != src_ext;
-      let has_page = page.is_some();
-      // A raster whose pixels are cropped (`trim`/`viewport`) or turned
-      // (`angle=`) gets a file of its own, as Perl gives a complex transform a
-      // new resource name (`Post/Graphics.pm` L318-323): transforming the plain
-      // copy in place changed every other use of the same source (2510.17772: ten
-      // `trim=…,clip` figures). A non-raster source keeps Perl's refusal
-      // (warned in `Plan::Copy` below).
-      let is_raster = props.as_ref().and_then(|p| p.raster).unwrap_or(true);
-      let ops = if needs_conversion || is_raster {
-        Self::physical_ops(&options)
-      } else {
-        Vec::new()
-      };
-      let transform = !ops.is_empty();
-      if needs_conversion || has_page || transform {
-        let digest = Self::digest_file_content(&source);
-        let job_key = match &digest {
-          Some(d) => JobKey::Hashed(d.content(), page, options.clone()),
-          None => JobKey::Pathy(source.clone(), page, options.clone()),
-        };
-        let job_id = if let Some(&job_id) = convert_job_ids.get(&job_key) {
-          job_id
-        } else {
-          let prior_source_jobs = convert_source_counts.get(&source).copied().unwrap_or(0);
-          let dest_name = Self::assign_dest_name(
-            &source,
-            &dest_type,
-            has_page || transform,
-            prior_source_jobs,
-            &mut used_dests,
-            &mut resource_counter,
-          );
-          convert_source_counts.insert(source.clone(), prior_source_jobs + 1);
-          // Vector-SVG path: opt-in for small PDFs only. We prepare an
-          // alternate `.svg` destination path alongside the normal raster
-          // destination so the worker can try the vector-SVG path first, then fall
-          // back. The file-size heuristic gates this — see
-          // `should_try_svg_path`.
-          // A vector render is cropped through its `viewBox`
-          // (`crop_svg_inplace`); only a turn needs the raster.
-          let turned = ops.iter().any(|op| matches!(op, GraphicxOp::Rotate(_)));
-          let try_svg = !turned && Self::should_try_svg_path(&source, self.svg_threshold_kb);
-          let rel_dest = format!("{}.{}", dest_name, dest_type);
-          let abs_dest = PathBuf::from(&dest_dir).join(&rel_dest);
-          if let Some(parent) = abs_dest.parent() {
-            std::fs::create_dir_all(parent).ok();
-          }
-          let abs_dest_str = abs_dest.to_string_lossy().to_string();
-          let svg_paths = if try_svg {
-            let rel_svg = format!("{}.svg", dest_name);
-            let abs_svg = PathBuf::from(&dest_dir).join(&rel_svg);
-            let abs_svg_str = abs_svg.to_string_lossy().to_string();
-            Some((rel_svg, abs_svg_str))
-          } else {
-            None
-          };
-          let copy_source = !needs_conversion && !has_page;
-          // The source's own pixels when it is a raster (a `page=` on a PNG,
-          // or a TIFF converted to PNG, keeps them: `-density` does not
-          // resample a raster); the render density for a vector source.
-          let px_per_bp = if props.as_ref().and_then(|p| p.raster).unwrap_or(true) {
-            latexml_core::util::image::raster_resolution_dpi(&source).map_or(72.0, |(x, _)| x)
-              / 72.0
-          } else {
-            Self::raster_density_for_source(&source) as f64 / 72.0
-          };
-          let job_id = convert_jobs.len();
-          convert_jobs.push(ConvertJob {
-            job_id,
-            source: source.clone(),
-            digest,
-            page,
-            rel_dest,
-            abs_dest_str,
-            svg_paths,
-            copy_source,
-            ops,
-            px_per_bp,
-          });
-          convert_job_ids.insert(job_key, job_id);
-          job_id
-        };
-        plans.push(Plan::Convert { idx, options, job_id });
-      } else {
-        plans.push(Plan::Copy { idx, source, options });
-      }
-    }
+    let PagePlan {
+      plans,
+      jobs: convert_jobs,
+      known,
+    } = self.plan_page(&doc, &nodes, &dirs, &mut names);
 
     // Phase 2: parallel conversions. Bounded worker count to avoid
     // oversubscribing when many images are in flight. `convert` itself
@@ -2535,6 +3073,11 @@ impl Processor for Graphics {
     // parallelism — capped at a reasonable limit to avoid fork/memory
     // storms with many-image papers.
     let convert_count = convert_jobs.len();
+    for job in &convert_jobs {
+      if let Some(parent) = Path::new(&job.abs_dest_str).parent() {
+        std::fs::create_dir_all(parent).ok();
+      }
+    }
     // Worker cap controls fork-fan-out of mutool / pdftocairo / convert.
     // Each spawn pulls libgs + libpoppler + libpng into a fresh
     // address space (~30 ms ambient), so on graphics-heavy papers
@@ -2745,7 +3288,7 @@ impl Processor for Graphics {
                     };
                     // The raster: converted (or, for a web-native raster whose pixels change,
                     // copied) into its staged file, cropped or turned there, then installed —
-                    // never over its own source (`assign_dest_name` avoids every source's name).
+                    // never over its own source (the resource cache names no file another source claimed).
                     let raster_dims = if svg_outcome.is_some() {
                       None
                     } else {
@@ -2922,8 +3465,22 @@ impl Processor for Graphics {
       outcomes.sort_by_key(|o| o.job_id);
       latexml_core::telemetry::add_graphics_subprocess(subproc_count.load(Ordering::Relaxed));
     }
-    let outcomes_by_job: HashMap<usize, ConvertOutcome> =
-      outcomes.into_iter().map(|o| (o.job_id, o)).collect();
+    // A converted image every later page reuses (Perl's `cacheStore`, `Post/Graphics.pm` L331); a failed one is
+    // tried again, as Perl's is.
+    for outcome in outcomes.iter().filter(|o| o.imagesrc.is_some()) {
+      if let Some(job) = convert_jobs.iter().find(|job| job.job_id == outcome.job_id)
+        && let Some(entry) = names
+          .converted
+          .get_mut(&(dest_dir.clone(), job.rel_dest.clone()))
+      {
+        entry.1 = Some(outcome.clone());
+      }
+    }
+    let outcomes_by_job: HashMap<usize, ConvertOutcome> = outcomes
+      .into_iter()
+      .chain(known)
+      .map(|o| (o.job_id, o))
+      .collect();
 
     // Phase 3: serial DOM mutations. Preserves original node order.
     for plan in &plans {
@@ -2948,34 +3505,26 @@ impl Processor for Graphics {
             graphic
           );
         },
-        Plan::Copy { idx, source, options } => {
+        Plan::Copy {
+          idx,
+          source,
+          options,
+          rel,
+          copy,
+        } => {
           let mut node_mut = nodes[*idx].clone();
-          // Content-hash dedup: if a byte-identical source with the
-          // same options was already copied, point this
-          // node at the same rel. Avoids both duplicate I/O and a
-          // duplicate output file in the bundle. Fall back to source-
-          // path keying when the file can't be hashed.
-          let key = match Self::digest_file_content(source) {
-            Some(d) => CopyKey::Hashed(d.content(), options.clone()),
-            None => CopyKey::Pathy(source.clone(), options.clone()),
-          };
-          let rel = if let Some(existing) = copy_dedup.get(&key) {
-            existing.clone()
-          } else {
-            let rel_opt = Self::copy_to_destination(
-              source,
-              &source_dir,
-              &dest_dir,
-              &mut used_dests,
-              &mut resource_counter,
-            );
+          let mut rel = rel.clone();
+          if *copy && Self::copy_file(source, &dest_dir, &rel).is_none() {
             // If the copy itself failed, still emit a RELATIVE URL (abs2rel),
             // never the raw absolute source path (issue #698 class).
-            let rel = rel_opt
-              .unwrap_or_else(|| latexml_core::util::pathname::relative(source, &source_dir));
-            copy_dedup.insert(key, rel.clone());
-            rel
-          };
+            let planned = std::mem::replace(
+              &mut rel,
+              latexml_core::util::pathname::relative(source, &source_dir),
+            );
+            names
+              .copies
+              .insert((dest_dir.clone(), planned), rel.clone());
+          }
           let raw_dims = Self::read_source_dimensions(source);
           // Plan::Copy fires for web-native sources whose pixels stay as they
           // are: a raster to crop or turn took Plan::Convert above, so any trim
@@ -3074,6 +3623,7 @@ impl Processor for Graphics {
       doc.get_destination().unwrap_or("?"),
       n_to_process
     );
+    self.names = names;
     Ok(vec![doc])
   }
 }
@@ -3089,67 +3639,76 @@ mod tests {
   use crate::test_env::EnvGuard;
   use crate::test_env::TempDir;
 
+  /// A conversion request for `source` to `ext` (no page, no transform: its stem is proposed).
+  fn stem_request(source: &str, ext: &str) -> Request {
+    let stem = Path::new(source)
+      .file_stem()
+      .unwrap()
+      .to_string_lossy()
+      .into_owned();
+    Request {
+      key:      format!("LaTeXML::Post::Graphics:{source}.{ext}||{source}"),
+      bytes:    format!("{ext}|{source}||"),
+      owner:    format!("{ext}|||{source}"),
+      source:   source.to_string(),
+      identity: source.to_string(),
+      proposal: Proposal::Stem(stem),
+      ext:      ext.to_string(),
+      svg_alt:  false,
+      copy:     false,
+      output:   Output::Render(None),
+    }
+  }
+
+  fn dests_of(requests: Vec<Request>) -> Vec<String> {
+    let pages = [requests];
+    let checks = crate::resource_cache::Checks {
+      prefix:  "x",
+      usable:  &|_| true,
+      vouch:   &|_, _, _| true,
+      on_disk: None,
+      cache:   crate::document::CACHE_FILE,
+      warn:    &|_| {},
+    };
+    DocCache::new(true)
+      .with_store(None, |store| {
+        store.immediate(|tx, _| crate::resource_cache::resolve(tx, &checks, &pages))
+      })
+      .unwrap()[0]
+      .iter()
+      .map(|r| r.name.dest.clone())
+      .collect()
+  }
+
   /// #6922: two DIFFERENT sources that share a basename must map to DISTINCT
   /// converted-output files. Before the fix, the first job of each source used
   /// its `file_stem()`, so `figs/a/plot.pdf` and `figs/b/plot.pdf` both became
   /// `plot.png` and the first write won — one figure silently replaced by the
   /// other (arXiv 2606.30620, Figures 2/4/5). The colliding second source now
-  /// falls back to a unique `xN`.
+  /// falls back to a unique `xN`; a distinct stem, or the same stem to another
+  /// type, keeps its readable name; the same source again is no collision.
   #[test]
   fn convert_dest_names_avoid_basename_collision() {
-    let mut used: HashMap<String, String> = HashMap::default();
-    let mut ctr: u32 = 0;
-    let a = Graphics::assign_dest_name("figs/a/plot.pdf", "png", false, 0, &mut used, &mut ctr);
-    let b = Graphics::assign_dest_name("figs/b/plot.pdf", "png", false, 0, &mut used, &mut ctr);
-    assert_eq!(a, "plot", "first source keeps the readable stem");
-    assert_ne!(
-      a, b,
-      "distinct sources sharing basename 'plot' must not collide"
-    );
-    assert!(
-      b.starts_with('x'),
-      "colliding source falls back to a unique xN, got {b}"
-    );
-
-    // A distinct stem is unaffected — keeps its readable name.
-    let c = Graphics::assign_dest_name("figs/c/other.pdf", "png", false, 0, &mut used, &mut ctr);
-    assert_eq!(c, "other");
-
-    // Same stem but a DIFFERENT output extension is a different file, not a collision.
-    let d = Graphics::assign_dest_name("figs/d/plot.eps", "svg", false, 0, &mut used, &mut ctr);
-    assert_eq!(d, "plot", "plot.svg does not collide with plot.png");
-
-    // A second job of the SAME source (e.g. `page=`) is still unique.
-    let e = Graphics::assign_dest_name("figs/a/plot.pdf", "png", true, 1, &mut used, &mut ctr);
-    assert!(
-      e.starts_with('x'),
-      "a second job of one source stays unique, got {e}"
-    );
-
-    // The SAME source is never treated as a self-collision (the `owner != source`
-    // guard). In the real caller a repeat reference is deduped upstream by content
-    // hash, and any genuine second job carries `prior_source_jobs > 0`; this pins
-    // the guard's own contract directly.
-    let mut used2: HashMap<String, String> = HashMap::default();
-    let mut ctr2: u32 = 0;
-    let f1 = Graphics::assign_dest_name("figs/a/plot.pdf", "png", false, 0, &mut used2, &mut ctr2);
-    let f2 = Graphics::assign_dest_name("figs/a/plot.pdf", "png", false, 0, &mut used2, &mut ctr2);
-    assert_eq!(f1, "plot");
-    assert_eq!(f2, "plot", "the same source is not a self-collision");
-
-    // Three distinct sources sharing a stem → three distinct outputs.
-    let mut u3: HashMap<String, String> = HashMap::default();
-    let mut c3: u32 = 0;
-    let g: Vec<String> = ["m1/chi2.pdf", "m3/chi2.pdf", "jk/chi2.pdf"]
-      .iter()
-      .map(|s| Graphics::assign_dest_name(s, "png", false, 0, &mut u3, &mut c3))
-      .collect();
-    assert_eq!(g[0], "chi2");
-    assert_eq!(
-      g.iter().collect::<std::collections::HashSet<_>>().len(),
-      3,
-      "3 same-stem sources must yield 3 distinct dest names, got {g:?}"
-    );
+    let names = dests_of(vec![
+      stem_request("figs/a/plot.pdf", "png"),
+      stem_request("figs/b/plot.pdf", "png"),
+      stem_request("figs/c/other.pdf", "png"),
+      stem_request("figs/d/plot.eps", "svg"),
+      stem_request("figs/a/plot.pdf", "png"),
+    ]);
+    assert_eq!(names, [
+      "plot.png",
+      "x1.png",
+      "other.png",
+      "plot.svg",
+      "plot.png"
+    ]);
+    let names = dests_of(vec![
+      stem_request("m1/chi2.pdf", "png"),
+      stem_request("m3/chi2.pdf", "png"),
+      stem_request("jk/chi2.pdf", "png"),
+    ]);
+    assert_eq!(names, ["chi2.png", "x1.png", "x2.png"]);
   }
 
   /// #6922 finding (reviewer): the `xN` fallback must not clobber a real source
@@ -3159,18 +3718,12 @@ mod tests {
   /// fresh name rather than overwrite the generated `x1.png`.
   #[test]
   fn generated_xn_survives_a_later_literal_xn_source() {
-    let mut used: HashMap<String, String> = HashMap::default();
-    let mut ctr: u32 = 0;
-    let base = Graphics::assign_dest_name("figs/b/plot.pdf", "png", false, 0, &mut used, &mut ctr);
-    let coll = Graphics::assign_dest_name("figs/c/plot.pdf", "png", false, 0, &mut used, &mut ctr);
-    let lit = Graphics::assign_dest_name("figs/a/x1.pdf", "png", false, 0, &mut used, &mut ctr);
-    assert_eq!(base, "plot");
-    assert_eq!(coll, "x1", "the colliding source takes the generated x1");
-    assert_ne!(
-      lit, coll,
-      "a real source named x1 must not reuse the generated x1.png"
-    );
-    assert_eq!(lit, "x2", "the literal-x1 source falls through to x2");
+    let names = dests_of(vec![
+      stem_request("figs/b/plot.pdf", "png"),
+      stem_request("figs/c/plot.pdf", "png"),
+      stem_request("figs/a/x1.pdf", "png"),
+    ]);
+    assert_eq!(names, ["plot.png", "x1.png", "x2.png"]);
   }
 
   // ---- cross-platform child-process fixtures for run_with_timeout ----
@@ -3451,10 +4004,13 @@ endobj
     assert_eq!(Graphics::read_svg_dimensions(tmp.to_str().unwrap()), None);
   }
 
-  /// Three `<graphics>` nodes over one source: two share `options`, one
-  /// differs. `process` must coalesce the matching pair into a single
-  /// conversion and run a second one for the differing options — proven by
-  /// counting the lines a fake `convert` on `PATH` appends to its log.
+  /// Three `<graphics>` nodes over one source: two differ only in their
+  /// width, which sizes the `<img>` and not the file, one picks a page.
+  /// `process` must coalesce the two widths into a single conversion and file
+  /// and run a second one for the page — proven by counting the lines a fake
+  /// `convert` on `PATH` appends to its log. A width edited and run again
+  /// keeps the file's name (issue 995 review: `x1.png`, then `x2.png`, after
+  /// each layout tweak).
   ///
   /// **The cache must be bypassed for this to mean anything.** The
   /// observable here is "how many converter subprocesses ran", and
@@ -3505,7 +4061,7 @@ endobj
 <document xmlns="http://dlmf.nist.gov/LaTeXML" xml:id="d">
   <graphics graphic="plot.ai" candidates="{0}" options="width=20pt"/>
   <graphics graphic="plot.ai" candidates="{0}" options="width=40pt"/>
-  <graphics graphic="plot.ai" candidates="{0}" options="width=20pt"/>
+  <graphics graphic="plot.ai" candidates="{0}" options="width=20pt,page=2"/>
 </document>"#,
       source.display()
     );
@@ -3531,9 +4087,24 @@ endobj
     assert_eq!(
       log_contents.lines().count(),
       2,
-      "matching source/page/options should coalesce, but different options need separate \
-       conversions; convert log was:\n{log_contents}"
+      "two widths of one source and page should coalesce, but another page needs a conversion \
+       of its own; convert log was:\n{log_contents}"
     );
+    assert_eq!(out.matches(r#"imagesrc="plot.png""#).count(), 2);
+    assert_eq!(out.matches(r#"imagesrc="x1.png""#).count(), 1);
+    // The width edited, a second run into the folder: the same names.
+    let edited = xml
+      .replace("width=40pt", "width=30pt")
+      .replace("width=20pt", "width=25pt");
+    let doc_opts = PostDocumentOptions {
+      destination: Some(tmp.join("out.html").display().to_string()),
+      source_directory: Some(tmp.path().display().to_string()),
+      ..Default::default()
+    };
+    let doc = PostDocument::new_from_string(&edited, doc_opts).unwrap();
+    let mut graphics = Graphics::new(None, true).with_cache_policy(CachePolicy::Bypass);
+    let nodes = graphics.to_process(&doc);
+    let out = graphics.process(doc, nodes).unwrap()[0].to_xml_string();
     assert_eq!(out.matches(r#"imagesrc="plot.png""#).count(), 2);
     assert_eq!(out.matches(r#"imagesrc="x1.png""#).count(), 1);
   }
@@ -3754,8 +4325,10 @@ endobj
     png.extend_from_slice(&[0u8; 16]);
     let img = tmp.join("img.png");
     std::fs::write(&img, &png).unwrap();
+    // The author's own `x1.png`, another picture (a byte past its header).
+    let authors_png = [png.clone(), vec![1]].concat();
     let authors_x1 = tmp.join("x1.png");
-    std::fs::write(&authors_x1, &png).unwrap();
+    std::fs::write(&authors_x1, &authors_png).unwrap();
     let log = tmp.join("convert.log");
     let fake_convert = tmp.join("convert");
     std::fs::write(
@@ -3817,7 +4390,7 @@ endobj
     }
     let copied = std::fs::read(dest.parent().unwrap().join("x1.png")).unwrap();
     assert_eq!(
-      copied, png,
+      copied, authors_png,
       "the author's x1.png must reach the output unchanged"
     );
   }
@@ -4746,6 +5319,7 @@ endobj
     .unwrap();
     let shared = dir.join("fig.svg");
     let stop = AtomicBool::new(false);
+    let mut renders: Vec<String> = Vec::new();
     std::thread::scope(|s| {
       s.spawn(|| {
         while !stop.load(Ordering::Relaxed) {
@@ -4768,17 +5342,32 @@ endobj
           Graphics::new(None, true).with_cache_policy(crate::graphics_cache::CachePolicy::Bypass);
         let nodes = graphics.to_process(&doc);
         let out = graphics.process(doc, nodes).expect("graphics process")[0].to_xml_string();
-        if !out.contains(r#" imagesrc="fig.svg" "#) {
+        // A vector render, whatever its name: since issue 995 a destination holding other bytes
+        // (the sibling's) is never written over, so the figure may be named `x1.svg` instead.
+        let src = out
+          .split(r#" imagesrc=""#)
+          .nth(1)
+          .and_then(|rest| rest.split('"').next())
+          .unwrap_or_default()
+          .to_string();
+        if !src.ends_with(".svg") {
           stop.store(true, Ordering::Relaxed);
           panic!("round {round}: the figure left its vector render:\n{out}");
         }
+        renders.push(src);
       }
       stop.store(true, Ordering::Relaxed);
     });
     let mut left: Vec<String> = std::fs::read_dir(&dir)
       .unwrap()
       .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
-      .filter(|name| name != "fig.pdf" && name != "fig.svg")
+      // The cache file, `LaTeXML-oxide.cache`, closed with its document.
+      .filter(|name| {
+        name != "fig.pdf"
+          && name != "fig.svg"
+          && name != "LaTeXML-oxide.cache"
+          && !renders.contains(name)
+      })
       .collect();
     left.sort();
     assert!(
@@ -4866,6 +5455,7 @@ endobj
       Graphics::new(None, true).with_cache_policy(crate::graphics_cache::CachePolicy::Bypass);
     let nodes = graphics.to_process(&doc);
     assert_eq!(nodes.len(), 2);
+    // The page is dropped here, and with it its cache, `LaTeXML-oxide.cache`, closed: no side file is left.
     let out = graphics.process(doc, nodes).expect("graphics process")[0].to_xml_string();
     let element = |id: &str| {
       let at = out.find(&format!(r#"xml:id="{id}""#)).unwrap();
@@ -4880,7 +5470,11 @@ endobj
     assert_eq!(element("g1"), some(["x1.svg", "300", "100"]), "{out}");
     assert_eq!(element("g2"), some(["x2.svg", "100", "300"]), "{out}");
     let out_dir = dest.parent().unwrap();
-    assert_eq!(listing(out_dir), ["x1.svg", "x2.svg"], "{out}");
+    assert_eq!(
+      listing(out_dir),
+      ["LaTeXML-oxide.cache", "x1.svg", "x2.svg"],
+      "{out}"
+    );
     assert_eq!(
       view_box(&out_dir.join("x2.svg")).as_deref(),
       Some("0 0 100 300")

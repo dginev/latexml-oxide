@@ -30,9 +30,9 @@ conversion starts.
 
 | Variable | Values | Default | Effect |
 |---|---|---|---|
-| `LATEXML_MAX_MEMORY` | MiB; `0` = no ceiling | 90 % of available RAM, at most 64 GiB, at least 2048 MiB | The one memory knob of `latexml_oxide`, the same as `--max-memory`. The watchdog stops the run above it; the cooperative fuse sits at 3/4 of it; streaming spills at a third of the fuse. |
-| `LATEXML_STREAMING` | `true` / `false` | unset = automatic | The same as `--streaming`. `true` streams from the start; `false` never streams. `1` is rejected. |
-| `LATEXML_TOKEN_LIMIT` | tokens; `0` disables | 20,000,000,000, raised to 1000 × the source size | Runaway-expansion backstop (a Fatal). `--token-limit` wins. Setting it at all turns off the scaling with source size. |
+| `LATEXML_MAX_MEMORY` | MiB; `0` = no ceiling | 90 % of available RAM, at most 64 GiB, at least 2048 MiB | `latexml_oxide` only (not `cortex_worker`). The one memory knob of `latexml_oxide`, the same as `--max-memory`. The watchdog stops the run above it; the cooperative fuse sits at 3/4 of it; streaming spills at a third of the fuse. |
+| `LATEXML_STREAMING` | `true` / `false` | unset = automatic | `latexml_oxide` only (not `cortex_worker`). The same as `--streaming`. `true` streams from the start; `false` never streams. `1` is rejected. |
+| `LATEXML_TOKEN_LIMIT` | tokens; `0` disables | 20,000,000,000, raised to 1000 × the source size | Runaway-expansion backstop (a Fatal). `--token-limit` wins. Setting either at all turns off the scaling with source size. |
 | `LATEXML_EXPAND_DEPTH_LIMIT` | integer; `0` disables | 12,000 | Nested expansion depth before `Fatal:Timeout:Recursion`. |
 | `LATEXML_MAX_GRAMMAR_LEXEMES` | integer; `0` or `none` disables | 12,000 | Formulas longer than this skip the grammar parser for the simpler fallback parser. |
 
@@ -81,9 +81,9 @@ Without an address-space limit neither is needed. The fleet sets both for its ch
 
 | Variable | Values | Default | Effect |
 |---|---|---|---|
-| `LATEXML_TELEMETRY_OUT` | file | none | Append one JSON line of timings and counts per conversion; the same as `--telemetry-out`. |
-| `LATEXML_SOURCE_MAP` | presence | off | The same as `--source-map`: `data-sourcepos` attributes in the output. |
-| `LATEXML_DISABLE_SHELL_ESCAPE` | presence | allowed | Rhai bindings may not run external commands (builds with runtime bindings). |
+| `LATEXML_TELEMETRY_OUT` | file | none | `latexml_oxide` only. Append one JSON line of timings and counts per conversion; the same as `--telemetry-out`. |
+| `LATEXML_SOURCE_MAP` | presence | off | `latexml_oxide` only. The same as `--source-map`: `data-sourcepos` attributes in the output. |
+| `LATEXML_DISABLE_SHELL_ESCAPE` | presence | allowed | Rhai bindings may not run external commands (builds with runtime bindings). `cortex_worker` loads no runtime binding at all, so it needs no such setting. |
 | `SOURCE_DATE_EPOCH` | Unix seconds | the clock | Fixes `\today`, `\time` and the log banner's time (UTC), and the member times of `--format=zip`/EPUB output, for reproducible builds. |
 | `NO_COLOR` | presence | colour on a terminal | No colour codes on stderr. |
 | `TMPDIR` (`TMP`/`TEMP` on Windows) | directory | the system default | Scratch files and temporary caches. |
@@ -130,9 +130,18 @@ document their variables in their headers.
 | `TMPDIR`, `MAGICK_TEMPORARY_PATH`, `MAGICK_TMPDIR` | a fresh directory per worker slot | Scratch space emptied between spawns. |
 | `MALLOC_ARENA_MAX`, `MIMALLOC_ARENA_RESERVE` | `2`, `128MiB` | The children run under an address-space limit (`--child-mem-limit-mb`); see "Under an address-space limit". |
 | `MALLOC_CONF`, `_RJEM_MALLOC_CONF` | `background_thread:true,dirty_decay_ms:500,muzzy_decay_ms:0` | Prompt return of freed memory in jemalloc builds. |
-| `LATEXML_RSS_CAP_BYTES` | `--max-rss-mb`, else `--child-mem-limit-mb` − 256 MiB | The per-child memory fuse. |
+| `LATEXML_RSS_CAP_BYTES` | `--child-mem-limit-mb` − 256 MiB, else (`--child-mem-limit-mb=0`) `--max-rss-mb` | The per-child memory fuse. |
 
-These replace any value of the same name in the worker's own environment. The Docker entrypoint reads `WORKERS` and
+These replace any value of the same name in the worker's own environment. The worker loads no runtime `.rhai`
+binding in any build, nor do the children it spawns (each re-executes its `main`). The worker itself reads:
+
+| Variable | Values | Default | Effect |
+|---|---|---|---|
+| `CORTEX_WORKER_THROTTLE_SECS` | seconds | 60 | How long an idle worker sleeps before asking the dispatcher for work again. |
+| `CORTEX_WORKER_IO_TIMEOUT_SECS` | seconds > 0 | 120 | How long a worker waits on a dead or wedged dispatcher before giving up that exchange. |
+| `CORTEX_HARNESS_RAM_HEADROOM_PCT` | percent, 10-100 | 85 | pericortex's worker-count clamp to RAM; `cortex_worker` never calls it, so it has no effect there (`--workers` and the memory governor size the fleet). |
+
+The Docker entrypoint reads `WORKERS` and
 `PROFILE` (`ar5iv` or `generic`).
 
 ## Diagnosing and measuring (dev)

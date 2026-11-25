@@ -1,0 +1,19 @@
+% mechanism: latexml_post graphics.rs Graphics::resolve_names (`not_owned`), resource_cache.rs Checks::on_disk: a
+%   store on its file gives no new name over a file in the folder it does not own, so a cache deleted (or emptied to
+%   0 bytes, a new store) beside other documents' images reuses none of their names, even one holding the same bytes
+% witness: issue 995 review round 7, probe sh_del (d1 ../c1/a.png -> x1.png, d2 ../c2/b.png (the same bytes) ->
+%   x2.png; the cache deleted, d2 run: x1.png; c2/b.png edited and d2 again: d1.html showed d2's new picture)
+% layout:  p/d1.tex (this file), p/d2.tex (../c2/b.png), p/d3.tex (../c3/c.png), p/k.tex (figs/k.png, kept); c1/a.png
+%          and c2/b.png one PNG, c3/c.png another; cwd p/, every --dest=../out/<doc>.html
+% oracle:  pdflatex 0 errors, one picture per document
+% engines: rust=GREEN perl=GREEN on the counter (read, not run: generateResourcePathname, Post.pm L192-200; a deleted
+%          LaTeXML.cache restarts it at x1 and overwrites)
+% expect:  d1, d2, d3: x1.png, x2.png, x3.png; the cache deleted, d2: x4.png; or emptied, k (figs/k.png), then d2:
+%          x4.png; c2/b.png edited, d2 again: x4.png the new picture; d1.html x1.png and d3.html x3.png unchanged;
+%          0 errors, 0 warnings (round 7: d2 x1.png, then d1.html showing d2's new picture)
+% status:  GREEN
+\documentclass{article}
+\usepackage{graphicx}
+\begin{document}
+D1 \includegraphics{../c1/a.png}
+\end{document}

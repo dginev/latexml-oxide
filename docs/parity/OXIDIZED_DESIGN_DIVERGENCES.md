@@ -21087,7 +21087,7 @@ bindings_start_the_paragraph, rhai_constructor_entering_horizontal_keeps_the_spa
 `rhai-bindings/constructor_opening_the_paragraph_keeps_the_space`, formerly `imperative_constructor_drops_space_red`,
 whose note blamed the imperative `\lxb`).
 
-### 1081. Untrusted input stays in the job: document Lua is sandboxed; an image copy never leaves `--dest` (SECLUA)
+### 1081. Untrusted input stays in the job: document Lua is sandboxed; an image copy never leaves the site directory (SECLUA)
 
 **Perl.** No Lua bridge. `Post/Graphics.pm` L292-300 copies an image to its source-relative path only when
 `pathname_is_contained` places it under the site directory, else under `generateResourcePathname`'s `xN` name.
@@ -21186,8 +21186,18 @@ through the links already there, stays inside the extraction directory (zip 9.7'
 inside (`tar`'s check). Other links, and entries whose path would leave the directory, are skipped with a
 `Warning:archive:*`, logged and counted when the conversion's report starts (`error::warn_at_session_start`).
 The CLI's own zip unpacking writes a link entry as a plain file. `graphics.rs`
-`copy_to_destination` follows Perl: a source-relative path that would leave `--dest` (a `..`, root or drive
-component) takes the next free `xN.<ext>`. Under the luatex profile `\pdfextension <keyword>` (`pdftex.rs`
+`kept_path` follows Perl: the source-relative path, taken from the destination directory, is kept only when
+it stays in the site directory (`--sitedirectory`, else `--dest`'s directory; lexically, Perl's
+`pathname_is_contained`), else the image takes the next free `xN.<ext>` (issue 995: `--sitedirectory` was ignored,
+OD #1157). The copy is written at that lexical absolute path, as Perl's `pathname_copy` canonicalizes before it writes
+(`Util/Pathname.pm` L264-266): joined raw, the system resolved `out/../children` through a linked `out` and wrote
+outside both directories. Beyond Perl, which writes through a link, a path whose real directory (links resolved) lies
+in neither the real site directory nor the real destination directory takes an `xN` name too (`resolves_inside_site_or_dest`:
+`out/sub` → `/elsewhere` in the site; Perl 0.8.8 writes `/elsewhere/d.png`). Guard
+`perfect_kernel_batchfix995::batchfix995_linked_destination_writes_nothing_outside_the_site_directory`. Both sides
+resolve alike (`pathname::is_contained_resolved`: a directory not made yet through its existing parent); a lexical
+fallback for a destination not made yet kept every image off its path on Windows (`RUNNER~1` against `runneradmin`,
+the rc3 release guards), guard `batchfix995_paths_spelled_through_a_link_keep_their_names`. Under the luatex profile `\pdfextension <keyword>` (`pdftex.rs`
 `read_pdfextension`) reads the operands of pdfTeX's `\pdf<keyword>`, with LuaTeX's additions (literal modes
 `text`/`raw`/`origin`, `lateliteral`, `obj … uncompressed`, `outline useobjnum`, `linkstate`; LuaTeX manual
 luatex-modifications.tex:592-907), through the same Rust readers and never through `\pdf<keyword>`, which
@@ -24341,9 +24351,16 @@ amsbook_backmatter_closes_the_appendix_and_part, svmono_backmatter_closes_the_la
   interrupts are Ctrl+C, SIGTERM and SIGHUP on Unix, and Ctrl+C, Ctrl+Break and closing the console on Windows (the
   `ctrlc` crate, `termination`). The handler is installed when the first build starts, so a process that builds
   nothing keeps its default interrupt; a process that already ignores or handles one of these signals (`nohup`, a
-  shell's background job) keeps them (`ctrlc::try_set_handler`). The handler keeps the build's record locked until the
-  process ends, so the build cannot record an outcome after the undo, and the record is set before the attempt note
-  is written. Embedders (`cortex_worker`, and the CLI's own `--server` LSP mode, whose forked children are ended by
+  shell's background job) keeps them (`ctrlc::try_set_handler`). The handler is installed before the build writes
+  anything; the record is set and the attempt note written under one lock, and the finished dump is published
+  (`format_dumps::publish`, its rename) and the record cleared under it too, so an interrupt in either window waits
+  and then undoes both or nothing (before, it could undo ahead of the note, or put the old note back beside a
+  published dump). The handler keeps the record locked until the process ends, so the build cannot record an outcome
+  after the undo, and ends it with `watchdog::exit_now` (`_exit`): the build's thread still runs, and `exit` would run
+  libxml2's destructor under it (#973). The handler stays installed after the build, so a later SIGTERM or SIGHUP
+  ends the process with status 130 rather than by the signal: ctrlc 3.5 cannot uninstall it, and restoring the
+  default action needs an `unsafe` `sigaction`. Under `--quiet` its notes (Info and Warnings) are not printed
+  (#1158). Embedders (`cortex_worker`, and the CLI's own `--server` LSP mode, whose forked children are ended by
   SIGTERM) keep their own signal handling and count an interrupted build as before. The DEGRADED banner
   (`dump_paths::warn_degraded_no_dump`) now says why no dump was built (once the format is marked failed, that names
   the mark to remove) instead of pointing to `tools/make_formats.sh`, which an installed binary does not have.
@@ -24353,7 +24370,7 @@ amsbook_backmatter_closes_the_appendix_and_part, svmono_backmatter_closes_the_la
   error (`\immediate\write\@unused{}`), so the reload's 5,015 dropped errors (TL 2025) printed 2,415 empty lines on
   the terminal, scrolling away why the run had no dump.
 
-**Guards**: `format_dumps::tests::an_interrupted_build_is_undone`;
+**Guards**: `format_dumps::tests::{an_interrupted_build_is_undone, a_published_build_is_not_undone}`;
 `dump_gate_init::nodump_latex_branch_converts_healthily` (no run of more than two blank lines). The interrupt itself
 is not tested, as its timing would make the test flaky; it was checked by hand (Ctrl+C during a first run's build
 leaves no `.attempts`, `.failed` or `.partial` file, and exits with status 130).
@@ -24583,6 +24600,209 @@ with a height at `\footnotesize`, and going by it set a `\parbox` paragraph on o
 `math-phantom/{phantom_height_among_siblings, xy_phantom_object_circle_1210_5701}`); repinned to the phantom's height:
 `cluster_schema::empty_node_foreign_object_is_sized` (quantikz's `{\phantom{H}}`), `box_primitives::tikz_align_line_padding`
 (c2/c3, pdflatex's +1.5pt), `86_tikz` `ac-drive-components.xml` (circuitikz's `\vphantom{+}-` label).
+
+### 1157. An image keeps its path inside `--sitedirectory`; image names come from Perl's document cache, persisted as `LaTeXML-oxide.cache` (issue 995)
+
+**Perl.** `Post/Graphics.pm` L292-300 keeps an image's source-relative path when, taken from the destination
+directory, it stays in the site directory (`pathname_is_contained`), else `generateResourcePathname` (`Post.pm`
+L192-200) names it `xN` from the counter `_max_<subdir>_<prefix>_counter_` in the document cache, which every split
+page shares (`new_internal` clones it, L687-690) and which is persisted as `LaTeXML.cache` in the destination directory
+(`openCache`, a DB_File, L1517-1548; `nocache`, L678). `transformGraphic` stores each image under
+`ref($self):reldir/name.srctype.type|transform` as `"dest|w|h"` and reuses it on a later lookup while the source is no
+newer than the destination (L245-262, L331). `Post::Document::new_internal` (L698-706) is Fatal when the destination
+lies outside `--sitedirectory`. Packages leave the cache out (`Pack/Zip.pm` `ARCHIVE_EXT_EXCLUDE` `.cache`,
+`Manifest/Epub.pm` L205).
+**Rust.** `PostDocument::cache_lookup`/`cache_store` are backed by `document.rs` `DocCache`: one key-value store per
+destination directory, the SQLite table `kv(key, value)` with Perl's keys and values, in the file `LaTeXML-oxide.cache`
+there (`sqlite_store.rs`: WAL, or the file's own mode where SQLite refuses WAL, `synchronous=NORMAL`, a 10 s busy
+timeout, inside a conversion's default `--timeout=60`, a `user_version` gate: a new file gets the schema under the write
+lock, another program's database (tables, no version) is left alone; opened at the first lookup, one store per
+directory however it is spelled,
+the directory made first as Perl's `checkDestination` makes it, L941-949; opening retried while another process holds
+a new file, whose turn to WAL SQLite refuses at once rather than wait), in memory under `nocache` (`latexml_oxide --nocache`; the cortex worker, whose every paper gets a fresh directory, and the LSP) or without a
+destination directory, and for a zip or an EPUB (made in a directory removed once packed). Every page of a run shares
+the run's `DocCache` (`PostDocumentOptions::cache`, carried by `PostDocument::new_document` to each split page); the run
+closes its file before the render workers start, and each opens its own on it. `resource_cache.rs` names images over it: every name goes through it (a copy's
+kept path, a converted image's stem, a generated `xN` from Perl's counter key). A name's owner is its source (its path
+relative to the destination directory, its page, crop and turn, and the target type; never a size, which sizes the
+`<img>` only, so two widths of one figure share one file and a width edited keeps it), as Perl's key names it: entries of ours,
+`_owner_<name>`, `_name_<owner>`, `_source_<name>` and `_holds_<name>` (the bytes it was last written with), make a
+name another source owns fall back to the next free `xN` (the claim covers the `.svg` a vector render may take beside a
+raster), and `_content_<bytes>` lets a source with the same bytes share that file while its owner is named in the
+same run with those bytes (the pages of one document); a source of another document takes a name of its own, as that
+document may later write other bytes into the file under a page this run does not rewrite, so
+neither split pages (Chapter One showed child_2's figure), nor two converted sources sharing a stem (`a/plot.eps`,
+`b/plot.eps`; witness 2401.00054, `Figures/ch2/qz.pdf` and `Figures/ch5/qz.pdf`), nor a converted `plot.png` and an
+author's `plot.png` overwrite each other. The names are planned before any page is rendered: each page of a split as it
+is spilled (`Graphics::plan_names`), the pages MakeIndex and MakeBibliography rewrote again after them (`post.rs`
+`plan_rewritten_pages`), all stored by `Graphics::commit_names` in one `IMMEDIATE` transaction; within a page the
+copies that keep their path come first, then the conversions, then the copies with generated names, each in node
+order. The serial render and the parallel one (64+ pages, `render_workers.rs`, the plan handed to every worker in the
+manifest) only look the names up, so their trees are byte-identical whatever the worker count, and CrossRef's copies
+of other pages' titles into a page's navigation meet the names of the pages they come from. A name still missing at
+render time is named then, with a Warning (`unexpected:resource_name`) when the run had planned (none is known to
+occur); an unsplit page, and a library caller, name as they render, as Perl does. Two widths of one converted figure
+are one conversion into one file, where Perl's key, carrying the whole transform, converts each into an `xN` of its
+own (`Post/Graphics.pm` L240-245, L318-319). Within a process a converted image
+is reused by every later page (Perl's `cacheLookup`), a failed one is tried again, as Perl's is. The Fatal is Perl's,
+`Fatal:unexpected:<dir> The destination directory (<dir>) must be within the siteDirectory (<site>)`, raised before
+anything is written; the process exits 1 (Perl's `die`: 255). Divergences: (1) the containment test refuses the
+base's own parent, which Perl's regex lets through (KNOWN_PERL_ERRORS #1329); (2) a copy is never written through a
+link that leaves the site and destination directories (OD #1081); (3) the file is SQLite, named `LaTeXML-oxide.cache`
+so that a Perl run's DB_File `LaTeXML.cache` in the same directory is never touched; every allocation is one
+`IMMEDIATE` transaction, so runs writing into one folder at once never hand out one name twice (their numbering then
+follows which run commits first); a file that is not ours, or of another schema version, is left alone (a Warning
+that names it and says to delete it; the run's entries stay in memory); (4) the key carries the source's content digest instead of Perl's timestamp check,
+so a changed image is a new key, copied or converted again into the name its source owns (a kept path, as Perl
+copies it every run; a stem; a generated `xN`, where Perl generates a new one), and a source sharing that file takes
+its own name once the file's owner writes other bytes into it; (5) an entry stores the name only (`dest||`): Perl's width and
+height let it skip the conversion, which the content-addressed graphics cache (`graphics_cache.rs`) serves here;
+(6) an image first met in another page's navigation is numbered at its own page, where Perl's serial
+CrossRef-then-Graphics numbered it at the first page whose navigation showed it; (7) a converted image keeps its stem
+when free (`plot.png`, witness 2606.30620), where Perl generates `xN` for every conversion (`Post/Graphics.pm`
+L318-319); (8) a stored name this run's site directory does not allow (a kept `../children/…` path, rerun without
+`--sitedirectory`) is not reused, where Perl reuses it; (9) a stored name is written only when the image could have
+been given it: its kept path, its stem or a generated `<prefix>N`, or another source's kept path or stem when that
+source, named in this run, holds the same bytes; a name of another type or on a hidden path (a corrupt or planted cache, which a source
+archive converted in place can carry) is ignored with a Warning naming the cache (`unexpected:cache`), where Perl's
+cache is written only by Perl; a stored `_source_` is read only when its file name is the name it vouches for and it
+is a relative path to a regular file (a link followed to one), an absolute path, a device or a FIFO (whose read would
+not end) reported once the same way;
+(10) a store that cannot be used, at opening, in a read or in a transaction (the file locked past the 10 s timeout,
+read-only, corrupt, or not a regular file: a symbolic link is never followed, as SQLite would make or write the file it
+leads to, and SQLite opens the `-wal`/`-shm` side files `O_NOFOLLOW`), is reported (`I/O:cache`, once) and the rest of the run is in memory, from a copy of the file's
+entries (SQLite's backup in one step that waits on no lock; none when the file is locked against readers, or when the
+statement fails on the copy too, as on a broken file, the Warning then saying the earlier entries are lost), where Perl's tie is Fatal (Post.pm L1537-1546); a statement
+that fails in memory is an Error (`internal:cache`) and stores nothing; the transaction runs again there, its Warnings
+emitted once it returns, and, told it is in memory, skips a generated name, a stem or a copy's kept path whose file
+in the destination holds other bytes than the image writes (a copy: its source's; a render: the graphics cache's entry
+for it), so a rerun of an unchanged document takes its own files again, while an edited, cropped or turned image, or
+a render the graphics cache does not hold (`LATEXML_GRAPHICS_CACHE_OFF`), takes a new name. A store that could not
+copy the file's entries (it could not be opened or read) does not know whose a file is: a file of another document
+holding the same bytes is taken as the image's own, so an edit of that other document's image, run with a usable
+cache, shows on this page too (owners are kept only in the file). A store on its file gives a name it has not
+stored over no file in the destination it does not own (a cache deleted, or emptied to 0 bytes, a new store, beside
+other documents' images; the files of a `--nocache` run; an author's, converting in place), but a copy's kept path
+that is its own source (in place), where Perl's `generateResourcePathname` overwrites what the folder holds; a counter
+with no next count (`u64::MAX`, which wrapped to `x0`, or no number) is reported (`unexpected:cache`) and counted again
+from `x1`, past those files. So the first conversion into a folder written without a cache (0.7.x, rc1/rc2, `--nocache`)
+names its images afresh and leaves the earlier files; converting in place, a figure whose stem the author's folder already
+holds (`fig.pdf` beside the author's `fig.png`) is named `x<N>.svg`, not `fig.svg`; and a rerun in place of an extensionless
+include (`\includegraphics{fig}`) that now finds the earlier run's `fig.svg` copies it once more under a new name (stable from
+the third run). `--nocache` (Perl's
+option, in memory from the start) skips nothing: its names restart at `x1` each run and overwrite, as Perl's do; (11) Perl's `--whatsout=math` unlinks
+`LaTeXML.cache` relative to the working directory after packing (`Util/Pack.pm` L343), which misses a cache in another
+destination directory; not ported: a math-only run keeps its cache, as every run does. The run closes the cache when post ends (checkpointed, no
+`-wal`/`-shm` left), before anything is packed, and packages skip it and its side files by name (`pack.rs`
+`is_excluded_archive_entry`, the EPUB manifest; a killed process's side files included). The parallel render's
+ObjectDB snapshot is a separate file, `LaTeXML-render.db` in the private spill directory (a read-only per-run
+snapshot; Perl keeps ObjectDB and `LaTeXML.cache` apart too).
+**Guards**: `cluster_package_guards::perfect_kernel_batchfix995::{batchfix995_sitedirectory_keeps_the_relative_image_path,
+batchfix995_destination_outside_the_site_directory_is_fatal, batchfix995_split_pages_share_the_generated_names,
+batchfix995_split_pages_keep_converted_stems_apart, batchfix995_split_pages_reuse_a_converted_image,
+batchfix995_every_job_count_names_images_alike, batchfix995_documents_in_one_folder_keep_their_own_images,
+batchfix995_concurrent_documents_in_one_folder_never_share_a_name,
+batchfix995_packages_leave_the_cache_out_when_a_worker_is_killed,
+batchfix995_linked_destination_writes_nothing_outside_the_site_directory, batchfix995_an_edited_image_keeps_its_name,
+batchfix995_a_corrupt_cache_entry_decides_no_file, batchfix995_a_read_only_cache_overwrites_no_image,
+batchfix995_a_locked_cache_waits_less_than_the_conversion, batchfix995_a_planted_source_is_never_read_for_ever,
+batchfix995_a_rerun_beside_an_unusable_cache_is_idempotent, batchfix995_nocache_writes_no_cache_and_names_the_split_book,
+batchfix995_another_documents_file_is_never_shared, batchfix995_a_broken_cache_file_is_a_warning,
+batchfix995_a_linked_cache_is_never_followed, batchfix995_an_unusable_cache_overwrites_no_kept_path,
+batchfix995_a_deleted_cache_overwrites_no_other_documents_image}`
+(`tools/perfect_kernel/repros/loader/image_subimport_sitedirectory.tex`,
+`tools/perfect_kernel/repros/loader/image_copy_through_linked_destination.tex`,
+`tools/perfect_kernel/repros/loader/image_names_two_documents_one_folder.tex`,
+`tools/perfect_kernel/repros/loader/image_edited_keeps_its_name.tex`,
+`tools/perfect_kernel/repros/loader/image_names_corrupt_cache_entry.tex`,
+`tools/perfect_kernel/repros/loader/image_names_cache_unusable.tex`,
+`tools/perfect_kernel/repros/loader/image_same_bytes_two_documents.tex`,
+`tools/perfect_kernel/repros/loader/image_kept_path_cache_unusable.tex`,
+`tools/perfect_kernel/repros/loader/image_names_cache_deleted.tex`,
+`tools/perfect_kernel/repros/split-navigation/image_names_shared_across_split_pages.tex`,
+`tools/perfect_kernel/repros/split-navigation/converted_image_reused_across_split_pages.tex`,
+`tools/perfect_kernel/repros/split-navigation/image_names_parallel_render_as_serial.tex`,
+`tools/perfect_kernel/repros/split-navigation/image_names_title_images_in_navigation.tex`);
+`resource_cache::tests::{names_follow_the_page_order_and_never_clash, an_edited_source_keeps_its_names,
+a_shared_file_is_left_when_its_owner_changes, another_documents_file_is_never_shared, a_planted_name_is_ignored,
+a_store_in_memory_skips_files_on_disk, a_counter_with_no_next_counts_again,
+concurrent_tables_on_one_file_never_share_a_name}`,
+`sqlite_store::tests::{another_version_is_left_alone, simultaneous_opens_of_a_new_file_all_use_it,
+a_failed_transaction_runs_again_told_it_is_in_memory, a_failure_in_memory_gives_nothing,
+a_file_locked_against_readers_falls_back_without_its_entries, a_link_is_never_followed}`,
+`graphics::tests::process_coalesces_only_matching_conversion_options` (two widths, one file), `pack::tests` (the side files),
+`pathname::tests::is_contained_is_underneath_only`.
+
+### 1158. The CLI's options are wired as latexmlc applies them; a bad option value is a usage error (CLIWIRE)
+
+`latexml_oxide`'s options follow Perl's `Common/Config.pm` and `LaTeXML.pm convert_post`, each checked against
+latexmlc 0.8.8 on the same host (CLI audit 2026-11-24):
+
+- `--documentid` reaches State before the pools load (`Config::documentid` → `CoreOptions::documentid`, Core.pm L48),
+  so Base_Schema defines `\thedocument@ID` from it (Base_Schema.pool.ltxml:52): the root carries the id and every id
+  is prefixed by it. It used to be assigned after the session was prepared and had no effect. The `\begin{document}`
+  constructor reads the expanded id tokens (Perl `ToString($props{id})`), so latexml.sty's `\lxDocumentID` names the
+  root as well. A joined supplement gets no document id.
+- `--format=html` is html5 (Config.pm L436); `--format=xhtml` runs `LaTeXML-xhtml.xsl` (Config.pm L543), not
+  `LaTeXML-all-xhtml.xsl`, and is serialized as XML.
+- The pages are serialized as HTML when the format is `html*` (Perl `is_html`, Config.pm L436; Writer.pm L47), never
+  by the stylesheet's name: `--stylesheet=my-html.xsl --dest=x.xml` keeps its XML, `--stylesheet=my.xsl
+  --dest=x.html` is serialized as HTML and gets the SVG processor. The library callers that name only a built-in sheet
+  keep the name test (`PostOptions::is_html` `None`).
+- An explicit `--token-limit` is kept as given, as `LATEXML_TOKEN_LIMIT` is (`gullet::fix_token_limit`); before, the
+  source-size scaling raised any lower value back. latexml.sty's `tokenlimit=` is still scaled (ar5iv.sty passes
+  `tokenlimit=999999999`, 20 times below the scaled default).
+- `--verbose`/`--quiet` count (Config.pm L53-54), and the parallel page render's workers take the parent's
+  verbosity, logging at no less than Info: their records reach the log whole, as the serial render's do, and the
+  console shows them through the parent's gate (`render_workers::stderr_share`). A worker line that opens no record
+  (a progress note, or an unindented line of a multi-line message) is shown when its record or a note would be.
+- `--splitat` takes a prefix of `part, chapter, section, subsection, subsubsection`, the shallowest (`_checkOptionValue`,
+  Config.pm L604-609, whose hash order leaves `sub` to chance), and is checked only when splitting; another element
+  name still splits there, with a Warning naming `--splitpath`. `--splitnaming` takes a prefix of `id, idrelative,
+  label, labelrelative`, and is likewise checked only when splitting (Config.pm L496-507). `--navigationtoc` is lowercased, `none` asks for none (Config.pm L472-480). An unknown
+  `--splitnaming` or `--navigationtoc` is a usage error (exit 2): Perl croaks but converts on (KNOWN_PERL_ERRORS
+  #1331).
+- `--keepXMath` (Perl's spelling) and `--nohackplane1` parse; `--sourcedirectory` is made absolute, so a relative one
+  never leaks into the output paths (ours: Perl's `pathname_canonical`, Pathname.pm:108-130, only collapses
+  `.`/`..`). The unused `NAVIGATIONTOC` XSLT parameter is no longer passed (no stylesheet
+  reads it; Perl passes none).
+- `cortex_worker`: `--input`/`--output` require `--standalone` (without it the worker joined the dispatcher on
+  localhost), and `--profile` is `ar5iv` or `generic`.
+
+**`--quiet` keeps the Errors on stderr.** Perl's `--quiet` prints nothing on stderr (Error.pm `_printline`,
+`$VERBOSITY >= 0`); ours keeps Errors, Fatals and the verdict on stderr at every verbosity (DG 2026-08-02, reaffirmed
+2026-11-24): the success-rate signal is never silent. Below verbosity 0 the console level is `Error`: Info records,
+Warnings and the front end's notes ("Output written to", "Log written to", "Format dump complete", the format build's
+notes and `[ini_tex]` progress) are hidden, while every `Error:`/`Fatal:` record, with its continuation lines, and the
+final verdict (`Conversion complete…`/`Conversion failed…`, and a failed input's status line) still print: a run
+without post-processing, whose own verdict is a muted Info note, prints the front end's (as on main, `--init` and an
+XML input under `--nopost` print no verdict at any verbosity). A note about output that was not produced (a skipped
+supplement, "Log not written") prints too. The render workers' records pass the same gate. Without `-q`, stderr is
+main's byte for byte. The log keeps everything at its Info floor, and the exit status and a zip's `status` are unchanged.
+
+**Guards**: `perfect_kernel_batchcliwire` (repros `tools/perfect_kernel/repros/cli-options/`), the binaries' unit tests
+`verbose_and_quiet_are_counted` and `cli_tests::standalone_files_and_the_profile_are_checked`;
+`perfect_kernel_batchclihard::{quiet_keeps_errors_and_the_verdict_on_stderr, quiet_hides_the_format_build_progress}`,
+`119_final_status_report::quiet_mode_still_reports_error_and_fatal`,
+`render_workers::tests::stderr_share_keeps_a_records_continuation_lines`.
+
+### 1159. `latexml_oxide` defaults to a 60-second timeout and no timestamp (Perl: 600 s, the conversion's time) (CLIWIRE)
+
+`--timeout` defaults to 60 s (Perl Config.pm L384: 600 s); the watchdog and the cooperative timeout both ride it, and
+`--timeout=0` lifts it. `--timestamp` is unset by default, so the page carries no "Generated on" date (Perl
+LaTeXML.pm L571: the local time, or `SOURCE_DATE_EPOCH` in UTC): output is reproducible without a variable;
+`--timestamp=<text>` prints one, `--timestamp=0` none, as Perl.
+
+### 1160. `--nonumbersections` unnumbers the sections, as Perl documents it (Perl's code: references show titles only) (CLIWIRE)
+
+Perl documents `--nonumbersections` as dropping "section numbers in titles, crossrefs" (Config.pm L838-840,
+L1163-1166); its code only switches CrossRef's `ref_show` to `title` (CrossRef.pm L34; the title half, L29, is
+commented out, and L33 doubts the option), so the headings keep their numbers and a reference to an equation reads
+"1 Introduction" (CrossRef.pm L686-695 falls back to the section's title). Ours follows the documentation: the CLI
+assigns the core's `no_number_sections` (as book.cls's `\frontmatter` does), so the headings are unnumbered and a
+reference shows its target's title. KNOWN_PERL_ERRORS #1330; to be asked of Bruce Miller (DG 2026-11-24).
+
+**Guard**: `perfect_kernel_batchcliwire::nonumbersections_unnumbers_the_sections`.
 
 ### 1161. An apalike natbib label `[Author, Year]` splits at its first `, `, as `\NAT@apalk` (NATBIB)
 

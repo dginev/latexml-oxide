@@ -1,0 +1,18 @@
+% mechanism: latexml_post resource_cache.rs `reusable`: a source shares another source's file of the same bytes only
+%   while that source is named in the same run (the pages of one document); a source of another document takes a
+%   generated name of its own, as that document may later write other bytes into the file.
+% witness: issue 995 review round 6 (p/d1.tex with ../c1/a.png and p/d2.tex with ../c2/b.png, identical bytes, both
+%          into out/: x1.png on both pages; c1/a.png edited and d1 alone run again: d2.html showed d1's new picture)
+% layout:  p/d1.tex (this file), p/d2.tex (the same with ../c2/b.png), c1/a.png and c2/b.png one PNG; cwd p/
+% oracle:  pdflatex 0 errors, one picture per document
+% engines: rust=GREEN perl=GREEN (read, not run: each copy outside the site directory takes its own xN,
+%          Post/Graphics.pm L292-300 and generateResourcePathname, Post.pm L192-200)
+% expect:  --dest=../out/d1.html, then --dest=../out/d2.html: d1.html x1.png, d2.html x2.png; c1/a.png changed and
+%          d1 again: x1.png the new picture, d2.html x2.png the old one; 0 errors, 0 warnings
+%          (round 6: d2.html x1.png, showing d1's new picture after the rerun)
+% status:  GREEN
+\documentclass{article}
+\usepackage{graphicx}
+\begin{document}
+D1 \includegraphics{../c1/a.png}
+\end{document}

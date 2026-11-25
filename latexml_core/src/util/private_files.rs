@@ -6,10 +6,7 @@ use std::path::Path;
 
 /// The process's effective user id.
 #[cfg(unix)]
-pub fn user_id() -> u32 {
-  // SAFETY: `geteuid` reads the process's effective user id; it cannot fail.
-  unsafe { libc::geteuid() }
-}
+pub fn user_id() -> u32 { rustix::process::geteuid().as_raw() }
 /// No user ids to compare off Unix.
 #[cfg(not(unix))]
 pub fn user_id() -> u32 { 0 }

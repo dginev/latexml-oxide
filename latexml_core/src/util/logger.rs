@@ -36,10 +36,12 @@ fn stderr_use_color() -> bool {
 ///
 /// Perl LaTeXML separates the two: the log file (`$LOG`) receives every message
 /// while it is open, but STDERR prints only when `$USE_STDERR && $VERBOSITY >= 0`
-/// (`Common/Error.pm` `_printline`). `--quiet` lowers THIS (to `Warn`) without
-/// lowering what the log keeps — so `(Loading …)` progress notes and `Info:`
-/// records still reach `.latexml.log`, which is what BookML's makefile dependency
-/// tracking reads (issue #763). `--verbose` raises it (to `Debug`).
+/// (`Common/Error.pm` `_printline`). `--quiet` lowers THIS (to `Error`: Info and
+/// Warnings off the console) without lowering what the log keeps — so `(Loading …)`
+/// progress notes and `Info:` records still reach `.latexml.log`, which is what
+/// BookML's makefile dependency tracking reads (issue #763). `--verbose` raises it
+/// (to `Debug`). Unlike Perl, `Error`/`Fatal` reach STDERR at every verbosity
+/// (DG 2026-08-02, OXIDIZED_DESIGN_DIVERGENCES #1158).
 ///
 /// Stored as the `LevelFilter` discriminant (`Off`=0 … `Trace`=5). Process-global
 /// like `max_level`: one shared stderr descriptor across `cortex_worker`'s pool.
@@ -53,8 +55,8 @@ static DEBUG_ALL: AtomicBool = AtomicBool::new(false);
 #[inline]
 pub fn debug_all() -> bool { DEBUG_ALL.load(Ordering::Relaxed) }
 
-/// The current STDERR verbosity (see [`STDERR_LEVEL`]).
-fn stderr_level() -> LevelFilter {
+/// The current STDERR verbosity (`STDERR_LEVEL`): `--quiet` `Error`, the default `Info`, `--verbose` `Debug`.
+pub fn stderr_level() -> LevelFilter {
   match STDERR_LEVEL.load(Ordering::Relaxed) {
     0 => LevelFilter::Off,
     1 => LevelFilter::Error,
@@ -554,9 +556,10 @@ fn write_record(level: Level, painted_message: String) {
   // console verbosity so `--quiet` reduces the console without touching the log
   // (issue #763) — EXCEPT `Error`/`Fatal`, which always reach STDERR (the
   // project's deliberate always-emit-errors divergence, since cortex aggregates
-  // success rates from `Error:`/`Fatal:` lines). `Error` is the lowest `Level`
-  // value and Fatal records are emitted at `Level::Error`, so `<= Error`
-  // captures both.
+  // success rates from `Error:`/`Fatal:` lines; Perl prints nothing below
+  // `$VERBOSITY` 0, `_printline`; OXIDIZED_DESIGN_DIVERGENCES #1158). `Error` is
+  // the lowest `Level` value and Fatal records are emitted at `Level::Error`, so
+  // `<= Error` captures both.
   // A `Debug` record that got here is wanted (`--verbose` or its feature); it prints at Perl's `$VERBOSITY >= 0`.
   let to_stderr = level <= Level::Error || stderr_admits(level.min(Level::Info));
   if to_stderr {
@@ -991,7 +994,7 @@ pub fn settled_empty_held_tags() { EMPTY_HELD_TAGS.set(0); }
 
 /// initialize the logger at a given STDERR verbosity `level`
 ///
-/// `level` is the **console** verbosity (`--quiet` ⇒ `Warn`, default ⇒ `Info`,
+/// `level` is the **console** verbosity (`--quiet` ⇒ `Error`, default ⇒ `Info`,
 /// `--verbose` ⇒ `Debug`, which also admits un-featured `Debug` records; a `--debug`
 /// feature raises only the `max_level` floor, [`crate::common::error::enable_debug_feature`]). Perl decouples this from the log-file floor:
 /// the `.latexml.log` keeps a minimum of `Info` regardless of `--quiet`, while

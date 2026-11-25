@@ -83,7 +83,12 @@ pub struct PostOptions<'a> {
   /// every non-CLI construction site (the binary threads the parsed `--urlstyle`
   /// value here).
   pub url_style:                 latexml_post::crossref::UrlStyle,
+  /// The navigation TOC style, `context` or `normal` (Perl `--navigationtoc`, lowercased and checked by the
+  /// caller; `none` is `None`, Config.pm L472-480).
   pub navigationtoc:             Option<&'a str>,
+  /// Serialize the pages as HTML (Perl `is_html`, Config.pm L436: the format is `html*`), else as XML. `None`: a
+  /// caller naming only a built-in sheet, whose name says it (`LaTeXML-html5.xsl`).
+  pub is_html:                   Option<bool>,
   pub schemadocs:                bool,
   pub split:                     bool,
   pub split_xpath:               Option<String>,
@@ -115,6 +120,9 @@ pub struct PostOptions<'a> {
   /// via `get_math`. Applied to each `PostDocument` in the final
   /// serialization loop.
   pub whatsout:                  latexml_post::extract::Whatsout,
+  /// Keep the destination's cache (Perl's document cache, `LaTeXML-oxide.cache`) in memory, writing no file (Perl's
+  /// `nocache`, `Post.pm` L678): the cortex worker, whose every paper gets a fresh directory that is packed.
+  pub nocache:                   bool,
 }
 
 impl Default for PostOptions<'_> {
@@ -138,6 +146,7 @@ impl Default for PostOptions<'_> {
       unicodemath:               false,
       url_style:                 latexml_post::crossref::UrlStyle::File,
       navigationtoc:             None,
+      is_html:                   None,
       schemadocs:                false,
       split:                     false,
       split_xpath:               None,
@@ -148,6 +157,7 @@ impl Default for PostOptions<'_> {
       timestamp:                 None,
       icon:                      None,
       whatsout:                  latexml_post::extract::Whatsout::Document,
+      nocache:                   false,
     }
   }
 }
@@ -248,8 +258,9 @@ impl MathFormats {
 /// sheet an `html5`/`xhtml`/`epub` job gets.
 pub fn default_stylesheet(format: Option<&str>) -> Option<&'static str> {
   match format {
-    Some("html5") => Some("embed:///LaTeXML-html5.xsl"),
-    Some("html") | Some("xhtml") => Some("embed:///LaTeXML-all-xhtml.xsl"),
+    // Config.pm L436: `html` is html5.
+    Some("html5") | Some("html") => Some("embed:///LaTeXML-html5.xsl"),
+    Some("xhtml") => Some("embed:///LaTeXML-xhtml.xsl"),
     Some("epub") | Some("epub3") => Some("embed:///LaTeXML-epub3.xsl"),
     _ => None,
   }
@@ -331,6 +342,8 @@ pub fn run_post_processing_from_file_logged(path: &str, opts: &PostOptions) -> P
 
 fn run_post_processing_impl_logged(input: PostInput, opts: &PostOptions) -> PostOutcome {
   latexml_core::util::logger::bind_log();
+  // An XML input has no core session to log what the front end held for it (`warn_at_session_start`).
+  latexml_core::common::error::log_session_warnings();
   let mut pages = Vec::new();
   let html = run_post_processing_impl(input, opts, &mut pages);
   let log = latexml_core::util::logger::flush_log();
@@ -513,10 +526,10 @@ fn try_streaming_front(
   path: &str,
   split_xpath: &str,
   split_naming: Option<&str>,
-  destination: Option<&str>,
   page_opts: &PostDocumentOptions,
   spill_dir: &std::path::Path,
   dom_fallback: bool,
+  mut graphics: Option<&mut latexml_post::graphics::Graphics>,
 ) -> Result<Option<PostFront>, ()> {
   let naming = resolve_split_naming(split_naming);
   telemetry::phase_enter(Phase::Split);
@@ -524,7 +537,8 @@ fn try_streaming_front(
     path,
     split_xpath,
     naming,
-    destination,
+    // The run's `--dest`, as `run_post_processing_inner` set it on the page options.
+    page_opts.destination.as_deref(),
     spill_dir,
     dom_fallback,
   );
@@ -652,6 +666,11 @@ fn try_streaming_front(
         "Scan placeholder tracking diverged from XPath probe on {}",
         page.destination
       );
+      if let Some(graphics) = graphics.as_deref_mut()
+        && outcome.pages.len() > 1
+      {
+        graphics.plan_names(&d);
+      }
       let (needs_index, needs_bib) = scan_placeholders;
       spilled.push(SpilledPage {
         needs_index,
@@ -781,6 +800,7 @@ fn stage_handoff(xml: &str, opts: &PostOptions) -> Option<StagedHandoff> {
 pub fn run_post_processing_owned_logged(xml: String, opts: &PostOptions) -> PostOutcome {
   // Bound first: the staging Info belongs to the post log.
   latexml_core::util::logger::bind_log();
+  latexml_core::common::error::log_session_warnings();
   latexml_core::common::arena::take_overflow_interns();
   let staged = if handoff_needs_file(&xml, opts) {
     stage_handoff(&xml, opts)
@@ -808,6 +828,7 @@ pub fn run_post_processing_owned_logged(xml: String, opts: &PostOptions) -> Post
 /// `LATEXML_POST_STREAM_THRESHOLD` above its size) is read back and post-processed as that `String` would be.
 pub fn run_post_processing_staged_logged(staged: StagedHandoff, opts: &PostOptions) -> PostOutcome {
   latexml_core::util::logger::bind_log();
+  latexml_core::common::error::log_session_warnings();
   latexml_core::common::arena::take_overflow_interns();
   let len = std::fs::metadata(&staged.path).map_or(0, |m| m.len());
   let mut pages = Vec::new();
@@ -884,6 +905,7 @@ fn run_post_processing_inner(
     unicodemath,
     url_style,
     navigationtoc,
+    is_html,
     schemadocs,
     split,
     ref split_xpath,
@@ -894,9 +916,18 @@ fn run_post_processing_inner(
     timestamp,
     icon,
     whatsout,
+    nocache,
   } = *opts;
 
-  let mut doc_opts = PostDocumentOptions::default();
+  // Perl's document cache, shared by the document and every page of it (`Post.pm` L687-690), closed (its side files
+  // checkpointed away) when post ends, before anything is packed.
+  let run_cache = latexml_post::document::DocCache::new(nocache);
+  let _close_cache = CloseCache(run_cache.clone());
+  let mut doc_opts = PostDocumentOptions {
+    nocache,
+    cache: Some(run_cache.clone()),
+    ..Default::default()
+  };
   if let Some(dest) = destination {
     doc_opts.destination = Some(dest.to_string());
   }
@@ -911,6 +942,24 @@ fn run_post_processing_inner(
   // falls back to the destination's directory (document.rs, Perl Config.pm L466).
   if let Some(site_dir) = site_directory {
     doc_opts.site_directory = Some(site_dir.to_string());
+    // Perl `Post.pm` L698-706 (`Post::Document::new_internal`): the destination must lie within the site directory.
+    if let Some(dest) = destination {
+      let dest_dir = std::path::Path::new(dest)
+        .parent()
+        .map(|dir| dir.to_string_lossy().into_owned())
+        .filter(|dir| !dir.is_empty())
+        .unwrap_or_else(|| ".".to_string());
+      if latexml_core::util::pathname::is_contained(&dest_dir, site_dir).is_none() {
+        emit_fatal(
+          "unexpected",
+          &dest_dir,
+          &format!(
+            "The destination directory ({dest_dir}) must be within the siteDirectory ({site_dir})"
+          ),
+        );
+        return String::new();
+      }
+    }
   }
   // `raw_xml` holds the in-memory serialization — `Some` only for `Xml` input.
   // `File` input streams from disk and never holds it, so `raw_xml` is `None`
@@ -968,6 +1017,15 @@ fn run_post_processing_inner(
   // whole-DOM parse of a 2.68 GB core XML needs ~30+ GB and OOM'd a 31 GB
   // host before Split ran (laptop UAT 2026-07-31). Everything downstream of
   // this block is shared between the two front-ends.
+  // Phase 5: Graphics (Perl `graphicimages!` → `dographics`, default on).
+  // `--nographicimages` skips the phase wholesale, leaving the raw
+  // `<ltx:graphics>` references in the output untouched. Made here: the pages of a split name their images as they
+  // are spilled (`Graphics::plan_names`, issue 995).
+  let mut graphics_proc = graphicimages.then(|| {
+    latexml_post::graphics::Graphics::new(None, true)
+      .with_svg_threshold_kb(graphics_svg_threshold_kb)
+      .with_doc_cache(run_cache.clone())
+  });
   let file_len = |path: &str| std::fs::metadata(path).map(|m| m.len()).ok();
   let streamed: Option<PostFront> = if let PostInput::File(path) = input
     && let Some(len) = file_len(path)
@@ -978,10 +1036,10 @@ fn run_post_processing_inner(
       path,
       xpath,
       split_naming,
-      destination,
       &page_opts,
       page_spill.path(),
       len < STREAM_SPLIT_DOM_FALLBACK_LIMIT,
+      graphics_proc.as_mut(),
     ) {
       Ok(front) => front,
       Err(()) => return fallback(),
@@ -1166,6 +1224,11 @@ fn run_post_processing_inner(
         post_error("post", &format!("cannot stage page {i} to disk: {e}"));
         return fallback();
       }
+      if let Some(graphics) = graphics_proc.as_mut()
+        && !keep_resident
+      {
+        graphics.plan_names(&d);
+      }
       let (needs_index, needs_bib) = page_placeholder_probes(&d);
       let destination = d.get_destination().map(String::from);
       let destination_directory = d.get_destination_directory().map(String::from);
@@ -1214,11 +1277,12 @@ fn run_post_processing_inner(
   // L408-420 from the destination's extension, else the format). Without it the
   // `server`/`negotiated` styles would strip the wrong suffix (the `xml` default)
   // and leave an html site's links untouched.
+  let is_html_out = is_html.unwrap_or_else(|| stylesheet.is_some_and(|s| s.contains("html")));
   let out_extension = destination
     .and_then(|d| std::path::Path::new(d).extension().and_then(|e| e.to_str()))
     .map(str::to_string)
     .unwrap_or_else(|| {
-      if stylesheet.is_some_and(|s| s.contains("html")) {
+      if is_html_out {
         "html".to_string()
       } else {
         "xml".to_string()
@@ -1236,26 +1300,18 @@ fn run_post_processing_inner(
     crossref
   };
 
-  // Phase 5: Graphics (Perl `graphicimages!` → `dographics`, default on).
-  // `--nographicimages` skips the phase wholesale, leaving the raw
-  // `<ltx:graphics>` references in the output untouched.
-  let graphics_proc = graphicimages.then(|| {
-    latexml_post::graphics::Graphics::new(None, true)
-      .with_svg_threshold_kb(graphics_svg_threshold_kb)
-  });
-
   // Phase 3: SVG + MathML + XSLT
   let post = latexml_post::Post::new();
   let mut processors: Vec<Box<dyn Processor>> = Vec::new();
-  let is_html_out = stylesheet.is_some_and(|s| s.contains("html"));
-
   // SVG first, on the live page DOM — Perl's chain order (`LaTeXML.pm`
-  // L493-581: Graphics → SVG → MathML → XSLT; SVG only for the HTML formats,
-  // `$$opts{svg}`). The Graphics page-phase has already resolved every
+  // L493-581: Graphics → SVG → MathML → XSLT; SVG for the HTML output and the
+  // html-family sheets, where Perl's `$$opts{svg}` is on for every sheet but html4's,
+  // Config.pm L560). The Graphics page-phase has already resolved every
   // picture-nested `<ltx:graphics>` by the time this runs, so
   // `SVG::convert_foreign` wraps the resolved node and the XSLT renders it
   // (#1291's Graphics→SVG order comes for free).
-  if is_html_out {
+  let svg = is_html_out || stylesheet.is_some_and(|s| s.contains("html"));
+  if svg {
     processors.push(Box::new(latexml_post::svg::SVG::new()));
   }
 
@@ -1335,9 +1391,6 @@ fn run_post_processing_inner(
         "JAVASCRIPT".to_string(),
         format!("\"{}\"", js_effective.join("|")),
       );
-    }
-    if let Some(navtoc) = navigationtoc {
-      xslt_params.insert("NAVIGATIONTOC".to_string(), format!("\"{}\"", navtoc));
     }
     if let Some(ts) = timestamp {
       xslt_params.insert("TIMESTAMP".to_string(), format!("\"{}\"", ts));
@@ -1523,6 +1576,14 @@ fn run_post_processing_inner(
   // SQLite file and each worker attaches it readonly; the workers run the
   // identical `render_spilled_page` pipeline over contiguous page ranges and
   // the parent folds their diagnostics deterministically, in chunk order.
+  // Every page's images are named before any page is rendered, in page order (as the pages were spilled, then those
+  // MakeIndex and MakeBibliography rewrote), and stored in the resource cache (Perl's document cache,
+  // `LaTeXML-oxide.cache`): the serial render and every render worker look the names up, so they are the same whichever
+  // process renders a page, and CrossRef's copies of other pages' titles into a page's navigation meet the names of
+  // the pages they come from (issue 995). One unsplit page names its images as it renders, as Perl does.
+  if let Some(gfx) = graphics_proc.as_mut() {
+    plan_rewritten_pages(&spilled_pages, &page_opts, gfx);
+  }
   // The pages an abandoned fleet may have written: a page's Fatal in the serial render removes them
   // too, and a stop removes those it did not rewrite.
   let mut fleet_pages: Vec<String> = Vec::new();
@@ -1557,6 +1618,7 @@ fn run_post_processing_inner(
       xslt_params: manifest_xslt_params,
       default_resources,
       searchpaths: manifest_searchpaths,
+      svg,
       is_html_out,
       schemadocs,
       whatsout: whatsout.as_cli().to_string(),
@@ -1565,7 +1627,14 @@ fn run_post_processing_inner(
       // Filled in by `parallel_render` once the fleet is sized.
       max_rss_kb: 0,
       post_values: latexml_core::PostStateValues::capture(),
+      resource_names: graphics_proc
+        .as_ref()
+        .map(latexml_post::graphics::Graphics::planned_names)
+        .unwrap_or_default(),
+      log_level: latexml_core::util::logger::stderr_level().to_string(),
     };
+    // The names are stored: the workers open the cache file themselves, so this process holds no handle across.
+    run_cache.close_files();
     let t_pages = audit_start("render_pages");
     let outcome = crate::render_workers::parallel_render(
       manifest,
@@ -1931,6 +2000,40 @@ struct SpilledPage {
   /// what re-parsing `path` would give (a clean parse reparses to the same tree, and Scan only adds the root's
   /// `xml:id`), and [`as_reparsed`] gives it the wrapper state of a fresh parse.
   resident:              Option<PostDocument>,
+}
+
+/// Closes the run's cache when post ends, whichever way it returns.
+struct CloseCache(latexml_post::document::DocCache);
+
+impl Drop for CloseCache {
+  fn drop(&mut self) { self.0.close(); }
+}
+
+/// Name the images MakeIndex and MakeBibliography may have added to the pages they rewrote (the pages were planned
+/// when spilled), then store the names of every planned page ([`Graphics::commit_names`]). A page that cannot be
+/// re-read is reported by its render.
+///
+/// [`Graphics::commit_names`]: latexml_post::graphics::Graphics::commit_names
+fn plan_rewritten_pages(
+  pages: &[SpilledPage],
+  opts: &PostDocumentOptions,
+  graphics: &mut latexml_post::graphics::Graphics,
+) {
+  if !graphics.planned() {
+    return;
+  }
+  for page_meta in pages.iter().filter(|p| p.needs_index || p.needs_bib) {
+    let Ok(mut page) = PostDocument::new_from_file(&page_meta.path.to_string_lossy(), opts.clone())
+    else {
+      continue;
+    };
+    page.destination.clone_from(&page_meta.destination);
+    page
+      .destination_directory
+      .clone_from(&page_meta.destination_directory);
+    graphics.plan_names(&page);
+  }
+  graphics.commit_names();
 }
 
 /// Whether libxml2 parsed `doc` without errors: a recovered tree (say, adjacent text nodes around a dropped

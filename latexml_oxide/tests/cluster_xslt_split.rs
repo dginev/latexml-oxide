@@ -468,6 +468,7 @@ mod xslt_failure_is_fatal {
       unicodemath:               false,
       url_style:                 latexml_post::crossref::UrlStyle::File,
       navigationtoc:             None,
+      is_html:                   None,
       schemadocs:                false,
       split:                     false,
       split_xpath:               None,
@@ -478,6 +479,7 @@ mod xslt_failure_is_fatal {
       timestamp:                 None,
       icon:                      None,
       whatsout:                  latexml_post::extract::Whatsout::default(),
+      nocache:                   false,
     }
   }
 

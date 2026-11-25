@@ -43,14 +43,74 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
 
 ## Changes
 
-### After 0.8.0-rc2
+### 0.8.0-rc3
 
-  - **rust-libxml 0.3.26** (from 0.3.24; both releases 2026-11-23): a wrapper of a node libxml2 freed reads as a null
-    node instead of pointing into freed memory, linking calls refuse a link that would double-free or loop, a
-    document's drop neutralises its wrappers, and strings with a NUL byte, over-long text and namespaces of another
-    document return errors instead of panicking or truncating. No C code changed (the vendored-native audit lists
-    both versions).
+  - **natbib reads an apalike label `[Author, Year]` as author and year.** A bare `\bibitem[Maes, 1995]{m}` label
+    printed "(Maes,, 1995)" and "Maes, (1995)", where pdflatex prints "(Maes, 1995)" and "Maes (1995)": the label is now
+    split at its first ", " outside braces, as natbib's `\NAT@apalk` does, and `\citename` the same way; the `(year)`
+    split ignores a `(` inside braces, which had given a numbers-mode label the year "LIGO Scientific Collaboration"
+    and spilled label text into the entry (2605.02429). A/B on 267 papers: 123 changed, all inside the bibitem tags
+    but that spill; Errors 118/118, Fatals 1/1; citations with ",," 2,312 → 0, "Name, (" 3,415 → 0, ", )" 140 → 0.
+    Witnesses 2505.11584 (37 "(Maes,, 1995)" → 0), 2605.20003, 2605.02429. OXIDIZED_DESIGN_DIVERGENCES #1161,
+    KNOWN_PERL_ERRORS #1332; residuals in row R NATBIBRES.
+  - **`\backmatter` closes the open part and chapter.** In book, amsbook, svmult and svmono the back matter belongs to no
+    part (book.cls:292-299), so the bibliography and index no longer nest in the last `ltx:part`: a split book's
+    Bibliography/Index buttons appear on every page and `bib.html`'s title no longer ends "‣ Part II …". A/B on 73
+    papers: words, Errors, Fatals and Warnings identical; 30 changed, each only by the back matter leaving the last
+    part. Witness 0710.2405; residuals in row R BACKMATTERRAW, AMSBACKNAME.
+  - **`-q` hides Info and Warnings on stderr, never Errors.** `-q` and `-qq` now show only the `Error:`/`Fatal:`
+    records (with their continuation lines), the final verdict and the notes about output not produced ("Log not
+    written") on stderr; Warnings, the split render's forwarded Warnings, the format build's progress and notes such
+    as "Log written to" are hidden. Perl's `--quiet` prints nothing at all; ours keeps the
+    success-rate signal on stderr at every verbosity (OXIDIZED_DESIGN_DIVERGENCES #1158); as on main, `--init` and an
+    XML input under `--nopost` print no verdict at any verbosity. The `.latexml.log` keeps
+    everything, and the exit status and an archive's `status` are unchanged. Guards
+    `perfect_kernel_batchclihard::quiet_keeps_errors_and_the_verdict_on_stderr`, `quiet_hides_the_format_build_progress`,
+    `quiet_mode_still_reports_error_and_fatal`, `perfect_kernel_batchcliwire::quiet_silences_the_render_workers`.
+  - **The command line's own warnings reach the log.** The Warnings for `--max-memory=0` and for a `--splitat` level
+    outside Perl's list were raised after the session had begun its report and before its log was open, so they
+    reached stderr and the status but not `<name>.latexml.log` or the log packed into a `.zip`. They are now held
+    for the session, as an archive's are, and logged once: by the session in a `.tex` run, by post-processing for an
+    XML input (`--whatsin=xml`), which has no session, and into the `--log` file when that input is not
+    post-processed (`--nopost`). Guard
+    `perfect_kernel_batchclihard::early_option_warnings_reach_the_log`.
+  - **An interrupted format build is undone until its dump is published** (issue 988, after #990). The interrupt
+    handler is installed before the build writes anything, the attempt note is written and the finished dump
+    published under the lock the handler takes, so an interrupt can no longer undo ahead of the note or put the old
+    note back beside a published dump (an interrupt just after publishing leaves this build's note beside the dump,
+    which is harmless: a dump that matches its tree is never rebuilt); and the handler ends the process with
+    `_exit`, not running libxml2's destructor under the still-running build thread (#973). A process that built a format still exits with status 130 on a later SIGTERM
+    or SIGHUP rather than by the signal. OXIDIZED_DESIGN_DIVERGENCES #1148; guard
+    `format_dumps::tests::a_published_build_is_not_undone`.
+  - **Security: `cortex_worker` never loads a runtime `.rhai` binding.** A worker built with `--features cortex`
+    alone keeps the default `runtime-bindings`, so a `<pkg>.sty.rhai` shipped inside an arXiv source loaded on
+    `\usepackage{pkg}` and its `Command(..).output()` ran any program. The worker now forbids runtime bindings
+    (`converter::forbid_runtime_bindings`) before anything else, whatever its build features, so such a file is
+    ignored as in a build without the feature, in the worker and in every child it spawns. The `latexml_oxide` CLI, the library and the LSP still load runtime bindings. Guards
+    `cortex_worker_untrusted_bindings` (`--features cortex`) and `forbid_runtime_bindings`; docs/release/SAFETY.md.
+  - **rust-libxml 0.3.27** (from 0.3.24; 0.3.25 and 0.3.26 2026-11-23, 0.3.27 2026-11-24): a wrapper of a node libxml2
+    freed reads as a null node instead of pointing into freed memory, linking calls refuse a link that would double-free
+    or loop, a document's drop neutralises its wrappers, and strings with a NUL byte, over-long text and namespaces of
+    another document return errors instead of panicking or truncating. 0.3.25's loop refusal walked from the insertion
+    point to the top of the tree on every link, which made a paper whose TikZ pictures nest groups deeply 2.1x slower
+    (arXiv 2605.19500, rc2's source: 916.6 G instructions before the refusal, 1,966 G with 0.3.26, 918 G with 0.3.27);
+    0.3.27 refuses the same links at about rc2's cost. No C code changed (the vendored-native audit lists every
+    version).
 
+  - **Command-line options do what latexmlc's do.** `--documentid` names the document and prefixes its ids (it had
+    no effect; latexml.sty's `\lxDocumentID` now names the root too). `--format=html` is html5, and `--format=xhtml`
+    writes well-formed XHTML with LaTeXML-xhtml.xsl. Output is serialized as HTML by the format, not the stylesheet's
+    name: a custom `--stylesheet` writing `.xml` keeps its XML, and one writing `.html` is serialized as HTML and gets
+    the SVG step, as in Perl; a stylesheet whose name contains "html" now writes XML to stdout when neither `--dest`
+    nor `--format` is given, as Perl's does. `--token-limit` below the default holds instead of being raised with the source's size.
+    `--quiet` and `--verbose` reach a split run's parallel render workers, and `-v`/`-q` count when repeated.
+    `--splitat` and `--splitnaming` take a prefix (`--splitat=sec`, `--splitnaming=labelrel`); both are checked
+    only when splitting, and a level outside Perl's list still splits there with a Warning naming `--splitpath`.
+    `--navigationtoc` is case-insensitive and `none` means none. An unknown `--splitnaming` or `--navigationtoc` is a
+    usage error. `--keepXMath` and `--nohackplane1` parse; a relative `--sourcedirectory` no longer leaks into the
+    output paths. `cortex_worker` refuses `--input`/`--output` without `--standalone` and an unknown `--profile`.
+    `--nonumbersections` keeps its documented meaning (unnumbered sections). OXIDIZED_DESIGN_DIVERGENCES #1158-#1160;
+    guards `perfect_kernel_batchcliwire`.
   - **A class whose `\@maketitle` takes an argument no longer leaves a group open or prints a stray letter.** The
     title-page deposit read its closing brace as that argument, so `\end{document}` warned of open groups, and the
     replay of the class's `\maketitle` printed the argument as text (iaus.cls's "n"; ~1,665 arXiv papers, 0801.1806).
@@ -123,6 +183,44 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     parses, as Perl draws it (`<mo>(</mo><mi>a</mi>`); formula readings and Content MathML are unchanged. In a
     sample of 635 arXiv papers, 370 carried 3,625 such words (25 of 100 random papers), now none.
     OXIDIZED_DESIGN_MATH #22; guards `perfect_kernel_batchnulldelim::*`.
+  - **An image outside the main file's directory keeps its place under `--sitedirectory`, and split pages no longer
+    overwrite each other's images** (issue 995). With `\subimport*{../children/child_1}{index.tex}` and
+    `--sitedirectory=..`, each image is now linked where it is (`../children/child_1/images/A.svg`) and nothing is
+    copied, as in Perl; the option was ignored and every image copied as `x1.svg`, `x2.svg`, …, which remains the
+    default without it, so the output stays self-contained. A destination outside `--sitedirectory` is Perl's Fatal.
+    Under `--split`, every page restarted the generated names at `x1`, so a later chapter's image replaced an earlier
+    chapter's (the first chapter showed the second's figure); converted images sharing a file name on different pages
+    (`a/plot.eps`, `b/plot.eps`) likewise shared one `plot.png`. Image names now come from Perl's document cache, kept
+    in the destination directory as `LaTeXML-oxide.cache` (an SQLite database; Perl's `LaTeXML.cache` is a DB_File,
+    left untouched): every page's images are named before any page is rendered, so the parallel render of 64 pages or
+    more names them exactly as the serial one, whatever the worker count, and a page's navigation shows the other
+    pages' title images right. A name belongs to its source: an edited image keeps its name and is written again
+    under it (another page, crop or turn is another image, with a name of its own, as in Perl; another width or
+    scale is the same file, made once), a second document converted into the same directory continues the numbering
+    (it restarted at `x1` and overwrote the first document's images) and never shares a file with the first, even
+    when two images hold the same bytes, conversions started together into one new
+    directory all share its cache and never share a name, and a corrupt cache entry is ignored with a Warning instead
+    of deciding where an image is written. A cache that cannot be used (read-only, unreadable, a symbolic link, which is
+    never followed, or held by another process for more than 10 seconds) is reported with a Warning and the run goes
+    on without it: no image is written over a file in the directory holding other bytes, and a rerun of an unchanged
+    document takes its own files again (when the cache cannot be read at all, a file of another document holding the
+    very same bytes can be taken as the image's own). A deleted cache, or a new one in a directory that already holds
+    images, gives no new name over a file it does not own; the first conversion into a folder written by 0.7.x, rc1 or rc2
+    (which keep no cache) therefore names its images afresh (`x1`, …) and leaves the earlier files in place. `--nocache` (Perl's
+    `nocache`) keeps no cache file: the names restart at `x1` each run, as before, still shared by the run's split
+    pages. A converted (or turned, cropped) image is made once and shown by every page that uses it. A
+    copy is never written through a symbolic link out of the site directory. `.zip` and EPUB outputs write no cache
+    (their directory is removed once packed), and the cortex worker keeps it in memory. The parallel render's private database snapshot is now named
+    `LaTeXML-render.db`.
+    OXIDIZED_DESIGN_DIVERGENCES #1081, #1157, KNOWN_PERL_ERRORS #1329; guards `perfect_kernel_batchfix995::*`.
+  - **Internal hardening: 26 fewer `unsafe` sites, and a ratchet that keeps the count from rising** (issue 937, phases
+    0 and the first of 1; no behaviour change). The `--server` editor mode's pipe, poll, read, write, wait and kill,
+    the free-disk and page-size probes, the effective user id, the graphics cache's and the harness's `flock`, and a
+    test's capture of libxslt's stderr now call `rustix` or the standard library (`File::lock`/`try_lock`) instead of
+    raw `libc`: 106 sites to 80. Guard `unsafe_sites_ratchet::unsafe_sites_only_fall` pins the count of every
+    `unsafe` keyword per file (83, with two `unsafe extern "C"` blocks and an `#[unsafe(link_section)]`); the ledger
+    is [`SAFETY.md`](SAFETY.md). The page size comes from rustix with its `use-libc-auxv` feature, so it is libc's
+    `sysconf` value and cannot fail on any kernel.
 
 ### 0.8.0-rc2
 

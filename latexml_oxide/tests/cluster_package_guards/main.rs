@@ -124,6 +124,7 @@ mod rtoken_patchcmd;
 mod scanner_status;
 mod token_kernel_gaps;
 mod unicode_format_encoding;
+mod unsafe_sites_ratchet;
 mod vfs_file_end;
 mod xkeyval_internals;
 
@@ -437,6 +438,10 @@ mod perfect_kernel_batchcl6;
 mod perfect_kernel_batchcl7;
 mod perfect_kernel_batchcl8;
 mod perfect_kernel_batchcl9;
+/// CLIHARD: the front end's early warnings reach the log; `-q` hides Info and Warnings, never Errors (OD #1158).
+mod perfect_kernel_batchclihard;
+/// CLIWIRE: the CLI options as latexmlc applies them; OD #1158.
+mod perfect_kernel_batchcliwire;
 /// CLUSTFIX: run-397 binding gaps — pasj00 without its class, the 1998 aipproc, `\cite*` under the lock, elsart's switches.
 mod perfect_kernel_batchclustfix;
 /// CLUSTFIX2: run-397 binding gaps — ar5iv's `\href` anchor layer, pasj00's `\timeform` without its class, psfig's
@@ -484,6 +489,8 @@ mod perfect_kernel_batchfb2a;
 mod perfect_kernel_batchfb2b2;
 mod perfect_kernel_batchfb2b3;
 mod perfect_kernel_batchfix991;
+/// FIX995: an image copy honours `--sitedirectory`; generated image names are shared by every page of a run (issue 995).
+mod perfect_kernel_batchfix995;
 /// FMRG: the red/green suite of frontmatter mark association — every witness and reviewer probe of the shared-note
 /// campaign against its pdflatex oracle (DG 2026-11-16).
 mod perfect_kernel_batchfmmarks;

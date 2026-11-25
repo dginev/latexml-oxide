@@ -1,3 +1,5 @@
+#[cfg(feature = "runtime-bindings")]
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::{rc::Rc, sync::LazyLock};
 
 use latexml_core::{
@@ -57,6 +59,18 @@ fn find_rhai_binding(request: &str, scope: RhaiScope) -> Option<String> {
       ..FindFileOptions::default()
     }),
   )
+}
+
+/// Set by [`forbid_runtime_bindings`]: the chain then has no runtime tier.
+#[cfg(feature = "runtime-bindings")]
+static RUNTIME_BINDINGS_FORBIDDEN: AtomicBool = AtomicBool::new(false);
+
+/// Never load a runtime `.rhai` binding in this process: every binding chain installed after this call resolves as in
+/// a build without `runtime-bindings`. One-way and process-wide, for a front end converting untrusted sources
+/// (`cortex_worker`: a `<pkg>.sty.rhai` shipped in an arXiv source would otherwise load and run; SAFETY.md).
+pub fn forbid_runtime_bindings() {
+  #[cfg(feature = "runtime-bindings")]
+  RUNTIME_BINDINGS_FORBIDDEN.store(true, Ordering::Relaxed);
 }
 
 /// Resolve a runtime `<request>.rhai` binding within `scope` and load it if
@@ -516,7 +530,7 @@ fn figure_output_cue(main_code: &str, dir: Option<&std::path::Path>) -> state::F
 ///   1. a local `<request>.rhai` in the search paths — lets a user (or a test
 ///      fixture next to its `.tex`) OVERRIDE any compiled binding of the same
 ///      name (e.g. `article.cls.rhai` shadows `article_cls`). `runtime-bindings`
-///      only.
+///      only, and not after [`forbid_runtime_bindings`] (nor is tier 4).
 ///   2. the `extra` dispatcher (`latexml_contrib` for our binaries) — consulted
 ///      before `latexml_package` to preserve the prior external-before-internal
 ///      order; the two registries are disjoint, so the order is immaterial.
@@ -540,12 +554,16 @@ fn figure_output_cue(main_code: &str, dir: Option<&std::path::Path>) -> state::F
 /// tier 1 first ([`state::set_local_binding_finder`]; #947).
 pub(crate) fn install_binding_dispatch(extra: Option<BindingDispatcher>) {
   #[cfg(feature = "runtime-bindings")]
-  state::set_local_binding_finder(Rc::new(|request: &str| {
-    find_rhai_binding(request, RhaiScope::LocalPaths)
-  }));
+  let runtime_bindings = !RUNTIME_BINDINGS_FORBIDDEN.load(Ordering::Relaxed);
+  #[cfg(feature = "runtime-bindings")]
+  if runtime_bindings {
+    state::set_local_binding_finder(Rc::new(|request: &str| {
+      find_rhai_binding(request, RhaiScope::LocalPaths)
+    }));
+  }
   set_bindings_dispatch(Rc::new(move |request: &str| {
     #[cfg(feature = "runtime-bindings")]
-    if let Some(result) = rhai_dispatch(request, RhaiScope::LocalPaths) {
+    if runtime_bindings && let Some(result) = rhai_dispatch(request, RhaiScope::LocalPaths) {
       return Some(result);
     }
     // The compiled tiers (contrib `extra`, then `latexml_package`) load
@@ -559,7 +577,7 @@ pub(crate) fn install_binding_dispatch(extra: Option<BindingDispatcher>) {
       return Some(result.map(|()| None));
     }
     #[cfg(feature = "runtime-bindings")]
-    if let Some(result) = rhai_dispatch(request, RhaiScope::TeXTree) {
+    if runtime_bindings && let Some(result) = rhai_dispatch(request, RhaiScope::TeXTree) {
       return Some(result);
     }
     None
@@ -633,19 +651,22 @@ pub struct Converter {
 
 impl Converter {
   pub fn from_config(opts: Config) -> Converter {
+    // Every field named (no `..Default`): a new option fails to compile until it is wired.
     let core = Core::new(CoreOptions {
-      verbosity: Some(opts.verbosity),
+      model:            None,
+      verbosity:        Some(opts.verbosity),
       include_comments: opts.include_comments.or(Some(false)),
-      strict: opts.strict,
-      include_styles: opts.include_styles,
-      preload: opts.preload.clone(),
-      search_paths: opts.search_paths.clone(),
-      nomathparse: opts.nomathparse,
-      source_map: opts.source_map,
+      strict:           opts.strict,
+      include_styles:   opts.include_styles,
+      preload:          opts.preload.clone(),
+      search_paths:     opts.search_paths.clone(),
+      nomathparse:      opts.nomathparse,
+      source_map:       opts.source_map,
       // Perl Core.pm L60-61: seed State PERL_INPUT_ENCODING from --inputencoding
       // (the Mouth reads it per-line to decode source bytes). `None` ⇒ utf-8.
-      input_encoding: opts.inputencoding.clone(),
-      ..CoreOptions::default()
+      input_encoding:   opts.inputencoding.clone(),
+      documentid:       opts.documentid.clone(),
+      graphics_paths:   None,
     });
     Converter {
       runtime: Runtime {

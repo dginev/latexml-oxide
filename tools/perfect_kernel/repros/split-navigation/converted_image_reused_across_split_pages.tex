@@ -1,0 +1,19 @@
+% mechanism: latexml_post graphics.rs ResourceNames::converted (Perl Post/Graphics.pm L249-260 cacheLookup, L331
+%   cacheStore, the document cache every split page shares): a converted image is made once per run and every later
+%   page points at it.
+% witness: issue 995 review (round 1 wrote one turned fig.png three times)
+% layout:  parent/index.tex (this file), parent/fig.png, parent/other.png (distinct); cwd parent/
+% oracle:  pdflatex 0 errors: five images, three of fig turned
+% engines: rust=GREEN perl=n/a (2026-11-24: Perl without Image::Magick drops the turn and copies fig.png; with it,
+%          cacheLookup reuses the turned image)
+% expect:  --split --splitat=chapter --dest=index.html: Ch1 x1.png, other.png; Ch2 x1.png; Ch3 x1.png, x2.png;
+%          written: x1.png (fig turned), x2.png (other turned); 0 errors
+%          (round 1: x1.png, x2.png, x3.png, all fig turned, and x4.png)
+% status:  GREEN
+\documentclass{book}
+\usepackage{graphicx}
+\begin{document}
+\chapter{A} \includegraphics[angle=90]{fig} \includegraphics{other}
+\chapter{B} \includegraphics[angle=90]{fig}
+\chapter{C} \includegraphics[angle=90]{fig} \includegraphics[angle=90]{other}
+\end{document}

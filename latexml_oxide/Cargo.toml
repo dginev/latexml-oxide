@@ -1,6 +1,6 @@
 [package]
 name = "latexml"
-version = "0.8.0-rc2"
+version = "0.8.0-rc3"
 edition = "2024"
 authors = ["Deyan Ginev <deyan.ginev@gmail.com>"]
 license = "CC0-1.0"
@@ -94,6 +94,11 @@ required-features = ["cortex"]
 name = "cortex_worker_exit_reports"
 required-features = ["cortex"]
 
+# cortex_worker never loads a runtime `.rhai` binding shipped in a source; the CLI still does.
+[[test]]
+name = "cortex_worker_untrusted_bindings"
+required-features = ["cortex"]
+
 [features]
 default = ["runtime-bindings"]
 # Enable building the cortex_worker binary (ZMQ-based CorTeX dispatcher client).
@@ -170,7 +175,7 @@ zip = { version = "9.7.0", default-features = false, features = ["deflate-flate2
 indexmap = "=2.14.2"
 tempfile = "3"
 log = "0.4"
-libxml = "0.3.26"
+libxml = "0.3.27"
 regex = { version = "1.7.1", default-features = false, features = ["std", "perf", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script"] }  # DEP-10
 glob = { version = "0.3", optional = true }
 roxmltree = { version = "0.21", optional = true }
@@ -215,6 +220,12 @@ serde = { version = "1.0.229", features = ["derive"] }
 # direct dep adds no compile cost; same minimal feature set.
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 
+# Safe Unix syscalls (issue #937): the `--server` fork/pipe/poll loop (`lsp_server/unix.rs`) and the
+# harness's claim liveness probe (`cortex_worker/exit_report.rs`). Pure Rust, already in the tree via
+# latexml_core.
+[target.'cfg(unix)'.dependencies]
+rustix = { version = "1.1.6", default-features = false, features = ["event", "fs", "pipe", "process", "std", "stdio"] }
+
 [dev-dependencies]
 # Enable `test-utils` automatically when running `cargo test` / `cargo nextest`
 # in the workspace without putting test harness code or audit binaries in the
@@ -226,6 +237,9 @@ latexml = { path = ".", features = ["test-utils"] }
 # pipeline (which required a Unix userland and silently vacuous-passed when
 # xmllint was missing). LCS-based, so counts match GNU diff's `<`/`>` lines.
 similar = "3"
+# Plants a corrupt entry in a destination's `LaTeXML-oxide.cache` (perfect_kernel_batchfix995); the spec latexml_post
+# builds, so nothing is compiled twice.
+rusqlite = { version = "0.43.0", features = ["bundled"] }
 
 # Metadata for `cargo deb` (https://github.com/kornelski/cargo-deb).
 # Drives `tools/make_release.sh` step 6: `cargo deb --no-build --profile maxperf -p latexml`.

@@ -18,6 +18,8 @@
 //! listed below.
 //!
 //! - **Disable flag** (Perl: `nocache`) → env `LATEXML_GRAPHICS_CACHE_OFF`.
+//! - **Names** (Perl: `key → dest`) → the document cache, `LaTeXML-oxide.cache` in the destination directory
+//!   ([`crate::document::DocCache`], [`crate::resource_cache`]); this cache holds the converted bytes only.
 //! - **Re-use across runs** (Perl: one .cache per dest dir) → global XDG cache, shared across all
 //!   conversions on the host. This is a strict superset of the Perl behaviour: cross-paper sharing,
 //!   plus reproducible content-keying instead of path-keying.
@@ -399,6 +401,21 @@ fn lookup_digest(
   Some(CacheHit { dims })
 }
 
+/// The cache's entry for `(source, key)` when `policy` consults the cache and it holds one: what a conversion of the
+/// source installs (`digest`: the source's, when read already).
+pub fn cached_output(
+  policy: CachePolicy,
+  source: &str,
+  digest: Option<&SourceDigest>,
+  key: RenderKey,
+) -> Option<PathBuf> {
+  if policy == CachePolicy::Bypass || disabled() {
+    return None;
+  }
+  let cached = cache_path(&cache_root()?, &source_key(source, digest, key)?, key.ext);
+  cached.exists().then_some(cached)
+}
+
 /// Insert `dest` (and optionally its dimensions) into the cache under
 /// `(source, key)`. Idempotent and best-effort: any I/O failure leaves
 /// the cache unchanged.
@@ -456,12 +473,11 @@ fn touch_now(p: &Path) -> std::io::Result<()> {
 /// lock is held for the lifetime of the returned handle. `None` =>
 /// another process already holds the lock; skip the prune.
 ///
-/// On Unix uses `flock(LOCK_EX | LOCK_NB)`. On Windows the lock is a
+/// On Unix uses `flock(LOCK_EX | LOCK_NB)` (`File::try_lock`). On Windows the lock is a
 /// best-effort `create_new` sentinel; multi-process correctness is
 /// still preserved because the prune itself is `ENOENT`-tolerant.
 #[cfg(unix)]
 fn acquire_prune_lock(root: &Path) -> Option<fs::File> {
-  use std::os::fd::AsRawFd;
   let lock_path = root.join(".prune.lock");
   let _ = fs::create_dir_all(root);
   let file = fs::File::options()
@@ -470,10 +486,7 @@ fn acquire_prune_lock(root: &Path) -> Option<fs::File> {
     .truncate(false)
     .open(&lock_path)
     .ok()?;
-  // SAFETY: fd is an owned, open file descriptor for the lock file; flock(2)
-  // operates on it without aliasing Rust memory.
-  let rc = unsafe { libc::flock(file.as_raw_fd(), libc::LOCK_EX | libc::LOCK_NB) };
-  if rc == 0 { Some(file) } else { None }
+  file.try_lock().is_ok().then_some(file)
 }
 
 #[cfg(not(unix))]

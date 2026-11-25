@@ -31,6 +31,7 @@ pub(crate) fn post_html(xml: &str) -> String {
     unicodemath:               false,
     url_style:                 latexml_post::crossref::UrlStyle::File,
     navigationtoc:             None,
+    is_html:                   None,
     schemadocs:                false,
     split:                     false,
     split_xpath:               None,
@@ -41,6 +42,7 @@ pub(crate) fn post_html(xml: &str) -> String {
     timestamp:                 None,
     icon:                      None,
     whatsout:                  latexml_post::extract::Whatsout::default(),
+    nocache:                   false,
   };
   let out = latexml::post::run_post_processing(xml, &opts);
   let log = latexml_core::util::logger::flush_log();

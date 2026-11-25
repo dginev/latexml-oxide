@@ -40,6 +40,7 @@ pub(super) fn post_logged(xml: &str, source_directory: &str) -> (String, String)
     unicodemath:               false,
     url_style:                 latexml_post::crossref::UrlStyle::File,
     navigationtoc:             None,
+    is_html:                   None,
     schemadocs:                false,
     split:                     false,
     split_xpath:               None,
@@ -50,6 +51,7 @@ pub(super) fn post_logged(xml: &str, source_directory: &str) -> (String, String)
     timestamp:                 None,
     icon:                      None,
     whatsout:                  latexml_post::extract::Whatsout::default(),
+    nocache:                   false,
   };
   let out = latexml::post::run_post_processing(xml, &opts);
   (out, latexml_core::util::logger::flush_log())

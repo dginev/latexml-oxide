@@ -294,7 +294,7 @@ under raw-loaded xpatch/collectbox leaks a `\bgroup`, swallowing line 209→EOF
 (2606.16679; plain Rust and Perl both fine — fleet-config-only); (c)
 unterminated `split` swallow (2605.19817 — loss parity, silence ours, F2(b));
 (d) alignment unclosed-group swallow — digestion continues, the `.bbl` is even
-read, but everything lands in a discarded group (2605.05903, 2606.02744).
+read, but everything lands in a discarded group (2605.05903, 2606.02744). Reproducer: [`bib_absence_2026-07-29/repros/f5_captionof_swallow/`](bib_absence_2026-07-29/repros/f5_captionof_swallow/README.md).
 
 **F6 — achemso `\iffalse` runaway. GENUINE RUST, concentrated.** An `\iffalse`
 opened in the achemso/OmniBus *preamble path* (no `\iffalse` in user source)

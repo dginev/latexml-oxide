@@ -277,10 +277,7 @@ pub fn same_bytes(a: &Path, b: &Path) -> bool {
 /// truncates the file: the destination directory on the resource search path made a stale
 /// resource its own only match (#312); a plain `!=` on two spellings (`./`, relative) misses it.
 pub fn same_file(a: impl AsRef<Path>, b: impl AsRef<Path>) -> bool {
-  match (fs::canonicalize(a), fs::canonicalize(b)) {
-    (Ok(ca), Ok(cb)) => ca == cb,
-    _ => false,
-  }
+  latexml_core::util::pathname::same_file(a, b)
 }
 
 /// Atomically write `bytes` to `dest` through a [`Staged`] file.
