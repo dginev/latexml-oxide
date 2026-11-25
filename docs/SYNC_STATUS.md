@@ -73,14 +73,21 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (416 items on 2026-11-25 on `int/towards_v0_8_1`: 416 open, weight 918, 43 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (418 items on 2026-11-25 on `int/towards_v0_8_1`: 418 open, weight 920, 43 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
 
 
   - ODR6 — OD ruling 12 (recorded in OD #449): `dump_reader.rs`'s "add-only" docstrings (:365, :574) corrected, then a removal trial of the skip lists against CLAUDE.md rule 2; 1
   - ODR7 — OD ruling 6: each "Bindings beyond Perl's tree" body (end of OD) into its binding module's `//!` doc comment, then trim the catalog to its table — the 19 CLSFM bodies ODDOC-E moved there from #460 (#412 … #912) included; 3
   - ODR8 — OD docs: #8 (the OML slot-127 claim unconfirmed in code), #26 (mdframed now inserts through `insert_block`, `mdframed_sty.rs`); 1
   - ODR9 — wire `tools/perfect_kernel/od_anchors.sh` into `tools/lint.sh`; 1
-  - ODR10 — the two Rhai `Fatal()` paths #870 left dropped (OD #1028; RHFAT, revRHFAT): a register GETTER (`values.rs` `.ok()?`; `Definition::value_of` returns `Option`, 720 callers; Perl `<p>Before </p>` + 1 fatal) and a `fontTest` Fatal in `set_node`'s close (document.rs:2855; Perl's `setNode`, Document.pm:74, dies) — REDs `rhai-bindings/register_getter_fatal_continues_red.tex`, `rhai-bindings/fonttest_fatal_closed_by_set_node_red.tex`; DG 2026-11-15 (RHFAT): stash the getter's and `set_node`'s close Fatal as `take_raised_fatal` does and stop at the next digest step, no API change — post-cutoff; 3
+  - DIGFATAL — (RHODR residual, Rhai-only, arXiv reach 0) a Fatal raised while digesting (a Rhai body's `Fatal()`, a
+    register getter's or setter's) loses all the text before it — inside the document body, the whole document — where
+    Perl's `hardYankProcessing` (`Error.pm:336-338`) keeps it (Perl: `<p>First paragraph.</p><p>Before </p>`);
+    `core_interface::digest_step_guarded` salvages only for the Stomach guards, TooManyErrors and Timeout:IfLimit. RED
+    `rhai-bindings/digest_fatal_keeps_text_before_red.tex`. Options: (a) keep the text before every digestion Fatal
+    except the token-loop guards (Gemini Neon's recommendation: `core_interface.rs:463` `_ => None` → `Some(false)`,
+    re-verify 2605.25400 and `101_fatal_salvages_partial_document`); (b) only a binding's Fatal; (c) keep today's and
+    count the loss; 2
   - OD83 — OD #83 (DG 2026-11-15): keep digesting acmart's `\Description`, but report an error inside it as a Warning (acmart.cls:895 discards the argument, so pdflatex never meets it; 2607.21760's `\D1 … \D5`; KNOWN_PERL_ERRORS #66 point 2) — post-cutoff; 1
   - PGF259 — OD #259 (DG 2026-11-15): one rule, pgf's `\divide`, for every native division by zero — `pgfmath_divisor` (pgfmath_code_tex.rs:208) returns the dividend as `pgfmath_divide` (:235) does, not EPSILON — post-cutoff code + guard rows; 1
   - PGF1007 — OD #1007 (DG 2026-11-15): follow pgf — an unparseable expression raises pgf's "Unknown function" Error and computes 0; `calc_compat_expand` (pgfmath_code_tex.rs:2247) retired — post-cutoff, with an A/B sizing the papers that lose a value; 3
@@ -313,7 +320,16 @@ Rules that keep this file honest and mergeable:
   - I790P — revI790A (issue #790, PR #876 merged): `keep_point_out_of` + the `text_run_font` walk cost +0.13 % on 0710.4421 — a text-node discard could compare with the point instead of walking (the replace-node coalesce and trailing-whitespace sites); 1
   - LOSTFR — LOSTF's residuals (#866): the pazh/astl `*` mark written as an e-mail contact "*" (`sectioning-frontmatter/mark_then_store_email_read_by_a_refused_abstract_red`; the observer reads the rerouted setter as the class's `\email`; reach ~880); astl address notes all go to the block's last name instead of following the marks (1206.0451 Khabibullin's "1" unanswered); `author_and_on_behalf_of_teams_red` (1002.4968), `rmaa_altaffiltext_marks_red`, `ptephy_author_given_twice_keeps_the_last_red`; `class-bindings/vmsta/vmsta_first_name_without_surname_red.tex`'s engines line is stale; 3
   - AMSPR — amsppt's heads (#868; AMSPPT, revAMSPPT): a bare `\ref` invents a "References" title amsppt never prints (math0206022; `amstex/amsppt_bare_ref_invents_references_red`; Perl and base too); alg-geom9502009 nests 49 theorems where Perl nests 19 (base the same; not minimized); `\proclaim\nofrills{…}` titles "\nofrills" (alg-geom9502009, pre-existing); no `\add@missing` (amsppt.sty:574-576, :863): `amstex/amsppt_roster_without_endroster_before_head_red.tex` (2 E vs TeX's 1, section 2 inside an item), `amsppt_head_inside_proclaim_red.tex` (0 E vs TeX's 2); NIT: five theorem `DefConstructor!`s → one loop; Reach (census 2026-11-24): 46/30k ≈ 4278 papers; 3
-  - RHBOR — a `fontTest` calling `AssignValue` panics "RefCell already borrowed" (state.rs:4087; document.rs:3355 runs the tests inside `state::with_value("TEXT_LIGATURES", …)` — clone the list first; probe `scratch_revRHFAT/p/ligsta.tex`, base too); NIT: the setter row's `kept: ""` checks nothing (revRHFAT); 1
+  - RHODRRES — (RHODR re-review, post-merge) the end-of-digestion stash check covers `digest_internal` only
+    (`core_interface.rs:2153-2157`): its callers then differ — `converter.rs:981-996` salvages, `bib_session.rs:300-302`
+    loses the bibliography with `Error:bibliography:convert`, `lsp_server/unix.rs:643` logs and falls back — and the
+    CLI's `digest_adaptive` (`:1984-2083`) has no end check (the build's first `check_timeout` raises it); one rule for
+    both loops. Streaming does not end the rewrites: `apply_rewrite_rules` returns `Ok` per fragment, so later fragments
+    and the spine still run every rule (latch a flag, or narrow OD #1028 to eager mode). A dropped stash should not be
+    marked printed (`:631`, `:1786` use `take_stashed_fatal`; use `set_aside_stashed_fatal`). A Rhai math matcher
+    returning only `name`/`role` drops the merged token's `meaning` (Perl keeps `meaning="equals"` on `≔`;
+    `MathLigatureOptions` cannot tell absent from undef) — keep ours or copy Perl? After a getter's Fatal the step goes
+    on, so twoget prints 2 `Fatal:` lines where Perl prints 1; 2
   - ODDB — docs and dead code (ODDOC-B, ODDOC-B2, revQA1985): `tools/fontmap_drift.py:56-67`'s slot-94/126 "Bruce's accents" allowlist is dead (61c made them ASCII) — remove; stale comments at `float_description.rs:84` ("read Undigested"), `latexml_math_parser/src/grammar/builder.rs:2123` ((∂_t∇)·u) and `latexml_core/src/binding/content.rs:1089-1098` (says `.ltxml_loaded` is not set, then sets it); constructor `font='#x'` pairs ignored for the whatsit's `font` property (constructable.rs:214, replacement.rs:796; Perl Document.pm:1834 applies them; probe glossaries/amsrefs `font='#titlefont'`); `next_entry_numbers.sh` cannot see `kit/od_reservations.txt` (#1051) and counts MATH in the OD pool though MATH runs its own sequence (#63); for the OD PRs: OD #887, OD:5004, :21249 and :21538 cite `arrange_panels_and_breaks` at the stale Perl range 3229-3349 (now L3236-3356); 1
   - ODDC — ODDOC-C's rest (revODDOCC): STANDIN members 592 597 605 614 734 735 741 986 and #731's ~500-line body not merged; #216's closed-form `\pgfmathpointintersectionoflineandarc` is a WORKAROUND — principled: TeX-exact trig, so pgf's bisection terminates (zx-calculus, 2201.09268); 13 merged entries carry no "ex-#N" marker on the bullet holding their text (#20 40 41 87 310 323 338 340 516 1035; #732/733/736/744 named in text) — code cites of #87 (bibunits_sty.rs:125, 06_cluster_bibliography.rs:502) and #41 (cluster_xslt_split.rs:149) reach the primary but no labelled bullet; the LOCK/REPLAY one-rule restatement (ruling 8, state.rs:5715-5824) for an ODDOC-E docs pass; 1
   - ODDD — ODDOC-D's code residuals, after DG's Q1-Q5: one Kind pass + one Link chain (#805/#954), K11 → #767 (ruling 9) (the spelling splits under #993 stay: DG 2026-11-15, ODDOC-D Q1, generic binding utilities); 5
@@ -1254,6 +1270,19 @@ Rules that keep this file honest and mergeable:
     matches `<notes`); move each to the whole-element helpers in `util/test.rs` with the shadow hook
     (`LATEXML_TEST_SHADOW`) showing 0 flips; 3
 
+  - WINLONGOUT — (PR #1014 residual, pre-existing) on Windows, `Graphics::reachable_source` gives the converters a short
+    alias of a figure whose source path reaches MAX_PATH, but the staged output path (`writer.rs` `staged_path`, `<dest
+    dir>/.<stem≤64>.tmp.<pid>.<seq>.<ext>`) is not aliased: a deep destination directory with a short figure name can
+    still pass 260 characters, and ImageMagick/mutool/Ghostscript then cannot create the output (rc4 failed the same
+    way). Windows CI has no converters, so `a_long_figure_name_converts_as_a_short_one` skips there; render to a
+    temp-dir name and install with copy-then-rename when the stage path reaches 260; 1
+  - CSSSEARCHROOT — (AR5IVCSS review, pre-existing) `latexml_oxide/src/post.rs:1360-1366` puts the binary's third
+    ancestor (exe/../../..) and the cwd on the resource search path, which Perl does not: a stray `ar5iv.css` or
+    `CSS/LaTeXML.css` there (for an unpacked release, plausibly `~`) wins over the embedded copy and is copied over a
+    user's non-empty destination file. Also: an empty file of a bundled name next to the `.tex` (issue 312's leftover)
+    is copied over a non-empty file in a separate destination with 0 Warnings (DG 2026-11-25 left the source→destination
+    copy unchanged; record, and revisit with Perl's `pathname_copy` date rule, `Pathname.pm:266`); 1
+
 ---
 
 ## Silent-loss inventory — blocks the 98 % claim (user 2026-10-18)
@@ -1267,6 +1296,7 @@ KNOWN_PERL_ERRORS cross-reference when one applies. Perl-origin defects go to `p
 
 Each entry's body (defect, cause, fix, guards, witnesses) is verbatim in [`archive/SYNC_SESSIONS_2026-11.md`](archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "From \"Rust Error Fixes\"". Titles here:
 
+- **A Rhai `fontTest` or math-ligature matcher that assigns no longer panics on a held state borrow (RHBOR; `apply_text_ligatures`/`apply_math_ligatures` copy the closures out first, Perl `Document.pm:1174-1183, 1225-1228`)**
 - **A `filecontents` capture ends at `\end{<current environment>}` (formerly OD #227)**
 - **`{filecontents}` ends at its `\end{…}` anywhere in a line, as LaTeX's does (formerly OD #572)**
 - **nicematrix's `\Block{i-j}<tokens>{content}` sets the tokens before the content (Perl: no nicematrix binding) (formerly OD #787)**
