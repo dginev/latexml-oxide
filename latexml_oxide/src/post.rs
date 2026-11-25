@@ -955,14 +955,21 @@ fn run_post_processing_inner(
   // falls back to the destination's directory (document.rs, Perl Config.pm L466).
   if let Some(site_dir) = site_directory {
     doc_opts.site_directory = Some(site_dir.to_string());
-    // Perl `Post.pm` L698-706 (`Post::Document::new_internal`): the destination must lie within the site directory.
+    // Perl `Post.pm` L698-706 (`Post::Document::new_internal`): the destination must lie within the site directory,
+    // as written (Perl) or with both sides resolved. A relative destination is completed from the working directory,
+    // which the OS reports resolved (macOS `/var` is `/private/var`), so a site directory named through a link fails
+    // the lexical test alone (KNOWN_PERL_ERRORS #1334); a destination named inside the site through a link that
+    // leads out passes it, and is written at its lexical path (batchfix995).
     if let Some(dest) = destination {
       let dest_dir = std::path::Path::new(dest)
         .parent()
         .map(|dir| dir.to_string_lossy().into_owned())
         .filter(|dir| !dir.is_empty())
         .unwrap_or_else(|| ".".to_string());
-      if latexml_core::util::pathname::is_contained(&dest_dir, site_dir).is_none() {
+      use latexml_core::util::pathname::{is_contained, resolved};
+      let inside = is_contained(&dest_dir, site_dir).is_some()
+        || is_contained(&resolved(&dest_dir), &resolved(site_dir)).is_some();
+      if !inside {
         emit_fatal(
           "unexpected",
           &dest_dir,

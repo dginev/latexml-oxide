@@ -45,6 +45,14 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
 
 ### 0.8.0-rc4
 
+  - **A `--sitedirectory` named through a symbolic link is accepted again.** rc3 (#1001) took Perl's check that the
+    destination lies in the site directory, and with it Perl's flaw: a relative destination is completed from the
+    working directory as the OS reports it, links followed, while the site directory stays as written. So
+    `--sitedirectory=/tmp/site` run from `/tmp/site/book` on macOS (`/tmp` is `/private/tmp`, every temporary directory
+    alike), or any site named through a link, ended in "Fatal: The destination directory (.) must be within the
+    siteDirectory" with no pages; rc1 and rc2 converted. The destination is now inside when it is so as written or with
+    both sides resolved, so only one outside the site in both forms is refused (KNOWN_PERL_ERRORS #1334; Perl refuses
+    the same way). Found by macOS CI on the issue 1006 guard, whose temporary directories are under `/var`.
   - **Split pages keep their navigation under `--sitedirectory` and a `./`-spelled `--dest`.** With a relative
     `--dest=index.htm` and an ancestor `--sitedirectory`, rc3's chapter up/prev links read `../index.htm` and the
     root's next `./Ch1.htm` (issue 1006). Split named its pages `./Ch1.htm` beside the root, so the two spellings of one folder

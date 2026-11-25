@@ -1351,6 +1351,10 @@ mod split_nav_relations {
       Ancestor,
       AncestorSlash,
       DestDir,
+      // The ancestor named through a symbolic link, the conversion run from inside the link: the working directory
+      // is reported resolved and the site directory is not, as macOS's `/var` → `/private/var` in every temporary
+      // directory (KNOWN_PERL_ERRORS #1334; rc3 refused it as outside the site). An ordinary ancestor off Unix.
+      AncestorThroughLink,
     }
     for stream in ["1", "0"] {
       for naming in [None, Some("idrelative")] {
@@ -1360,12 +1364,25 @@ mod split_nav_relations {
           std::fs::create_dir_all(&book).unwrap();
           std::fs::write(book.join("index.tex"), DOC).unwrap();
           let out = book.join(Path::new(dest).parent().unwrap());
+          let link = work.path().join("link");
+          let through_link = cfg!(unix) && matches!(site, Site::AncestorThroughLink);
+          let cwd = if through_link {
+            link.join("book")
+          } else {
+            book.clone()
+          };
           let site_arg = match site {
             Site::None => None,
             Site::Ancestor => Some(format!("--sitedirectory={}", work.path().display())),
             // The issue's own shape: `--sitedirectory=/mnt/g/public_html/`.
             Site::AncestorSlash => Some(format!("--sitedirectory={}/", work.path().display())),
             Site::DestDir => Some(format!("--sitedirectory={}", out.display())),
+            Site::AncestorThroughLink => {
+              #[cfg(unix)]
+              std::os::unix::fs::symlink(work.path(), &link).unwrap();
+              let site_dir = if through_link { &link } else { work.path() };
+              Some(format!("--sitedirectory={}", site_dir.display()))
+            },
           };
           let dest_arg = format!("--dest={dest}");
           let naming_arg = naming.map(|n| format!("--splitnaming={n}"));
@@ -1380,7 +1397,7 @@ mod split_nav_relations {
           let output = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
             .args(&args)
             .env("LATEXML_POST_STREAM_SPLIT", stream)
-            .current_dir(&book)
+            .current_dir(&cwd)
             .output()
             .expect("spawn latexml_oxide");
           assert!(
@@ -1414,6 +1431,8 @@ mod split_nav_relations {
           ("./index.html", Site::DestDir),
           ("./out/index.html", Site::None),
           ("./out/index.html", Site::Ancestor),
+          ("index.html", Site::AncestorThroughLink),
+          ("./out/index.html", Site::AncestorThroughLink),
         ] {
           assert_eq!(
             run(dest, site),
