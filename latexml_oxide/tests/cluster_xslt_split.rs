@@ -1425,53 +1425,96 @@ mod split_nav_relations {
     }
   }
 
-  /// A page named after a label is written where the label says, inside the destination: no `~` expansion and no
-  /// leading `/` (OXIDIZED_DESIGN_DIVERGENCES #1164; Perl's `pathname_make` canonicalizes the name, so `\label{~one}`
-  /// becomes `$HOME`one, outside the site directory, and `\label{/x}` the absolute `/x.html`).
+  /// Every `.html` file under `root`, its path relative to `root` with `/` separators, sorted.
+  fn html_files(root: &Path) -> Vec<String> {
+    let mut files = Vec::new();
+    let mut dirs = vec![root.to_path_buf()];
+    while let Some(dir) = dirs.pop() {
+      for entry in std::fs::read_dir(&dir).unwrap().flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+          dirs.push(path);
+        } else if path.extension().is_some_and(|e| e == "html") {
+          files.push(
+            path
+              .strip_prefix(root)
+              .unwrap()
+              .to_string_lossy()
+              .replace('\\', "/"),
+          );
+        }
+      }
+    }
+    files.sort();
+    files
+  }
+
+  /// A page named after a label is written where the label says, inside the destination, and so are its child pages:
+  /// no `~` expansion and no leading `/` (OXIDIZED_DESIGN_DIVERGENCES #1164; Perl's `pathname_make` canonicalizes the
+  /// name, so `\label{~one}` becomes `$HOME`one and `\label{/x}` the absolute `/x.html`), with `label` and
+  /// `labelrelative` naming, on both split paths. The exact set of pages in the work directory is asserted, so a page
+  /// written anywhere else is missing from it.
   #[test]
   fn split_label_names_stay_in_the_destination() {
     const DOC: &str = "\\documentclass{article}\n\\begin{document}\n\\section{One}\\label{~one}\nA.\n\
-                       \\section{Two}\\label{/lzxrev}\nB.\n\\section{Three}\\label{three}\nC.\n\\end{document}\n";
-    for dest in ["index.html", "out/index.html"] {
-      let work = tempfile::tempdir().expect("tempdir");
-      let home = work.path().join("home");
-      std::fs::create_dir_all(&home).unwrap();
-      std::fs::write(work.path().join("doc.tex"), DOC).unwrap();
-      let output = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
-        .args([
-          "doc.tex",
-          "--splitat=section",
-          "--splitnaming=label",
-          "--format=html5",
-          &format!("--dest={dest}"),
-        ])
-        .env("HOME", &home)
-        .current_dir(work.path())
-        .output()
-        .expect("spawn latexml_oxide");
-      assert!(
-        output.status.success(),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-      );
-      let out = work.path().join(Path::new(dest).parent().unwrap());
-      for page in ["~one.html", "lzxrev.html", "three.html"] {
-        assert!(out.join(page).is_file(), "{dest}: no {page}");
-      }
-      assert_eq!(
-        std::fs::read_dir(&home).unwrap().count(),
-        0,
-        "{dest}: a page under HOME"
-      );
-      for (page, links) in split_hrefs(&out) {
+                       \\subsection{Sub}\\label{two}\nB \\ref{~one}.\n\\section{Two}\\label{/lzxrev}\nC.\n\
+                       \\section{Three}\\label{three}\nD \\ref{two}.\n\\end{document}\n";
+    for stream in ["1", "0"] {
+      for (naming, expected) in [
+        ("label", [
+          "index.html",
+          "lzxrev.html",
+          "three.html",
+          "two.html",
+          "~one.html",
+        ]),
+        ("labelrelative", [
+          "index.html",
+          "lzxrev/index.html",
+          "three/index.html",
+          "~one/index.html",
+          "~one/two.html",
+        ]),
+      ] {
+        // `$HOME` beside the work directory, not inside it, so a page written under `$HOME` is missing from the list.
+        let root = tempfile::tempdir().expect("tempdir");
+        let (work, home) = (root.path().join("w"), root.path().join("home"));
+        std::fs::create_dir_all(&work).unwrap();
+        std::fs::create_dir_all(&home).unwrap();
+        std::fs::write(work.join("doc.tex"), DOC).unwrap();
+        let output = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+          .args([
+            "doc.tex",
+            "--splitat=subsection",
+            &format!("--splitnaming={naming}"),
+            "--format=html5",
+            "--dest=index.html",
+          ])
+          .env("HOME", &home)
+          .env("LATEXML_POST_STREAM_SPLIT", stream)
+          .current_dir(&work)
+          .output()
+          .expect("spawn latexml_oxide");
         assert!(
-          links.iter().all(|h| !h.starts_with('/')),
-          "{dest}, {page}: {links:?}"
+          output.status.success(),
+          "{}",
+          String::from_utf8_lossy(&output.stderr)
         );
+        let expected: Vec<String> = expected.iter().map(|f| format!("w/{f}")).collect();
+        assert_eq!(
+          html_files(root.path()),
+          expected,
+          "{naming}, stream {stream}"
+        );
+        for (page, links) in split_hrefs(&work) {
+          assert!(
+            links.iter().all(|h| !h.starts_with('/')),
+            "{naming}, stream {stream}, {page}: {links:?}"
+          );
+        }
       }
     }
-    // A `../` in a label stays: the page lies beside `out`, where Perl and rc3 put it, and `out`'s pages link it
-    // through `../` (round 2 joined it canonically and linked `esc.html`, which does not exist).
+    // A `../` in a label stays: the page lies beside `out`, where Perl puts it, and `out`'s pages link it through `../`.
     let work = tempfile::tempdir().expect("tempdir");
     std::fs::write(
       work.path().join("doc.tex"),
@@ -1513,8 +1556,7 @@ mod split_nav_relations {
   }
 
   /// A `~` in `--dest` is expanded once, for the CLI and post alike (Perl `Config.pm` L395-397 canonicalizes it): the
-  /// whole site lands in `$HOME/out`, and no second root page is written under a literal `./~` (round 2 canonicalized
-  /// inside post only, so the CLI wrote a stray `./~/out/index.html`).
+  /// whole site lands in `$HOME/out`, and no second root page is written under a literal `./~`.
   #[test]
   fn split_tilde_destination_is_one_place() {
     const DOC: &str = "\\documentclass{book}\n\\begin{document}\n\\chapter{One}\nA.\n\\chapter{Two}\nB.\n\

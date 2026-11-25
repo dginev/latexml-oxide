@@ -444,12 +444,8 @@ impl Split {
   }
 }
 
-/// A page's pathname beside its parent's, or (`as_dir`) as `index` in a folder of its name there: Perl
-/// `Split::getPageName`'s `pathname_make` (`Split.pm` L185-191). A root named `index.html` gives `Ch1.html`, never
-/// `./Ch1.html`, whose site-relative location no longer matched the root's (issue 1006: `../index.html` links). The
-/// name is the document's text (a label), joined as written, as rc3 did: no `~` expansion and no leading separator,
-/// which Perl's canonicalizing `pathname_make` turns into `$HOME/…` or an absolute path (OXIDIZED_DESIGN_DIVERGENCES
-/// #1164); a `../` stays, so the page lies where Perl puts it and links keep the `../` (`\label{../esc}`).
+/// A page's pathname beside its parent's, or (`as_dir`) as `index` in a folder of its name: Perl `Split::getPageName`'s
+/// `pathname_make` (`Split.pm` L185-191), joined as written: no `~` expansion, no leading separator (issue 1006, OD #1164).
 pub(crate) fn page_pathname(parent_path: &str, name: &str, ext: &str, as_dir: bool) -> String {
   let name = name.trim_start_matches(['/', '\\']);
   let file = if as_dir {
@@ -457,11 +453,14 @@ pub(crate) fn page_pathname(parent_path: &str, name: &str, ext: &str, as_dir: bo
   } else {
     format!("{name}.{ext}")
   };
-  let dir = latexml_core::util::pathname::directory(parent_path);
-  if dir.is_empty() {
-    file
-  } else {
-    format!("{dir}/{file}")
+  // The parent's directory as written: the parent is a canonical destination or a page named here, and canonicalizing
+  // it again expands a label's `~` (`\label{~one}`'s child page went to `$HOME/..`).
+  match std::path::Path::new(parent_path)
+    .parent()
+    .and_then(|dir| dir.to_str())
+  {
+    Some(dir) if !dir.is_empty() => format!("{dir}/{file}"),
+    _ => file,
   }
 }
 

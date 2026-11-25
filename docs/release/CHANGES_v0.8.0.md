@@ -50,8 +50,9 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     next `./Ch1.htm` (issue 1006). Split named its pages `./Ch1.htm` beside the root, so the two spellings of one folder
     no longer matched under a site directory; it now names a page as Perl's `Split::getPageName` does (`pathname_make`),
     and `--dest`, `--sitedirectory` and `--sourcedirectory` are canonicalized once, up front, as Perl's `Config.pm`
-    does. A label-named page `\label{~x}` or `\label{/x}` is written as `~x.html` or `x.html` in the destination, not
-    under `$HOME` or at `/` (OXIDIZED_DESIGN_DIVERGENCES #1164).
+    does: a `~` in them is now expanded (rc3 wrote a literal `./~/out/…` and found no image under
+    `--sourcedirectory=~/…`), and `./`, `..` are resolved. A label-named page keeps a label's `~` or leading `/` as
+    text, as rc3 did, where Perl would expand it (OXIDIZED_DESIGN_DIVERGENCES #1164).
 
 ### 0.8.0-rc3
 
