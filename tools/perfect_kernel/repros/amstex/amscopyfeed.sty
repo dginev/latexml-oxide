@@ -1,0 +1,8 @@
+%% a renamed copy of amsppt.sty whose own command feeds amsppt's front matter (math0410032 ias-pcms.sty's \Lecture)
+\def\filename{amsppt.sty}
+\catcode`\@=11
+\def\topmatter{\begingroup}
+\def\endtopmatter{\centerline{\bf\thelecturename}\endgroup}
+\def\lecturename#1\endlecturename{\gdef\thelecturename{#1}}
+\def\Lecture#1{\topmatter\lecturename Lecture #1\endlecturename\endtopmatter}
+\catcode`\@=12

@@ -1,0 +1,15 @@
+% witness: math0410032 (ias-pcms.sty:2522-2528 `\Lecture`, :2112-2118 `\lecturename`, its `\endtopmatter` :2274)
+% oracle:  tex (\input amstex) 0 errors: "Lecture One" centred bold, "Body text."
+% engines: rust INT081T = the copy replaced by the amsppt binding, `\Lecture` undefined: 1 error, "One Body text."
+%          ("Lecture" lost); rust AMSPPTRES's trial of reading the copy after the binding (OD #731's declaration
+%          route) = `\Lecture` defined but the binding's `\topmatter … \endtopmatter` kept, which never prints the
+%          copy's `\thelecturename`: "Lecture One" lost with no diagnostic (math0410032: every lecture title);
+%          perl the amsppt fallback, `\Lecture` undefined (KNOWN_PERL_ERRORS #1051)
+% expect:  0 errors; "Lecture One", then the body paragraph
+% status:  RED (INT081T), the counter-example to reading a copy's additions over the binding
+% moves:   post-merge (with amstex/amstex_copy_additions_are_kept_red: one rule for a copy's additions)
+\input amstex
+\documentstyle{amscopyfeed}
+\Lecture{One}
+Body text.
+\bye

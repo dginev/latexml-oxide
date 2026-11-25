@@ -603,9 +603,9 @@ LoadDefinitions!({
   // Architecture: AmS-TeX bibliography uses field-marker macros
   // (`\key`, `\by`, `\paper`, `\jour`, etc.) that each terminate the
   // previous field via `\@end@bibfield` and start the next via
-  // `\@bibfield{<name>}`. `\@bibfield` is an `XUntil:\@end@bibfield`
-  // macro that captures the trailing tokens into state under
-  // `amsbibitem@<field>`. After all fields are read, `\endref` calls
+  // `\@bibfield{<name>}`. `\@bibfield` digests the field up to the next
+  // `\@end@bibfield` and stores it under `amsbibitem@<field>` (below).
+  // After all fields are read, `\endref` calls
   // `\@fill@bibitem` which reads the captured fields back from state
   // and emits formatted output via `\@bibitem@field` and `\@bibitem@tag`
   // constructors.
@@ -624,7 +624,8 @@ LoadDefinitions!({
   // Perl L340-348: \@auto@Refs / \Refs / \endRefs.
   DefMacro!("\\@auto@Refs", "\\Refs");
   DefMacro!("\\Refs", "\\@Refs\\def\\@auto@Refs{}");
-  DefMacro!("\\endRefs", "\\def\\@auto@Refs{\\Refs}\\end@Refs");
+  // (amsppt.sty:874: its `\par` closes a reference left open, `\add@missing\endref` there)
+  DefMacro!("\\endRefs", "\\add@missing\\endref\\def\\@auto@Refs{\\Refs}\\end@Refs");
   // The bibliography is back matter, at the place of amsppt's top unit (`\specialhead`'s chapter): amsppt.sty:862-869 sets
   // `\Refs` as a head, so it closes the open heads (as LaTeX's, latex_constructs.pool.ltxml:3935-3946) instead of
   // nesting in the last one, and a heading unit before it heads it (`absorb_bibliography_heading`; math0304264).
@@ -648,42 +649,104 @@ LoadDefinitions!({
 
   // Perl L375-379: `\@bibitem` / `\@bibblock` constructors. RefStepID
   // assigns `xml:id` from the @bibitem counter.
+  // (`amsbibitem@item`: the reference `\ref` opened, whose number tags it when it has no `\key` or `\no`)
   DefConstructor!("\\@bibitem", "<ltx:bibitem xml:id='#id'>",
-    properties => sub[_args] { ref_step_id("@bibitem") });
+    properties => sub[_args] {
+      assign_value("amsbibitem@item", Stored::Bool(true), None);
+      ref_step_id("@bibitem")
+    });
   DefConstructor!("\\@end@bibitem", "</ltx:bibitem>");
   DefConstructor!("\\@bibblock", "<ltx:bibblock>");
   DefConstructor!("\\@end@bibblock", "</ltx:bibblock>");
 
-  // Perl L446-453: `\@bibfield{type} XUntil:\@end@bibfield` — captures
-  // the trailing tokens into `amsbibitem@<field>` state, after trimming
-  // leading/trailing T_SPACE.
-  DefMacro!("\\@bibfield{} XUntil:\\@end@bibfield", sub[args] {
-    let field = args[0].clone().into_tokens_result()?.to_string();
-    let tokens = args[1].clone().into_tokens_result()?;
-    let mut tk_vec: Vec<Token> = tokens.unlist();
-    // A `\nofrills` in the field (amsppt.sty:877-882: the box being filled joins `\nofrills@list`), the reference's own
-    // `\lx@amsppt@nofrills` there, which the expanding read keeps: the field is printed without its frills (below).
-    let before = tk_vec.len();
-    tk_vec.retain(|t| *t != T_CS!("\\nofrills"));
-    if tk_vec.len() < before {
+  // A field is digested up to the next field's `\@end@bibfield`, as amsppt.sty:956-965 `\makerefbox` sets it in a box
+  // (`\setbox\curbox\vbox\bgroup`), its assignments executed; it is kept when it has ink (`\ifdim\wd\@ne>\z@`, below)
+  // and printed by `\lx@amsppt@field`. Perl's `XUntil` read (L439-446) expands it, and a `\global\@fwdreftrue` in it is
+  // read as a conditional (KNOWN_PERL_ERRORS #1298; math0610862's `\noOf`, math0205237).
+  DefPrimitive!("\\@bibfield{}", sub[(field)] {
+    // (a marker inside a box, `\@end@bibfield`)
+    if lookup_bool("amsbibitem@inert") {
+      assign_value("amsbibitem@inert", Stored::Bool(false), Some(Scope::Global));
+      return Ok(Vec::new());
+    }
+    let field = field.to_string();
+    assign_value("amsbibitem@nofrills@here", Stored::Bool(false), Some(Scope::Global));
+    let depth = lookup_int("amsbibitem@depth") + 1;
+    assign_value("amsbibitem@depth", Stored::Int(depth), Some(Scope::Global));
+    assign_value("amsbibitem@ended", Stored::Int(0), Some(Scope::Global));
+    begin_mode("restricted_horizontal")?;
+    assign_value("amsbibitem@open", Stored::Bool(true), None);
+    let mut body = digest_next_body(Some(T_CS!("\\@end@bibfield")))?;
+    end_mode("restricted_horizontal")?;
+    assign_value("amsbibitem@depth", Stored::Int(depth - 1), Some(Scope::Global));
+    // A field the input ended in (a stray `\key` after `\Refs`: math9204232; a `\ref` the document ends in) is printed
+    // where it stands: what it holds was the rest of the document. Its "expected" Warning counts it.
+    if lookup_int("amsbibitem@ended") != depth {
+      return Ok(body);
+    }
+    // (the field's spaces and paragraph ends at either end, as Perl trims its tokens; TeX's `\endgraf` and
+    // `\unskip\unskip`)
+    let trimmed = |d: &Digested| is_spacing_item(d) || is_par_item(d);
+    while body.last().is_some_and(trimmed) {
+      body.pop();
+    }
+    let lead = body.iter().take_while(|d| trimmed(d)).count();
+    body.drain(..lead);
+    if lookup_bool("amsbibitem@nofrills@here") {
       assign_value(&format!("amsbibitem@{field}@nofrills"), Stored::Bool(true), None);
     }
-    while tk_vec.first().map(|t| t.get_catcode() == Catcode::SPACE).unwrap_or(false) {
-      tk_vec.remove(0);
+    // (TeX keeps a box of width; ink is kept here: a rule, `\bysame`'s `\hrulefill`, but no blank space. Text first,
+    // the cheap test.)
+    if body.iter().any(typesets_content) || !body.iter().all(leaves_no_ink) {
+      let mut value = vec![T_CS!("\\lx@amsppt@field")];
+      value.extend(braced_name(&field));
+      assign_value(&format!("amsbibitem@{field}"), Stored::Tokens(Tokens::new(value)), None);
+      assign_value(&format!("amsbibitem@{field}@boxes"), Stored::VecDigested(body), None);
     }
-    while tk_vec.last().map(|t| t.get_catcode() == Catcode::SPACE).unwrap_or(false) {
-      tk_vec.pop();
-    }
-    if !tk_vec.is_empty() {
-      let key = format!("amsbibitem@{}", field);
-      assign_value(&key, Stored::Tokens(Tokens::new(tk_vec)), None);
-    }
-    Ok(Tokens!())
+    Ok(Vec::new())
   });
-  Let!("\\@end@bibfield", "\\relax");
-  // amsppt.sty:877 `\nofrills` in a reference marks the field being filled; elsewhere it is the AmSTeX pool's no-op
-  // (amstex.rs). In a reference it is this unexpandable marker, which `\@bibfield`'s expanding read keeps and takes out.
-  DefPrimitive!("\\lx@amsppt@nofrills", None);
+  // (Perl L447 `\relax`; the depth of the field it ends, for `\@bibfield`.) A field marker met inside a group the field
+  // opened: TeX's `\makerefbox` `\egroup` closes that group, not the field's box, and loses the field (`\by {\smc A.
+  // Author\paper …}`). Here a `{` or `\begingroup` is closed first, as tex.web §1064 `off_save` inserts its closer; inside
+  // a box the marker's field is read as part of the box, its words kept. Either with a Warning.
+  DefPrimitive!("\\@end@bibfield", {
+    while lookup_bool("amsbibitem@open") && !is_value_bound("amsbibitem@open", Some(0)) {
+      let Some(closer) = off_save_closer() else {
+        let next = read_token()?;
+        let marker = next == Some(T_CS!("\\@bibfield"));
+        if let Some(next) = next {
+          unread_one(next);
+        }
+        if marker {
+          Warn!("unexpected", "\\@end@bibfield", "A reference field marker inside a box; its field stays in the box");
+          assign_value("amsbibitem@inert", Stored::Bool(true), Some(Scope::Global));
+          return Ok(Vec::new());
+        }
+        break;
+      };
+      Warn!("unexpected", "\\@end@bibfield", s!("A reference field ends inside a group it opened; inserting {}",
+        closer.stringify()));
+      // (a `}` ends the `{` group's own digestion, which then reads this marker again)
+      if closer == T_END!() {
+        unread(Tokens!(closer, T_CS!("\\@end@bibfield")));
+        return Ok(Vec::new());
+      }
+      invoke_token(&closer)?;
+    }
+    assign_value("amsbibitem@ended", Stored::Int(lookup_int("amsbibitem@depth")), Some(Scope::Global));
+  });
+  // The field `\@bibfield` set, where `\@fill@bibitem` prints it (amsppt.sty:1053-1066 `\unhbox`).
+  DefPrimitive!("\\lx@amsppt@field{}", sub[(field)] {
+    match remove_value(&format!("amsbibitem@{field}@boxes")) {
+      Some(Stored::VecDigested(boxes)) => Ok(boxes),
+      _ => Ok(Vec::new()),
+    }
+  });
+  // amsppt.sty:877 `\nofrills` in a reference marks the field being filled (`\xdef\nofrills@list{…\do\curbox}`);
+  // elsewhere it is the AmSTeX pool's no-op (amstex.rs).
+  DefPrimitive!("\\lx@amsppt@nofrills", {
+    assign_value("amsbibitem@nofrills@here", Stored::Bool(true), Some(Scope::Global));
+  });
 
   // Perl L442-445: \@bibitem@field / \@bibitem@tag constructors.
   DefConstructor!("\\@bibitem@field{}{}",
@@ -711,6 +774,14 @@ LoadDefinitions!({
         _ => None,
       }
     }
+    // A field printed is emptied, as `\unhbox` empties its box (amsppt.sty:1053-1066 `\ppunbox@`): fields an `\endref`
+    // printed outside a reference (after a blank line closed it) are not printed again by the next one.
+    fn take_field(field: &str) -> Option<Tokens> {
+      match remove_value(&format!("amsbibitem@{field}")) {
+        Some(Stored::Tokens(t)) => Some(t),
+        _ => None,
+      }
+    }
 
     // The entry as amsppt.sty's `\endref@` (:1001-1052) sets it, field by field (`\ppunbox@`, :1053-1066). `bare` is
     // TeX's `\lastkern` of -1sp: the next field's punctuation is dropped. `\endref@` opens with it (`\kern-\tw@
@@ -729,9 +800,7 @@ LoadDefinitions!({
       // Append `\@bibitem@field{<field>}{<value>}` invocation.
       fn push_field(&mut self, field: &str, value: Tokens) {
         self.body.push(T_CS!("\\@bibitem@field"));
-        self.body.push(T_BEGIN!());
-        for ch in field.chars() { self.body.push(T_OTHER!(ch.to_string())); }
-        self.body.push(T_END!());
+        self.body.extend(braced_name(field));
         self.body.push(T_BEGIN!());
         self.body.extend(value.unlist());
         self.body.push(T_END!());
@@ -739,10 +808,10 @@ LoadDefinitions!({
       // Perl `ppunbox` — emit `[punct][pre]<field>[post]` if non-empty; for a `\nofrills` field, a space for
       // `[pre]` and no `[post]` (`\frills@{#2\eat@}\space`, `\frills@{#4\eat@}`).
       fn pp(&mut self, punct: Option<&str>, pre: Option<Tokens>, field: &str, post: Option<Tokens>) {
-        let Some(value) = lookup_field(field) else { return };
+        let Some(value) = take_field(field) else { return };
         let nofrills = lookup_bool(&format!("amsbibitem@{field}@nofrills"));
         if let Some(p) = punct.filter(|_| !self.bare) {
-          for ch in p.chars() { self.body.push(T_OTHER!(ch.to_string())); }
+          self.body.extend(Explode!(p));
         }
         let pre: Vec<Token> = match pre {
           Some(pre_tk) if !nofrills || pre_tk.is_empty() => pre_tk.unlist(),
@@ -769,11 +838,13 @@ LoadDefinitions!({
     let mut fill = Fill { body: Vec::new(), bare: true, start: true };
 
     // Tag at start (skip if this is a `\moreref` continuation).
-    let is_moreref = lookup_field("moreref").is_some();
-    if !is_moreref {
-      let tag_value = lookup_field("key")
-        .or_else(|| lookup_field("refnum"))
-        .unwrap_or_else(|| Tokens!(T_CS!("\\the@bibitem")));
+    // (fields an `\endref` closes outside a reference, after a blank line closed it, have no number: amsppt prints
+    // no key there, :1011)
+    let is_moreref = take_field("moreref").is_some();
+    let number = || lookup_bool("amsbibitem@item").then(|| Tokens!(T_CS!("\\the@bibitem")));
+    if !is_moreref
+      && let Some(tag_value) = [take_field("key"), take_field("refnum")].into_iter().flatten().next().or_else(number)
+    {
       fill.body.push(T_CS!("\\@bibitem@tag"));
       fill.body.push(T_BEGIN!());
       fill.body.extend(tag_value.unlist());
@@ -899,23 +970,25 @@ LoadDefinitions!({
        "language", Some(Tokens!(T_OTHER!(")"))));
     fill.comma("mathreview");
 
-    // Clear all amsbibitem@* fields for next entry. Perl relies on
-    // `\begingroup`/`\endgroup` to local-scope them; Rust's `assign_value`
-    // with `None` scope follows the active group, so the same scoping
-    // applies. Explicit clear isn't strictly needed but keeps state
-    // tidy across `\moreref` chains.
     Ok(Tokens::new(fill.body))
   });
 
   // Perl L367-373: `\ref` / `\endref` / `\moreref` orchestrate
   // capturing-then-emitting a bibitem.
+  // amsppt.sty:886-889: a reference opens with `\par` and, inside it, `\par` is `\add@missing\endref`, so a blank line
+  // or the next `\ref` closes a reference left open, with an Error, its fields kept (the `\par` that opens one is
+  // `\add@missing\endref` here: in the bibliography's vertical list it ends nothing else). `\newline` is amstex.tex:215's line
+  // break there, not the pool's `\par` (math0003031's URL on a line of its own).
+  DefMacro!("\\lx@amsppt@ref@group",
+    "\\begingroup\\def\\envir@end{\\endref}\\def\\par{\\add@missing\\endref}\\let\\newline\\\\\
+     \\let\\nofrills\\lx@amsppt@nofrills");
   DefMacro!("\\ref",
-    "\\@auto@Refs\\begingroup\\let\\nofrills\\lx@amsppt@nofrills\\@bibitem\\@bibfield{random}");
+    "\\add@missing\\endref\\@auto@Refs\\lx@amsppt@ref@group\\@bibitem\\@bibfield{random}");
   DefMacro!("\\endref",
     "\\@end@bibfield\\@fill@bibitem\\@end@bibitem\\endgroup");
   DefMacro!("\\moreref",
     "\\@end@bibfield\\@fill@bibitem\\@end@bibblock\\endgroup\
-     \\begingroup\\let\\nofrills\\lx@amsppt@nofrills\\@bibblock\\@bibfield{moreref}nonempty\\@end@bibfield\
+     \\lx@amsppt@ref@group\\@bibblock\\@bibfield{moreref}nonempty\\@end@bibfield\
      \\@bibfield{random}");
   // amsppt.sty:1088 `\def\transl{\moreref}` (amsppt.doc:2578-2585: "for setting translation information", a
   // reference's translation as a further part of it, `\transl English translation: \jour …`). Perl's binding leaves it
@@ -925,7 +998,7 @@ LoadDefinitions!({
 
   // Perl L460-493: field-marker macros — each terminates the current
   // field and opens the next. The trailing `\it`/`\bf` for paper/book/
-  // vol gets prepended to the captured tokens (XUntil reads through it).
+  // vol is the field's first, digested with it (amsppt.sty's `\makerefbox` #3).
   DefMacro!("\\key",       "\\@end@bibfield\\@bibfield{key}");
   DefMacro!("\\no",        "\\@end@bibfield\\@bibfield{refnum}");
   DefMacro!("\\by",        "\\@end@bibfield\\@bibfield{authors}");
@@ -1265,6 +1338,21 @@ LoadDefinitions!({
   DefPrimitive!("\\tenpoint", { amsppt_point_size(10.0); });
   DefPrimitive!("\\eightpoint", { amsppt_point_size(8.0); });
 });
+
+/// `{<field>}`, a reference field's name as the argument of `\lx@amsppt@field` and `\@bibitem@field`.
+fn braced_name(field: &str) -> Vec<Token> {
+  let mut tokens = vec![T_BEGIN!()];
+  tokens.extend(Explode!(field));
+  tokens.push(T_END!());
+  tokens
+}
+
+/// Whether a field's item is a paragraph end (a blank line, `\endgraf`), which `\makerefbox`'s `\endgraf` and
+/// `\lastbox` read past at the field's end (amsppt.sty:956-958).
+fn is_par_item(d: &Digested) -> bool {
+  matches!(d.data(), DigestedData::Whatsit(w)
+    if matches!(w.borrow().get_definition().get_cs_name().as_ref(), "\\par" | "\\lx@normal@par"))
+}
 
 /// amsppt's `\tenpoint` / `\eightpoint` (amsppt.sty:153-214): the size, and in text the roman they end in.
 fn amsppt_point_size(size: f64) {

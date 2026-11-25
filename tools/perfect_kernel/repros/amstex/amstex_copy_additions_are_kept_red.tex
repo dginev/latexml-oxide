@@ -3,6 +3,10 @@
 % oracle:  tex (\input amstex) 0 errors: "Lecture One" centred bold, "Hello" centred bold, "Body text."
 % engines: rust REGFIXD = the copy replaced by the amsppt binding, its own `\Lecture` lost (undefined, 1 error);
 %          MAIN935 = read raw, Fatal:oom; perl the amsppt fallback, `\Lecture` undefined (KNOWN_PERL_ERRORS #1051)
+%          AMSPPTRES tried OD #731's declaration route (the copy read after the binding, its names the binding
+%          owns kept): this file green, 6 of 8 witnesses with fewer Errors, but a command the copy adds that feeds
+%          one the binding owns prints nothing (amstex/amstex_copy_addition_feeds_the_binding_red; math0410032's
+%          lecture titles lost)
 % expect:  0 errors, 1 warning at most; "Lecture One", <title>Hello</title>, the body paragraph
 % status:  RED (REGFIXD)
 % moves:   post-merge (read the copy's additions over the binding: what a copy defines beyond amsppt.sty)

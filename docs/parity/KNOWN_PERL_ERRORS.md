@@ -22183,9 +22183,13 @@ expanded:
 
 Perl: 2 Errors ("Missing \fi or \else, conditional fell off end", "Input ended while conditional \if@fwdref was
 incomplete"), the bibitem empty; pdftex 0 errors, "??. A. Author, Title, J (1990)." math0610862 (jmhlab.tex:210
-`\noOf`, a LaTeX-style `\make@ref` in an amsppt copy): Perl `Fatal:too_many_errors`, 101 errors; ours the same read
-(amsppt_sty.rs), `Fatal:TooManyErrors`; so math0205237. Open in Rust (digest each field as `\makerefbox` boxes it).
-Repro amstex/amsppt_bibfield_expands_a_conditional_red (OXIDIZED_DESIGN_DIVERGENCES #825).
+`\noOf`, a LaTeX-style `\make@ref` in an amsppt copy): Perl `Fatal:too_many_errors`, 101 errors; so math0205237.
+Fixed in Rust (AMSPPTRES): amsppt_sty.rs `\@bibfield` digests the field, in a group of its own, up to the next field's
+`\@end@bibfield`, and keeps it when it has ink (`\ifdim\wd\@ne>\z@`: a rule too); `\@fill@bibitem` prints the boxes
+(`\lx@amsppt@field`). math0610862 101 Errors and the Fatal → 2 (its copy's `\Refst`, `\subrefhead`), math0205237
+101 and the Fatal → 2 (2,138 words of references back), math0108062 62 → 2. A field's font switch (`\paper`'s
+`\it`) now holds inside it, as in its box: the period after a final `\paper` was italic. Repro amstex/amsppt_bibfield_is_digested; guard
+`perfect_kernel_batchamsppt::amsppt_heads_and_theorems` (OXIDIZED_DESIGN_DIVERGENCES #825).
 
 ## 1300. A class binding loads another binding as a file its real class never loads
 
