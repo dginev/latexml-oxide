@@ -3,10 +3,7 @@
 //! arximspdf.
 use latexml::util::test::{assert_element, check_requirements, loads};
 
-use super::{
-  perfect_kernel_batch46::{error_count, warning_count},
-  perfect_kernel_batch57::{RAW, assert_elements},
-};
+use super::perfect_kernel_batch57::{RAW, assert_elements};
 
 /// 63a: arxbj.cls:930-958 makes `{longlist}` a `\list` counted `longlist` and labelled "(i)", "(ii)" (:1070); the
 /// binding's `\let\longlist\list` took the first `\item` as the label argument, every label `\item` again: an endless
@@ -2669,7 +2666,14 @@ fn svg_setup_options() {
     )],
     Some("ar5iv.sty"),
   );
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(
+    (
+      super::perfect_kernel_batch46::error_count(&log),
+      super::perfect_kernel_batch46::warning_count(&log)
+    ),
+    (0, 0),
+    "{log}"
+  );
   assert_element(
     &xml,
     "graphics",
