@@ -1342,9 +1342,9 @@ mod split_nav_relations {
   /// split paths (the streamed default and the whole-DOM one) and with pages in folders (`idrelative`).
   #[test]
   fn split_navigation_ignores_an_ancestor_site_directory() {
-    const DOC: &str = "\\documentclass[12pt,oneside]{book}\n\\begin{document}\n\\title{my book}\\maketitle\n\
-                       \\tableofcontents\n\\chapter{chapter 1}\n\\section{section 1}\n\\subsection{sub 1}\ntest\n\
-                       \\section{section 2}\ntest\n\\end{document}\n";
+    const DOC: &str = "\\documentclass[12pt,oneside]{book}\n\\begin{document}\n\\title{Book}\\maketitle\n\
+                       \\tableofcontents\n\\chapter{One}\n\\section{A}\n\\subsection{A1}\nText A.\n\
+                       \\section{B}\nText B.\n\\end{document}\n";
     #[derive(Clone, Copy, Debug)]
     enum Site {
       None,
