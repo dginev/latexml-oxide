@@ -169,19 +169,19 @@ LoadDefinitions!({
       Info!("ignore", cs,
         &s!("Ignoring redefinition (\\newcommand) of '{cs}'")); }
   } else {
-    let args = convert_latex_args(nargs.value_of() as usize, opt)?;
+    let args = convert_latex_args(nargs.value_of(), opt)?;
     DefMacro!(cs, args, body, protected => true, long => true);
   }
   Tokens!() }, peeks_by_futurelet => true, protected => true);
 
   DefMacro!("\\renewrobustcmd OptionalMatch:* DefToken [Number][]{}", sub[(_star,cs,nargs,opt,body)] {
-  let args = convert_latex_args(nargs.value_of() as usize, opt)?;
+  let args = convert_latex_args(nargs.value_of(), opt)?;
   DefMacro!(cs, args, body, protected => true, long => true);
   Tokens!() }, peeks_by_futurelet => true, protected => true);
 
   DefMacro!("\\providerobustcmd OptionalMatch:* DefToken [Number][]{}", sub[(_star,cs,nargs,opt,body)] {
   if is_definable(&cs) {
-    let args = convert_latex_args(nargs.value_of() as usize, opt)?;
+    let args = convert_latex_args(nargs.value_of(), opt)?;
     DefMacro!(cs, args, body, protected => true, long => true); }
   Tokens!() }, peeks_by_futurelet => true, protected => true);
 

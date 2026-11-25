@@ -1160,7 +1160,7 @@ LoadDefinitions!({
 
   DefPrimitive!("\\lxDefMath {} [Number] [] {} OptionalKeyVals:XMath", sub[(cs, nargs, opt, presentation, params_opt)] {
     let cs_name = cs.to_string();
-    let n = nargs.value_of() as usize;
+    let n = latex_arg_count(nargs.value_of())?;
     // Extract semantic properties from keyvals.
     // Perl L368 always sets `revert_as => 'context'` so source-export
     // emits the user-defined CS rather than expanding the presentation

@@ -1111,6 +1111,86 @@ const BOUNDARY: &[Row] = &[
     &[],
     &[("p", "p1.1", "<p xml:id=\"p1.1\">After Q  done.</p>")],
   ),
+  (
+    "a negative argument count (repro macro-state/newcommand_negative_argument_count; red on 9fa31b9a7ad: \
+     Fatal:oom:alloc_failed)",
+    "pdflatex 4 `!` (You already have nine parameters, then a runaway); Perl 0 errors, \"A[x] B\"",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/newcommand_negative_argument_count.tex"
+    ),
+    &[],
+    (1, 0),
+    &[NINE_M1],
+    &[("p", "p1.1", "<p xml:id=\"p1.1\">A[x] B</p>")],
+  ),
+  (
+    "an argument count above nine (repro macro-state/newcommand_argument_count_above_nine; red on 9fa31b9a7ad: \
+     0 errors, ten arguments)",
+    "pdflatex 4 `!` (You already have nine parameters, then a runaway); Perl 0 errors, \"A[(ai)] B\"",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/newcommand_argument_count_above_nine.tex"
+    ),
+    &[],
+    (1, 0),
+    &["Error:misdefined:[10] You already have nine parameters"],
+    &[("p", "p1.1", "<p xml:id=\"p1.1\">A[(ai)j] B</p>")],
+  ),
+  (
+    "nine arguments, with and without an optional one (repro macro-state/newcommand_nine_arguments)",
+    "pdflatex 0 `!`; Perl 0 errors",
+    include_str!("../../../tools/perfect_kernel/repros/macro-state/newcommand_nine_arguments.tex"),
+    &[],
+    (0, 0),
+    &[],
+    &[(
+      "p",
+      "p1.1",
+      "<p xml:id=\"p1.1\">A[(ai)] B[(oi)] C[(pi)]</p>",
+    )],
+  ),
+  (
+    "every declarator's argument count at [-1] (repro macro-state/argument_count_out_of_range_every_declarator; red \
+     on 9fa31b9a7ad: Fatal:oom:alloc_failed)",
+    "pdflatex 18 `!` (one You already have nine parameters per declarator, mathtools's two); Perl 0 errors, \
+     \"A[abcdeFghl] B[(i)z] C[k]\"",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/argument_count_out_of_range_every_declarator.tex"
+    ),
+    &[],
+    (13, 0),
+    EVERY_DECLARATOR_AT_MINUS_ONE,
+    &[(
+      "p",
+      "p1.1",
+      "<p xml:id=\"p1.1\">A[abcdeFghl] B[<Math mode=\"inline\" tex=\"(i)\" text=\"i\" xml:id=\"p1.m1\"><XMath \
+       xml:id=\"p1.m1.2\"><XMDual xml:id=\"p1.m1.2.1\"><XMRef idref=\"p1.m1.1\" xml:id=\"p1.m1.2.1.1\"/><XMWrap \
+       xml:id=\"p1.m1.2.1.2\"><XMTok role=\"OPEN\" stretchy=\"false\">(</XMTok><XMTok font=\"italic\" \
+       role=\"UNKNOWN\" xml:id=\"p1.m1.1\">i</XMTok><XMTok role=\"CLOSE\" stretchy=\"false\">)</XMTok></XMWrap>\
+       </XMDual></XMath></Math>]\nC[<tabular vattach=\"middle\" xml:id=\"p1.1.1\"><tbody><tr \
+       xml:id=\"p1.1.1.1\"><td align=\"center\" xml:id=\"p1.1.1.1.1\">k</td></tr></tbody></tabular>]</p>",
+    )],
+  ),
+];
+
+const NINE_M1: &str = "Error:misdefined:[-1] You already have nine parameters";
+
+/// `\newcommand*`, `\newcommand…[-2][d]`, `\renewcommand`, `\providecommand`, `\DeclareRobustCommand`,
+/// `\newenvironment`, `\renewenvironment`, `\newrobustcmd`, `\newcommandtwoopt`, `\DeclarePairedDelimiterX`,
+/// `\lstnewenvironment`, `\newcolumntype`, `\DeclareTextCommand`: one Error each.
+const EVERY_DECLARATOR_AT_MINUS_ONE: &[&str] = &[
+  NINE_M1,
+  "Error:misdefined:[-2] You already have nine parameters",
+  NINE_M1,
+  NINE_M1,
+  NINE_M1,
+  NINE_M1,
+  NINE_M1,
+  NINE_M1,
+  NINE_M1,
+  NINE_M1,
+  NINE_M1,
+  NINE_M1,
+  NINE_M1,
 ];
 
 /// Every row converted once, in-process: the exact counts, each named diagnostic as often as listed, a schema-valid

@@ -1,0 +1,9 @@
+% witness: synthetic (INTW5; a code point's low 16 bits below 0x80 were read as an OT1 slot: U+20041 → A, U+10000 → Γ)
+% oracle:  xelatex 0 `!`, the characters kept (its font lacks the glyphs); pdflatex 6 `!` (Unicode character not set up)
+% engines: Perl 0 errors, the characters kept; rust base "A[A] B[Γ] C[!] D[A] E[Γ!]"
+% expect:  0 errors, 0 warnings; "A[𠁁] B[𐀀] C[𰀡]", each font run keeping its character
+% status:  GREEN
+\documentclass{article}
+\begin{document}
+A[𠁁] B[𐀀] C[𰀡] D[\texttt{𠁁}] E[\textsf{𐀀}\textbf{𰀡}]
+\end{document}
