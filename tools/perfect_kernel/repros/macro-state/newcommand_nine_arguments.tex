@@ -1,0 +1,11 @@
+% witness: synthetic (INTW5; the safe side of newcommand_negative_argument_count.tex)
+% oracle:  pdflatex 0 `!`, "A[(ai)] B[(oi)] C[(pi)]"
+% engines: Perl 0 errors, same text; rust base 0 errors, same text
+% expect:  0 errors, 0 warnings; "A[(ai)] B[(oi)] C[(pi)]"
+% status:  GREEN
+\documentclass{article}
+\newcommand\foo[9]{(#1#9)}
+\newcommand\baz[9][o]{(#1#9)}
+\begin{document}
+A[\foo abcdefghi] B[\baz bcdefghi] C[\baz[p]bcdefghi]
+\end{document}

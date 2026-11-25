@@ -43,6 +43,37 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
 
 ## Changes
 
+### 0.8.0-rc5
+
+  - **Books of thousands of `\input`/`\subimport` files convert again (issue 1011).** Since rc1 every file read as
+    content re-stored the whole list of the document's content files (the list the title-page check reads), so the run's
+    strings grew with the square of the number of files: 1.5 GB for 5,000 files, and a 26,000-page book aborted with
+    "the string arena's buffer reached 2 GiB" and no log. Each file's path is now stored once (5,000 files: 3 MB of
+    strings, peak memory 3.6 → 2.1 GB). The string arena holds ~4 GiB again, as in 0.7.6 (rc1 had halved it), with no
+    silent symbol wrap past it; a run beyond it says it "interned about 4 GiB of distinct strings". Any crash now writes
+    the log so far, ending in a `Fatal:panic:caught` line that names where it happened and `Status:conversion:3`, and
+    prints where that log is, also in the release build that aborts.
+  - **A conversion closing its `LaTeXML-oxide.cache` at the same moment as another no longer leaves
+    `LaTeXML-oxide.cache-wal`/`-shm` behind,** also when the destination is reached through a symbolic link, as every
+    macOS temporary folder is. SQLite removes them only when one close gets the file's exclusive lock on its single try;
+    a cache whose `-wal` is still there after a short pause is now read and closed again, at most twice, by its folder
+    resolved and its own name as written (the name is never followed, and nothing is created). Seen on macOS CI run
+    45645721304 (the issue 995 guard). Guards: `sqlite_store::tests::{simultaneous_closes_leave_no_side_files,
+    a_close_check_removes_a_leftover_and_makes_no_file}`.
+  - **A negative argument count no longer exhausts memory.** `\newcommand\foo[-1]{x}` read its count as an unsigned
+    number, so it wrapped to 2^64 and the conversion died with `Fatal:oom:alloc_failed` (or took the machine's memory
+    without a limit). Every declarator taking a LaTeX argument count (`\newcommand`, `\renewcommand`,
+    `\providecommand`, `\DeclareRobustCommand`, `\newenvironment`, `\renewenvironment`, `\DeclareTextCommand`,
+    etoolbox's `\newrobustcmd`, twoopt's `\newcommandtwoopt`, mathtools' `\DeclarePairedDelimiterX`, listings'
+    `\lstnewenvironment`, array's `\newcolumntype`, tcolorbox's `\newtcbinputlisting`, `\lxDefMath`) now checks it
+    in one place: a count outside 0 to 9 is TeX's "You already have nine parameters", reported as an Error, and then
+    read as 0 (a negative count, as Perl) or as nine plain arguments (`[10]`; Perl took ten; TeX keeps nine and runs
+    away) (KNOWN_PERL_ERRORS #1336). xargs' `\newcommandx` still parses its own count (row R).
+  - **A character beyond the Basic Multilingual Plane is kept as itself in text.** The font-map lookup compared only
+    the low 16 bits of a code point, so U+20041 (a CJK Extension B ideograph) printed as `A`, U+10000 as `Γ` and
+    U+30021 as `!`, in `\texttt` and every other font alike. The whole code point is now compared, as Perl and XeTeX
+    do; characters in the Basic Multilingual Plane are unchanged.
+
 ### 0.8.0-rc4
 
   - **A `--sitedirectory` named through a symbolic link is accepted again.** rc3 (#1001) took Perl's check that the

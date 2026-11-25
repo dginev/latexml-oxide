@@ -48,8 +48,17 @@ fn new_interner() -> Interner {
   StringInterner::with_capacity_and_hasher(131_072, BuildHasherDefault::<FxHasher>::default())
 }
 
-/// The first overflow symbol: the arena's own symbols are byte offsets into its buffer, kept below 2 GiB.
-const OVERFLOW_BASE: usize = 1 << 31;
+/// The overflow page's symbols: the top of the `SymbolU32` range (a `NonZeroU32` holding index + 1, so the largest
+/// index is `u32::MAX - 1`). Measured peaks: 392 strings (2308.04512), 222 (2604.01119), 56 (a 3,952-page book).
+const OVERFLOW_SLOTS: usize = 1 << 24;
+/// The first overflow symbol: the arena's own symbols are byte offsets into its buffer, kept below it, so the buffer
+/// holds ~4 GiB as in 0.7.6 (issue 1011: a 26,000-page book passed the former 2 GiB).
+const OVERFLOW_BASE: usize = u32::MAX as usize - OVERFLOW_SLOTS;
+
+/// The bytes the buffer holds. A new string's symbol is this offset cast `as u32`, unchecked (string-interner 0.20
+/// `buffer.rs:81`, `symbol.rs:79`), so [`push`] keeps it at most `OVERFLOW_BASE`.
+#[thread_local]
+static BUFFER_LEN: Cell<usize> = Cell::new(0);
 
 /// The strings interned while a lend was live, which the arena's buffer could not take without moving.
 #[derive(Default)]
@@ -67,16 +76,49 @@ static OVERFLOW: LazyLock<RefCell<Overflow>> = LazyLock::new(Default::default);
 #[inline(never)]
 fn page_symbol(text: &str) -> Option<SymStr> { OVERFLOW.borrow().symbols.get(text).copied() }
 
-/// A symbol of the arena's buffer, refusing one past the 2 GiB the overflow symbols start at. Lookups pass theirs
-/// through too: a string interned past 2 GiB stays in the buffer after the panic is caught, never to read as an
-/// overflow symbol.
+/// A symbol of the arena's buffer, never one of the overflow page's: [`push`] keeps the buffer below them.
 #[inline]
 fn in_buffer(sym: SymStr) -> SymStr {
   assert!(
     sym.to_usize() < OVERFLOW_BASE,
-    "the string arena's buffer reached 2 GiB, where the overflow symbols start"
+    "a symbol of the string arena's buffer reached the overflow page's"
   );
   sym
+}
+
+/// Add a new string to the buffer, outside any lend; refused, the buffer unchanged, when it would end past
+/// `OVERFLOW_BASE`.
+#[inline]
+fn push(arena: &mut Interner, text: &str) -> SymStr {
+  let start = BUFFER_LEN.get();
+  let Some(end) = buffer_end(start, text.len()) else {
+    buffer_full()
+  };
+  let sym = arena.get_or_intern(text);
+  debug_assert_eq!(
+    sym.to_usize(),
+    start,
+    "the buffer's length went out of step"
+  );
+  BUFFER_LEN.set(end);
+  sym
+}
+
+/// Where a string of `len` bytes added at `start` ends: after its length, 7 bits a byte (string-interner 0.20
+/// `buffer.rs:139-148, 208-226`), and its text; `None` past `OVERFLOW_BASE`.
+#[inline]
+fn buffer_end(start: usize, len: usize) -> Option<usize> {
+  let prefix = (usize::BITS - len.leading_zeros()).div_ceil(7).max(1) as usize;
+  Some(start.saturating_add(prefix).saturating_add(len)).filter(|end| *end <= OVERFLOW_BASE)
+}
+
+#[cold]
+#[inline(never)]
+fn buffer_full() -> ! {
+  panic!(
+    "the string arena is full: this conversion interned about 4 GiB of distinct strings (names, labels, file paths, \
+     numbers), the most one run can hold"
+  )
 }
 
 #[inline]
@@ -86,7 +128,7 @@ fn intern(text: &str) -> SymStr {
       return in_buffer(sym);
     }
     // A string first interned under a lend keeps its overflow symbol.
-    return page_symbol(text).unwrap_or_else(|| in_buffer(arena.get_or_intern(text)));
+    return page_symbol(text).unwrap_or_else(|| push(&mut arena, text));
   }
   intern_cold(text)
 }
@@ -103,13 +145,19 @@ fn intern_cold(text: &str) -> SymStr {
   if let Some(&sym) = overflow.symbols.get(text) {
     return sym;
   }
-  let sym = SymStr::try_from_usize(OVERFLOW_BASE + overflow.texts.len())
-    .expect("the arena's overflow page is full");
+  let sym = page_slot(overflow.texts.len());
   let text: Rc<str> = Rc::from(text);
   overflow.texts.push(Rc::clone(&text));
   overflow.symbols.insert(text, sym);
   overflow.fresh += 1;
   sym
+}
+
+/// The overflow page's symbol for its `index`th string. (`try_from_usize` truncates past `u32::MAX`: the count is
+/// checked first.)
+fn page_slot(index: usize) -> SymStr {
+  assert!(index < OVERFLOW_SLOTS, "the arena's overflow page is full");
+  SymStr::try_from_usize(OVERFLOW_BASE + index).expect("an overflow symbol is a SymbolU32")
 }
 
 /// A symbol's text, from the arena's buffer (under the caller's borrow) or the overflow page (its own `Rc`).
@@ -149,7 +197,7 @@ fn buffer_text(arena: &Interner, sym: SymStr) -> &str {
     "an overflow symbol resolved in the arena's buffer"
   );
   // SAFETY: `resolve_unchecked` skips the bounds and UTF-8 checks. Every symbol below `OVERFLOW_BASE` came from
-  // the buffer's `get_or_intern` of a `&str`, and the buffer is append-only between `reset`s, so the symbol names a
+  // the buffer's `get_or_intern` of a `&str` at its true offset (`push` refuses one that would wrap), and the buffer is append-only between `reset`s, so the symbol names a
   // whole UTF-8 string in it. Callgrind measured the validating `resolve` at ~3% of total Ir (`str::from_utf8`).
   unsafe { arena.resolve_unchecked(sym) }
 }
@@ -232,7 +280,7 @@ macro_rules! pin {
 
 /// Assign a string into the arena, returning a unique symbol.
 ///
-/// No overflow guard below 2 GiB: the main-level wall-clock watchdog (watchdog.rs) catches genuinely runaway loops
+/// No overflow guard below the buffer's ~4 GiB (`OVERFLOW_BASE`): the main-level wall-clock watchdog (watchdog.rs) catches genuinely runaway loops
 /// long before any real-world workload approaches it. Earlier versions had both a call-count and a distinct-symbol
 /// sentinel; the call-count one false-fired on dedup-heavy hot loops, and the distinct-symbol one added a per-call
 /// `arena.len()` read on a hot path (~350k calls per doc). Neither cost was paying for itself.
@@ -389,6 +437,7 @@ pub fn reset() {
     .expect("arena::reset inside a lend (`arena::with`): the lent text would dangle") =
     new_interner();
   *OVERFLOW.borrow_mut() = Overflow::default();
+  BUFFER_LEN.set(0);
   // The cached symbols index the replaced arena: a character or literal first
   // pinned mid-document would otherwise resolve to another string in the next
   // conversion on this thread.
@@ -400,6 +449,10 @@ pub fn reset() {
   }
   *SUFFIXED_KEY.borrow_mut() = String::new();
 }
+
+/// The bytes the buffer holds, for a test of what a mechanism costs the arena.
+#[cfg(test)]
+pub(crate) fn buffer_len() -> usize { BUFFER_LEN.get() }
 
 /// Eagerly initialize this thread's `#[thread_local]` `ARENA` LazyLock.
 ///
@@ -673,6 +726,123 @@ mod tests {
       "the first overflow symbol again"
     );
     assert_eq!(to_string(paged), "arena_reset_paged2");
+  }
+
+  /// The buffer's symbols reach past 2 GiB, up to the overflow page at the top of the u32 range (issue 1011: a 26,000-page
+  /// book's buffer passed 2 GiB, which 0.7.6 took).
+  #[test]
+  fn buffer_symbols_reach_past_2_gib() {
+    for at in [1 << 31, OVERFLOW_BASE - 1] {
+      let sym = SymStr::try_from_usize(at).unwrap();
+      assert_eq!(in_buffer(sym), sym);
+      assert!(!is_paged(sym), "{at} is a buffer symbol");
+    }
+    assert_eq!(
+      OVERFLOW_BASE,
+      (1 << 32) - 1 - (1 << 24),
+      "the buffer's ceiling is near 4 GiB"
+    );
+    assert!(is_paged(SymStr::try_from_usize(OVERFLOW_BASE).unwrap()));
+    // The page's last symbol is the largest a `SymbolU32` holds.
+    let last = SymStr::try_from_usize(u32::MAX as usize - 1).unwrap();
+    assert!(is_paged(last));
+    assert_eq!(SymStr::try_from_usize(u32::MAX as usize), None);
+  }
+
+  /// The overflow page numbers its symbols from its base, and each resolves to its text.
+  #[test]
+  fn overflow_symbols_start_at_the_page_base() {
+    reset();
+    let lent = pin("arena_base_lent");
+    let [first, second] = with(lent, |_| {
+      [pin("arena_base_first"), pin("arena_base_second")]
+    });
+    assert_eq!(
+      (first.to_usize(), second.to_usize()),
+      (OVERFLOW_BASE, OVERFLOW_BASE + 1)
+    );
+    assert!(first.to_usize() > 1 << 31);
+    assert_eq!(to_string(first), "arena_base_first");
+    assert_eq!(with(second, str::to_owned), "arena_base_second");
+    let buffered = pin("arena_base_buffered");
+    assert!(buffered.to_usize() < OVERFLOW_BASE);
+    assert_eq!(to_string(buffered), "arena_base_buffered");
+  }
+
+  /// A new string is refused when it would end past `OVERFLOW_BASE`, and the buffer does not take it; the strings it
+  /// holds still read, and under a lend a new string still goes to the overflow page.
+  #[test]
+  fn a_full_buffer_refuses_a_new_string() {
+    reset();
+    let held = pin("arena_full_held");
+    // 15 bytes of text and 1 of length, with 15 left
+    BUFFER_LEN.set(OVERFLOW_BASE - 15);
+    let refused =
+      std::panic::catch_unwind(|| pin("arena_full_new0")).expect_err("the buffer is full");
+    assert!(
+      refused
+        .downcast_ref::<&str>()
+        .is_some_and(|m| m.starts_with("the string arena is full"))
+    );
+    assert_eq!(get("arena_full_new0"), None);
+    assert_eq!(BUFFER_LEN.get(), OVERFLOW_BASE - 15);
+    assert_eq!(pin("arena_full_held"), held);
+    assert_eq!(to_string(held), "arena_full_held");
+    let paged = with(held, |_| pin("arena_full_paged"));
+    assert!(is_paged(paged));
+    assert_eq!(to_string(paged), "arena_full_paged");
+    reset();
+  }
+
+  /// A string may end exactly at `OVERFLOW_BASE`, not a byte past it: the next one would start at a symbol that is
+  /// the page's (and, 2^24 further, one that wraps).
+  #[test]
+  fn the_buffer_ends_at_the_overflow_base() {
+    assert_eq!(buffer_end(OVERFLOW_BASE - 15, 14), Some(OVERFLOW_BASE));
+    assert_eq!(buffer_end(OVERFLOW_BASE - 15, 15), None);
+    assert_eq!(buffer_end(OVERFLOW_BASE - 1, 0), Some(OVERFLOW_BASE));
+    assert_eq!(buffer_end(OVERFLOW_BASE, 0), None);
+    // one string of 16 MiB, the page's width, cannot cross it either
+    assert_eq!(buffer_end(OVERFLOW_BASE - 100, OVERFLOW_SLOTS), None);
+    assert_eq!(buffer_end(usize::MAX - 1, 5), None);
+  }
+
+  /// The buffer's length follows every string it takes: a symbol is the offset after its predecessor's length prefix
+  /// (one byte per 7 bits) and text.
+  #[test]
+  fn the_buffer_length_follows_its_strings() {
+    reset();
+    for (len, prefix) in [
+      (0, 1),
+      (1, 1),
+      (127, 1),
+      (128, 2),
+      (16_383, 2),
+      (16_384, 3),
+      (70_000, 3),
+    ] {
+      let start = BUFFER_LEN.get();
+      assert_eq!(pin("y".repeat(len)).to_usize(), start);
+      assert_eq!(BUFFER_LEN.get(), start + prefix + len);
+    }
+    let end = BUFFER_LEN.get();
+    assert_eq!(pin("arena_len_next").to_usize(), end);
+  }
+
+  /// The page's first and last slots are the base and the largest `SymbolU32`; one more is refused, not wrapped.
+  #[test]
+  fn the_overflow_page_ends_at_the_largest_symbol() {
+    assert_eq!(page_slot(0).to_usize(), OVERFLOW_BASE);
+    assert_eq!(
+      page_slot(OVERFLOW_SLOTS - 1).to_usize(),
+      u32::MAX as usize - 1
+    );
+    let full =
+      std::panic::catch_unwind(|| page_slot(OVERFLOW_SLOTS)).expect_err("the page is full");
+    assert_eq!(
+      full.downcast_ref::<&str>(),
+      Some(&"the arena's overflow page is full")
+    );
   }
 
   /// `reset` inside a lend would leave the lent text dangling: it refuses.

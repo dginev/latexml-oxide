@@ -3223,7 +3223,7 @@ LoadDefinitions!({
     let start_code = start_code.pack_parameters()?;
     let end_code = end_code.pack_parameters()?;
     let env_name = name.to_string();
-    let n: usize = n_arg.value_of() as usize;
+    let n = latex_arg_count(n_arg.value_of())?;
     // Build parameter spec matching Perl's convertLaTeXArgs($n, $opt).
     // `[N][default]` syntax: N total args; if [default] present, the FIRST
     // arg is OPTIONAL with that default value. The default IS allowed to

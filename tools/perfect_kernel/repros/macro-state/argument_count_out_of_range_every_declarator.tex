@@ -1,0 +1,27 @@
+% witness: synthetic (INTW5; every declarator reading a LaTeX argument count, each at [-1]; the base exhausted memory)
+% oracle:  pdflatex 18 `!`: one "You already have nine parameters" per declarator (mathtools's two \newcommand
+%          and its "Macro need 1 or more arguments"), then a runaway \ca
+% engines: Perl 0 errors, "A[abcdeFghl] B[(i)z] C[k]"; rust base Fatal:oom:alloc_failed
+% expect:  13 errors (one misdefined:[-1]/[-2] per declarator), 0 warnings; "A[abcdeFghl] B[(i)] C[k]"
+%          (mathtools's \ci takes at least one argument here, so it reads {z})
+% status:  GREEN
+\documentclass{article}
+\usepackage{etoolbox,twoopt,mathtools,listings,array}
+\newcommand*\ca[-1]{a}
+\newcommand\cb[-2][d]{b}
+\newcommand\cc{}
+\renewcommand\cc[-1]{c}
+\providecommand\cd[-1]{d}
+\DeclareRobustCommand\ce[-1]{e}
+\newenvironment{ef}[-1]{f}{}
+\renewenvironment{ef}[-1]{F}{}
+\newrobustcmd\cg[-1]{g}
+\newcommandtwoopt\ch[-1][x][y]{h}
+\DeclarePairedDelimiterX\ci[-1]{(}{)}{i}
+\lstnewenvironment{ej}[-1]{}{}
+\newcolumntype{K}[-1]{c}
+\DeclareTextCommand\cl{OT1}[-1]{l}
+\begin{document}
+A[\ca\cb\cc\cd\ce\begin{ef}\end{ef}\cg\ch\cl] B[$\ci{z}$]
+C[\begin{tabular}{K}k\end{tabular}]
+\end{document}
