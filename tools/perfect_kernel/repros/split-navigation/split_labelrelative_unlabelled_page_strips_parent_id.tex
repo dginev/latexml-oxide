@@ -1,0 +1,22 @@
+% mechanism: latexml_post split.rs PageNamer (Perl Split::getPageName, Split.pm L167-171): a page with no label takes
+%   its xml:id, and $attr switches to xml:id, so --splitnaming=labelrelative strips its parent's xml:id, not label.
+% witness: synthetic (row R SPLITIDATTR, issue 1006 round-5 review)
+% oracle:  pdflatex 0 errors: two sections, three subsections
+% engines: perl latexmlc 2026-11-25 = sec/SS1.html, sec/c.html, S2/SS1.html; rust INT081P = sec/S1.SS1.html,
+%   S2/S2.SS1.html (the parent's label kept)
+% expect:  --splitat=subsection --splitnaming=labelrelative --dest=index.html: index.html, sec/index.html,
+%   sec/SS1.html, sec/c.html, S2/index.html, S2/SS1.html; 0 errors, 0 warnings; both split paths
+% status:  GREEN (guard split_nav_relations::split_label_names_stay_in_the_destination, ~one/SS2.html)
+\documentclass{article}
+\begin{document}
+\section{A}\label{sec}
+Text a.
+\subsection{B}
+Text b.
+\subsection{C}\label{sec:c}
+Text c.
+\section{D}
+Text d.
+\subsection{E}
+Text e.
+\end{document}

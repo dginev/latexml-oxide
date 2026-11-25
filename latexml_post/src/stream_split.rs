@@ -90,7 +90,7 @@ use rustc_hash::{FxHashMap as HashMap, FxHashSet};
 
 use crate::{
   document::{LTX_NSURI, SplitArm, SplitCond, collect_split_pages, is_ltx, parse_split_union},
-  split::SplitNaming,
+  split::{PageKeys, PageNamer, SplitNaming},
 };
 
 /// One spilled page, in pre-order (index 0 is the root page).
@@ -245,7 +245,8 @@ enum LevelKind {
 
 struct Splitter {
   arms:                Vec<SplitArm>,
-  naming:              SplitNaming,
+  /// Names the pages, as `Split` does.
+  namer:               PageNamer,
   root_destination:    String,
   spill_dir:           PathBuf,
   levels:              Vec<Level>,
@@ -272,7 +273,6 @@ struct Splitter {
   late_template:       Option<String>,
   /// Fail on a late template instead of warning (see the module doc).
   late_template_fails: bool,
-  unnamed_counter:     u32,
 }
 
 impl Splitter {
@@ -284,7 +284,7 @@ impl Splitter {
   ) -> Self {
     Splitter {
       arms,
-      naming,
+      namer: PageNamer::new(naming),
       root_destination: destination.unwrap_or("").to_string(),
       spill_dir: spill_dir.to_path_buf(),
       levels: Vec::new(),
@@ -300,7 +300,6 @@ impl Splitter {
       warned_late: false,
       late_template: None,
       late_template_fails: false,
-      unnamed_counter: 0,
     }
   }
 
@@ -1157,6 +1156,7 @@ impl Splitter {
         haschildren.insert(m.localname.clone(), true);
       }
     }
+    self.namer.start(&self.root_destination);
     self.prename_rec(0, &ext, &haschildren);
   }
 
@@ -1175,66 +1175,18 @@ impl Splitter {
     }
   }
 
-  /// Port of `Split::get_page_name` over metadata.
+  /// Port of `Split::get_page_name` over metadata, through [`PageNamer`].
   fn get_page_name(&mut self, page: usize, parent: usize, ext: &str, recursive: bool) -> String {
-    let use_labels = matches!(self.naming, SplitNaming::Label | SplitNaming::LabelRelative);
-    let attr_name = if use_labels { "labels" } else { "xml:id" };
-    let raw = if use_labels {
-      self.metas[page].labels.clone()
-    } else {
-      self.metas[page].xml_id.clone()
-    };
-    let mut name = raw.unwrap_or_default();
-    if let Some(first) = name.split_whitespace().next() {
-      name = first.to_string();
-    }
-    if let Some(stripped) = name.strip_prefix("LABEL:") {
-      name = stripped.to_string();
-    }
-    name = crate::split::page_name_segments(&name);
-    if name.is_empty() {
-      if use_labels && let Some(id) = self.metas[page].xml_id.clone() {
-        Info!(
-          "split",
-          "pathname",
-          "Using '{}' to create page pathname, instead of missing '{}'",
-          id,
-          attr_name
-        );
-        name = id;
-      } else {
-        self.unnamed_counter += 1;
-        name = format!("FOO{}", self.unnamed_counter);
-        Info!(
-          "split",
-          "pathname",
-          "Using '{}' to create page pathname, instead of missing '{}'",
-          name,
-          attr_name
-        );
+    fn keys(meta: &PageMeta) -> PageKeys<'_> {
+      PageKeys {
+        labels: meta.labels.as_deref(),
+        id:     meta.xml_id.as_deref(),
       }
     }
-    let as_dir = match self.naming {
-      SplitNaming::IdRelative | SplitNaming::LabelRelative => {
-        let parent_attr = if use_labels {
-          self.metas[parent].labels.clone()
-        } else {
-          self.metas[parent].xml_id.clone()
-        };
-        if let Some(pname) = parent_attr {
-          let pname = pname.split_whitespace().next().unwrap_or("");
-          let pname =
-            crate::split::page_name_segments(pname.strip_prefix("LABEL:").unwrap_or(pname));
-          if let Some(rest) = crate::split::strip_parent_name(&name, &pname) {
-            name = rest;
-          }
-        }
-        recursive
-      },
-      _ => false,
-    };
-    name = crate::split::colons_to_underscore(&name);
-    crate::split::page_pathname(&self.metas[parent].name, &name, ext, as_dir)
+    let (page, parent) = (&self.metas[page], &self.metas[parent]);
+    self
+      .namer
+      .page_name(keys(page), keys(parent), &parent.name, ext, recursive)
   }
 
   /// The `inlist="toc"` lookahead pass: for each tree level where any page's

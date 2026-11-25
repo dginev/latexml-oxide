@@ -1515,29 +1515,48 @@ mod split_nav_relations {
     }
   }
 
+  /// The `Error:` and `Warning:` lines of a run's log.
+  fn error_warning_counts(stderr: &[u8]) -> (usize, usize) {
+    let log = String::from_utf8_lossy(stderr);
+    let count = |prefix: &str| log.lines().filter(|line| line.starts_with(prefix)).count();
+    (count("Error:"), count("Warning:"))
+  }
+
   /// A page named after a label is written where the label says, inside the destination, and so are its child pages
   /// (OXIDIZED_DESIGN_DIVERGENCES #1164): no `~` expansion and no root (Perl's `pathname_make` makes `\label{~one}`
   /// `$HOME`one and `\label{/x}` the absolute `/x.html`), empty and `.` segments dropped as Perl drops them
   /// (`\label{./dot}` is `dot`, so its links need no extra `../`), and a label of separators alone (`\label{/}`) takes
-  /// the unnamed page's `xml:id`. For `label` and `labelrelative` naming, on both split paths, with a bare and a
+  /// the unnamed page's `xml:id`. An unlabelled page takes its `xml:id`, relative to its parent's `xml:id`
+  /// (`Split.pm` L171: `~one/SS2.html`; red: `~one/S1.SS2.html`). A label whose pathname is already issued (`dot` after
+  /// `./dot`; `index`, the root's, under `label`) takes the page's `xml:id` with one Warning (red: the page lost), and
+  /// `\label{../esc}`, outside the destination, takes it with an Error (as Perl's site check, `Post.pm` L700-704;
+  /// pdflatex 0 `!`, Perl 0 errors, esc.html outside; red: the same). For `label` and `labelrelative` naming, on both
+  /// split paths, with a bare and a
   /// foldered destination under a site directory, the exact set of pages under a root holding `$HOME` beside the work
-  /// directory is asserted (a page written anywhere else is missing from it), and every page's relative links resolve.
+  /// directory is asserted (a page written anywhere else is missing from it), the Error and Warning counts, and that
+  /// every page's relative links resolve.
   #[test]
   fn split_label_names_stay_in_the_destination() {
     const DOC: &str = "\\documentclass{article}\n\\begin{document}\n\\section{One}\\label{~one}\nA.\n\
-                       \\subsection{Sub}\\label{two}\nB \\ref{~one}.\n\\section{Two}\\label{/lzxrev}\nC.\n\
+                       \\subsection{Sub}\\label{two}\nB \\ref{~one}.\n\\subsection{Bare}\nB2.\n\
+                       \\section{Two}\\label{/lzxrev}\nC.\n\
                        \\section{Three}\\label{three}\nD \\ref{two}.\n\\section{Dot}\\label{./dot}\nE.\n\
                        \\section{Root}\\label{/}\nF.\n\\subsection{Leaf}\\label{leaf}\nG \\ref{./dot}.\n\
-                       \\end{document}\n";
+                       \\section{Twin}\\label{dot}\nH \\ref{./dot}.\n\\section{Index}\\label{index}\nI \\ref{dot}.\n\
+                       \\section{Esc}\\label{../esc}\nJ \\ref{index}.\n\\end{document}\n";
     for (dest, site) in [
       ("index.html", None),
       ("out/index.html", Some("--sitedirectory=.")),
     ] {
       let folder = dest.strip_suffix("index.html").unwrap();
       for stream in ["1", "0"] {
-        for (naming, expected) in [
-          ("label", [
+        for (naming, warnings, expected) in [
+          ("label", 2, [
+            "S1.SS2.html",
             "S5.html",
+            "S6.html",
+            "S7.html",
+            "S8.html",
             "dot.html",
             "index.html",
             "leaf.html",
@@ -1546,13 +1565,17 @@ mod split_nav_relations {
             "two.html",
             "~one.html",
           ]),
-          ("labelrelative", [
+          ("labelrelative", 1, [
             "S5/index.html",
             "S5/leaf.html",
+            "S6/index.html",
+            "S8/index.html",
             "dot/index.html",
             "index.html",
+            "index/index.html",
             "lzxrev/index.html",
             "three/index.html",
+            "~one/SS2.html",
             "~one/index.html",
             "~one/two.html",
           ]),
@@ -1585,49 +1608,72 @@ mod split_nav_relations {
             "{case}: {}",
             String::from_utf8_lossy(&output.stderr)
           );
+          assert_eq!(
+            error_warning_counts(&output.stderr),
+            (1, warnings),
+            "{case}: {}",
+            String::from_utf8_lossy(&output.stderr)
+          );
           let expected: Vec<String> = expected.iter().map(|f| format!("w/{folder}{f}")).collect();
           assert_eq!(html_files(root.path()), expected, "{case}");
           assert_split_links_resolve(&work, &case);
         }
       }
     }
-    // A `../` in a label stays: the page lies beside `out`, where Perl puts it, and `out`'s pages link it through `../`.
-    let work = tempfile::tempdir().expect("tempdir");
-    std::fs::write(
-      work.path().join("doc.tex"),
-      "\\documentclass{article}\n\\begin{document}\n\\section{One}\\label{../esc}\nA \\ref{../esc}.\n\
-       \\section{Two}\\label{two}\nB \\ref{../esc}.\n\\end{document}\n",
-    )
-    .unwrap();
-    for stream in ["1", "0"] {
-      let output = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
-        .args([
-          "doc.tex",
-          "--splitat=section",
-          "--splitnaming=label",
-          "--format=html5",
-          "--dest=out/index.html",
-        ])
-        .env("LATEXML_POST_STREAM_SPLIT", stream)
-        .current_dir(work.path())
-        .output()
-        .expect("spawn latexml_oxide");
-      assert!(
-        output.status.success(),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-      );
-      assert!(
-        work.path().join("esc.html").is_file(),
-        "stream {stream}: no esc.html beside out/"
-      );
-      let pages = split_hrefs(&work.path().join("out"));
-      for page in ["index.html", "two.html"] {
-        let links = &pages.iter().find(|(p, _)| p == page).unwrap().1;
+    // The Error boundary, beside a foldered destination: `../esc` leaves it (an Error; the page is `out/S1.html`, which
+    // `out`'s pages link; red: esc.html beside `out`, as Perl and rc3), `a/../b` stays in it (`out/b.html`, 0 errors;
+    // Perl the same). pdflatex 0 `!` both.
+    for (label, errors, page) in [("../esc", 1, "S1.html"), ("a/../b", 0, "b.html")] {
+      let work = tempfile::tempdir().expect("tempdir");
+      std::fs::write(
+        work.path().join("doc.tex"),
+        format!(
+          "\\documentclass{{article}}\n\\begin{{document}}\n\\section{{One}}\\label{{{label}}}\nA \\ref{{{label}}}.\n\
+           \\section{{Two}}\\label{{two}}\nB \\ref{{{label}}}.\n\\end{{document}}\n"
+        ),
+      )
+      .unwrap();
+      for stream in ["1", "0"] {
+        let case = format!("{label}, stream {stream}");
+        let output = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+          .args([
+            "doc.tex",
+            "--splitat=section",
+            "--splitnaming=label",
+            "--format=html5",
+            "--dest=out/index.html",
+          ])
+          .env("LATEXML_POST_STREAM_SPLIT", stream)
+          .current_dir(work.path())
+          .output()
+          .expect("spawn latexml_oxide");
         assert!(
-          links.iter().any(|h| h.starts_with("../esc.html")),
-          "stream {stream}, {page}: {links:?}"
+          output.status.success(),
+          "{case}: {}",
+          String::from_utf8_lossy(&output.stderr)
         );
+        assert_eq!(
+          error_warning_counts(&output.stderr),
+          (errors, 0),
+          "{case}: {}",
+          String::from_utf8_lossy(&output.stderr)
+        );
+        let mut expected = vec![
+          format!("out/{page}"),
+          "out/index.html".into(),
+          "out/two.html".into(),
+        ];
+        expected.sort();
+        assert_eq!(html_files(work.path()), expected, "{case}");
+        let pages = split_hrefs(&work.path().join("out"));
+        for from in ["index.html", "two.html"] {
+          let links = &pages.iter().find(|(p, _)| p == from).unwrap().1;
+          assert!(
+            links.iter().any(|h| h.starts_with(page)),
+            "{case}, {from}: {links:?}"
+          );
+        }
+        assert_split_links_resolve(work.path(), &case);
       }
     }
   }

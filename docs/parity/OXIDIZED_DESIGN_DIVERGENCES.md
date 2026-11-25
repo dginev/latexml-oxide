@@ -24828,7 +24828,7 @@ as natbib does: author "Smith", year "Jones".
 natbib_entry_constructor_is_binding_private` (author "Batselier et al.", no full authors),
 `perfect_kernel_batch56::apacite_old_bbl_keeps_its_declared_italics` (no full authors).
 
-### 1164. A split page named after a label: no `~` expansion, no absolute path (issue 1006)
+### 1164. A split page named after a label: no `~` expansion, no absolute path, no page outside the destination or over another (issue 1006)
 
 **Perl behavior**: `Split::getPageName` (Split.pm L185-191) builds the page path with `pathname_make`, which runs
 `pathname_canonical` over the whole path, the label included: under `--splitnaming=label` a page `\label{~one}` is
@@ -24839,9 +24839,25 @@ them (`Pathname.pm` L126-128: no `.` segment, a `name/..` pair collapsed, `a/../
 (Perl keeps `a//b`, and a trailing `/` makes its page the hidden `a/.html`; ours is `a/b.html`, `a.html`), but with no
 `~` expansion and no root, so the page is
 `~one.html` or `x.html` in the destination, as rc3 wrote them; a label of separators alone (`\label{/}`) is an empty
-name and takes the page's `xml:id`, Perl's `!$name` branch (`Split.pm` L167-175). A `../` in the label is kept, so `\label{../esc}`
-still lies outside the destination, where Perl and rc3 put it, and its links keep the `../`. The parent page's
-directory is taken as written too, so the child of a `~one.html` page lies beside it, not under `$HOME`. **Why**: the
-label is the document's text, not a path the user gave; expanding it writes outside the destination and leaks a
-filesystem path into the links. A candidate patch for Perl. **Guard**
-`split_nav_relations::split_label_names_stay_in_the_destination`.
+name and takes the page's `xml:id`, Perl's `!$name` branch (`Split.pm` L167-175), which also names the page relative
+to its parent's `xml:id` (L171 switches `$attr`: `\section{A}\label{sec}` + an unlabelled `\subsection` is
+`sec/SS1.html`). The parent page's directory is taken as written too, so the child of a `~one.html` page lies beside
+it, not under `$HOME`. One `split::PageNamer` names the pages of both split paths and keeps the pathnames it issued,
+the root's first:
+- A pathname already issued (`\label{dup}` and `\label{dup/}`, `./x` and `x`, `\label{index}` beside `index.html`)
+  is not issued again: the page takes the fallback a missing label takes (its `xml:id`, else `FOO<n>`) with one
+  Warning naming both keys and the file. Perl and rc3 wrote both pages to one file, the first one lost (Perl keeps
+  `dup/` as the hidden `dup/.html`).
+- A page whose name leaves the destination's directory (`\label{../esc}`, or `..` past it under `labelrelative`) is
+  an Error and takes the same fallback inside it; `a/../b` (`b`) stays and is clean. Perl's check (`Post.pm` L700-704,
+  a Fatal) tests the site directory and misses a single `../` (`pathname_is_contained`, `Pathname.pm` L186, wants a
+  separator after the `..`), so Perl writes `../esc.html` and stops only at `../../esc`. The boundary is the
+  destination's directory even under `--sitedirectory`: a page beside the destination got links that resolve nowhere
+  (`../index.html` for `out/index.html`, Perl and rc3 alike).
+
+**Why**: the label is the document's text, not a path the user gave; expanding it writes outside the destination and
+leaks a filesystem path into the links, and a page written over another loses its content silently. A candidate patch
+for Perl. **Guards** `split_nav_relations::split_label_names_stay_in_the_destination` (the label matrix and the Error
+boundary table), `split_nav_relations::split_label_names_follow_perls_relative_strip`; repros
+`split-navigation/{split_labelrelative_unlabelled_page_strips_parent_id, split_label_names_collide,
+split_label_leaves_the_destination}`, `epub/split_label_collides_with_root`.

@@ -6,13 +6,14 @@
 % oracle:  pdflatex 0 errors: a contents list, two sections, a bibliography
 % engines: rust (I807b c507e4c1a12) = the root page lost, the href listed twice, no nav property; perl latexmlc 2026-11-14 =
 %   the same loss and duplicate, nav on the first entry
-% expect:  0 errors; every page its own file (Split's name-collision rule), one manifest entry each, nav on the root
-% status:  RED (post-merge)
-% run:     latexml_oxide --split --splitnaming=label --dest=split_label_collides_with_root_red.epub split_label_collides_with_root_red.tex
+% expect:  0 errors, 1 warning; every page its own file (Split's name-collision rule, OD #1164: the section is
+%   S1.xhtml), one manifest entry each, nav on the root
+% status:  GREEN (SPLITFIX: the root's pathname is issued first; guard split_nav_relations, the `index` row)
+% run:     latexml_oxide --split --splitnaming=label --dest=split_label_collides_with_root.epub split_label_collides_with_root.tex
 \documentclass{article}
 \begin{document}
 \tableofcontents
-\section{Zed}\label{split_label_collides_with_root_red} Text z.
+\section{Zed}\label{split_label_collides_with_root} Text z.
 \subsection{Zsub}\label{zs} Text zs.
 \section{Alpha}\label{a} Text a.
 \begin{thebibliography}{1}\bibitem{k} K. Book.\end{thebibliography}
