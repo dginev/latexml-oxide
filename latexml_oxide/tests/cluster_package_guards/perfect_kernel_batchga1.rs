@@ -258,8 +258,8 @@ const ROWS: &[Row] = &[
   ),
   // `thebibliography` names its list's counter as `\usecounter{enumiv}` does (article.cls:573, latex.ltx:16048): an
   // asl.cls entry composing its number from `\value{\@listctr}` reads enumiv, 1 then 2, with nothing reported (GA1
-  // alone: 3 errors on `\c@`; witnesses 1005.4193, 0705.0395). The `[…]` left in the text is
-  // item_label_in_thebibliography_is_the_entry_tag_red.
+  // alone: 3 errors on `\c@`; witnesses 1005.4193, 0705.0395). The `\item[…]` label is the entry's tag, typeset once
+  // (BIBITEMLABEL2: was also left in the text, "[[1]]First entry.").
   (
     None,
     include_str!(
@@ -272,17 +272,43 @@ const ROWS: &[Row] = &[
     &[
       (
         "bibitem",
-        &[r#"xml:id="bib.bib1""#],
-        "<bibitem xml:id=\"bib.bib1\"><tags><tag>[1]</tag><tag role=\"refnum\">1</tag></tags>
-          <bibblock>[[1]]First entry.\n</bibblock></bibitem>",
+        &[r#"xml:id="bib.bibx1""#],
+        "<bibitem xml:id=\"bib.bibx1\"><tags><tag>[1]</tag></tags>
+          <bibblock>First entry.\n</bibblock></bibitem>",
       ),
       (
         "bibitem",
-        &[r#"xml:id="bib.bib2""#],
-        "<bibitem xml:id=\"bib.bib2\"><tags><tag>[2]</tag><tag role=\"refnum\">2</tag></tags>
-          <bibblock>[[2]]Second entry.\n</bibblock></bibitem>",
+        &[r#"xml:id="bib.bibx2""#],
+        "<bibitem xml:id=\"bib.bibx2\"><tags><tag>[2]</tag></tags>
+          <bibblock>Second entry.\n</bibblock></bibitem>",
       ),
     ],
+  ),
+  // An `\item[label]` in `thebibliography` prints `\makelabel{label}` as its entry's tag and steps no counter
+  // (latex.ltx `\@item`); Perl's `\save@bibitem{}` numbered it and left `[label]` in the text (KNOWN_PERL_ERRORS #1335,
+  // BIBITEMLABEL2). The next `\item` and `\bibitem` are [1] and [2], as pdflatex prints them.
+  (
+    None,
+    include_str!(
+      "../../../tools/perfect_kernel/repros/index-bib/item_label_in_thebibliography_is_the_entry_tag.tex"
+    ),
+    0,
+    0,
+    0,
+    "",
+    &[(
+      "biblist",
+      &[],
+      r#"<biblist>
+        <bibitem xml:id="bib.bibx1"><tags><tag>[A1]</tag></tags><bibblock> First entry.
+</bibblock></bibitem>
+        <bibitem xml:id="bib.bibx2"><tags><tag>B2</tag></tags><bibblock> Second entry.
+</bibblock></bibitem>
+        <bibitem xml:id="bib.bib1"><tags><tag>[1]</tag><tag role="refnum">1</tag></tags><bibblock>Third entry.
+</bibblock></bibitem>
+        <bibitem key="k" xml:id="bib.bib2"><tags><tag>[2]</tag><tag role="refnum">2</tag></tags><bibblock> Fourth entry.
+</bibblock></bibitem></biblist>"#,
+    )],
   ),
   // varioref.sty:803's `\c@vrcnt`, which cleveref's varioref support steps (1602.00476, 2409.11413, 2505.14566; GA1
   // alone: 3 errors on `\c@vrcnt`).
