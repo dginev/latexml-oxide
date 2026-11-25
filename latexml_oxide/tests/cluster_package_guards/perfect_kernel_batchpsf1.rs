@@ -6,7 +6,7 @@
 //! Red (int166a): every row 0 warnings; the `.epsi`/`.epsf` and `.eps.gz` rows also on PSF1b (EPS by extension).
 use std::io::Write;
 
-use latexml::util::test::{convert_bytes_files_then, xml_element};
+use latexml::util::test::{convert_bytes_files_then, xml_elements};
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
 
@@ -179,13 +179,7 @@ fn batchpsf1_dropped_fragments_are_counted() {
       .filter_map(|line| line.strip_prefix(MISSING))
       .collect();
     assert_eq!(warnings, row.warnings, "{name}: {log}");
-    let mut rest = xml.as_str();
-    let mut graphics = Vec::new();
-    while let Some(element) = xml_element(rest, "graphics", &[]) {
-      let at = rest.find("<graphics").unwrap();
-      rest = &rest[at + 1..];
-      graphics.push(element);
-    }
+    let graphics = xml_elements(&xml, "graphics", &[]);
     assert_eq!(graphics.len(), row.graphics.len(), "{name}: {xml}");
     for (found, expected) in graphics.iter().zip(row.graphics) {
       if expected.starts_with('<') {

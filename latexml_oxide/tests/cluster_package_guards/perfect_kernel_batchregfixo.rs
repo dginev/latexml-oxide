@@ -6,7 +6,7 @@
 //! guard converts its repro under `tools/perfect_kernel/repros/` and asserts no Error or Warning and the authored
 //! content, against pdflatex. Round 2: the PDF string's `\@protected@testopt`, `\@ifnextchar`, `\let` and arrows
 //! (hyperref.sty:545-549, 563-564), and the package option's information strings.
-use latexml::util::test::{assert_element, convert_with};
+use latexml::util::test::{assert_element, convert_with, xml_elements};
 
 use super::{
   perfect_kernel_batch46::{error_count, warning_count},
@@ -19,15 +19,6 @@ macro_rules! repro {
   ($path:literal) => {
     include_str!(concat!("../../../tools/perfect_kernel/repros/", $path))
   };
-}
-
-/// Every `<tag …>…</tag>` element of `xml` (no nesting of the same tag), in document order.
-fn elements<'a>(xml: &'a str, tag: &str) -> Vec<&'a str> {
-  let (open, close) = (format!("<{tag} "), format!("</{tag}>"));
-  xml
-    .match_indices(&open)
-    .map(|(i, _)| &xml[i..i + xml[i..].find(&close).map_or(0, |end| end + close.len())])
-    .collect()
 }
 
 /// hyperref.sty:405-413: `\$ \{ \} \# \% \& \_` are their characters in a PDF string, and `\protect` stays what it is
@@ -116,7 +107,7 @@ fn start_align_does_not_reenter_by_name() {
     Some(PRELOAD),
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  let groups = elements(&xml, "equationgroup");
+  let groups = xml_elements(&xml, "equationgroup", &[]);
   assert_eq!(groups.len(), 4, "{xml}");
   let tags: Vec<String> = groups
     .iter()
@@ -129,7 +120,7 @@ fn start_align_does_not_reenter_by_name() {
     .collect();
   assert_eq!(tags, ["(1)", "(2)", "", ""], "{xml}");
   for group in &groups {
-    assert_eq!(elements(group, "equation").len(), 1, "{group}");
+    assert_eq!(xml_elements(group, "equation", &[]).len(), 1, "{group}");
     assert!(
       group.contains("tex=\"\\displaystyle a=b\"") && group.contains("tex=\"\\displaystyle c=d\""),
       "{group}"
@@ -150,9 +141,9 @@ fn xrightarrow_in_a_protected_edef() {
     Some(PRELOAD),
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  let items = elements(&xml, "bibitem");
+  let items = xml_elements(&xml, "bibitem", &[]);
   assert_eq!(items.len(), 1, "{xml}");
-  let item = items[0];
+  let item = &items[0];
   assert!(
     text(item).contains("in the") && text(item).contains("transition"),
     "{item}"
@@ -185,7 +176,7 @@ fn restatable_in_a_wrapper_environment() {
     Some(PRELOAD),
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  let theorems: Vec<String> = elements(&xml, "theorem")
+  let theorems: Vec<String> = xml_elements(&xml, "theorem", &[])
     .iter()
     .map(|theorem| {
       text(theorem)
@@ -209,7 +200,7 @@ fn restatable_in_a_wrapper_environment() {
     "{theorems:?}"
   );
   // the `{restatable*}` is numbered as the later `\bar` (pdflatex "Theorem 2"): a reference to its label
-  let elements = elements(&xml, "theorem");
+  let elements = xml_elements(&xml, "theorem", &[]);
   assert!(
     elements[1].contains("<tag role=\"refnum\"><ref labelref=\"LABEL:restatable:bar\"/></tag>"),
     "{}",

@@ -4,7 +4,9 @@
 //! 2410.16774, 2207.11475, 2207.11842); a call whose printed words the reading writes none of is written as queued, as off
 //! writes it (iopart's `\ead` with no address in its text; 2112.14174).
 
-use latexml::util::test::{convert_files_with_setup_then, error_count, warning_count};
+use latexml::util::test::{
+  assert_all_elements, convert_files_with_setup_then, error_count, warning_count,
+};
 
 use super::perfect_kernel_batch84b::creators;
 
@@ -27,18 +29,6 @@ fn run(tex: &str) -> (String, String) {
   (log, xml)
 }
 
-/// The elements `tag` of `xml`, whole, in order.
-fn elements(xml: &str, tag: &str) -> Vec<String> {
-  let (open, close) = (format!("<{tag}"), format!("</{tag}>"));
-  xml
-    .match_indices(&open)
-    .filter_map(|(at, _)| {
-      let end = xml[at..].find(&close)? + close.len();
-      Some(xml[at..at + end].to_string())
-    })
-    .collect()
-}
-
 /// authblk's `\author[1\thanks{Equal contribution alpha.}]{Aviv Slobodkin}`: off digests the `annotations={1\thanks{…}}`
 /// the binding gives the creator, the note the document's pubnote; `=2` wrote the reading's labels alone and lost it, with
 /// no Warning. Now its creators carry the block's own annotations, as off's.
@@ -50,11 +40,9 @@ fn a_note_in_an_authors_annotations_is_kept() {
     row(&["Aviv Slobodkin", "affiliation=Bar-Ilan University"]),
     row(&["Niv Nachum", "affiliation=Amazon"])
   ]);
-  assert_eq!(
-    elements(&xml, "pubnote"),
-    ["<pubnote>Equal contribution alpha.</pubnote>"],
-    "{xml}"
-  );
+  assert_all_elements(&xml, "pubnote", &[], &[
+    "<pubnote>Equal contribution alpha.</pubnote>",
+  ]);
 }
 
 /// iopart's `\ead{jborkowska astro.uni.torun.pl}` prints no address: `=2`'s reading holds no place for its words and wrote

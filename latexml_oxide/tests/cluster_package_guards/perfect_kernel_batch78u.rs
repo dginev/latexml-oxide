@@ -3,7 +3,7 @@
 //! note; `classify_thanks` reads its funding words as words; a footnote's `[\numexpr…]` is a number. Each guard
 //! converts its repro under `tools/perfect_kernel/repros/` (pdflatex-checked) and asserts the diagnostics by count and
 //! the authored content in whole elements.
-use latexml::util::test::{convert_with, normalize_markup, xml_element};
+use latexml::util::test::{assert_all_elements, convert_with};
 
 use super::{
   perfect_kernel_batch46::{error_count, warning_count},
@@ -18,21 +18,13 @@ macro_rules! repro {
   };
 }
 
-/// Every `<creator …>` element of `tex`'s XML in document order, whole (`xml_element`), against `expected`, after 0
-/// errors and 0 warnings: the creators of a title block have no id to pick one by.
+/// Every `<creator …>` element of `tex`'s XML in document order, whole (`assert_all_elements`), against `expected`,
+/// after 0 errors and 0 warnings: the creators of a title block have no id to pick one by.
 #[track_caller]
 fn assert_creators(tex: &str, expected: &[&str]) {
   let (log, xml) = convert_with(tex, Some(PRELOAD));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  let mut found = Vec::new();
-  let mut rest = xml.as_str();
-  while let Some(element) = xml_element(rest, "creator", &[]) {
-    found.push(element);
-    let open = rest.find("<creator").unwrap();
-    rest = &rest[open + 1..];
-  }
-  let expected: Vec<String> = expected.iter().map(|e| normalize_markup(e)).collect();
-  assert_eq!(found, expected, "{xml}");
+  assert_all_elements(&xml, "creator", &[], expected);
 }
 
 /// latex.ltx:17215: `Bob Beta\textsuperscript{\rm 1,\rm 2\thanks{…}}` prints "1,2" and the note's mark in the

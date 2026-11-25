@@ -83,16 +83,7 @@ fn psfig_natural_panels_are_as_wide_as_their_bounding_box() {
 }
 
 /// Every `<caption>` element of `xml` in document order.
-fn captions(xml: &str) -> Vec<String> {
-  let mut found = Vec::new();
-  let mut rest = xml;
-  while let Some(element) = latexml::util::test::xml_element(rest, "caption", &[]) {
-    found.push(element);
-    let at = rest.find("<caption").unwrap();
-    rest = &rest[at + 1..];
-  }
-  found
-}
+fn captions(xml: &str) -> Vec<String> { latexml::util::test::xml_elements(xml, "caption", &[]) }
 
 /// `--preload=[classcaptionfonts]ar5iv.sty` sets the class caption fonts knob (caption_sty.rs `CLASS_CAPTION_FONTS`):
 /// acmart sigconf's captions carry their bold label and text (acmart.cls:960-961; pdflatex LinLibertineTB), with ar5iv's

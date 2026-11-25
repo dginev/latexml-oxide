@@ -8,7 +8,7 @@
 //! calling a title-code command declares everything but what the command's run assigns, replayed under the author markup
 //! (B1: a name built at run time was lost; S2: a named one erred `undefined:\instref`); an ORCID given as its `http://`
 //! address loses no word.
-use latexml::util::test::convert_with;
+use latexml::util::test::{convert_with, xml_elements};
 use serde_json::json;
 
 use super::{
@@ -29,19 +29,6 @@ const IN_A_MACRO: &str = include_str!(
   "../../../tools/perfect_kernel/repros/sectioning-frontmatter/title_code_command_in_a_papers_macro_keeps_its_other_definitions.tex"
 );
 
-/// Each `<name …>…</name>` element of `xml`, whole, in order.
-fn elements<'a>(xml: &'a str, name: &str) -> Vec<&'a str> {
-  let (open, close) = (format!("<{name}"), format!("</{name}>"));
-  xml
-    .match_indices(&open)
-    .filter(|(start, _)| matches!(xml.as_bytes().get(start + open.len()), Some(b' ' | b'>')))
-    .map(|(start, _)| {
-      let end = start + xml[start..].find(&close).expect("closed") + close.len();
-      &xml[start..end]
-    })
-    .collect()
-}
-
 /// The title-code command's assignments (`field_notes::keep_declared`): called from the block (`\instref{1}`, the witnesses'
 /// shape) and through a paper's macro (`\myref{2}`); the variant calls it only through the macro, the path the first call's
 /// Error, raised once, would hide. Both marks stay the names'.
@@ -61,7 +48,7 @@ fn title_code_command_assigning_is_no_declaration() {
       "{xml}"
     );
     assert_eq!(
-      elements(&xml, "personname"),
+      xml_elements(&xml, "personname", &[]),
       [
         r#"<personname>Ann Able</personname>"#,
         r#"<personname>Bob Baker</personname>"#
@@ -96,7 +83,7 @@ fn title_code_command_in_a_papers_macro_keeps_its_other_definitions() {
     "{xml}"
   );
   assert_eq!(
-    elements(&xml, "personname"),
+    xml_elements(&xml, "personname", &[]),
     [
       r#"<personname>Ann Able</personname>"#,
       r#"<personname>Bob Baker</personname>"#
@@ -104,7 +91,7 @@ fn title_code_command_in_a_papers_macro_keeps_its_other_definitions() {
     "{xml}"
   );
   assert_eq!(
-    elements(&xml, "p"),
+    xml_elements(&xml, "p", &[]),
     [r#"<p xml:id="p1.1">Body: Inst One; City A.</p>"#],
     "{xml}"
   );
@@ -127,7 +114,7 @@ fn omnibus_orcid_given_as_its_address_keeps_the_id() {
     "{xml}"
   );
   // (each contact whole, its logo's SVG, the same in each, cut to its opening tag)
-  let contacts: Vec<String> = elements(&xml, "contact")
+  let contacts: Vec<String> = xml_elements(&xml, "contact", &[])
     .into_iter()
     .map(|contact| {
       let start = contact.find("<svg:svg ").expect("the logo");

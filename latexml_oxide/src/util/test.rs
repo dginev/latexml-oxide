@@ -631,7 +631,75 @@ pub fn error_count(log: &str) -> usize {
 /// 2026-09-17): a guard asserts the entire markup context of its feature, not a
 /// substring that unrelated markup can satisfy. `tag` is matched with or
 /// without the `ltx:` prefix.
+///
+/// Under `LATEXML_TEST_SHADOW=<dir>`, a call whose result differs from the first of [`xml_elements`] is appended to
+/// `<dir>/<pid>.tsv` (caller, tag, attributes, this result, that one); this result stays the one returned.
+#[track_caller]
 pub fn xml_element(xml: &str, tag: &str, attrs: &[&str]) -> Option<String> {
+  let found = first_element_by_substring(xml, tag, attrs);
+  if let Some(dir) = TEST_SHADOW.as_deref() {
+    shadow_compare(
+      dir,
+      std::panic::Location::caller(),
+      xml,
+      tag,
+      attrs,
+      found.as_deref(),
+    );
+  }
+  found
+}
+
+/// `LATEXML_TEST_SHADOW`: the directory [`xml_element`] logs its disagreements with [`xml_elements`] to.
+static TEST_SHADOW: LazyLock<Option<PathBuf>> =
+  LazyLock::new(|| std::env::var_os("LATEXML_TEST_SHADOW").map(PathBuf::from));
+
+/// Log one [`xml_element`] call whose result `old` differs from the first of [`xml_elements`].
+fn shadow_compare(
+  dir: &std::path::Path,
+  caller: &std::panic::Location,
+  xml: &str,
+  tag: &str,
+  attrs: &[&str],
+  old: Option<&str>,
+) {
+  use std::io::Write;
+  let new = element_spans(xml, tag, attrs)
+    .first()
+    .map(|&(start, end)| normalize_markup(&xml[start..end]));
+  if new.as_deref() == old {
+    return;
+  }
+  let cell = |s: Option<&str>| {
+    let s = s
+      .unwrap_or("<None>")
+      .replace('\t', "\\t")
+      .replace('\n', "\\n");
+    match s.char_indices().nth(160) {
+      Some((cut, _)) => format!("{}…", &s[..cut]),
+      None => s,
+    }
+  };
+  let line = format!(
+    "{}:{}\t{tag}\t{}\t{}\t{}\n",
+    caller.file(),
+    caller.line(),
+    attrs.join(" "),
+    cell(old),
+    cell(new.as_deref())
+  );
+  let _ = std::fs::create_dir_all(dir);
+  if let Ok(mut log) = std::fs::OpenOptions::new()
+    .create(true)
+    .append(true)
+    .open(dir.join(format!("{}.tsv", std::process::id())))
+  {
+    let _ = log.write_all(line.as_bytes());
+  }
+}
+
+/// [`xml_element`]'s own scan: the first start tag containing every `attrs` fragment, to its close.
+fn first_element_by_substring(xml: &str, tag: &str, attrs: &[&str]) -> Option<String> {
   let bare = tag.strip_prefix("ltx:").unwrap_or(tag);
   let opens = [format!("<{bare}"), format!("<ltx:{bare}")];
   let mut from = 0;
@@ -788,6 +856,292 @@ pub fn assert_element(xml: &str, tag: &str, attrs: &[&str], expected: &str) {
       attrs.join(" ")
     ),
   }
+}
+
+/// Every element `<tag …>…</tag>` of `xml` whose start tag carries every `attrs` fragment, in document order, nested
+/// ones included, each whole and normalized as [`xml_element`] returns it. Unlike [`xml_element`], markup inside a
+/// comment, CDATA section or processing instruction is no element; a `name=…` fragment matches at an attribute's start
+/// only (`id="p1"` is not `xml:id="p1"`), any other fragment anywhere in the start tag; an HTML void element (`<br>`)
+/// is its start tag.
+pub fn xml_elements(xml: &str, tag: &str, attrs: &[&str]) -> Vec<String> {
+  element_spans(xml, tag, attrs)
+    .into_iter()
+    .map(|(start, end)| normalize_markup(&xml[start..end]))
+    .collect()
+}
+
+/// The number of [`xml_elements`] of `xml`.
+pub fn element_count(xml: &str, tag: &str, attrs: &[&str]) -> usize {
+  element_spans(xml, tag, attrs).len()
+}
+
+/// Assert that `xml` holds none of the [`xml_elements`] `tag` with `attrs`; the failure prints the first one.
+#[track_caller]
+pub fn assert_no_element(xml: &str, tag: &str, attrs: &[&str]) {
+  if let Some(found) = xml_elements(xml, tag, attrs).first() {
+    panic!(
+      "unexpected <{tag} {}> element in the output\n--- found:\n{found}\n--- xml:\n{xml}",
+      attrs.join(" ")
+    );
+  }
+}
+
+/// Assert that the [`xml_elements`] `tag` with `attrs` of `xml` are EXACTLY `expected`, in order, each
+/// whitespace-normalized as [`assert_element`] normalizes.
+#[track_caller]
+pub fn assert_all_elements(xml: &str, tag: &str, attrs: &[&str], expected: &[impl AsRef<str>]) {
+  let want: Vec<String> = expected
+    .iter()
+    .map(|e| normalize_markup(e.as_ref()))
+    .collect();
+  assert_eq!(
+    xml_elements(xml, tag, attrs),
+    want,
+    "the <{tag} {}> elements differ from the expected markup\n--- xml:\n{xml}",
+    attrs.join(" ")
+  );
+}
+
+/// The character data of `markup`: tags, comments and processing instructions dropped (with no space in their place,
+/// so `2<text>021</text>` reads `2021`), CDATA kept, entities and character references decoded, XML whitespace runs
+/// collapsed to one space and the ends trimmed.
+pub fn markup_text(markup: &str) -> String {
+  let mut text = String::with_capacity(markup.len());
+  let mut pos = 0;
+  while let Some(rel) = markup[pos..].find('<') {
+    let at = pos + rel;
+    decode_entities(&markup[pos..at], &mut text);
+    pos = match markup_item(markup, at) {
+      Some((MarkupItem::Cdata, end)) => {
+        text.push_str(&markup[at + "<![CDATA[".len()..end - "]]>".len()]);
+        end
+      },
+      Some((_, end)) => end,
+      None => {
+        text.push('<');
+        at + 1
+      },
+    };
+  }
+  decode_entities(&markup[pos..], &mut text);
+  text
+    .split([' ', '\t', '\r', '\n'])
+    .filter(|word| !word.is_empty())
+    .collect::<Vec<_>>()
+    .join(" ")
+}
+
+/// Append `text` to `out` with its predefined and HTML `&nbsp;` entities and its character references decoded; an
+/// unknown or unterminated one stays as written.
+fn decode_entities(text: &str, out: &mut String) {
+  let mut rest = text;
+  while let Some(amp) = rest.find('&') {
+    out.push_str(&rest[..amp]);
+    rest = &rest[amp..];
+    let decoded = rest[1..]
+      .find(';')
+      .filter(|&semi| semi <= 32)
+      .and_then(|semi| {
+        let name = &rest[1..=semi];
+        let c = match name {
+          "amp" => Some('&'),
+          "lt" => Some('<'),
+          "gt" => Some('>'),
+          "quot" => Some('"'),
+          "apos" => Some('\''),
+          "nbsp" => Some('\u{a0}'),
+          _ => name.strip_prefix('#').and_then(|num| {
+            let code = match num.strip_prefix(['x', 'X']) {
+              Some(hex) => u32::from_str_radix(hex, 16).ok(),
+              None => num.parse().ok(),
+            };
+            code.and_then(char::from_u32)
+          }),
+        };
+        c.map(|c| (c, semi + 2))
+      });
+    match decoded {
+      Some((c, len)) => {
+        out.push(c);
+        rest = &rest[len..];
+      },
+      None => {
+        out.push('&');
+        rest = &rest[1..];
+      },
+    }
+  }
+  out.push_str(rest);
+}
+
+/// What the markup scanner of [`xml_elements`] and [`markup_text`] reads at a `<`.
+enum MarkupItem<'a> {
+  /// A start tag `<name …>`; `empty` when self-closing (`/>`) or an HTML void element.
+  Start { name: &'a str, empty: bool },
+  /// An end tag `</name>`.
+  End { name: &'a str },
+  /// `<![CDATA[…]]>`.
+  Cdata,
+  /// A comment, processing instruction or `<!DOCTYPE …>`.
+  Other,
+}
+
+/// The HTML elements with no end tag (HTML Living Standard §13.1.2 "void elements").
+const HTML_VOID_ELEMENTS: &[&str] = &[
+  "area", "base", "br", "col", "embed", "hr", "img", "input", "keygen", "link", "meta", "param",
+  "source", "track", "wbr",
+];
+
+/// The markup item starting at `xml[at] == '<'` and the byte offset just past it; `None` for a `<` that opens no
+/// markup (a stray `<` in text) or an item left unterminated.
+fn markup_item(xml: &str, at: usize) -> Option<(MarkupItem<'_>, usize)> {
+  let rest = &xml[at..];
+  let past = |open: usize, close: &str| {
+    rest[open..]
+      .find(close)
+      .map(|e| at + open + e + close.len())
+  };
+  if rest.starts_with("<!--") {
+    return Some((MarkupItem::Other, past(4, "-->")?));
+  }
+  if rest.starts_with("<![CDATA[") {
+    return Some((MarkupItem::Cdata, past(9, "]]>")?));
+  }
+  if rest.starts_with("<?") {
+    return Some((MarkupItem::Other, past(2, "?>")?));
+  }
+  if rest.starts_with("<!") {
+    return Some((MarkupItem::Other, at + start_tag_end(rest)? + 1));
+  }
+  let (closing, name_at) = if rest.starts_with("</") {
+    (true, 2)
+  } else {
+    (false, 1)
+  };
+  if !rest[name_at..]
+    .chars()
+    .next()
+    .is_some_and(|c| c.is_alphabetic() || c == '_' || c == ':')
+  {
+    return None;
+  }
+  let name_len = rest[name_at..]
+    .find(|c: char| c.is_whitespace() || c == '>' || c == '/')
+    .unwrap_or(rest.len() - name_at);
+  let name = &rest[name_at..name_at + name_len];
+  let end = start_tag_end(rest)?;
+  let item = if closing {
+    MarkupItem::End { name }
+  } else {
+    let empty = rest[..end].ends_with('/') || HTML_VOID_ELEMENTS.contains(&name);
+    MarkupItem::Start { name, empty }
+  };
+  Some((item, at + end + 1))
+}
+
+/// Whether `start_tag` carries the fragment `attr`: a `name=…` fragment starting one of its attributes, any other
+/// fragment as a substring (the fragment contract of [`xml_element`]).
+fn start_tag_has(start_tag: &str, attr: &str) -> bool {
+  let attr_name = attr.split_once('=').map(|(name, _)| name);
+  let is_attribute = attr_name.is_some_and(|name| {
+    name.starts_with(|c: char| c.is_alphabetic() || c == '_' || c == ':')
+      && name
+        .chars()
+        .all(|c| c.is_alphanumeric() || matches!(c, '_' | ':' | '.' | '-'))
+  });
+  if !is_attribute {
+    return start_tag.contains(attr);
+  }
+  let bytes = start_tag.as_bytes();
+  let mut i = start_tag
+    .find(|c: char| c.is_whitespace() || c == '>' || c == '/')
+    .unwrap_or(bytes.len());
+  loop {
+    while i < bytes.len() && bytes[i].is_ascii_whitespace() {
+      i += 1;
+    }
+    if i >= bytes.len() || matches!(bytes[i], b'>' | b'/') {
+      return false;
+    }
+    if start_tag[i..].starts_with(attr) {
+      return true;
+    }
+    // Past this attribute: its name, then an optional `= value`, quoted or bare.
+    while i < bytes.len()
+      && !matches!(bytes[i], b'=' | b'>' | b'/')
+      && !bytes[i].is_ascii_whitespace()
+    {
+      i += 1;
+    }
+    while i < bytes.len() && bytes[i].is_ascii_whitespace() {
+      i += 1;
+    }
+    if bytes.get(i) != Some(&b'=') {
+      continue;
+    }
+    i += 1;
+    while i < bytes.len() && bytes[i].is_ascii_whitespace() {
+      i += 1;
+    }
+    match bytes.get(i) {
+      Some(&q @ (b'"' | b'\'')) => {
+        i += 1
+          + start_tag[i + 1..]
+            .find(q as char)
+            .map_or(bytes.len(), |e| e + 1)
+      },
+      _ => {
+        while i < bytes.len() && !bytes[i].is_ascii_whitespace() && bytes[i] != b'>' {
+          i += 1;
+        }
+      },
+    }
+  }
+}
+
+/// The byte ranges of [`xml_elements`], in document order: one scan, each open element of the name (with or without
+/// `ltx:`) on its own stack, so an element closes at the end tag of its own name, as [`xml_element`]'s depth count.
+fn element_spans(xml: &str, tag: &str, attrs: &[&str]) -> Vec<(usize, usize)> {
+  let bare = tag.strip_prefix("ltx:").unwrap_or(tag);
+  let prefixed = format!("ltx:{bare}");
+  let names = [bare, prefixed.as_str()];
+  // Per name, its open elements: `Some(start)` for one that matches `attrs`.
+  let mut open: [Vec<Option<usize>>; 2] = [Vec::new(), Vec::new()];
+  let mut spans = Vec::new();
+  let mut pos = 0;
+  while let Some(rel) = xml[pos..].find('<') {
+    let at = pos + rel;
+    let Some((item, end)) = markup_item(xml, at) else {
+      pos = at + 1;
+      continue;
+    };
+    pos = end;
+    match item {
+      MarkupItem::Start { name, empty } => {
+        let Some(which) = names.iter().position(|n| *n == name) else {
+          continue;
+        };
+        let matches = attrs.iter().all(|a| start_tag_has(&xml[at..end], a));
+        if empty {
+          if matches {
+            spans.push((at, end));
+          }
+        } else {
+          open[which].push(matches.then_some(at));
+        }
+      },
+      MarkupItem::End { name } => {
+        if let Some(which) = names.iter().position(|n| *n == name)
+          && let Some(Some(start)) = open[which].pop()
+        {
+          spans.push((start, end));
+        }
+      },
+      MarkupItem::Cdata | MarkupItem::Other => {},
+    }
+  }
+  spans.sort_unstable();
+  spans
 }
 
 /// RelaxNG-validate a core-XML string against the repo's authoritative
@@ -1475,7 +1829,10 @@ mod exemption_audit {
 
 #[cfg(test)]
 mod element_helper_tests {
-  use super::{assert_element, normalize_markup, xml_element};
+  use super::{
+    assert_all_elements, assert_element, assert_no_element, element_count, markup_text,
+    normalize_markup, xml_element, xml_elements,
+  };
 
   const XML: &str = "<document>\n  <bibliography>\n    <biblist>\n      <bibitem key=\"a\" xml:id=\"bib.a\">\n        <bibtag role=\"refnum\">1</bibtag>\n        <bibblock>Author <emph>T</emph></bibblock>\n      </bibitem>\n      <bibitem key=\"b\"><bibtag>2</bibtag></bibitem>\n    </biblist>\n  </bibliography>\n  <graphics graphic=\"x.pdf\"/>\n</document>\n";
 
@@ -1530,6 +1887,70 @@ mod element_helper_tests {
       "bibitem",
       &["key=\"b\""],
       "<bibitem key=\"b\">\n  <bibtag>2</bibtag>\n</bibitem>",
+    );
+  }
+
+  #[test]
+  fn markup_inside_a_comment_cdata_or_pi_is_no_element() {
+    let xml = "<doc><!-- <note>old</note> --><note>a<!-- </note> -->b</note><![CDATA[<note>c</note>]]><?pi <note>p</note>?></doc>";
+    assert_eq!(xml_elements(xml, "note", &[]), [
+      "<note>a<!-- </note> -->b</note>"
+    ]);
+    assert_eq!(element_count(xml, "note", &[]), 1);
+  }
+
+  #[test]
+  fn an_attribute_fragment_sits_at_an_attribute_boundary() {
+    let xml = "<doc><p xml:id=\"p1\">a</p><p id=\"p1\" class=\"ltx_foo ltx_bar\">b</p></doc>";
+    assert_eq!(xml_elements(xml, "p", &["id=\"p1\""]), [
+      "<p class=\"ltx_foo ltx_bar\" id=\"p1\">b</p>"
+    ]);
+    assert_eq!(xml_elements(xml, "p", &["xml:id=\"p1\""]), [
+      "<p xml:id=\"p1\">a</p>"
+    ]);
+    // Other fragments keep the substring contract: a class among several, a value's prefix.
+    assert_eq!(element_count(xml, "p", &["ltx_bar"]), 1);
+    assert_eq!(element_count(xml, "p", &["class=\"ltx_foo"]), 1);
+  }
+
+  #[test]
+  fn every_element_is_returned_attribute_less_and_nested_ones_too() {
+    let xml = "<doc><g><g id=\"i\"><path/></g><text>L</text></g><gx/><g/></doc>";
+    assert_eq!(xml_elements(xml, "ltx:g", &[]), [
+      "<g><g id=\"i\"><path/></g><text>L</text></g>",
+      "<g id=\"i\"><path/></g>",
+      "<g/>"
+    ]);
+    assert_eq!(element_count(xml, "g", &["id=\"i\""]), 1);
+    assert_all_elements(xml, "g", &["id=\"i\""], &["<g id=\"i\">\n  <path/>\n</g>"]);
+    assert_no_element(xml, "g", &["id=\"zz\""]);
+    assert_no_element(xml, "graphics", &[]);
+  }
+
+  #[test]
+  #[should_panic(expected = "<g id=\"i\"><path/></g>")]
+  fn assert_no_element_names_the_element_it_found() {
+    assert_no_element("<g id=\"i\"><path/></g>", "g", &[]);
+  }
+
+  #[test]
+  fn an_html_void_element_is_its_start_tag() {
+    let html = "<p>a<br>b<br class=\"x\">c<img src=\"i.png\" alt=\"\"></p>";
+    assert_eq!(xml_elements(html, "br", &[]), ["<br>", "<br class=\"x\">"]);
+    assert_eq!(xml_elements(html, "img", &[]), [
+      "<img alt=\"\" src=\"i.png\">"
+    ]);
+    assert_eq!(xml_elements(html, "p", &[]), [normalize_markup(html)]);
+  }
+
+  #[test]
+  fn markup_text_reads_through_split_spans() {
+    assert_eq!(markup_text("2<text>021</text>"), "2021");
+    assert_eq!(
+      markup_text(
+        "<p>a &amp; b&#160;c&#x41;<!-- x --><?pi y?>&lt;d&gt;</p>\n  <p>e<![CDATA[ & f]]></p>"
+      ),
+      "a & b\u{a0}cA<d> e & f"
     );
   }
 }

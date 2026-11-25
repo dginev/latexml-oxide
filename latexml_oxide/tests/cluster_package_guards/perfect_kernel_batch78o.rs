@@ -4,7 +4,7 @@
 //! yield to an author's own; amsmath's alignment dimens are defined. Each guard converts its repro under
 //! `tools/perfect_kernel/repros/` (or a pdflatex-checked probe) and asserts no Error or Warning and the authored
 //! content in whole elements, against pdflatex.
-use latexml::util::test::{convert_with, normalize_markup, xml_element};
+use latexml::util::test::{assert_all_elements, convert_with};
 
 use super::{
   perfect_kernel_batch46::{error_count, warning_count},
@@ -13,21 +13,13 @@ use super::{
 
 const PRELOAD: &str = "ar5iv.sty";
 
-/// Every `<tag …>` element of `xml` in document order, whole (`xml_element`), against `expected`, after 0 errors and
-/// 0 warnings: the creators of a title block have no id to pick one by.
+/// Every `<tag …>` element of `xml` in document order, whole (`assert_all_elements`), against `expected`, after 0 errors
+/// and 0 warnings: the creators of a title block have no id to pick one by.
 #[track_caller]
 fn assert_each(tex: &str, tag: &str, expected: &[&str]) -> String {
   let (log, xml) = convert_with(tex, Some(PRELOAD));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  let mut found = Vec::new();
-  let mut rest = xml.as_str();
-  while let Some(element) = xml_element(rest, tag, &[]) {
-    found.push(element);
-    let open = rest.find(&format!("<{tag}")).unwrap();
-    rest = &rest[open + 1..];
-  }
-  let expected: Vec<String> = expected.iter().map(|e| normalize_markup(e)).collect();
-  assert_eq!(found, expected, "{xml}");
+  assert_all_elements(&xml, tag, &[], expected);
   xml
 }
 
