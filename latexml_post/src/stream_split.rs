@@ -42,7 +42,7 @@
 //! * **Inherited attributes** (`xml:lang`, `backgroundcolor`): nearest
 //!   ancestor-or-self value, copied onto each page root.
 //! * **Naming** ports `Split::{presort,prename,get_page_name}` including the
-//!   `FOO{n}` unnamed-page counter and its name-level-then-descend ordering.
+//!   `FOO{n}` unnamed-page counter and its document-order naming.
 //! * The root page gets `xml:id="TEMPORARY_DOCUMENT_ID"` when it has no id
 //!   (the Writer removes it later), and pre-order spill order is the DOM
 //!   path's docs order (root first, each page before its descendants).
@@ -1140,9 +1140,9 @@ impl Splitter {
   // ====================================================================
   // Deferred passes
 
-  /// Port of `Split::prename_pages` + `get_page_name` over the metadata tree
-  /// (names all children of a node, then recurses into each — the order the
-  /// `FOO{n}` counter depends on).
+  /// Port of `Split::prename_pages` + `get_page_name` over the metadata tree:
+  /// each child named, then its own children, in document order (the order the
+  /// `FOO{n}` counter and a pathname collision depend on).
   fn prename(&mut self) {
     let ext = Path::new(&self.root_destination)
       .extension()
@@ -1169,8 +1169,6 @@ impl Splitter {
         .unwrap_or(false);
       let name = self.get_page_name(child, node, ext, recursive);
       self.metas[child].name = name;
-    }
-    for &child in &children {
       self.prename_rec(child, ext, haschildren);
     }
   }

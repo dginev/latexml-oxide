@@ -1,0 +1,30 @@
+% mechanism: latexml_post split.rs PageNamer (OXIDIZED_DESIGN_DIVERGENCES #1164): pages are named in document order,
+%   each page before its children (Perl prenamePages, Split.pm L87-93); on a collision the earlier page keeps the
+%   name (our rule, OD #1164: Perl writes both pages to one file, which holds the later one) and the FOO<n> fallbacks
+%   count in document order; both split paths alike.
+% witness: synthetic (row R SPLITFIXR (a), review of SPLITFIX, probe order.tex)
+% oracle:  pdflatex 0 errors: five sections, three subsections
+% engines: rust SPLITFIX = sections named before subsections: y.html is B (A1 in S1.SS1.html), x.html is A (B1 in
+%   S2.SS1.html), FOO1.html is E, FOO2.html is C1; 4 warnings
+% expect:  --splitat=subsection --splitnaming=label --dest=index.html: x.html A, y.html A1, S2.html B, S2.SS1.html B1,
+%   S3.SS1.html C, FOO1.html C1, S5.html D, FOO2.html E; 0 errors, 4 warnings; both split paths
+% status:  GREEN (guard split_nav_relations::split_label_names_stay_in_the_destination, the order table)
+\documentclass{article}
+\begin{document}
+\section{A}\label{x}
+Text A, see \ref{y}.
+\subsection{A1}\label{y}
+Text A1.
+\section{B}\label{y/}
+Text B.
+\subsection{B1}\label{x/}
+Text B1.
+\section{C}\label{S3.SS1}
+Text C.
+\subsection{C1}
+Text C1.
+\section{D}\label{S5}
+Text D.
+\section{E}
+Text E.
+\end{document}

@@ -24848,22 +24848,27 @@ them (`Pathname.pm` L126-128: no `.` segment, a `name/..` pair collapsed, `a/../
 name and takes the page's `xml:id`, Perl's `!$name` branch (`Split.pm` L167-175), which also names the page relative
 to its parent's `xml:id` (L171 switches `$attr`: `\section{A}\label{sec}` + an unlabelled `\subsection` is
 `sec/SS1.html`). The parent page's directory is taken as written too, so the child of a `~one.html` page lies beside
-it, not under `$HOME`. One `split::PageNamer` names the pages of both split paths and keeps the pathnames it issued,
-the root's first:
+it, not under `$HOME`. One `split::PageNamer` names the pages of both split paths in document order, each page before
+its children (Perl `prenamePages`, `Split.pm` L87-93), and keeps the pathnames it issued, the root's first:
 - A pathname already issued (`\label{dup}` and `\label{dup/}`, `./x` and `x`, `\label{index}` beside `index.html`)
-  is not issued again: the page takes the fallback a missing label takes (its `xml:id`, else `FOO<n>`) with one
-  Warning naming both keys and the file. Perl and rc3 wrote both pages to one file and one was lost (Perl keeps
-  `dup/` as the hidden `dup/.html`; its `\label{index}` page replaced the root page).
+  is not issued again: the first page in document order keeps it, and a later one takes the fallback a missing label
+  takes (its `xml:id`, else `FOO<n>`, counted in document order) with one Warning naming both keys and the file. Perl
+  and rc3 wrote both pages to one file and one was lost (Perl keeps `dup/` as the hidden `dup/.html`; its
+  `\label{index}` page replaced the root page).
 - A page whose name leaves the destination's directory (`\label{../esc}`, or `..` past it under `labelrelative`) is
   an Error and takes the same fallback inside it; `a/../b` (`b`) stays and is clean. Perl's check (`Post.pm` L700-704,
-  a Fatal) tests the site directory and misses a single `../` (`pathname_is_contained`, `Pathname.pm` L186, wants a
-  separator after the `..`), so Perl writes `../esc.html` and stops only at `../../esc`. The boundary is the
-  destination's directory even under `--sitedirectory`: a page beside the destination got links that resolve nowhere
-  (`../index.html` for `out/index.html`, Perl and rc3 alike).
+  a Fatal) tests the site directory and misses a single `../` (KNOWN_PERL_ERRORS #1329), so Perl writes `../esc.html`
+  and stops only at `../../esc`. The boundary is the destination's directory even under `--sitedirectory`: a page
+  beside the destination got links that resolve nowhere (`../index.html` for `out/index.html`, Perl and rc3 alike).
+- A name with a leading `..` that stays inside (a `labelrelative` child `\label{../up}` of a foldered page) is
+  written to its pathname resolved lexically, `out/up.html` for `out/S1/../up.html`, and its links are made from it.
+- The messages name pages relative to the destination's directory, for HTML and EPUB alike, and the directory as
+  written, `.` when bare (Perl's `$dir || '.'`, `Post.pm` L697); an EPUB's is its sandbox's `OPS`, named in full.
 
 **Why**: the label is the document's text, not a path the user gave; expanding it writes outside the destination and
 leaks a filesystem path into the links, and a page written over another loses its content silently. A candidate patch
 for Perl. **Guards** `split_nav_relations::split_label_names_stay_in_the_destination` (the label matrix and the Error
 boundary table), `split_nav_relations::split_label_names_follow_perls_relative_strip`; repros
 `split-navigation/{split_labelrelative_unlabelled_page_strips_parent_id, split_label_names_collide,
-split_label_leaves_the_destination}`, `epub/split_label_collides_with_root`.
+split_label_leaves_the_destination, split_label_names_collide_in_document_order,
+split_labelrelative_page_climbs_out_of_its_folder}`, `epub/split_label_collides_with_root`.
