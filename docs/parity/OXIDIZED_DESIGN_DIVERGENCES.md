@@ -21708,7 +21708,10 @@ of every released cleveref (dated before its 2018/03/28 test; TL 2025 ships v0.2
 step (cleveref.sty:2044-2054 sets it only in `\H@refstepcounter`), is a wrapper of cleveref's
 `\cref@old@refstepcounter` (and of `\refstepcounter@noarg`, its `\let` copy) that a `package/cleveref/after` hook
 installs; algorithmicx's `\ALG@step` reads that data (2403.15855). The wrapper is defined, once, before the hook, which
-runs at once when cleveref came first (1811.08194, 1909.08399: cleveref's own load-order Error only, as pdflatex).
+runs at once when cleveref came first (1811.08194, 1909.08399: cleveref's own load-order Error only, as pdflatex), and
+installed only under cleveref's hyperref branch (`\if@cref@hyperrefloaded`, cleveref.sty:2026-2036): otherwise
+cleveref's own `\refstepcounter` (:45-56) sets the same data after the step, and the plug, which only ever runs inside
+it here, would compute it twice (1811.08194: +6.6 % instructions, the same XML).
 The hook comes with any hyperref load, the AASTeX 5.x preload's too, so an aastex + algpseudocode + cleveref document
 no longer `\xdef`s `\cref@currentprefix` into itself (1 Error before; aastex + cleveref in 0 of 35,942 census papers;
 row AAS5-HYPERREF). TL 2025's pdflatex prints "section A" for a `\cref` to a section after `\appendix` (with or without
