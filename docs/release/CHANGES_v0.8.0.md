@@ -53,7 +53,9 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     does: a `~` in them is now expanded (rc3 wrote a literal `./~/out/…` and found no image under
     `--sourcedirectory=~/…`), and `./`, `..` are resolved. A label-named page keeps a label's `~` as text and drops
     its leading `/`, as rc3 did, where Perl would expand them; its empty and `./` segments drop out, so `\label{./x}`
-    links as `x` does and `\label{/}` takes the page's id (OXIDIZED_DESIGN_DIVERGENCES #1164).
+    links as `x` does and `\label{/}` takes the page's id (OXIDIZED_DESIGN_DIVERGENCES #1164). As in Perl,
+    `--splitnaming=labelrelative` drops a parent's label only before a `.`, `_` or `:` (`section` under `sec` was
+    `tion`), and a run of `:` in a page name is one `_`.
 
 ### 0.8.0-rc3
 

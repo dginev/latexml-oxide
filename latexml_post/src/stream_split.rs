@@ -1225,18 +1225,15 @@ impl Splitter {
           let pname = pname.split_whitespace().next().unwrap_or("");
           let pname =
             crate::split::page_name_segments(pname.strip_prefix("LABEL:").unwrap_or(pname));
-          if let Some(rest) = name.strip_prefix(pname.as_str()) {
-            let rest = rest.trim_start_matches(['.', '_', ':']);
-            if !rest.is_empty() {
-              name = rest.to_string();
-            }
+          if let Some(rest) = crate::split::strip_parent_name(&name, &pname) {
+            name = rest;
           }
         }
         recursive
       },
       _ => false,
     };
-    name = name.replace(':', "_");
+    name = crate::split::colons_to_underscore(&name);
     crate::split::page_pathname(&self.metas[parent].name, &name, ext, as_dir)
   }
 

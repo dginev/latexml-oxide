@@ -24448,8 +24448,10 @@ natbib_entry_constructor_is_binding_private` (author "Batselier et al.", no full
 `pathname_canonical` over the whole path, the label included: under `--splitnaming=label` a page `\label{~one}` is
 `$HOME` + `one.html`, outside the site directory (Perl then stops: "The destination directory … must be within the
 siteDirectory"), and `\label{/x}` beside a root with no directory is the absolute `/x.html`.
-**Rust behavior**: `split::page_name_segments` takes the label's path segments as Perl's `pathname_make` does, without
-empty and `.` ones (`./x` and `a//b` are `x` and `a/b`), but with no `~` expansion and no root, so the page is
+**Rust behavior**: `split::page_name_segments` takes the label's path segments as Perl's `pathname_canonical` leaves
+them (`Pathname.pm` L126-128: no `.` segment, a `name/..` pair collapsed, `a/../b` is `b`), and drops empty segments too
+(Perl keeps `a//b`, and a trailing `/` makes its page the hidden `a/.html`; ours is `a/b.html`, `a.html`), but with no
+`~` expansion and no root, so the page is
 `~one.html` or `x.html` in the destination, as rc3 wrote them; a label of separators alone (`\label{/}`) is an empty
 name and takes the page's `xml:id`, Perl's `!$name` branch (`Split.pm` L167-175). A `../` in the label is kept, so `\label{../esc}`
 still lies outside the destination, where Perl and rc3 put it, and its links keep the `../`. The parent page's

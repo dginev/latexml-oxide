@@ -423,11 +423,8 @@ impl Split {
         if let Some(pname) = parent_attr {
           let pname = pname.split_whitespace().next().unwrap_or("");
           let pname = page_name_segments(pname.strip_prefix("LABEL:").unwrap_or(pname));
-          if let Some(rest) = name.strip_prefix(pname.as_str()) {
-            let rest = rest.trim_start_matches(['.', '_', ':']);
-            if !rest.is_empty() {
-              name = rest.to_string();
-            }
+          if let Some(rest) = strip_parent_name(&name, &pname) {
+            name = rest;
           }
         }
         recursive
@@ -435,8 +432,7 @@ impl Split {
       _ => false,
     };
 
-    // Sanitize colons
-    name = name.replace(':', "_");
+    name = colons_to_underscore(&name);
 
     let ext = doc
       .get_destination_extension()
@@ -445,15 +441,44 @@ impl Split {
   }
 }
 
-/// A label as a page name: its path segments, without empty and `.` ones (`/x`, `./x`, `a//b` are `x`, `x`, `a/b`), as
-/// Perl's `pathname_make` reads them, but no `~` expansion and no root (OD #1164); a `..` stays. A name of separators
-/// alone is empty, so it takes the unnamed page's fallback (`Split.pm` L167-175). `\` separates only on Windows.
+/// A label as a page name: its path segments as Perl's `pathname_canonical` leaves them (`Pathname.pm` L126-128) — no
+/// empty or `.` segment, a `name/..` pair collapsed (`./x`, `a//b`, `a/../b` are `x`, `a/b`, `b`), a leading `..` kept —
+/// but with no `~` expansion and no root (OD #1164). A name of separators alone is empty, so it takes the unnamed page's
+/// fallback (`Split.pm` L167-175). `\` separates only on Windows.
 pub(crate) fn page_name_segments(name: &str) -> String {
-  name
-    .split(std::path::is_separator)
-    .filter(|segment| !segment.is_empty() && *segment != ".")
-    .collect::<Vec<_>>()
-    .join("/")
+  let mut segments: Vec<&str> = Vec::new();
+  for segment in name.split(std::path::is_separator) {
+    match segment {
+      "" | "." => {},
+      ".." if segments.last().is_some_and(|last| *last != "..") => {
+        segments.pop();
+      },
+      _ => segments.push(segment),
+    }
+  }
+  segments.join("/")
+}
+
+/// A relative page name: the name less its parent's and at least one `.`, `_` or `:` after it, Perl's
+/// `/^\Q$pname\E(\.|_|:)+(.*)$/` (`Split.pm` L180-181), as [`page_name_segments`]; `None` keeps the whole name.
+pub(crate) fn strip_parent_name(name: &str, parent: &str) -> Option<String> {
+  let rest = name
+    .strip_prefix(parent)
+    .filter(|rest| !parent.is_empty() && rest.starts_with(['.', '_', ':']))?;
+  Some(page_name_segments(rest.trim_start_matches(['.', '_', ':']))).filter(|rest| !rest.is_empty())
+}
+
+/// Every run of `:` in a page name as one `_`, Perl's `s/:+/_/g` (`Split.pm` L183).
+pub(crate) fn colons_to_underscore(name: &str) -> String {
+  let mut out = String::with_capacity(name.len());
+  for (i, c) in name.char_indices() {
+    if c != ':' {
+      out.push(c);
+    } else if !name[..i].ends_with(':') {
+      out.push('_');
+    }
+  }
+  out
 }
 
 /// A page's pathname beside its parent's, or (`as_dir`) as `index` in a folder of its name: Perl `Split::getPageName`'s
@@ -593,4 +618,43 @@ fn is_child(child: &Node, ancestor: &Node) -> bool {
     parent = p.get_parent();
   }
   false
+}
+
+#[cfg(test)]
+mod page_name_tests {
+  use super::*;
+
+  /// A label becomes a page name as Perl's `Split::getPageName` and `pathname_canonical` make it (`Split.pm` L180-183,
+  /// `Pathname.pm` L126-128), less the `~` expansion and the root (OD #1164).
+  #[test]
+  fn page_names_take_perls_segments_strip_and_colons() {
+    for (label, name) in [
+      ("/x", "x"),
+      ("./x", "x"),
+      ("a//b/", "a/b"),
+      ("a/./b", "a/b"),
+      ("a/../b", "b"),
+      ("a/../..", ".."),
+      ("../esc", "../esc"),
+      ("../../x", "../../x"),
+      ("a/..", ""),
+      ("/", ""),
+      ("~one", "~one"),
+    ] {
+      assert_eq!(page_name_segments(label), name, "{label}");
+    }
+    assert_eq!(
+      page_name_segments("a\\b"),
+      if cfg!(windows) { "a/b" } else { "a\\b" }
+    );
+    assert_eq!(strip_parent_name("section", "sec"), None);
+    assert_eq!(
+      strip_parent_name("sec:./dot", "sec").as_deref(),
+      Some("dot")
+    );
+    assert_eq!(strip_parent_name("sec._x", "sec").as_deref(), Some("x"));
+    assert_eq!(strip_parent_name("sec:", "sec"), None);
+    assert_eq!(strip_parent_name("x", ""), None);
+    assert_eq!(colons_to_underscore("sec:::1:a"), "sec_1_a");
+  }
 }

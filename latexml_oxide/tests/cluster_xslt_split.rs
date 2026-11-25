@@ -1449,6 +1449,72 @@ mod split_nav_relations {
     files
   }
 
+  /// Every relative link of every split page under `work` names a file (`#` fragments and absolute URLs left out).
+  fn assert_split_links_resolve(work: &Path, case: &str) {
+    for (page, links) in split_hrefs(work) {
+      let dir = work.join(&page).parent().unwrap().to_path_buf();
+      for link in &links {
+        let target = link.split('#').next().unwrap();
+        if target.is_empty() || link.contains("://") {
+          continue;
+        }
+        assert!(
+          !target.starts_with('/') && dir.join(target).is_file(),
+          "{case}, {page}: {link} does not resolve ({links:?})"
+        );
+      }
+    }
+  }
+
+  /// `labelrelative` drops the parent's label from a child's only with a `.`, `_` or `:` after it, Perl's
+  /// `/^\Q$pname\E(\.|_|:)+(.*)$/` (`Split.pm` L180-181): `section` under `sec` stays `section` (rc3: `tion`). What
+  /// remains is a page name like any other (`sec:./dot` is `dot`, not the rooted `/dot`), a run of `:` is one `_`
+  /// (`s/:+/_/g`, L183: `sec::a::b` is `a_b`), and `up/../b` is `b`, as `pathname_canonical` collapses it (rc3:
+  /// `up/../b/index.html`, which made `up/`). On both split paths, every link resolving.
+  #[test]
+  fn split_label_names_follow_perls_relative_strip() {
+    const DOC: &str = "\\documentclass{article}\n\\begin{document}\n\\section{Sec}\\label{sec}\nA.\n\
+                       \\subsection{Section}\\label{section}\nB.\n\\subsection{Dot}\\label{sec:./dot}\nC.\n\
+                       \\subsection{Colons}\\label{sec::a::b}\nD.\n\\section{Up}\\label{up/../b}\nE \\ref{sec:./dot}.\n\
+                       \\end{document}\n";
+    for stream in ["1", "0"] {
+      let work = tempfile::tempdir().expect("tempdir");
+      std::fs::write(work.path().join("doc.tex"), DOC).unwrap();
+      let output = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+        .args([
+          "doc.tex",
+          "--splitat=subsection",
+          "--splitnaming=labelrelative",
+          "--format=html5",
+          "--dest=index.html",
+        ])
+        .env("LATEXML_POST_STREAM_SPLIT", stream)
+        .current_dir(work.path())
+        .output()
+        .expect("spawn latexml_oxide");
+      let case = format!("stream {stream}");
+      assert!(
+        output.status.success(),
+        "{case}: {}",
+        String::from_utf8_lossy(&output.stderr)
+      );
+      assert_eq!(
+        html_files(work.path()),
+        [
+          "b/index.html",
+          "index.html",
+          "sec/a_b.html",
+          "sec/dot.html",
+          "sec/index.html",
+          "sec/section.html"
+        ],
+        "{case}"
+      );
+      assert!(!work.path().join("up").exists(), "{case}: a stray up/");
+      assert_split_links_resolve(work.path(), &case);
+    }
+  }
+
   /// A page named after a label is written where the label says, inside the destination, and so are its child pages
   /// (OXIDIZED_DESIGN_DIVERGENCES #1164): no `~` expansion and no root (Perl's `pathname_make` makes `\label{~one}`
   /// `$HOME`one and `\label{/x}` the absolute `/x.html`), empty and `.` segments dropped as Perl drops them
@@ -1521,19 +1587,7 @@ mod split_nav_relations {
           );
           let expected: Vec<String> = expected.iter().map(|f| format!("w/{folder}{f}")).collect();
           assert_eq!(html_files(root.path()), expected, "{case}");
-          for (page, links) in split_hrefs(&work) {
-            let dir = work.join(&page).parent().unwrap().to_path_buf();
-            for link in &links {
-              let target = link.split('#').next().unwrap();
-              if target.is_empty() || link.contains("://") {
-                continue;
-              }
-              assert!(
-                !target.starts_with('/') && dir.join(target).is_file(),
-                "{case}, {page}: {link} does not resolve ({links:?})"
-              );
-            }
-          }
+          assert_split_links_resolve(&work, &case);
         }
       }
     }
