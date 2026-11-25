@@ -134,10 +134,10 @@ static ATOMIC_TMP_SEQ: AtomicU64 = AtomicU64::new(0);
 /// `.<stem>.tmp.<pid>.<seq>.<ext>` (the stem [bounded](bounded_name)), its extension kept last
 /// for converters that read the format from it; registered with the watchdog's exit sweep, and
 /// removed when dropped — after an install too, since a rename onto a hard link of the same file
-/// succeeds and leaves both names (POSIX `rename(2)`; a graphics-cache entry linked into the
-/// destination by a sibling worker). A name some file already holds — a killed run's leftover,
-/// perhaps a link to a cache entry, or a process with the same pid in another PID namespace
-/// sharing the cache — is skipped, never written through.
+/// succeeds and leaves both names (POSIX `rename(2)`; a destination an older binary hard-linked to
+/// a graphics-cache entry). A name some file already holds — a killed run's leftover, perhaps a
+/// link to a cache entry, or a process with the same pid in another PID namespace sharing the
+/// cache — is skipped, never written through.
 pub struct Staged {
   path:     PathBuf,
   _on_exit: latexml_core::watchdog::RemoveOnExit,
@@ -159,30 +159,6 @@ impl Staged {
       {
         Ok(file) => return Ok((Self::at(path), file)),
         Err(e) if e.kind() == io::ErrorKind::AlreadyExists => continue,
-        Err(e) => return Err(e),
-      }
-    }
-  }
-
-  /// [`Self::beside`], made a hard link to `src`; `None` where the filesystem can't link it here.
-  fn link(src: &Path, dest: &Path) -> io::Result<Option<Self>> {
-    loop {
-      let path = free_path(dest);
-      match fs::hard_link(src, &path) {
-        Ok(()) => return Ok(Some(Self::at(path))),
-        Err(e) if e.kind() == io::ErrorKind::AlreadyExists => continue,
-        // Another filesystem, or one without (more) hard links: the caller copies.
-        Err(e)
-          if matches!(
-            e.kind(),
-            io::ErrorKind::CrossesDevices
-              | io::ErrorKind::PermissionDenied
-              | io::ErrorKind::TooManyLinks
-              | io::ErrorKind::Unsupported
-          ) =>
-        {
-          return Ok(None);
-        },
         Err(e) => return Err(e),
       }
     }
@@ -295,21 +271,14 @@ pub fn write_atomic(dest: &Path, bytes: &[u8]) -> io::Result<()> {
 
 /// Atomically copy `src` to `dest` through a [`Staged`] file. Copying a file onto itself is
 /// refused: it would only rewrite it, and a caller that then changes `dest` would change its source.
-pub fn copy_atomic(src: &Path, dest: &Path) -> io::Result<()> { place_atomic(src, dest, false) }
-
-/// [`copy_atomic`] by a hard link where the filesystem allows one, for an immutable artefact
-/// (a graphics-cache entry) whose readers replace it, never write through it.
-pub fn link_atomic(src: &Path, dest: &Path) -> io::Result<()> { place_atomic(src, dest, true) }
-
-fn place_atomic(src: &Path, dest: &Path, link: bool) -> io::Result<()> {
+/// The copy is `dest`'s own: a hard link let an edit of one graphics output in place rewrite the
+/// cache entry and every other document's copy (GFXHARDLINK).
+pub fn copy_atomic(src: &Path, dest: &Path) -> io::Result<()> {
   if same_file(src, dest) {
     return Err(io::Error::other(format!(
       "{} is the source itself",
       dest.display()
     )));
-  }
-  if link && let Some(staged) = Staged::link(src, dest)? {
-    return staged.install(dest);
   }
   let (staged, file) = Staged::create(dest)?;
   drop(file);
@@ -615,8 +584,9 @@ mod tests {
   }
 
   /// A rename onto a hard link of the same file succeeds and keeps both names (POSIX): a
-  /// graphics-cache entry a sibling worker linked into the destination left every later worker's
-  /// staged link behind.
+  /// graphics-cache entry a sibling worker linked into the destination (before GFXHARDLINK's copy
+  /// delivery; a destination an older binary wrote is still one) left every later worker's staged
+  /// link behind.
   #[test]
   fn a_stage_installed_onto_its_own_hard_link_is_removed() {
     let dir = tempfile::tempdir().unwrap();
@@ -657,7 +627,7 @@ mod tests {
 
   /// A temp name already taken — a killed run's leftover, perhaps a hard link to a graphics-cache
   /// entry, or a process with the same pid in another PID namespace sharing the cache — is never
-  /// written through: `write_atomic`, `link_atomic` and `copy_atomic` take the next name.
+  /// written through: `write_atomic` and `copy_atomic` take the next name.
   #[test]
   fn a_taken_temp_name_is_never_written_through() {
     let dir = tempfile::tempdir().unwrap();
@@ -665,7 +635,7 @@ mod tests {
     fs::write(&sentinel, b"<svg>site</svg>").unwrap();
     let src = dir.path().join("cached.svg");
     fs::write(&src, b"<svg>new</svg>").unwrap();
-    let dests = ["w.svg", "l.svg", "c.svg"].map(|name| dir.path().join(name));
+    let dests = ["w.svg", "c.svg"].map(|name| dir.path().join(name));
     let next = ATOMIC_TMP_SEQ.load(Ordering::Relaxed);
     for dest in &dests {
       for seq in next..next + 64 {
@@ -673,8 +643,7 @@ mod tests {
       }
     }
     write_atomic(&dests[0], b"<svg>new</svg>").unwrap();
-    link_atomic(&src, &dests[1]).unwrap();
-    copy_atomic(&src, &dests[2]).unwrap();
+    copy_atomic(&src, &dests[1]).unwrap();
     assert_eq!(fs::read(&sentinel).unwrap(), b"<svg>site</svg>");
     for dest in &dests {
       assert_eq!(

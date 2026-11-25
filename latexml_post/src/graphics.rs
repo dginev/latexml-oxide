@@ -873,8 +873,8 @@ impl Graphics {
   /// their own units. Clamped to the page, never padded, as the raster crop.
   /// `Ok(false)` when the box keeps the whole page; `Err` when the root lacks a
   /// usable `viewBox`, `width` or `height`, and the caller renders a raster to
-  /// crop instead. Replaces the file by rename ([`crate::writer::write_atomic`]; it may be a cache
-  /// hard link). Witness 2605.06510 (`trim=0cm 0.25cm 0cm 0.1cm,clip` on PDF legends).
+  /// crop instead. Replaces the file by rename ([`crate::writer::write_atomic`]; one an older binary
+  /// wrote may be a hard link to a cache entry). Witness 2605.06510 (`trim=0cm 0.25cm 0cm 0.1cm,clip` on PDF legends).
   fn crop_svg_inplace(path: &str, op: &GraphicxOp) -> Result<bool, String> {
     use latexml_core::util::image::{svg_attr_value, svg_root_tag};
     let text = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
@@ -946,8 +946,8 @@ impl Graphics {
   /// the size the remaining (scaling and turning) ops then apply to — or
   /// `None` when nothing was cropped.
   ///
-  /// The result replaces `dest` by rename, never by writing through it: the
-  /// graphics cache may have hard-linked `dest` to its own copy.
+  /// The result replaces `dest` by rename, never by writing through it: a `dest`
+  /// an older binary wrote may be a hard link to a graphics-cache entry.
   fn transform_raster_inplace(
     dest: &str,
     ops: &[GraphicxOp],

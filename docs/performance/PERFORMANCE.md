@@ -1575,7 +1575,9 @@ structural math output on math-heavy fixtures before treating it as a win.
 - **Persistent on-disk cache** — SHA-256 of `source‖page‖density‖target-ext` at
   `$XDG_CACHE_HOME/latexml-oxide/graphics/<aa>/<hash>.<ext>` + `.dims` sidecar
   (Perl `LaTeXML.cache` parity). Multi-process safe (tmp+atomic rename,
-  hardlink-on-read, `flock` LRU). Warm 9.55→5.07 s on 1909.03909. Overrides:
+  copy-on-read — a hard link let an edited output rewrite the entry, GFXHARDLINK — and a `flock` LRU
+  that prunes to 90 % of the cap and walks only when a `.usage` tally passes it or an hour after
+  the last walk, GCACHECHURN). Warm 9.55→5.07 s on 1909.03909. Overrides:
   `LATEXML_GRAPHICS_CACHE_OFF=1`, `LATEXML_GRAPHICS_CACHE_DIR`,
   `LATEXML_GRAPHICS_CACHE_MAX_MB` (default 2048).
 - **Vector-SVG fast path** (#902) — `--graphics-svg-threshold-kb N` bypasses

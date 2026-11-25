@@ -50,6 +50,7 @@
 //!   `$XDG_CACHE_HOME/latexml-oxide/graphics/<aa>/<full-hash>.<ext>`
 //!   `$XDG_CACHE_HOME/latexml-oxide/graphics/<aa>/<full-hash>.<ext>.dims`
 //!   `$XDG_CACHE_HOME/latexml-oxide/graphics/.prune.lock`
+//!   `$XDG_CACHE_HOME/latexml-oxide/graphics/.usage`
 //!
 //! Sharded by the first two hex characters of the hash to keep any one
 //! directory's entry count bounded (worst case ~1/256th of the total
@@ -62,40 +63,46 @@
 //! The cache is designed to be shared by parallel `cortex_worker`
 //! processes within a canvas sweep. Concurrency guarantees:
 //!
-//! 1. **Concurrent writes to the same key**: each writer links or copies into a private
+//! 1. **Concurrent writes to the same key**: each writer copies into a private
 //!    `.<stem>.tmp.<pid>.<seq>.<ext>` file ([`crate::writer::Staged`]) then issues a single
 //!    `rename(2)` into the final path. `rename` is atomic on the same filesystem; if two writers
 //!    race, the last `rename` wins, and because both sources are byte-equivalent the outcome is
 //!    correct.
-//! 2. **Concurrent reads + writes**: a reader hardlinks the cached file into the destination, the
-//!    same way (a staged link renamed onto it). POSIX
-//!    `link(2)` either succeeds (returning a new directory entry that survives any subsequent
-//!    `unlink` of the source) or fails cleanly. If the cache file is unlinked between hash
-//!    computation and link, the reader gets a miss and falls through — no data corruption.
+//! 2. **Concurrent reads + writes**: a reader copies the cached file into the destination the same
+//!    way (a staged copy renamed onto it). An entry the writers replace by rename is never written
+//!    through, so the reader's open file keeps the bytes it opened. If the cache file is unlinked
+//!    between hash computation and the copy, the reader gets a miss and falls through — no data
+//!    corruption.
 //! 3. **Concurrent prunes**: prune holds `flock(LOCK_EX | LOCK_NB)` on `.prune.lock`. If another
 //!    process already holds the lock, this one skips its prune attempt. Only one prune runs at a
 //!    time per machine. The prune itself walks the dir, sorts by mtime, deletes oldest until under
-//!    cap — and tolerates `ENOENT` (another writer could have re-used the entry concurrently). It
-//!    also removes every `.tmp.` sidecar changed (ctime on Unix) over an hour ago: a killed process's
-//!    unfinished install.
-//! 4. **Hardlinked dest ↔ cache**: when `link_or_copy` hardlinks the cache file into the
-//!    destination, that hardlink is independent of the cache lifecycle. Even if a prune deletes the
-//!    cache entry afterwards, the destination's hardlink keeps the data alive on the filesystem.
+//!    the low-water mark — and tolerates `ENOENT` (another writer could have re-used the entry
+//!    concurrently). It also removes every `.tmp.` sidecar changed (ctime on Unix) over an hour ago:
+//!    a killed process's unfinished install.
+//! 4. **The usage tally**: `.usage` holds the bytes the last walk counted plus every insertion
+//!    since, and when that walk ran; an insertion adds its size under an exclusive lock on the file
+//!    (held for one read and one write). Drift — an entry two racing writers both count, one
+//!    removed by hand, one an older binary added — lasts until the next walk recounts.
+//! 5. **Destination ↔ cache**: every destination holds its own copy, so an output edited in place
+//!    (a post-processing step, a user) changes neither the cache entry nor another document's copy,
+//!    and a prune that deletes the entry leaves every destination whole.
 //!
-//! These guarantees hold on any POSIX filesystem. On Windows (which
-//! lacks robust `flock`), the prune lock is a best-effort `OpenOptions`
-//! create-new sentinel — same correctness, slightly more retry traffic.
+//! These guarantees hold on any POSIX filesystem, and on Windows, where `File::lock` is
+//! `LockFileEx`. (The prune lock there was a `create_new` sentinel no one removed, so no prune ran
+//! after a cache's first insertion.)
 //!
 //! ## Lifecycle
 //!
-//! * **Hit**: hardlink the cache file into the destination (zero-copy on the same filesystem). If
-//!   hardlink fails (cross-filesystem, EXDEV), fall back to a regular file copy. Read the `.dims`
-//!   sidecar if present.
+//! * **Hit**: copy the cache file into the destination (`fs::copy`, which shares the extents where the
+//!   filesystem can: Linux `copy_file_range` on btrfs or XFS). Read the `.dims` sidecar if present.
 //! * **Miss-then-success**: copy the produced destination back into the cache. Write the `.dims`
 //!   sidecar alongside.
-//! * **LRU prune**: each insertion checks the on-disk total against the cap
-//!   (`LATEXML_GRAPHICS_CACHE_MAX_MB`, default 2048 = 2 GB). When over cap, holds the prune lock,
-//!   sorts entries by mtime ascending, deletes until under cap. File access on read also refreshes
+//! * **LRU prune**: each insertion adds its size to the usage tally and checks it against the cap
+//!   (`LATEXML_GRAPHICS_CACHE_MAX_MB`, default 2048 = 2 GB). Over the cap, or an hour after the
+//!   last walk (which also recounts the tally and reclaims stale `.tmp.` files), it holds the prune
+//!   lock, walks the cache, sorts entries by mtime ascending and deletes the oldest until the total
+//!   is under 90 % of the cap, so the next tenth of the cap is inserted without a walk (each walk
+//!   stats every entry: 20-29 ms on a 2 GB cache, GCACHECHURN). File access on read also refreshes
 //!   the mtime so frequently-hit entries survive.
 //!
 //! ## Disable / tune
@@ -325,16 +332,17 @@ fn dims_sidecar(cache_file: &Path) -> PathBuf {
   PathBuf::from(s)
 }
 
-/// Hard-link (else copy) `src` to `dst` through a staged file and one rename
-/// ([`crate::writer::link_atomic`]): a reader of `dst` never sees it half-written, and a link is
-/// safe because graphics outputs are immutable artefacts. Returns `true` on success.
-fn link_or_copy(src: &Path, dst: &Path) -> bool {
+/// Copy `src` to `dst` through a staged file and one rename ([`crate::writer::copy_atomic`]): a
+/// reader of `dst` never sees it half-written, and the copy is `dst`'s own, so an output edited in
+/// place changes neither the cache entry nor another document's copy (a hard link did, GFXHARDLINK).
+/// `fs::copy` shares the extents where the filesystem can (Linux `copy_file_range` on btrfs, XFS).
+fn deliver(src: &Path, dst: &Path) -> bool {
   if let Some(parent) = dst.parent()
     && fs::create_dir_all(parent).is_err()
   {
     return false;
   }
-  crate::writer::link_atomic(src, dst).is_ok()
+  crate::writer::copy_atomic(src, dst).is_ok()
 }
 
 /// Read a `.dims` sidecar if present.
@@ -364,7 +372,7 @@ pub struct CacheHit {
   pub dims: Option<CachedDims>,
 }
 
-/// Look the cache up. On hit: hardlink/copy into `dest`, refresh the
+/// Look the cache up. On hit: copy into `dest`, refresh the
 /// cache entry's mtime, return `Some(CacheHit{dims})`. On miss or any
 /// I/O hiccup, return `None` so the caller falls through to a real
 /// conversion.
@@ -389,7 +397,7 @@ fn lookup_digest(
     MISSES.fetch_add(1, Ordering::Relaxed);
     return None;
   }
-  if !link_or_copy(&cached, Path::new(dest)) {
+  if !deliver(&cached, Path::new(dest)) {
     MISSES.fetch_add(1, Ordering::Relaxed);
     return None;
   }
@@ -440,25 +448,30 @@ fn store_digest(
   };
   let cached = cache_path(&root, &hash, key.ext);
   // A sidecar without its entry is never reclaimed: the prune removes one only with its entry.
-  if install(Path::new(dest), &cached)
+  let added = install(Path::new(dest), &cached);
+  if added.is_some()
     && let Some(d) = dims
   {
     write_dims_sidecar(&dims_sidecar(&cached), d);
   }
   // Best-effort LRU prune after insert (process-locked).
-  prune_if_over_cap(&root);
+  prune_if_over_cap(&root, added.unwrap_or(0));
 }
 
-/// Install `dest` as the cache entry `cached`, unless an entry is already there; whether an entry is in place after.
-/// Concurrent writers each stage a private link or copy and race the rename ([`link_or_copy`]): the
-/// last wins, and both are the same bytes. A killed install's staged `.tmp.` file is reclaimed by
-/// the prune's `STALE_TMP_AGE` sweep (33k such files in the fleet's cache by 2026-11-16).
-fn install(dest: &Path, cached: &Path) -> bool {
+/// Install `dest` as the cache entry `cached`, unless an entry is already there: the bytes it added (`0` when an
+/// entry was in place), `None` when no entry is in place after.
+/// Concurrent writers each stage a private copy and race the rename ([`deliver`]): the last wins,
+/// and both are the same bytes. A killed install's staged `.tmp.` file is reclaimed by the prune's
+/// `STALE_TMP_AGE` sweep (33k such files in the fleet's cache by 2026-11-16).
+fn install(dest: &Path, cached: &Path) -> Option<u64> {
   if cached.is_file() {
     let _ = touch_now(cached);
-    return true;
+    return Some(0);
   }
-  link_or_copy(dest, cached) || cached.is_file()
+  if deliver(dest, cached) {
+    return Some(fs::metadata(cached).map_or(0, |meta| meta.len()));
+  }
+  cached.is_file().then_some(0)
 }
 
 fn touch_now(p: &Path) -> std::io::Result<()> {
@@ -469,14 +482,9 @@ fn touch_now(p: &Path) -> std::io::Result<()> {
   Ok(())
 }
 
-/// Acquire an advisory exclusive lock on the prune sentinel file. The
-/// lock is held for the lifetime of the returned handle. `None` =>
-/// another process already holds the lock; skip the prune.
-///
-/// On Unix uses `flock(LOCK_EX | LOCK_NB)` (`File::try_lock`). On Windows the lock is a
-/// best-effort `create_new` sentinel; multi-process correctness is
-/// still preserved because the prune itself is `ENOENT`-tolerant.
-#[cfg(unix)]
+/// Acquire an advisory exclusive lock on the prune sentinel file (`File::try_lock`: `flock` on
+/// Unix, `LockFileEx` on Windows), held for the lifetime of the returned handle and released when
+/// its process dies. `None` => another process already holds the lock; skip the prune.
 fn acquire_prune_lock(root: &Path) -> Option<fs::File> {
   let lock_path = root.join(".prune.lock");
   let _ = fs::create_dir_all(root);
@@ -489,38 +497,89 @@ fn acquire_prune_lock(root: &Path) -> Option<fs::File> {
   file.try_lock().is_ok().then_some(file)
 }
 
-#[cfg(not(unix))]
-fn acquire_prune_lock(root: &Path) -> Option<fs::File> {
-  let lock_path = root.join(".prune.lock");
-  let _ = fs::create_dir_all(root);
-  fs::File::options()
-    .create_new(true)
+/// The share of the cap a prune leaves filled: the next tenth of the cap is inserted without a walk.
+const LOW_WATER_PERCENT: u64 = 90;
+
+/// The usage tally, `.usage` in the cache root: the bytes of the entries the last walk kept plus
+/// every insertion's since, and when (Unix seconds) that walk ran.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct Usage {
+  bytes:  u64,
+  walked: u64,
+}
+
+/// The usage tally's file, opened under an exclusive lock (blocking; held for one read and one
+/// write, released when the handle drops).
+fn lock_usage(root: &Path) -> Option<fs::File> {
+  let file = fs::File::options()
+    .read(true)
     .write(true)
-    .open(&lock_path)
-    .ok()
+    .create(true)
+    .truncate(false)
+    .open(root.join(".usage"))
+    .ok()?;
+  file.lock().ok()?;
+  Some(file)
 }
 
-#[cfg(not(unix))]
-fn release_prune_lock(root: &Path, _f: fs::File) {
-  let _ = fs::remove_file(root.join(".prune.lock"));
+/// The tally `file` holds; `None` when it is empty (new) or unreadable (a write a kill cut short).
+fn read_usage(file: &mut fs::File) -> Option<Usage> {
+  use std::io::{Seek, SeekFrom};
+  let mut raw = String::new();
+  file.seek(SeekFrom::Start(0)).ok()?;
+  file.read_to_string(&mut raw).ok()?;
+  let mut lines = raw.lines();
+  Some(Usage {
+    bytes:  lines.next()?.parse().ok()?,
+    walked: lines.next()?.parse().ok()?,
+  })
 }
 
-/// Walk the cache, total up sizes, and if over the cap delete oldest
-/// entries (by mtime) until under; remove the `.tmp.` files older than
-/// [`STALE_TMP_AGE`]. Errors are non-fatal. Only one process performs a
-/// prune at a time (advisory lock). Without a cap (`0`) it returns at
-/// once, so stale tmp files stay too.
-fn prune_if_over_cap(root: &Path) {
+fn write_usage(file: &mut fs::File, usage: Usage) {
+  use std::io::{Seek, SeekFrom, Write};
+  let body = format!("{}\n{}\n", usage.bytes, usage.walked);
+  let _ = file
+    .seek(SeekFrom::Start(0))
+    .and_then(|_| file.set_len(0))
+    .and_then(|_| file.write_all(body.as_bytes()));
+}
+
+fn unix_secs(t: std::time::SystemTime) -> u64 {
+  t.duration_since(std::time::UNIX_EPOCH)
+    .map_or(0, |d| d.as_secs())
+}
+
+/// Count an insertion of `added` bytes, and prune when that is due ([`prune_if_due`]). Errors are
+/// non-fatal. Without a cap (`0`) it returns at once, so stale tmp files stay too.
+fn prune_if_over_cap(root: &Path, added: u64) {
+  prune_if_due(root, added, max_bytes(), std::time::SystemTime::now())
+}
+
+/// [`prune_if_over_cap`] under `cap` at time `now`: the cache is walked and pruned when the tally
+/// passes the cap, when its last walk is over [`STALE_TMP_AGE`] old, or when there is no tally.
+fn prune_if_due(root: &Path, added: u64, cap: u64, now: std::time::SystemTime) {
+  if cap == 0 {
+    return;
+  }
   // A clock under an hour past the epoch has no stale tmp; the size cap still applies.
-  let now = std::time::SystemTime::now();
   let stale_before = now
     .checked_sub(STALE_TMP_AGE)
     .unwrap_or(std::time::UNIX_EPOCH);
-  prune_if_over_cap_at(root, stale_before);
+  let due = lock_usage(root).is_none_or(|mut file| match read_usage(&mut file) {
+    Some(usage) => {
+      let bytes = usage.bytes.saturating_add(added);
+      write_usage(&mut file, Usage { bytes, ..usage });
+      bytes > cap || usage.walked < unix_secs(stale_before)
+    },
+    None => true,
+  });
+  if due {
+    prune(root, cap, now, stale_before);
+  }
 }
 
-/// When a file's inode last changed: a tmp hard-linked from an old output keeps the output's mtime,
-/// but `link()` sets its ctime.
+/// When a file's inode last changed: a tmp an older binary hard-linked from an old output keeps the
+/// output's mtime, but `link()` sets its ctime.
 #[cfg(unix)]
 fn changed(meta: &fs::Metadata) -> Option<std::time::SystemTime> {
   use std::os::unix::fs::MetadataExt;
@@ -534,16 +593,21 @@ fn changed(meta: &fs::Metadata) -> Option<std::time::SystemTime> {
 #[cfg(not(unix))]
 fn changed(meta: &fs::Metadata) -> Option<std::time::SystemTime> { meta.modified().ok() }
 
-/// [`prune_if_over_cap`], taking the `.tmp.` files changed before `stale_before` for stale.
-fn prune_if_over_cap_at(root: &Path, stale_before: std::time::SystemTime) {
-  let cap = max_bytes();
-  if cap == 0 {
-    return;
-  }
+/// Walk the cache and total up its entries; over `cap`, delete the oldest (by mtime) until the total
+/// is under [`LOW_WATER_PERCENT`] of it; remove the `.tmp.` files changed before `stale_before`; and
+/// restart the usage tally from the total kept, walked at `now`. Only one process walks at a time
+/// (advisory lock); an insertion during the walk stays counted.
+fn prune(root: &Path, cap: u64, now: std::time::SystemTime, stale_before: std::time::SystemTime) {
   let Some(_lock) = acquire_prune_lock(root) else {
     // Another process is pruning; let it work.
     return;
   };
+  let tallied = || {
+    lock_usage(root)
+      .and_then(|mut file| read_usage(&mut file))
+      .map_or(0, |usage| usage.bytes)
+  };
+  let before = tallied();
   let mut entries: Vec<(PathBuf, u64, std::time::SystemTime)> = Vec::new();
   let mut total: u64 = 0;
   let Ok(shard_iter) = fs::read_dir(root) else {
@@ -552,7 +616,7 @@ fn prune_if_over_cap_at(root: &Path, stale_before: std::time::SystemTime) {
   for shard in shard_iter.flatten() {
     let path = shard.path();
     let Ok(meta) = shard.metadata() else { continue };
-    // Skip non-dirs (e.g. .prune.lock).
+    // Skip non-dirs (e.g. .prune.lock, .usage).
     if !meta.is_dir() {
       continue;
     }
@@ -587,26 +651,31 @@ fn prune_if_over_cap_at(root: &Path, stale_before: std::time::SystemTime) {
       entries.push((path, size, mtime));
     }
   }
-  if total <= cap {
-    // Lock auto-released when `_lock` goes out of scope at fn end.
-    return;
-  }
-  entries.sort_by_key(|(_, _, t)| *t);
-  let mut to_free = total.saturating_sub(cap);
-  for (path, size, _) in entries {
-    if to_free == 0 {
-      break;
-    }
-    // Tolerate ENOENT: another writer may have raced this entry away.
-    if fs::remove_file(&path).is_ok() {
-      // Also drop the .dims sidecar if present (best-effort).
-      let mut dims = path.into_os_string();
-      dims.push(".dims");
-      let _ = fs::remove_file(PathBuf::from(dims));
-      to_free = to_free.saturating_sub(size);
+  if total > cap {
+    let low_water = cap / 100 * LOW_WATER_PERCENT;
+    entries.sort_by_key(|(_, _, t)| *t);
+    for (path, size, _) in entries {
+      if total <= low_water {
+        break;
+      }
+      // Tolerate ENOENT: another writer may have raced this entry away.
+      if fs::remove_file(&path).is_ok() {
+        // Also drop the .dims sidecar if present (best-effort).
+        let mut dims = path.into_os_string();
+        dims.push(".dims");
+        let _ = fs::remove_file(PathBuf::from(dims));
+        total = total.saturating_sub(size);
+      }
     }
   }
-  // _lock drops here, releasing the flock.
+  if let Some(mut file) = lock_usage(root) {
+    let since = read_usage(&mut file).map_or(0, |usage| usage.bytes.saturating_sub(before));
+    write_usage(&mut file, Usage {
+      bytes:  total.saturating_add(since),
+      walked: unix_secs(now),
+    });
+  }
+  // _lock drops here, releasing the prune lock.
 }
 
 /// Three-state result from a cached conversion. Disambiguates the two
@@ -954,6 +1023,50 @@ mod tests {
       dims: Some(CachedDims { width: 640, height: 480 }),
     }));
     assert_eq!(measure_calls, 1, "hit replays sidecar dims, no re-measure");
+  }
+
+  /// Each destination gets its own copy of a cache entry (GFXHARDLINK): an output edited in place
+  /// (an append) leaves the cache entry and every other destination's file as they were.
+  #[test]
+  fn an_output_edited_in_place_leaves_the_cache_and_its_siblings() {
+    use std::io::Write as _;
+    let root = shared_cache_dir();
+    let dir = temp_dir("edit-in-place");
+    let src = dir.join("src.bin");
+    write_bytes(&src, &unique_source_bytes("edit-in-place"));
+    let key = RenderKey {
+      page:    None,
+      density: 0,
+      ext:     "svg",
+    };
+    let cached = cache_path(root, &hash_key(&src, key).unwrap(), key.ext);
+    let [out1, out2, out3] = ["out1", "out2", "out3"].map(|d| dir.join(d).join("fig.svg"));
+    fs::create_dir_all(out1.parent().unwrap()).unwrap();
+    // out1 converts and stores; out2 is served from the cache.
+    let convert = || {
+      fs::write(&out1, b"<svg/>").unwrap();
+      true
+    };
+    assert!(with_cache(
+      CachePolicy::Shared,
+      src.to_str().unwrap(),
+      out1.to_str().unwrap(),
+      key,
+      convert
+    ));
+    assert!(lookup(src.to_str().unwrap(), out2.to_str().unwrap(), key).is_some());
+    for edited in [&out1, &out2] {
+      let mut file = fs::OpenOptions::new().append(true).open(edited).unwrap();
+      file.write_all(b"<!-- edited -->").unwrap();
+    }
+    assert_eq!(fs::read(&cached).unwrap(), b"<svg/>", "the cache entry");
+    assert!(lookup(src.to_str().unwrap(), out3.to_str().unwrap(), key).is_some());
+    let read = |p: &Path| String::from_utf8(fs::read(p).unwrap()).unwrap();
+    assert_eq!([read(&out1), read(&out2), read(&out3)], [
+      "<svg/><!-- edited -->",
+      "<svg/><!-- edited -->",
+      "<svg/>"
+    ]);
   }
 
   #[test]
@@ -1305,6 +1418,83 @@ mod tests {
     }
   }
 
+  /// Over the cap a prune leaves 90 % of it (GCACHECHURN); an insertion that keeps the usage tally
+  /// under the cap walks nothing, which an entry planted past the tally shows by surviving; an hour
+  /// after the last walk the next insertion walks again, reclaiming the stale tmp files.
+  #[test]
+  fn a_prune_leaves_the_low_water_mark_and_a_later_insertion_walks_nothing() {
+    let root = temp_dir("low-water");
+    let cap = 1000;
+    let start = std::time::SystemTime::now();
+    let entry = |i: u64| {
+      root
+        .join(format!("{:02x}", i % 4))
+        .join(format!("{i:064x}.png"))
+    };
+    // Twelve entries of 100 bytes, oldest first.
+    for i in 0..12 {
+      write_bytes(&entry(i), &[b'x'; 100]);
+      let mtime = start - std::time::Duration::from_secs(1200 - i * 60);
+      fs::File::options()
+        .write(true)
+        .open(entry(i))
+        .unwrap()
+        .set_modified(mtime)
+        .unwrap();
+    }
+    let present = || {
+      (0..20)
+        .filter(|&i| entry(i).is_file())
+        .collect::<Vec<u64>>()
+    };
+    let tally = || read_usage(&mut lock_usage(&root).unwrap());
+    // No tally yet: the first insertion walks, and 1200 bytes over a cap of 1000 leave 900.
+    prune_if_due(&root, 100, cap, start);
+    assert_eq!(present(), (3..12).collect::<Vec<u64>>());
+    assert_eq!(
+      tally(),
+      Some(Usage {
+        bytes:  900,
+        walked: unix_secs(start),
+      })
+    );
+    // 500 bytes the tally never saw: an insertion of 50 that keeps it at 950 walks nothing.
+    write_bytes(&entry(12), &[b'x'; 500]);
+    prune_if_due(&root, 50, cap, start);
+    assert_eq!(present(), (3..13).collect::<Vec<u64>>());
+    assert_eq!(
+      tally(),
+      Some(Usage {
+        bytes:  950,
+        walked: unix_secs(start),
+      })
+    );
+    // The next 100 pass the cap: the walk finds 1400 and keeps the newest 900 (entry 12 is newest).
+    prune_if_due(&root, 100, cap, start);
+    assert_eq!(present(), vec![8, 9, 10, 11, 12]);
+    assert_eq!(
+      tally(),
+      Some(Usage {
+        bytes:  900,
+        walked: unix_secs(start),
+      })
+    );
+    // Two hours on, an insertion under the cap walks: the stale tmp goes, the entries stay.
+    let tmp = entry(13).with_extension("png.tmp.17.1");
+    write_bytes(&tmp, b"partial");
+    let later = start + std::time::Duration::from_secs(7200);
+    prune_if_due(&root, 0, cap, later);
+    assert!(!tmp.exists(), "the stale tmp is reclaimed");
+    assert_eq!(present(), vec![8, 9, 10, 11, 12]);
+    assert_eq!(
+      tally(),
+      Some(Usage {
+        bytes:  900,
+        walked: unix_secs(later),
+      })
+    );
+  }
+
   #[test]
   fn a_prune_reclaims_the_tmp_files_of_killed_installs() {
     let root = temp_dir("prune-tmp");
@@ -1331,7 +1521,12 @@ mod tests {
     std::thread::sleep(std::time::Duration::from_millis(50));
     // An install in flight, hard-linked from an old output: its mtime is the output's, its ctime the link's.
     fs::hard_link(&output, shard.join("abcdef.png.tmp.18.3")).unwrap();
-    prune_if_over_cap_at(&root, stale_before);
+    prune(
+      &root,
+      DEFAULT_MAX_MB << 20,
+      std::time::SystemTime::now(),
+      stale_before,
+    );
     // On Unix the link's ctime keeps the in-flight tmp. Elsewhere the age is the mtime (std exposes no ctime), so it
     // is reclaimed: the install's rename then fails and the image is just not cached that time.
     let in_flight_kept: Vec<String> = if cfg!(unix) {
