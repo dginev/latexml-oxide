@@ -543,7 +543,7 @@ impl XSLT {
       },
       None => {
         // Not on disk — try the embedded table: CSS/JS assets baked into the binary, written straight to the
-        // destination unless a non-empty file is already there (a user's own, or an older release's, is kept).
+        // destination unless a non-empty file is already there (a user's own, or an older release's, is kept; OD #1165).
         if let Some(bytes) = embedded_resources::bundled(src, basename) {
           if crate::writer::needs_write(Path::new(&dest)) {
             ensure_parent(&dest);

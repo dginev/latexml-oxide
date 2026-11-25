@@ -56,9 +56,9 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     `split_css_links::{bundled_ar5iv_css_follows_latexml_css, css_already_in_place_is_used_as_is}`,
     `build_rerun::tests::tracks_only_what_exists`, and the `tools/release_smoke.sh` check on every release leg.
 
-  - **A stylesheet or script already in the destination, or next to the `.tex`, is used as-is; only a missing or
-    empty one is written from the bundled copy.** Before, any file with a bundled name in the destination (e.g. your
-    own `LaTeXML.css` or `ar5iv.css`, also at a `--sitedirectory` root) was rewritten from the binary with no Warning
+  - **A stylesheet or script already in the destination is used as-is; only a missing or empty one is written from the
+    bundled copy.** Before, any file with a bundled name in the destination (e.g. your own `LaTeXML.css`, also at a
+    `--sitedirectory` root) was rewritten from the binary with no Warning
     (a 41-byte user `LaTeXML.css` became 48,707 bytes). This holds for all 18 bundled CSS/JS names and `ar5iv.css`,
     with or without `--split`/`--sitedirectory`; issue 312's empty leftover is still repaired. A user's file next to
     the `.tex` is still copied into a separate destination, with its local `@import`s. The trade-off: after an upgrade,

@@ -1315,6 +1315,9 @@ mod split_css_links {
     for (layout, css, file, before, after) in rows {
       let row = format!("{layout} {css:?} {file} {before:?}");
       if layout != "copy" && css.is_some() && bundled.is_empty() {
+        eprintln!(
+          "SKIP {row}: this build bundles no ar5iv.css (release builds only; tools/release_smoke.sh)"
+        );
         continue;
       }
       let src = tempfile::tempdir().expect("tempdir");

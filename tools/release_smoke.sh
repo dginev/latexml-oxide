@@ -100,14 +100,14 @@ fi
 echo "OK: --css=ar5iv.css and --css=./ar5iv.css keep a user's own ar5iv.css in the destination"
 
 # A destination apart from the source: a user's ar5iv.css there is kept too, and an empty one is written from the binary.
-for case in sep empty; do
-  d="$out/$case"
+for kind in sep empty; do
+  d="$out/$kind"
   mkdir -p "$d"
-  if [ "$case" = sep ]; then printf '%s\n' "$own" > "$d/ar5iv.css"; else : > "$d/ar5iv.css"; fi
+  if [ "$kind" = sep ]; then printf '%s\n' "$own" > "$d/ar5iv.css"; else : > "$d/ar5iv.css"; fi
   NO_COLOR=1 "$BIN" --css=ar5iv.css --nodefaultresources --destination="$(native "$d")/main.html" \
-    --log="$(native "$d")/main.latexml.log" "$(native "$TEX")" > "$out/log.$case" 2>&1
+    --log="$(native "$d")/main.latexml.log" "$(native "$TEX")" > "$out/log.$kind" 2>&1
   rc=$?
-  [ "$rc" -eq 0 ] || fail "--css=ar5iv.css into a separate destination ($case): latexml_oxide exited $rc"
+  [ "$rc" -eq 0 ] || fail "--css=ar5iv.css into a separate destination ($kind): latexml_oxide exited $rc"
 done
 [ "$(cat "$out/sep/ar5iv.css")" = "$own" ] || fail "--css=ar5iv.css replaced a user's ar5iv.css in a separate destination"
 got="$(tail -n +2 "$out/empty/ar5iv.css" 2> /dev/null | sha256)"

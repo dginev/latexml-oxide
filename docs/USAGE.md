@@ -24,9 +24,10 @@ For the [ar5iv](https://github.com/dginev/ar5iv-css) look, the prebuilt release 
 `--css=ar5iv.css --nodefaultresources` writes it beside the page in place of `LaTeXML.css` (most of its rules are
 layered, so LaTeXML.css, if kept, overrides them). A build from source lacks it, as does the cortex-worker container
 image (only the release binaries and the CLI image carry it); pass the path to a local copy instead.
-A stylesheet or script already in the destination, or next to the `.tex`, is used as-is; only a missing or empty one
-is written from the bundled copy. So after an upgrade a reused output folder keeps the `LaTeXML.css`/`ar5iv.css` an
-older version wrote: delete the file to get the new one.
+A stylesheet or script already in the destination is used as-is; only a missing or empty one is written from the
+bundled copy. A file of that name next to the `.tex` (or on `--path`) is used instead of the bundled one and copied
+over the destination's. So after an upgrade a reused output folder keeps the `LaTeXML.css`/`ar5iv.css` an older
+version wrote: delete the file to get the new one.
 Working from a checkout instead of an installed binary? Prefix with
 `cargo run --bin latexml_oxide --`.
 
