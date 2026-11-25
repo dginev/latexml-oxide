@@ -21773,7 +21773,7 @@ until they move into the binding module's `//!` doc comment (a code PR; this PR 
 | nicematrix.sty | `nicematrix_sty.rs` | nicematrix `\begin{<x>NiceMatrix}` renders as a real math array with `\CodeBefore` cell colors | #145 |
 | tabto.sty | `tabto_sty.rs` | `\tabto` (tabto-ltx) approximated as `\hfill` — right-justified algorithm comments flush inline | #151 |
 | minted.sty | `minted_sty.rs` | `minted` renders Pygments syntax colors from a committed `_minted/` frozencache | #157 |
-| OmniBus | `omnibus_cls.rs` | OmniBus captures `\orcid` and no-ops the running-head registers `\lefttitle`/`\righttitle` | #160 |
+| OmniBus | `omnibus_cls.rs` | OmniBus captures `\orcid` and no-ops the running-head registers `\lefttitle`/`\righttitle` and the journal year `\jyear{…}` | #160 |
 | algpseudocodex.sty | `algpseudocodex_sty.rs` | algpseudocodex.sty package binding | #214 |
 | algorithm2e.sty | `algorithm2e_sty.rs` | algorithm2e's `{procedure}`/`{function}` are bound like `{algorithm}` (Perl: raw, the caption lost) | #279 |
 | quotchap.sty | `quotchap_sty.rs` | quotchap's quotations are epigraphs where they are written (Perl: lost) | #287 |

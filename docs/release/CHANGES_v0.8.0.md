@@ -43,6 +43,14 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
 
 ## Changes
 
+### 0.8.0-rc4
+
+  - **A journal class's `\jyear{2021}` no longer prints its year as the first body paragraph.** The OmniBus fallback
+    (sn-jnl and other unbound journal classes) took `\jyear` with an optional argument, so `{2021}` stayed in the
+    preamble and opened the document early with a "2021" paragraph that pdflatex never prints; it now takes the
+    required argument every class defines (sn-jnl.cls L479, cjs-rcs-article.cls L751). 40 of 218 arXiv papers using
+    `\jyear` lose that paragraph and nothing else (ar5iv issues 353 and 301; witness 2103.04081).
+
 ### 0.8.0-rc3
 
   - **natbib reads an apalike label `[Author, Year]` as author and year.** A bare `\bibitem[Maes, 1995]{m}` label
