@@ -40,7 +40,7 @@ from two layers — not competing options.
 | `--workers N` | CPU-derived¹ | Number of single-conversion child processes to keep alive. A **deliberate over-commit** (see below) — explicit override. |
 | `--child-mem-limit-mb MB` | `5632` | Per-child **address-space** ceiling, enforced via `setrlimit(RLIMIT_AS)` before each child execs (`0` disables). Contains a *single* runaway job. (Was `8192` until a 72-worker sweep let the aggregate hit 207 GB → kernel OOM; now a ~4 GB-RSS cap. The binary's `--help` is the authoritative default.) |
 | `--mem-pressure-floor-mb MB` | auto³ | Fleet **memory-pressure governor** floor. Contains the *aggregate* (a heavy cluster). Omit = auto; `0` = disable. |
-| `--max-rss-mb MB` | auto² | Per-child polled **RSS** soft guard (forwarded to children). |
+| `--max-rss-mb MB` | auto² | Per-child polled **RSS** soft guard and cooperative memory fuse (forwarded to children; `0` disables both). |
 
 ¹ `pericortex::harness::default_worker_count()`: CPU count minus a reservation
 for the OS + dispatcher (−4 above 16 cores, −2 above 4, −1 above 2). This is a
@@ -88,7 +88,11 @@ Guards 1–4 bound a **single conversion** (per-process); guard 5 bounds the
    any RSS ceiling. See `docs/archive/MEMORY_GUARD_HARDENING_2026-06-09.md`.
 2. **Polled RSS soft guard** (`--max-rss-mb`, the shared `Watchdog`) — samples
    `/proc/self/status` `VmRSS` and exits `137` with a `Fatal:oom:rss` log line
-   and a `Status:conversion:3` artifact. Linux-only (reads `/proc`).
+   and a `Status:conversion:3` artifact. Linux-only (reads `/proc`). The same
+   value is the cooperative fuse (`stomach::check_timeout`, polled far more
+   often, a located `Fatal:Timeout:MemoryBudget`) and sets the streaming
+   watermarks (restart at 9/10, spill at 1/3), in every worker mode —
+   standalone, pool and harness child.
 3. **Alloc-error hook** (`custom_alloc_error_hook`) — when any *Rust* allocation
    returns null (e.g. an `ENOMEM` from the hard cap below; C libraries such as libxml2 call `malloc` directly and never
    reach it), emits

@@ -2,6 +2,8 @@
 //! `<pkg>.sty.rhai` shipped inside a paper would otherwise auto-load (`converter.rs` `rhai_dispatch`) and could run any
 //! program through the binding API's `Command(..).output()` (docs/release/SAFETY.md). The same source through the
 //! `latexml_oxide` CLI, the user's own machine, still loads it.
+//!
+//! Also the standalone worker's one memory knob: its `--max-rss-mb`, not `LATEXML_RSS_CAP_BYTES`, sets the fuse.
 
 use std::{
   fs,
@@ -16,9 +18,17 @@ const PROBE_RHAI: &str =
 
 /// `main.tex` and `probe.sty.rhai`, zipped as an arXiv source bundle at `zip_path`.
 fn write_source_zip(zip_path: &Path) {
+  write_zip(zip_path, &[
+    ("main.tex", MAIN_TEX),
+    ("probe.sty.rhai", PROBE_RHAI),
+  ]);
+}
+
+/// `files` (name, body), zipped at `zip_path`.
+fn write_zip(zip_path: &Path, files: &[(&str, &str)]) {
   let mut zip = zip::ZipWriter::new(fs::File::create(zip_path).unwrap());
   let options = zip::write::SimpleFileOptions::default();
-  for (name, body) in [("main.tex", MAIN_TEX), ("probe.sty.rhai", PROBE_RHAI)] {
+  for &(name, body) in files {
     zip.start_file(name, options).unwrap();
     zip.write_all(body.as_bytes()).unwrap();
   }
@@ -96,5 +106,39 @@ fn the_cli_still_loads_the_runtime_binding() {
       .unwrap()
       .contains("PROBE-LOADED"),
     "the binding's macro is missing from the CLI's HTML"
+  );
+}
+
+/// A standalone worker's conversion runs under the fuse its `--max-rss-mb` sets, whatever `LATEXML_RSS_CAP_BYTES`
+/// says (row R CORTEXRSS): a one-byte env fuse stopped the paper for memory, as the worker ignored its flag.
+#[test]
+fn a_standalone_workers_max_rss_mb_sets_its_fuse() {
+  let dir = tempfile::tempdir().unwrap();
+  let input = dir.path().join("paper.zip");
+  let output = dir.path().join("result.zip");
+  write_zip(&input, &[(
+    "main.tex",
+    "\\documentclass{article}\n\\begin{document}\nText.\n\\end{document}\n",
+  )]);
+  let run = Command::new(env!("CARGO_BIN_EXE_cortex_worker"))
+    .env("LATEXML_RSS_CAP_BYTES", "1")
+    .args(["--standalone", "--max-rss-mb", "6144", "--input"])
+    .arg(&input)
+    .arg("--output")
+    .arg(&output)
+    .output()
+    .unwrap();
+  let stderr = String::from_utf8_lossy(&run.stderr);
+  assert!(run.status.success(), "cortex_worker failed:\n{stderr}");
+  let log = zip_member(&output, "cortex.log");
+  assert!(
+    !log.contains("MemoryBudget") && !log.contains("streaming:restart"),
+    "the conversion stopped for memory under a 6144 MiB --max-rss-mb:\n{log}"
+  );
+  assert!(zip_member(&output, "main.html").contains("Text."));
+  let status = zip_member(&output, "status");
+  assert!(
+    matches!(status.trim(), "Status:conversion:0" | "Status:conversion:1"),
+    "{status}:\n{log}"
   );
 }

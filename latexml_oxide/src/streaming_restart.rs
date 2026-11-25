@@ -9,16 +9,6 @@ use std::{fs::File, io::Read, path::Path};
 
 use latexml_core::stomach::{self, RestartSignal};
 
-/// The RSS at which an eligible eager run stops to rerun under `--streaming`:
-/// nine tenths of the cooperative fuse in force for this thread. The stop
-/// exists for clean reporting (an Info instead of a Fatal, no salvage of a
-/// partial document) more than for time: sweep #104 put it at two thirds and
-/// five documents whose eager peak sat between the watermark and the fuse paid
-/// a needless rerun (+330 s of sweep wall, no verdict changed), while the
-/// witnesses that fuse anyway saved little (pgf-PeriodicTable's manual is
-/// bounded by its ~380 s streaming rerun, not by where the eager attempt
-/// stops). `None` when memory limiting is disabled (`--max-memory=0`): the
-/// single knob governs every ceiling.
 /// The box budget a mid-run eager→streaming transition (`digest_adaptive`)
 /// hands to pass 1: the same yardstick `resolve_streaming` uses — the resolved
 /// RSS cap when one is set, else this machine's default ceiling — over the
@@ -30,14 +20,25 @@ pub fn transition_budget() -> usize {
   // what is resolvable here is the fuse `apply_memory_ceiling` derived from it
   // (`soft_cap_from_ceiling` = 3/4 of N), so invert that to the same yardstick.
   // With no cap at all (`--max-memory=0`) both use this machine's default
-  // ceiling. (An embedder that sets only `LATEXML_RSS_CAP_BYTES` — the cap IS
-  // the fuse there — gets a yardstick 4/3 of it; a slightly larger budget.)
+  // ceiling. (`cortex_worker`, whose fuse IS its `--max-rss-mb`, and an
+  // embedder that sets only `LATEXML_RSS_CAP_BYTES` get a yardstick 4/3 of it;
+  // a slightly larger budget.)
   let yardstick_mib = stomach::resolve_rss_cap()
     .map(|fuse| fuse.saturating_mul(4) / 3 / (1024 * 1024))
     .unwrap_or_else(latexml_core::watchdog::default_ceiling_mib);
   ((yardstick_mib.saturating_mul(1024 * 1024) / 8 / BYTES_PER_BOX) as usize).max(1)
 }
 
+/// The RSS at which an eligible eager run stops to rerun under `--streaming`:
+/// nine tenths of the cooperative fuse in force for this thread. The stop
+/// exists for clean reporting (an Info instead of a Fatal, no salvage of a
+/// partial document) more than for time: sweep #104 put it at two thirds and
+/// five documents whose eager peak sat between the watermark and the fuse paid
+/// a needless rerun (+330 s of sweep wall, no verdict changed), while the
+/// witnesses that fuse anyway saved little (pgf-PeriodicTable's manual is
+/// bounded by its ~380 s streaming rerun, not by where the eager attempt
+/// stops). `None` when memory limiting is disabled (`--max-memory=0`): the
+/// single knob governs every ceiling.
 pub fn restart_watermark() -> Option<u64> { stomach::resolve_rss_cap().map(|cap| cap * 9 / 10) }
 
 /// After an eager attempt on this thread: the fragment budget to rerun under

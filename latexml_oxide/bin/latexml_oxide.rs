@@ -1480,8 +1480,8 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     // one flag governs one limit and `--max-memory=0` disables both. It also
     // WINS over `LATEXML_RSS_CAP_BYTES`: no env var may quietly override what
     // the user typed. That env still governs embedders which never parse CLI
-    // flags and so never get here (the library test harness, the cortex_worker
-    // fleet) — see `stomach::apply_memory_ceiling`.
+    // flags and so never get here (the library test harness) — see
+    // `stomach::apply_memory_ceiling`.
     latexml_core::stomach::apply_memory_ceiling(max_memory);
     if cli.timeout > 0 {
       latexml_core::stomach::set_timeout(cli.timeout);

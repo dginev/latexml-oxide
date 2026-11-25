@@ -570,7 +570,8 @@ Fatal either way, retried alike by CorTeX — while it cost a paper that complet
 e839db2fc3, 4/9 with the fuse (dies in Finalizing on one 195 MiB `Vec<u8>` doubling at the cap; round 1, fusing in
 streaming pass 1 too, stopped it 3/3). At the moment the fuse would fire, RSS and VmSize of runaways and of 0804.1983
 look alike (RSS 4.1–4.2 GB, VmSize 5.4–5.6 GB), so no threshold separates them. Measured at fleet caps (`ulimit -v
-5767168`, `--max-rss-mb 5376`, standalone `cortex_worker`), agent_reports/2026-10-16_68p_review.md and
+5767168`, `--max-rss-mb 5376`, standalone `cortex_worker`, whose fuse then stayed at the 4.5 GB library default — row R
+CORTEXRSS), agent_reports/2026-10-16_68p_review.md and
 2026-10-16_68p_r2_report.md.
 
 **Open.** physics0504062: one formula's math-parse spike (RSS 2.5 → 5.2 GB in 0.2 s, ASF traversal) where no
