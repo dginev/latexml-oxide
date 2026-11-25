@@ -73,7 +73,7 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (406 items on 2026-11-25 on `int/towards_v0_8_1`: 406 open, weight 900, 43 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (416 items on 2026-11-25 on `int/towards_v0_8_1`: 416 open, weight 918, 43 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
 
 
   - ODR6 — OD ruling 12 (recorded in OD #449): `dump_reader.rs`'s "add-only" docstrings (:365, :574) corrected, then a removal trial of the skip lists against CLAUDE.md rule 2; 1
@@ -1209,6 +1209,50 @@ Rules that keep this file honest and mergeable:
     deferred collapse would move where that loop stops, so collapse at once when the closing group's single child
     carries `_scopebegin`, or keep the loop's check on the unmerged child. Bar: byte-identical output on every pgf/TikZ
     witness, plus the instructions:u gain on 2605.19500 and a heavy-picture population; 3
+  - ARENAQUAD — (FIX1011 residual, pre-existing) the issue-1011 pattern — `lookup_string(K)` + push + `assign_value(K,
+    String)` — interns a fresh copy of a whole list per call (`Stored::from(String)`, `store.rs:720`), so the
+    never-freed arena grows with the square of the list. LTLABEL: `longtable_sty.rs:292-303` re-interns the space-joined
+    label list at each `\label` in one longtable (30 MB at 2,000 labelled rows, ~750 MB at 10,000; synthetic witness).
+    FMACC: per-author accumulators `ELS_AUTHORS` (`elsart_support_core_sty.rs:147`), `NAME_LABEL_MARKS` and
+    `note_labels` (`authblk_sty.rs:370,486`), `AUTHOR_KEYS` (`frontmatter_stores.rs:8631`) — a few MB at ~1,000 authors
+    (Gemini: 45-90 MB at 3,000). Fix: the mapping-or-list change `note_content_file` got (PR 1015); 3
+  - ARENANITS — (FIX1011 review nits, post-merge) `latexml_oxide.rs:665/936` a caught-and-recovered panic leaves
+    `PANIC_LINE` set, so a later `resume_unwind` from another thread would log the earlier panic (not reachable today:
+    the only `resume_unwind`, `xslt.rs:176`, re-raises on the hooked thread) — use it only when its reason equals the
+    payload's; `:1716` clones the core log for the whole post phase (move it in, take it back) and leaves a gap between
+    `Converter::flush_log` and the arming; `:1245` a panic with an archive `--dest` writes `<stem>.latexml.log` beside
+    the zip where a normal run packs it; `content.rs:3476` a non-mapping `lx_content_files` (a cached dump from
+    2026-11-04..14) makes `content_files()` silently empty; 1
+  - INTWCASE — (INTWIDTH #4a, Gemini 2026-11-25, CONFIRMED) `\lccode`/`\uccode`/`\sfcode` keep 16 bits
+    (`tex_character.rs:265,273,282` cast `i64 as u16`): `\lowercase{𐐀}` gives `Ш` (U+10400 → U+0400), a non-BMP case map
+    is silently rewritten; hold the full code point; 1
+  - INTWHOSTILE — (INTWIDTH #4b/#5/#6, hostile-only, CONFIRMED) out-of-range codes and integer edges pass silently where
+    TeX errs: `$\mathchar"18041$` dropped with no message (`tex_math.rs:986,1020,1045,1071,1118`, "Bad mathchar" in
+    TeX); `\endlinechar` as `i16` wraps 65536+13 → 13 (`mouth.rs:1847`) and `^^` casts via `i16`/`u8`
+    (`mouth.rs:1134-1136`); `numeric_ops.rs:170-179,221-230` add/subtract skip TeX's `\maxdimen`/2^31 overflow checks
+    (shared with Perl; SIGFPE CONTRADICTED — Rust panics, `divideround` makes d positive). Raise TeX's error and clamp,
+    never wrap; 3
+  - CHARNONBMP — (INTW5 review P2, PARITY with Perl's silence) `\char"20AC`, `\char"20041` and `\symbol{"10000}` vanish
+    with 0 E/0 W; pdflatex says "Bad character code". A silent content loss: at least a Warning naming the code (or keep
+    the character, as XeTeX would); RED post-merge; 1
+  - YARGDEFCOUNT — (INTW5 review P1, pre-existing) `\@yargdef` parses its count as a string where latex.ltx:1281 uses
+    `\number #3` (`sect08.rs:129-131`): `\@yargdef\fh\@ne{\numargs}{(#1#2)}` gives 2 Errors ("#1/#2 should never reach
+    Stomach") and `J[(12)mn]`, pdflatex `J[(mn)]` clean. Reachable from raw callers that pass a macro count
+    (etoolbox.sty:81, elsarticle.cls:609, biditools.sty:631, mhsetup.sty:163, tocbasic.sty:2006); 1
+  - XARGSCOUNT — (INTW5 review, KPE #1336) xargs declarators do not go through `latex_arg_count`, so a bad count there
+    is not checked (Error + clamp 0..9) like every kernel declarator; read the count as a number
+    (`package-bindings/xargs_argument_count_unparsed_red.tex`); 1
+  - MATHTOOLSX0 — (INTW5 leftover) `\DeclarePairedDelimiterX\ci[0]{(}{)}{i}` then `$\ci$`: `mathtools_sty.rs` `n.max(1)`
+    reads an argument the command does not take (the closing `$`: Missing $ inserted, unparsed math), and mathtools's
+    own "Macro need 1 or more arguments" is not raised (pdflatex 1 `!`, "(i)"; Perl 0 errors, "(i)");
+    `package-bindings/mathtools_paired_delimiter_x_zero_arguments_red.tex`; 1
+  - TESTTEXTFOLD — (TESTHARDEN1 round 2, deferred) the 84b `text` helper still reads markup by its own rule; folding it
+    into `markup_text` moves 131 `cluster_package_guards` expectations (`<sup>1</sup>Univ` reads `1Univ`, U+2003 not
+    collapsed; largest: 94b 12, 104c 8, ieeeroute 7, c1 7, 97f 6). Needs a ruling on whether a mark/text boundary reads
+    as a space; also `markup_text` parses `<script>`/`<style>` content as markup (skip to the close tag); 3
+  - TESTHARDEN2 — (TESTHARDEN burn-down) 76 guards still assert with prefix-ambiguous `contains("<tag")` (`<note` also
+    matches `<notes`); move each to the whole-element helpers in `util/test.rs` with the shadow hook
+    (`LATEXML_TEST_SHADOW`) showing 0 flips; 3
 
 ---
 
