@@ -377,6 +377,7 @@ impl Split {
     if let Some(stripped) = name.strip_prefix("LABEL:") {
       name = stripped.to_string();
     }
+    name = page_name_segments(&name);
 
     if name.is_empty() {
       if attr == "labels" {
@@ -421,8 +422,8 @@ impl Split {
         };
         if let Some(pname) = parent_attr {
           let pname = pname.split_whitespace().next().unwrap_or("");
-          let pname = pname.strip_prefix("LABEL:").unwrap_or(pname);
-          if let Some(rest) = name.strip_prefix(pname) {
+          let pname = page_name_segments(pname.strip_prefix("LABEL:").unwrap_or(pname));
+          if let Some(rest) = name.strip_prefix(pname.as_str()) {
             let rest = rest.trim_start_matches(['.', '_', ':']);
             if !rest.is_empty() {
               name = rest.to_string();
@@ -444,17 +445,31 @@ impl Split {
   }
 }
 
+/// A label as a page name: its path segments, without empty and `.` ones (`/x`, `./x`, `a//b` are `x`, `x`, `a/b`), as
+/// Perl's `pathname_make` reads them, but no `~` expansion and no root (OD #1164); a `..` stays. A name of separators
+/// alone is empty, so it takes the unnamed page's fallback (`Split.pm` L167-175). `\` separates only on Windows.
+pub(crate) fn page_name_segments(name: &str) -> String {
+  name
+    .split(std::path::is_separator)
+    .filter(|segment| !segment.is_empty() && *segment != ".")
+    .collect::<Vec<_>>()
+    .join("/")
+}
+
 /// A page's pathname beside its parent's, or (`as_dir`) as `index` in a folder of its name: Perl `Split::getPageName`'s
-/// `pathname_make` (`Split.pm` L185-191), joined as written: no `~` expansion, no leading separator (issue 1006, OD #1164).
+/// `pathname_make` (`Split.pm` L185-191) over a name of [`page_name_segments`] (issue 1006, OD #1164).
 pub(crate) fn page_pathname(parent_path: &str, name: &str, ext: &str, as_dir: bool) -> String {
-  let name = name.trim_start_matches(['/', '\\']);
+  debug_assert!(
+    !name.is_empty() && !name.starts_with(std::path::is_separator),
+    "page name {name:?}"
+  );
   let file = if as_dir {
     format!("{name}/index.{ext}")
   } else {
     format!("{name}.{ext}")
   };
-  // The parent's directory as written: the parent is a canonical destination or a page named here, and canonicalizing
-  // it again expands a label's `~` (`\label{~one}`'s child page went to `$HOME/..`).
+  // The parent's directory as written: the parent is the canonical destination or a page named here, and
+  // canonicalizing it again would expand a label's `~`.
   match std::path::Path::new(parent_path)
     .parent()
     .and_then(|dir| dir.to_str())

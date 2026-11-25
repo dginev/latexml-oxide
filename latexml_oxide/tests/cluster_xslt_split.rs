@@ -1449,68 +1449,91 @@ mod split_nav_relations {
     files
   }
 
-  /// A page named after a label is written where the label says, inside the destination, and so are its child pages:
-  /// no `~` expansion and no leading `/` (OXIDIZED_DESIGN_DIVERGENCES #1164; Perl's `pathname_make` canonicalizes the
-  /// name, so `\label{~one}` becomes `$HOME`one and `\label{/x}` the absolute `/x.html`), with `label` and
-  /// `labelrelative` naming, on both split paths. The exact set of pages in the work directory is asserted, so a page
-  /// written anywhere else is missing from it.
+  /// A page named after a label is written where the label says, inside the destination, and so are its child pages
+  /// (OXIDIZED_DESIGN_DIVERGENCES #1164): no `~` expansion and no root (Perl's `pathname_make` makes `\label{~one}`
+  /// `$HOME`one and `\label{/x}` the absolute `/x.html`), empty and `.` segments dropped as Perl drops them
+  /// (`\label{./dot}` is `dot`, so its links need no extra `../`), and a label of separators alone (`\label{/}`) takes
+  /// the unnamed page's `xml:id`. For `label` and `labelrelative` naming, on both split paths, with a bare and a
+  /// foldered destination under a site directory, the exact set of pages under a root holding `$HOME` beside the work
+  /// directory is asserted (a page written anywhere else is missing from it), and every page's relative links resolve.
   #[test]
   fn split_label_names_stay_in_the_destination() {
     const DOC: &str = "\\documentclass{article}\n\\begin{document}\n\\section{One}\\label{~one}\nA.\n\
                        \\subsection{Sub}\\label{two}\nB \\ref{~one}.\n\\section{Two}\\label{/lzxrev}\nC.\n\
-                       \\section{Three}\\label{three}\nD \\ref{two}.\n\\end{document}\n";
-    for stream in ["1", "0"] {
-      for (naming, expected) in [
-        ("label", [
-          "index.html",
-          "lzxrev.html",
-          "three.html",
-          "two.html",
-          "~one.html",
-        ]),
-        ("labelrelative", [
-          "index.html",
-          "lzxrev/index.html",
-          "three/index.html",
-          "~one/index.html",
-          "~one/two.html",
-        ]),
-      ] {
-        // `$HOME` beside the work directory, not inside it, so a page written under `$HOME` is missing from the list.
-        let root = tempfile::tempdir().expect("tempdir");
-        let (work, home) = (root.path().join("w"), root.path().join("home"));
-        std::fs::create_dir_all(&work).unwrap();
-        std::fs::create_dir_all(&home).unwrap();
-        std::fs::write(work.join("doc.tex"), DOC).unwrap();
-        let output = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
-          .args([
+                       \\section{Three}\\label{three}\nD \\ref{two}.\n\\section{Dot}\\label{./dot}\nE.\n\
+                       \\section{Root}\\label{/}\nF.\n\\subsection{Leaf}\\label{leaf}\nG \\ref{./dot}.\n\
+                       \\end{document}\n";
+    for (dest, site) in [
+      ("index.html", None),
+      ("out/index.html", Some("--sitedirectory=.")),
+    ] {
+      let folder = dest.strip_suffix("index.html").unwrap();
+      for stream in ["1", "0"] {
+        for (naming, expected) in [
+          ("label", [
+            "S5.html",
+            "dot.html",
+            "index.html",
+            "leaf.html",
+            "lzxrev.html",
+            "three.html",
+            "two.html",
+            "~one.html",
+          ]),
+          ("labelrelative", [
+            "S5/index.html",
+            "S5/leaf.html",
+            "dot/index.html",
+            "index.html",
+            "lzxrev/index.html",
+            "three/index.html",
+            "~one/index.html",
+            "~one/two.html",
+          ]),
+        ] {
+          let root = tempfile::tempdir().expect("tempdir");
+          let (work, home) = (root.path().join("w"), root.path().join("home"));
+          std::fs::create_dir_all(&work).unwrap();
+          std::fs::create_dir_all(&home).unwrap();
+          std::fs::write(work.join("doc.tex"), DOC).unwrap();
+          let naming_arg = format!("--splitnaming={naming}");
+          let dest_arg = format!("--dest={dest}");
+          let mut args = vec![
             "doc.tex",
             "--splitat=subsection",
-            &format!("--splitnaming={naming}"),
+            &naming_arg,
             "--format=html5",
-            "--dest=index.html",
-          ])
-          .env("HOME", &home)
-          .env("LATEXML_POST_STREAM_SPLIT", stream)
-          .current_dir(&work)
-          .output()
-          .expect("spawn latexml_oxide");
-        assert!(
-          output.status.success(),
-          "{}",
-          String::from_utf8_lossy(&output.stderr)
-        );
-        let expected: Vec<String> = expected.iter().map(|f| format!("w/{f}")).collect();
-        assert_eq!(
-          html_files(root.path()),
-          expected,
-          "{naming}, stream {stream}"
-        );
-        for (page, links) in split_hrefs(&work) {
+            &dest_arg,
+          ];
+          args.extend(site);
+          let output = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+            .args(&args)
+            .env("HOME", &home)
+            .env("LATEXML_POST_STREAM_SPLIT", stream)
+            .current_dir(&work)
+            .output()
+            .expect("spawn latexml_oxide");
+          let case = format!("{naming}, stream {stream}, {dest}");
           assert!(
-            links.iter().all(|h| !h.starts_with('/')),
-            "{naming}, stream {stream}, {page}: {links:?}"
+            output.status.success(),
+            "{case}: {}",
+            String::from_utf8_lossy(&output.stderr)
           );
+          let expected: Vec<String> = expected.iter().map(|f| format!("w/{folder}{f}")).collect();
+          assert_eq!(html_files(root.path()), expected, "{case}");
+          for (page, links) in split_hrefs(&work) {
+            let dir = work.join(&page).parent().unwrap().to_path_buf();
+            for link in &links {
+              let target = link.split('#').next().unwrap();
+              if target.is_empty() || link.contains("://") {
+                continue;
+              }
+              assert!(
+                !target.starts_with('/') && dir.join(target).is_file(),
+                "{case}, {page}: {link} does not resolve ({links:?})"
+              );
+            }
+          }
         }
       }
     }

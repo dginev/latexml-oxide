@@ -1191,6 +1191,7 @@ impl Splitter {
     if let Some(stripped) = name.strip_prefix("LABEL:") {
       name = stripped.to_string();
     }
+    name = crate::split::page_name_segments(&name);
     if name.is_empty() {
       if use_labels && let Some(id) = self.metas[page].xml_id.clone() {
         Info!(
@@ -1222,8 +1223,9 @@ impl Splitter {
         };
         if let Some(pname) = parent_attr {
           let pname = pname.split_whitespace().next().unwrap_or("");
-          let pname = pname.strip_prefix("LABEL:").unwrap_or(pname);
-          if let Some(rest) = name.strip_prefix(pname) {
+          let pname =
+            crate::split::page_name_segments(pname.strip_prefix("LABEL:").unwrap_or(pname));
+          if let Some(rest) = name.strip_prefix(pname.as_str()) {
             let rest = rest.trim_start_matches(['.', '_', ':']);
             if !rest.is_empty() {
               name = rest.to_string();

@@ -46,13 +46,14 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
 ### 0.8.0-rc4
 
   - **Split pages keep their navigation under `--sitedirectory` and a `./`-spelled `--dest`.** With a relative
-    `--dest=index.htm` and an ancestor `--sitedirectory`, a chapter's up/prev links read `../index.htm` and the root's
-    next `./Ch1.htm` (issue 1006). Split named its pages `./Ch1.htm` beside the root, so the two spellings of one folder
+    `--dest=index.htm` and an ancestor `--sitedirectory`, rc3's chapter up/prev links read `../index.htm` and the
+    root's next `./Ch1.htm` (issue 1006). Split named its pages `./Ch1.htm` beside the root, so the two spellings of one folder
     no longer matched under a site directory; it now names a page as Perl's `Split::getPageName` does (`pathname_make`),
     and `--dest`, `--sitedirectory` and `--sourcedirectory` are canonicalized once, up front, as Perl's `Config.pm`
     does: a `~` in them is now expanded (rc3 wrote a literal `./~/out/…` and found no image under
-    `--sourcedirectory=~/…`), and `./`, `..` are resolved. A label-named page keeps a label's `~` or leading `/` as
-    text, as rc3 did, where Perl would expand it (OXIDIZED_DESIGN_DIVERGENCES #1164).
+    `--sourcedirectory=~/…`), and `./`, `..` are resolved. A label-named page keeps a label's `~` as text and drops
+    its leading `/`, as rc3 did, where Perl would expand them; its empty and `./` segments drop out, so `\label{./x}`
+    links as `x` does and `\label{/}` takes the page's id (OXIDIZED_DESIGN_DIVERGENCES #1164).
 
 ### 0.8.0-rc3
 
