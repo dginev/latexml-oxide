@@ -1349,6 +1349,7 @@ mod split_nav_relations {
     enum Site {
       None,
       Ancestor,
+      AncestorSlash,
       DestDir,
     }
     for stream in ["1", "0"] {
@@ -1362,6 +1363,8 @@ mod split_nav_relations {
           let site_arg = match site {
             Site::None => None,
             Site::Ancestor => Some(format!("--sitedirectory={}", work.path().display())),
+            // The issue's own shape: `--sitedirectory=/mnt/g/public_html/`.
+            Site::AncestorSlash => Some(format!("--sitedirectory={}/", work.path().display())),
             Site::DestDir => Some(format!("--sitedirectory={}", out.display())),
           };
           let dest_arg = format!("--dest={dest}");
@@ -1406,6 +1409,7 @@ mod split_nav_relations {
         );
         for (dest, site) in [
           ("index.html", Site::Ancestor),
+          ("index.html", Site::AncestorSlash),
           ("./index.html", Site::Ancestor),
           ("./index.html", Site::DestDir),
           ("./out/index.html", Site::None),
@@ -1461,13 +1465,84 @@ mod split_nav_relations {
       );
       for (page, links) in split_hrefs(&out) {
         assert!(
-          links
-            .iter()
-            .all(|h| !h.starts_with('/') && !h.contains("home")),
+          links.iter().all(|h| !h.starts_with('/')),
           "{dest}, {page}: {links:?}"
         );
       }
     }
+    // A `../` in a label stays: the page lies beside `out`, where Perl and rc3 put it, and `out`'s pages link it
+    // through `../` (round 2 joined it canonically and linked `esc.html`, which does not exist).
+    let work = tempfile::tempdir().expect("tempdir");
+    std::fs::write(
+      work.path().join("doc.tex"),
+      "\\documentclass{article}\n\\begin{document}\n\\section{One}\\label{../esc}\nA \\ref{../esc}.\n\
+       \\section{Two}\\label{two}\nB \\ref{../esc}.\n\\end{document}\n",
+    )
+    .unwrap();
+    for stream in ["1", "0"] {
+      let output = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+        .args([
+          "doc.tex",
+          "--splitat=section",
+          "--splitnaming=label",
+          "--format=html5",
+          "--dest=out/index.html",
+        ])
+        .env("LATEXML_POST_STREAM_SPLIT", stream)
+        .current_dir(work.path())
+        .output()
+        .expect("spawn latexml_oxide");
+      assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+      );
+      assert!(
+        work.path().join("esc.html").is_file(),
+        "stream {stream}: no esc.html beside out/"
+      );
+      let pages = split_hrefs(&work.path().join("out"));
+      for page in ["index.html", "two.html"] {
+        let links = &pages.iter().find(|(p, _)| p == page).unwrap().1;
+        assert!(
+          links.iter().any(|h| h.starts_with("../esc.html")),
+          "stream {stream}, {page}: {links:?}"
+        );
+      }
+    }
+  }
+
+  /// A `~` in `--dest` is expanded once, for the CLI and post alike (Perl `Config.pm` L395-397 canonicalizes it): the
+  /// whole site lands in `$HOME/out`, and no second root page is written under a literal `./~` (round 2 canonicalized
+  /// inside post only, so the CLI wrote a stray `./~/out/index.html`).
+  #[test]
+  fn split_tilde_destination_is_one_place() {
+    const DOC: &str = "\\documentclass{book}\n\\begin{document}\n\\chapter{One}\nA.\n\\chapter{Two}\nB.\n\
+                       \\end{document}\n";
+    let work = tempfile::tempdir().expect("tempdir");
+    let home = work.path().join("home");
+    std::fs::create_dir_all(&home).unwrap();
+    std::fs::write(work.path().join("doc.tex"), DOC).unwrap();
+    let output = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+      .args([
+        "doc.tex",
+        "--splitat=chapter",
+        "--format=html5",
+        "--dest=~/out/index.html",
+      ])
+      .env("HOME", &home)
+      .current_dir(work.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    assert!(
+      output.status.success(),
+      "{}",
+      String::from_utf8_lossy(&output.stderr)
+    );
+    for page in ["index.html", "Ch1.html", "Ch2.html", "LaTeXML.css"] {
+      assert!(home.join("out").join(page).is_file(), "no $HOME/out/{page}");
+    }
+    assert!(!work.path().join("~").exists(), "a stray ./~ was written");
   }
 
   /// The back matter belongs to no part (OXIDIZED_DESIGN_DIVERGENCES #1147, row R BACKMATTERPART): split at

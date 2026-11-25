@@ -447,21 +447,21 @@ impl Split {
 /// A page's pathname beside its parent's, or (`as_dir`) as `index` in a folder of its name there: Perl
 /// `Split::getPageName`'s `pathname_make` (`Split.pm` L185-191). A root named `index.html` gives `Ch1.html`, never
 /// `./Ch1.html`, whose site-relative location no longer matched the root's (issue 1006: `../index.html` links). The
-/// name is the document's text (a label), joined as written: no `~` expansion and no leading separator, which Perl's
-/// canonicalizing `pathname_make` turns into a page outside the destination (OXIDIZED_DESIGN_DIVERGENCES #1164).
+/// name is the document's text (a label), joined as written, as rc3 did: no `~` expansion and no leading separator,
+/// which Perl's canonicalizing `pathname_make` turns into `$HOME/…` or an absolute path (OXIDIZED_DESIGN_DIVERGENCES
+/// #1164); a `../` stays, so the page lies where Perl puts it and links keep the `../` (`\label{../esc}`).
 pub(crate) fn page_pathname(parent_path: &str, name: &str, ext: &str, as_dir: bool) -> String {
-  use latexml_core::util::pathname::{concat, directory};
   let name = name.trim_start_matches(['/', '\\']);
   let file = if as_dir {
     format!("{name}/index.{ext}")
   } else {
     format!("{name}.{ext}")
   };
-  let dir = directory(parent_path);
+  let dir = latexml_core::util::pathname::directory(parent_path);
   if dir.is_empty() {
     file
   } else {
-    concat(&dir, &file)
+    format!("{dir}/{file}")
   }
 }
 

@@ -24442,14 +24442,15 @@ as natbib does: author "Smith", year "Jones".
 natbib_entry_constructor_is_binding_private` (author "Batselier et al.", no full authors),
 `perfect_kernel_batch56::apacite_old_bbl_keeps_its_declared_italics` (no full authors).
 
-### 1164. A split page named after a label is written inside the destination: no `~` expansion, no absolute path (issue 1006)
+### 1164. A split page named after a label: no `~` expansion, no absolute path (issue 1006)
 
 **Perl behavior**: `Split::getPageName` (Split.pm L185-191) builds the page path with `pathname_make`, which runs
 `pathname_canonical` over the whole path, the label included: under `--splitnaming=label` a page `\label{~one}` is
 `$HOME` + `one.html`, outside the site directory (Perl then stops: "The destination directory … must be within the
 siteDirectory"), and `\label{/x}` beside a root with no directory is the absolute `/x.html`.
 **Rust behavior**: `split::page_pathname` joins the label as written: no `~` expansion and no leading separator, so the
-page is `~one.html` or `x.html` in the destination, as rc3 wrote them. The rest of the name is Perl's (`pathname_make`
-over the parent's directory). **Why**: the label is the document's text, not a path the user gave; expanding it writes
+page is `~one.html` or `x.html` in the destination, as rc3 wrote them. A `../` in the label is kept, so `\label{../esc}`
+still lies outside the destination, where Perl and rc3 put it, and its links keep the `../`. The rest of the name is
+Perl's (`pathname_make` over the parent's directory). **Why**: the label is the document's text, not a path the user gave; expanding it writes
 outside the destination and leaks a filesystem path into the links. A candidate patch for Perl. **Guard**
 `split_nav_relations::split_label_names_stay_in_the_destination`.
