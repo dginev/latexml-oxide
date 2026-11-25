@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["OutputFormat"],"fn":["bounded_name","copy_atomic","ensure_parent_dir","link_atomic","made_dir_count","same_bytes","same_file","write_atomic","write_output","write_output_segments"],"struct":["MadeDirs","Staged","Writer"]};
+window.SIDEBAR_ITEMS = {"enum":["OutputFormat"],"fn":["bounded_name","copy_atomic","ensure_parent_dir","link_atomic","made_dir_count","needs_write","same_bytes","same_file","write_atomic","write_output","write_output_segments"],"struct":["MadeDirs","Staged","Writer"]};

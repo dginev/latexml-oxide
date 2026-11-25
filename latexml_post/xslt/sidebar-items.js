@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["resource_copy_count"],"struct":["XSLT"]};
+window.SIDEBAR_ITEMS = {"fn":["ar5iv_css_bundled","resource_copy_count"],"struct":["XSLT"]};
