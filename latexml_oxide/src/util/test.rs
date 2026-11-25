@@ -633,7 +633,8 @@ pub fn error_count(log: &str) -> usize {
 /// without the `ltx:` prefix.
 ///
 /// Under `LATEXML_TEST_SHADOW=<dir>`, a call whose result differs from the first of [`xml_elements`] is appended to
-/// `<dir>/<pid>.tsv` (caller, tag, attributes, this result, that one); this result stays the one returned.
+/// `<dir>/<pid>.tsv` (caller, tag, attributes, this result, that one); this result stays the one returned. `<dir>` must be
+/// absolute (a test's working directory is its crate's); a relative one, or a log it cannot write, panics the call.
 #[track_caller]
 pub fn xml_element(xml: &str, tag: &str, attrs: &[&str]) -> Option<String> {
   let found = first_element_by_substring(xml, tag, attrs);
@@ -652,7 +653,18 @@ pub fn xml_element(xml: &str, tag: &str, attrs: &[&str]) -> Option<String> {
 
 /// `LATEXML_TEST_SHADOW`: the directory [`xml_element`] logs its disagreements with [`xml_elements`] to.
 static TEST_SHADOW: LazyLock<Option<PathBuf>> =
-  LazyLock::new(|| std::env::var_os("LATEXML_TEST_SHADOW").map(PathBuf::from));
+  LazyLock::new(|| shadow_dir(std::env::var_os("LATEXML_TEST_SHADOW")));
+
+/// The shadow directory of a `LATEXML_TEST_SHADOW` value: unset or empty is none; a relative path panics.
+fn shadow_dir(value: Option<std::ffi::OsString>) -> Option<PathBuf> {
+  let dir = PathBuf::from(value.filter(|v| !v.is_empty())?);
+  assert!(
+    dir.is_absolute(),
+    "LATEXML_TEST_SHADOW must be an absolute path, not {}",
+    dir.display()
+  );
+  Some(dir)
+}
 
 /// Log one [`xml_element`] call whose result `old` differs from the first of [`xml_elements`].
 fn shadow_compare(
@@ -688,14 +700,17 @@ fn shadow_compare(
     cell(old),
     cell(new.as_deref())
   );
-  let _ = std::fs::create_dir_all(dir);
-  if let Ok(mut log) = std::fs::OpenOptions::new()
-    .create(true)
-    .append(true)
-    .open(dir.join(format!("{}.tsv", std::process::id())))
-  {
-    let _ = log.write_all(line.as_bytes());
-  }
+  let path = dir.join(format!("{}.tsv", std::process::id()));
+  // A lost row would read as "no flips": a write failure fails the test instead.
+  std::fs::create_dir_all(dir)
+    .and_then(|()| {
+      std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&path)
+    })
+    .and_then(|mut log| log.write_all(line.as_bytes()))
+    .unwrap_or_else(|e| panic!("LATEXML_TEST_SHADOW: cannot write {}: {e}", path.display()));
 }
 
 /// [`xml_element`]'s own scan: the first start tag containing every `attrs` fragment, to its close.
@@ -875,13 +890,23 @@ pub fn element_count(xml: &str, tag: &str, attrs: &[&str]) -> usize {
   element_spans(xml, tag, attrs).len()
 }
 
-/// Assert that `xml` holds none of the [`xml_elements`] `tag` with `attrs`; the failure prints the first one.
+/// Assert that `xml` holds none of the [`xml_elements`] `tag` with `attrs`, nor such a start tag left unclosed
+/// (truncated markup); the failure prints the first one.
 #[track_caller]
 pub fn assert_no_element(xml: &str, tag: &str, attrs: &[&str]) {
-  if let Some(found) = xml_elements(xml, tag, attrs).first() {
+  let scan = scan_elements(xml, tag, attrs);
+  if let Some(&(start, end)) = scan.whole.first() {
     panic!(
-      "unexpected <{tag} {}> element in the output\n--- found:\n{found}\n--- xml:\n{xml}",
-      attrs.join(" ")
+      "unexpected <{tag} {}> element in the output\n--- found:\n{}\n--- xml:\n{xml}",
+      attrs.join(" "),
+      normalize_markup(&xml[start..end])
+    );
+  }
+  if let Some(&(start, end)) = scan.unclosed.first() {
+    panic!(
+      "unexpected <{tag} {}> element in the output\n--- found unclosed {}\n--- xml:\n{xml}",
+      attrs.join(" "),
+      normalize_markup(&xml[start..end])
     );
   }
 }
@@ -902,9 +927,10 @@ pub fn assert_all_elements(xml: &str, tag: &str, attrs: &[&str], expected: &[imp
   );
 }
 
-/// The character data of `markup`: tags, comments and processing instructions dropped (with no space in their place,
-/// so `2<text>021</text>` reads `2021`), CDATA kept, entities and character references decoded, XML whitespace runs
-/// collapsed to one space and the ends trimmed.
+/// The character data of `markup`: a `<break/>` or `<br>` read as one space, every other tag, comment and processing
+/// instruction dropped with no space in its place (so `2<text>021</text>` reads `2021`), CDATA kept, entities and
+/// character references decoded, XML whitespace runs collapsed to one space and the ends trimmed. Never use it where
+/// whitespace is the signal (listings, verbatim, `\verb`): pin those elements whole.
 pub fn markup_text(markup: &str) -> String {
   let mut text = String::with_capacity(markup.len());
   let mut pos = 0;
@@ -914,6 +940,12 @@ pub fn markup_text(markup: &str) -> String {
     pos = match markup_item(markup, at) {
       Some((MarkupItem::Cdata, end)) => {
         text.push_str(&markup[at + "<![CDATA[".len()..end - "]]>".len()]);
+        end
+      },
+      Some((MarkupItem::Start { name, .. }, end)) => {
+        if matches!(name.strip_prefix("ltx:").unwrap_or(name), "break" | "br") {
+          text.push(' ');
+        }
         end
       },
       Some((_, end)) => end,
@@ -976,7 +1008,7 @@ fn decode_entities(text: &str, out: &mut String) {
 
 /// What the markup scanner of [`xml_elements`] and [`markup_text`] reads at a `<`.
 enum MarkupItem<'a> {
-  /// A start tag `<name …>`; `empty` when self-closing (`/>`) or an HTML void element.
+  /// A start tag `<name …>`; `empty` when self-closing (`/>`).
   Start { name: &'a str, empty: bool },
   /// An end tag `</name>`.
   End { name: &'a str },
@@ -988,8 +1020,8 @@ enum MarkupItem<'a> {
 
 /// The HTML elements with no end tag (HTML Living Standard §13.1.2 "void elements").
 const HTML_VOID_ELEMENTS: &[&str] = &[
-  "area", "base", "br", "col", "embed", "hr", "img", "input", "keygen", "link", "meta", "param",
-  "source", "track", "wbr",
+  "area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source",
+  "track", "wbr",
 ];
 
 /// The markup item starting at `xml[at] == '<'` and the byte offset just past it; `None` for a `<` that opens no
@@ -1011,7 +1043,12 @@ fn markup_item(xml: &str, at: usize) -> Option<(MarkupItem<'_>, usize)> {
     return Some((MarkupItem::Other, past(2, "?>")?));
   }
   if rest.starts_with("<!") {
-    return Some((MarkupItem::Other, at + start_tag_end(rest)? + 1));
+    let end = start_tag_end(rest)?;
+    // A `<!DOCTYPE d [ … ]>` internal subset holds `>`s of its own.
+    if rest[..end].contains('[') {
+      return Some((MarkupItem::Other, past(2, "]>")?));
+    }
+    return Some((MarkupItem::Other, at + end + 1));
   }
   let (closing, name_at) = if rest.starts_with("</") {
     (true, 2)
@@ -1033,7 +1070,7 @@ fn markup_item(xml: &str, at: usize) -> Option<(MarkupItem<'_>, usize)> {
   let item = if closing {
     MarkupItem::End { name }
   } else {
-    let empty = rest[..end].ends_with('/') || HTML_VOID_ELEMENTS.contains(&name);
+    let empty = rest[..end].ends_with('/');
     MarkupItem::Start { name, empty }
   };
   Some((item, at + end + 1))
@@ -1099,14 +1136,27 @@ fn start_tag_has(start_tag: &str, attr: &str) -> bool {
   }
 }
 
-/// The byte ranges of [`xml_elements`], in document order: one scan, each open element of the name (with or without
-/// `ltx:`) on its own stack, so an element closes at the end tag of its own name, as [`xml_element`]'s depth count.
+/// The byte ranges of [`xml_elements`], in document order.
 fn element_spans(xml: &str, tag: &str, attrs: &[&str]) -> Vec<(usize, usize)> {
+  scan_elements(xml, tag, attrs).whole
+}
+
+/// What [`scan_elements`] finds: the whole elements, and the start tags never closed.
+struct ElementScan {
+  whole:    Vec<(usize, usize)>,
+  unclosed: Vec<(usize, usize)>,
+}
+
+/// One scan for the elements `tag` with `attrs`, each open element of the name (with or without `ltx:`) on its own
+/// stack, so an element closes at the end tag of its own name, as [`xml_element`]'s depth count. An HTML void element
+/// left open is its start tag, whole; closed, as XML may write it, it is the element. Any other start tag left open
+/// has no extent, so it is no whole element (only [`assert_no_element`] reads it).
+fn scan_elements(xml: &str, tag: &str, attrs: &[&str]) -> ElementScan {
   let bare = tag.strip_prefix("ltx:").unwrap_or(tag);
   let prefixed = format!("ltx:{bare}");
   let names = [bare, prefixed.as_str()];
-  // Per name, its open elements: `Some(start)` for one that matches `attrs`.
-  let mut open: [Vec<Option<usize>>; 2] = [Vec::new(), Vec::new()];
+  // Per name, its open elements: `Some((start, start tag's end))` for one that matches `attrs`.
+  let mut open: [Vec<Option<(usize, usize)>>; 2] = [Vec::new(), Vec::new()];
   let mut spans = Vec::new();
   let mut pos = 0;
   while let Some(rel) = xml[pos..].find('<') {
@@ -1127,12 +1177,12 @@ fn element_spans(xml: &str, tag: &str, attrs: &[&str]) -> Vec<(usize, usize)> {
             spans.push((at, end));
           }
         } else {
-          open[which].push(matches.then_some(at));
+          open[which].push(matches.then_some((at, end)));
         }
       },
       MarkupItem::End { name } => {
         if let Some(which) = names.iter().position(|n| *n == name)
-          && let Some(Some(start)) = open[which].pop()
+          && let Some(Some((start, _))) = open[which].pop()
         {
           spans.push((start, end));
         }
@@ -1140,8 +1190,13 @@ fn element_spans(xml: &str, tag: &str, attrs: &[&str]) -> Vec<(usize, usize)> {
       MarkupItem::Cdata | MarkupItem::Other => {},
     }
   }
+  let mut unclosed: Vec<(usize, usize)> = open.into_iter().flatten().flatten().collect();
+  if HTML_VOID_ELEMENTS.contains(&bare) {
+    spans.append(&mut unclosed);
+  }
   spans.sort_unstable();
-  spans
+  unclosed.sort_unstable();
+  ElementScan { whole: spans, unclosed }
 }
 
 /// RelaxNG-validate a core-XML string against the repo's authoritative
@@ -1934,6 +1989,17 @@ mod element_helper_tests {
   }
 
   #[test]
+  #[should_panic(expected = "unclosed <note class=\"x\">")]
+  fn assert_no_element_fails_on_a_start_tag_left_open() {
+    // Truncated markup: no whole element, but the start tag is there.
+    assert_eq!(
+      xml_elements("<p><note class=\"x\">abc", "note", &[]),
+      [""; 0]
+    );
+    assert_no_element("<p><note class=\"x\">abc", "note", &[]);
+  }
+
+  #[test]
   fn an_html_void_element_is_its_start_tag() {
     let html = "<p>a<br>b<br class=\"x\">c<img src=\"i.png\" alt=\"\"></p>";
     assert_eq!(xml_elements(html, "br", &[]), ["<br>", "<br class=\"x\">"]);
@@ -1941,6 +2007,11 @@ mod element_helper_tests {
       "<img alt=\"\" src=\"i.png\">"
     ]);
     assert_eq!(xml_elements(html, "p", &[]), [normalize_markup(html)]);
+    // In XML a void-named element may have content (epub.rs writes `<meta …>…</meta>`).
+    assert_eq!(
+      xml_elements("<p><meta a=\"1\">v</meta></p>", "meta", &[]),
+      ["<meta a=\"1\">v</meta>"]
+    );
   }
 
   #[test]
@@ -1951,6 +2022,59 @@ mod element_helper_tests {
         "<p>a &amp; b&#160;c&#x41;<!-- x --><?pi y?>&lt;d&gt;</p>\n  <p>e<![CDATA[ & f]]></p>"
       ),
       "a & b\u{a0}cA<d> e & f"
+    );
+    assert_eq!(markup_text("<!DOCTYPE d [<!ENTITY a \"b\">]><d>x</d>"), "x");
+  }
+
+  #[test]
+  fn markup_text_reads_a_break_as_one_space() {
+    assert_eq!(markup_text("Univ A<break/>Town"), "Univ A Town");
+    assert_eq!(markup_text("<p><break/>a<break/></p>"), "a");
+    assert_eq!(
+      markup_text("Univ A <ltx:break/> Town<br>X"),
+      "Univ A Town X"
+    );
+  }
+
+  #[test]
+  fn the_shadow_directory_is_absolute_and_nonempty() {
+    use super::shadow_dir;
+    assert_eq!(shadow_dir(None), None);
+    assert_eq!(shadow_dir(Some("".into())), None);
+    assert_eq!(
+      shadow_dir(Some("/tmp/shadow".into())),
+      Some("/tmp/shadow".into())
+    );
+    let relative = std::panic::catch_unwind(|| shadow_dir(Some("shadow".into())));
+    assert!(relative.is_err(), "a relative directory must not be used");
+  }
+
+  #[test]
+  #[should_panic(expected = "LATEXML_TEST_SHADOW: cannot write")]
+  fn the_shadow_hook_fails_when_it_cannot_write() {
+    let file = tempfile::NamedTempFile::new().unwrap();
+    // A regular file where the directory should be.
+    super::shadow_compare(
+      file.path(),
+      std::panic::Location::caller(),
+      "<!-- <p>x</p> --><p>y</p>",
+      "p",
+      &[],
+      Some("<p>x</p>"),
+    );
+  }
+
+  #[test]
+  fn the_shadow_hook_logs_a_disagreement_as_one_row() {
+    let dir = tempfile::tempdir().unwrap();
+    let here = std::panic::Location::caller();
+    let xml = "<!-- <p>x</p> --><p>y</p>";
+    let old = super::first_element_by_substring(xml, "p", &[]);
+    super::shadow_compare(dir.path(), here, xml, "p", &[], old.as_deref());
+    let log = dir.path().join(format!("{}.tsv", std::process::id()));
+    assert_eq!(
+      std::fs::read_to_string(log).unwrap(),
+      format!("{}:{}\tp\t\t<p>x</p>\t<p>y</p>\n", here.file(), here.line())
     );
   }
 }

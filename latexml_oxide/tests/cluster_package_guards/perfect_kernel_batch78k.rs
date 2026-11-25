@@ -5,7 +5,9 @@
 //! Warning and the authored content in whole elements, against pdflatex. Witnesses 1505.04294, 2311.15711, 1706.08429,
 //! 2608.16854 (thmtools); 1810.03652, 1911.01815, 1903.04631, 1402.6889 and the ten other shippers of algorithm2e v5.00
 //! (algorithm2e); 2210.16098, 2505.07606 (bibentry); 1907.00006 (footmisc).
-use latexml::util::test::{assert_element, convert_files_with, convert_with, xml_element};
+use latexml::util::test::{
+  assert_element, convert_files_with, convert_with, xml_element, xml_elements,
+};
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
 
@@ -199,11 +201,7 @@ fn thmtools_declaretheorem_declares_each_listed_name() {
 /// The `<ltx:listingline>`s of `xml`, ids stripped, its `Math` collapsed to `M`.
 fn listing_lines(xml: &str) -> Vec<String> {
   let mut lines = Vec::new();
-  let mut rest = xml;
-  while let Some(at) = rest.find("<listingline") {
-    let line = xml_element(&rest[at..], "listingline", &[]).expect("a listingline");
-    let close = rest[at..].find("</listingline>").expect("its close") + "</listingline>".len();
-    rest = &rest[at + close..];
+  for line in xml_elements(xml, "listingline", &[]) {
     let mut flat = String::new();
     let mut s = line.as_str();
     while let Some(m) = s.find("<Math") {
