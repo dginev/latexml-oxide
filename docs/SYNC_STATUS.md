@@ -73,7 +73,7 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (392 items on 2026-11-25 on `int/towards_v0_8_1`: 392 open, weight 880, 43 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (392 items on 2026-11-25 on `int/towards_v0_8_1`: 392 open, weight 882, 43 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
 
 
   - ODR6 — OD ruling 12 (recorded in OD #449): `dump_reader.rs`'s "add-only" docstrings (:365, :574) corrected, then a removal trial of the skip lists against CLAUDE.md rule 2; 1
@@ -449,10 +449,20 @@ Rules that keep this file honest and mergeable:
     killer) orphans a spinning texlua (`PR_SET_PDEATHSIG` needs `pre_exec`); defence in depth (LUAOSBOX): an OS sandbox
     of the texlua child — Linux Landlock (read texmf and the source, write the job dir) + seccomp (no
     execve/fork/socket), a macOS sandbox-exec profile, a Windows Job object (no child processes) + a restricted token; 5
-  - PARANOIDIN — (DG 2026-11-18: "not now") a document reads any file the user can read (`\input{/abs}`, `\input{../…}`,
-    `\verbatiminput`, `\openin`, `\includegraphics` copying it into the output, Lua `io.open`, `os.getenv`), as under
-    TeX's default `openin_any=a` and in Perl; kept for later: a `--paranoid-input` (`openin_any=p` semantics: the
-    unpacked source root, texmf and `--path` after symlink resolution), on in cortex_worker; 3
+  - PARANOIDIN — (DG 2026-11-25: v0.8.1; "not now" 2026-11-18) a document reads any file the user can read, as under
+    TeX's default `openin_any=a` and in Perl; confirmed for an archive (CLI `.zip`, and `cortex_worker` by its code): all
+    19 read paths leak a file outside the unpacked tree by `../` or an absolute name with Status OK (`\input`,
+    `\include`, `\IfFileExists`, `\openin`, verbatim/listings/fancyvrb, `\includegraphics` copying it, `\graphicspath`,
+    `.bib`/biblatex, `\import`, `\usepackage{../x}`, `\pdfmdfivesum`, Lua `io.open`), and a bare name is answered from
+    the process cwd (`SEARCHPATHS` puts it first, `state.rs:800-812`; kpathsea's `.`). DG rulings: archives always
+    confined, `--paranoid-input` opt-in for plain `.tex`; `Error:refused_file` once per name, one Warning per
+    out-of-tree `\graphicspath`/`\input@path` directory. Rule study (advisor, `agent_reports/2026-11-25_ARCHJAIL_rule_study.md`):
+    roots = the unpack root (lexical then resolved), `--path` and the TeX installation from kpathsea's `$TEXMF`
+    expansion + `OSFONTDIR` (lexical + same-file, not resolved: the distro tree's symlinks point outside it), never the
+    destination, cwd, `$HOME` or `SELFAUTO*`; checked inside `pathname::find`/`pathname::kpsewhich` before any stat (no
+    existence oracle); post `graphics.rs:495`'s cwd try; Lua's whole read surface (`io.lines`, `loadfile`, `dofile`,
+    `package.path`, `lfs.dir`). Six decisions for DG in the study (dest root, user trees, cwd under
+    `--paranoid-input`, env `TEXINPUTS`, Lua reads, absolute TL paths). Repro probes `~/data/pk_wt/scratch_PARANOID/`; 5
   - IMGINTENT — after v0.8.0, a dedicated sprint (DG 2026-11-20: "addressing the full challenge and complexity, and
     testing against the full diversity of arXiv"): image sizing that keeps the source's width intent (issue #721,
     ar5iv#83). Today `width=7in`, `0.8\linewidth`, a length register and a macro all reach the XML as pt
