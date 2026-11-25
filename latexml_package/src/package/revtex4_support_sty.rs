@@ -47,9 +47,10 @@ LoadDefinitions!({
   if !iftex_before {
     unmark_loaded("iftex.sty");
   }
-  // Its `\refstepcounter` dispatch (hyperref.sty:6651-6657) goes with that load too: the shipped revtex 4.0
-  // ltxutil.sty:682 `\let\H@refstepcounter\refstepcounter` took it for the kernel's and closed a loop at every
-  // `\section` (astro-ph0112270; OXIDIZED_DESIGN_DIVERGENCES #1100). The document's own load installs it again.
+  // Its `\refstepcounter` dispatch (a format before 2024-11-01, hyperref.sty:6694-6713) goes with that load too: the
+  // shipped revtex 4.0 ltxutil.sty:682 `\let\H@refstepcounter\refstepcounter` took it for the kernel's and closed a
+  // loop at every `\section` (astro-ph0112270; OXIDIZED_DESIGN_DIVERGENCES #1100). The document's own load installs it
+  // again.
   Let!("\\refstepcounter", "\\lx@kernel@refstepcounter");
   RequirePackage!("natbib");
   RequirePackage!("revsymb");

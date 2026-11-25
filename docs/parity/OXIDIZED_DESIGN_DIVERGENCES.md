@@ -10970,7 +10970,7 @@ warm-up), so at 32 it read as a cycle; every numeric register value the gullet s
 The stomach's span history takes the values read for each box the same way, which also ends a false Fatal at the old
 window: `\loop abcdefghi\advance\n1 \ifnum\n<6000 \repeat` was "a window of 9 box(es)". A loop that only re-expands (the
 alias cycles of OD #1100; 2609.30372's document-level `\let\H@refstepcounter\refstepcounter`, a 20-token window, 180 s →
-5 s, pdflatex finishes it) reads no changing value and still trips, as does one that moves a counter it never reads
+5 s, pdflatex finishes it, as we do since HYPREFSTEP) reads no changing value and still trips, as does one that moves a counter it never reads
 (`\loop\advance\count255 by 1 \iftrue\repeat`, which `cluster_cli`'s watchdog test used as its endless loop; it now
 tests the count, `\ifnum\count255>0`); an infinite loop that reads its moving counter runs to the deadline, as before.
 The ring holds `MAX_WINDOW × REPEAT` = 3,200 items, so the gullet's duty window widened with it, 2,048 of every 16,384
@@ -21699,22 +21699,42 @@ looped (math0612243, 0705.4126, math0112238; ~18). The revtex classes' preload o
 kept for documents that use its commands, marked unloaded) installed hyperref's `\refstepcounter` dispatch through
 `\H@refstepcounter`, which the shipped revtex 4.0 ltxutil.sty:682 `\let\H@refstepcounter\refstepcounter` pointed back
 at it (astro-ph0112270; ~21); the preload now restores the kernel's `\refstepcounter` (as `aastex_cls.rs` does after
-aas_support's preload for AASTeX 5.x, which loads no hyperref). Under revtex the document's own
-`\usepackage{hyperref}` installs the dispatch; under AASTeX 5.x aas_support leaves hyperref marked loaded (as Perl), so
-it does not, and cleveref's hyperref branch (cleveref.sty:2044-2054, patching only `\H@refstepcounter`) then sets no
-`\cref@currentlabel` (an aastex + algpseudocode + cleveref probe: 2 Errors; aastex + cleveref in 0 of 35,942 census
-papers; row R AAS5-HYPERREF). slashed's `\lx@slashed` called `\not` by name, which slashed.sty:112-118
-never does, and an author's `\def\not#1{\slashed{#1}}` looped (2504.21590). physics's commands, built on helpers that
+aas_support's preload for AASTeX 5.x, which loads no hyperref). hyperref's own dispatch is under its condition too:
+hyperref.sty:6658-6714 redefines `\refstepcounter` only on a format before 2024-11-01, and otherwise plugs the
+kernel's `refstepcounter` sockets (latex.ltx:14951-14968), so the binding dispatches only there; on a later format a
+document's `\let\H@refstepcounter\refstepcounter` is no cycle (2609.30372, after cleveref: a 5 s `Timeout:Recursion`
+Fatal), and those restores are no-ops. hyperref's `hyperref/fixcleveref` plug (:6662-6673), which sets the label data
+of every released cleveref (dated before its 2018/03/28 test; TL 2025 ships v0.21.4, 2018/03/27) after the kernel's
+step (cleveref.sty:2044-2054 sets it only in `\H@refstepcounter`), is a wrapper of cleveref's
+`\cref@old@refstepcounter` (and of `\refstepcounter@noarg`, its `\let` copy) that a `package/cleveref/after` hook
+installs; algorithmicx's `\ALG@step` reads that data (2403.15855). The wrapper is defined, once, before the hook, which
+runs at once when cleveref came first (1811.08194, 1909.08399: cleveref's own load-order Error only, as pdflatex), and
+installed only under cleveref's hyperref branch (`\if@cref@hyperrefloaded`, cleveref.sty:2026-2036): otherwise
+cleveref's own `\refstepcounter` (:45-56) sets the same data after the step, and the plug, which only ever runs inside
+it here, would compute it twice (1811.08194: +6.6 % instructions, the same XML).
+The hook comes with any hyperref load, the AASTeX 5.x preload's too, so an aastex + algpseudocode + cleveref document
+no longer `\xdef`s `\cref@currentprefix` into itself (1 Error before; aastex + cleveref in 0 of 35,942 census papers;
+row AAS5-HYPERREF). TL 2025's pdflatex prints "section A" for a `\cref` to a section after `\appendix` (with or without
+hyperref, and under `latexrelease` 2024-06-01); our cleveref binding reads the label's own type, "appendix A",
+cleveref's documented appendix typing, with or without the wrapper.
+On a format before 2024-11-01, the document's own `\usepackage{hyperref}` installs the dispatch again under revtex,
+but not under AASTeX 5.x, where aas_support leaves hyperref marked loaded (as Perl).
+Without a dump (`LATEXML_NODUMP`), `\fmtversion` is the bootstrap's 2018/12/01 (latex_base.rs, as Perl
+latex_base.pool.ltxml:256), so the binding dispatches there; the repros and 2609.30372 convert as on the base.
+slashed's `\lx@slashed` called `\not` by name, which slashed.sty:112-118 never does, and an author's
+`\def\not#1{\slashed{#1}}` looped (2504.21590). physics's commands, built on helpers that
 take the command itself as their reversion argument, re-expanded inside their own helper in an `\edef` (ifthen's
 `\equal` under algpseudocode's `\Function`; 2001.08539, 2505.01628; ~7; Perl physics.sty.ltxml:401/464-476 hangs
 alike): the commands physics.sty declares with `\DeclareDocumentCommand` are `protected`, as ltcmd makes them,
 all but `\svmqty` and `\trace`/`\Trace` (with their `\tr`/`\Tr` aliases), which loop in no `\edef` (row R PHYS-PROTECT).
 
 **Perl.** Perl has no apacite binding (101 undefined-`\citet` errors on the repro), runs amsmath's `\X@` lets only
-through the raw package's test, has no `\refstepcounter` dispatch (hyperref.sty.ltxml:383), and loops on physics as we
+through the raw package's test, has no `\refstepcounter` dispatch (hyperref.sty.ltxml:385), and loops on physics as we
 did. **Guards** `perfect_kernel_batchloopfix::{apacite_forms_survive_the_class_lets,
 amsmath_keeps_an_inlined_amstex_sum, revtex_preload_leaves_ltxutil_refstepcounter_alone,
-physics_commands_are_protected_in_an_edef}` (repros `package-bindings/alias_cycle_*`).
+physics_commands_are_protected_in_an_edef, hyperref_leaves_refstepcounter_to_the_kernel}` (repros
+`package-bindings/alias_cycle_*`, `package-bindings/hyperref_cleveref_algorithmic_label_data`,
+`package-bindings/hyperref_after_cleveref_algorithmic_label_data`).
 
 ### 1101. An abstract opened as a command that the bibliography or the document's end closes keeps its first paragraph
 

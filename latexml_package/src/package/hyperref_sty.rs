@@ -594,33 +594,32 @@ LoadDefinitions!({
   // that undoes the wrapping relies on it: pittetd.cls `\AtBeginDocument{\let\maketitle\HyOrg@maketitle}` left
   // `\maketitle` undefined (1509.06375: 101 errors then Fatal; Perl's binding saves none either).
   Let!("\\HyOrg@maketitle", "\\maketitle");
-  // Perl `hyperref.sty.ltxml:383` only does `Let('\H@refstepcounter',
-  // '\refstepcounter')`. We go one step further and mirror the real
-  // `hyperref.sty:6631+6638-6657`: redefine `\refstepcounter` to
-  // dispatch through `\H@refstepcounter`. This is what real-world
-  // packages assume — most notably `cleveref.sty:2045-2053` patches
-  // `\H@refstepcounter` (under `\@ifpackageloaded{hyperref}`) to set
-  // `\cref@currentlabel`. Without the dispatch, that patch is dead
-  // code: `\refstepcounter` stays bound to the kernel primitive,
-  // `\cref@currentlabel` keeps its `\ALG@beginalgorithmic` placeholder
-  // `[line][\arabic{ALG@line}][\cref@currentprefix]\theALG@line`,
-  // and the cleveref-augmented `\ALG@step` then does
-  // `\xdef\cref@currentprefix{\cref@currentprefix}` — a runaway
-  // self-expansion that Perl LaTeXML catches with an in-engine
-  // recursion guard (`Expandable.pm:81-89`), but Rust hangs at the
-  // worker wall-clock guard.
-  // Witness: 2403.15855 (Springer Nature `sn-jnl` class). The anchor
-  // `\Hy@raisedlink` carries is kept (below, 57cn); `\hyper@anchorstart`/
-  // `\hyper@anchorend` are still skipped (SYNC_STATUS) — only the dispatch
-  // matters here.
   // The kernel's own, whatever `\refstepcounter` is now, as hyperref.sty:6651 `\let\H@refstepcounter
   // \@kernel@refstepcounter`: our kernel's is `\lx@kernel@refstepcounter` (latex_constructs/sect08.rs; the dump's
   // `\@kernel@refstepcounter` is latex.ltx:14969's raw macro, which bypasses the binding's counter and ID handling).
   // Loaded again — a document's own `\usepackage{hyperref}` after the revtex classes' preload, revtex4_support_sty.rs
-  // — `\refstepcounter` is this one, and `\H@refstepcounter` saved as it called itself, a PushbackLimit Fatal under
-  // cleveref (2207.13707).
+  // — `\H@refstepcounter` saved as `\refstepcounter` called itself, a PushbackLimit Fatal under cleveref (2207.13707).
   Let!("\\H@refstepcounter", "\\lx@kernel@refstepcounter");
-  DefMacro!("\\refstepcounter{}", "\\H@refstepcounter{#1}");
+  // hyperref.sty:6662-6673's `hyperref/fixcleveref` plug, for every released cleveref (cleveref.sty:2044-2054 sets its
+  // label data only in `\H@refstepcounter`): the update after the kernel's step
+  // (latex2e-first-aid-for-external-files.ltx:238-247), in cleveref's `\refstepcounter@noarg` copy too (2403.15855).
+  // Defined once, before the hook below; needed only where cleveref took its hyperref branch (cleveref.sty:2026-2036),
+  // as its own `\refstepcounter` sets the same data otherwise (cleveref first: 1811.08194, 1909.08399).
+  RawTeX!(
+    r"\ifdefined\lx@hyperref@fixcleveref\else\def\lx@hyperref@fixcleveref{\let\lx@hyperref@fixcleveref\relax
+\ifx\refstepcounter@noarg\cref@old@refstepcounter\def\refstepcounter@noarg{\cref@old@refstepcounter}\fi
+\let\lx@hyperref@cref@step\cref@old@refstepcounter
+\def\cref@old@refstepcounter##1{\lx@hyperref@cref@step{##1}\cref@constructprefix{##1}{\cref@result}%
+\@ifundefined{cref@##1@alias}{\def\@tempa{##1}}{\def\@tempa{\csname cref@##1@alias\endcsname}}%
+\protected@edef\cref@currentlabel{[\@tempa][\arabic{##1}][\cref@result]\csname p@##1\endcsname\csname the##1\endcsname}}}\fi"
+  );
+  // hyperref.sty:6658-6714: a format from 2024-11-01 keeps the kernel's `\refstepcounter` (latex.ltx:14951-14968's
+  // sockets), so a document's `\let\H@refstepcounter\refstepcounter` is no cycle (2609.30372); an older one dispatches
+  // through `\H@refstepcounter`, as Perl never does (hyperref.sty.ltxml:385; OXIDIZED_DESIGN_DIVERGENCES #1100).
+  RawTeX!(
+    r"\@ifl@t@r\fmtversion{2024/11/01}{\AddToHook{package/cleveref/after}{\@ifpackagelater{cleveref}{2018/03/28}{}%
+{\if@cref@hyperrefloaded\lx@hyperref@fixcleveref\fi}}}{\def\refstepcounter#1{\H@refstepcounter{#1}}}"
+  );
 
   // Blech...
   DefMacro!(

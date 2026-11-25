@@ -1,0 +1,21 @@
+% witness: 2609.30372 (`\AtBeginDocument{\let\H@refstepcounter\refstepcounter}` after hyperref; revtex4-2 + cleveref)
+% oracle:  pdflatex 0 errors: sections 1 and 2, equation (1), Figure 1; "See 1 and (1)."
+% engines: rust INT081T = Fatal:Timeout:Recursion (our hyperref binding's `\refstepcounter` dispatched through
+%          `\H@refstepcounter`, which the `\let` pointed back at it; hyperref on a 2024-11-01 format leaves
+%          `\refstepcounter` alone, hyperref.sty:6658-6714); Perl not run (its binding has no dispatch)
+% expect:  0 errors, 0 warnings; sections 1 and 2, equation (1), figure 1, the references resolved
+% status:  RED (INT081T) -> GREEN (HYPREFSTEP)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{hyperref}
+\makeatletter
+\AtBeginDocument{\let\H@refstepcounter\refstepcounter}
+\makeatother
+\begin{document}
+\section{Intro}\label{s:a}
+\begin{equation}a=b\label{e:a}\end{equation}
+\section{Next}
+See \ref{s:a} and \eqref{e:a}.
+\begin{figure}\caption{Cap}\label{f:a}\end{figure}
+\end{document}

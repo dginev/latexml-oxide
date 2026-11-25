@@ -121,10 +121,10 @@ LoadDefinitions!({
     revtex4_support_sty::define_float_repair()?;
   }
   RequirePackage!("aas_support");
-  // aas_support's hyperref preload re-installs hyperref's `\refstepcounter` dispatch that revtex4_support_sty.rs undid;
-  // AASTeX 5.x loads no hyperref (6+ does), and a shipped ltxutil.sty:682 `\let\H@refstepcounter\refstepcounter`
-  // closed a loop through it (astro-ph0112270; OXIDIZED_DESIGN_DIVERGENCES #1100). hyperref stays marked loaded, so a
-  // document's own `\usepackage{hyperref}` does not re-install it (row R AAS5-HYPERREF).
+  // aas_support's hyperref preload re-installs hyperref's `\refstepcounter` dispatch (a format before 2024-11-01) that
+  // revtex4_support_sty.rs undid; AASTeX 5.x loads no hyperref (6+ does), and a shipped ltxutil.sty:682
+  // `\let\H@refstepcounter\refstepcounter` closed a loop through it (astro-ph0112270; OXIDIZED_DESIGN_DIVERGENCES
+  // #1100). hyperref stays marked loaded, so a document's own `\usepackage{hyperref}` does not re-install it.
   if !aastex6_plus {
     Let!("\\refstepcounter", "\\lx@kernel@refstepcounter");
   }

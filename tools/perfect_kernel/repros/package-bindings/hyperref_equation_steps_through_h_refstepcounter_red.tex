@@ -1,0 +1,21 @@
+% witness: synthetic (found by HYPREFSTEP's sibling sweep)
+% oracle:  pdflatex 0 errors: "Steps: 1." — without amsmath, hyperref's `\equation` (hyperref.sty:6971-6983) steps
+%          with `\H@refstepcounter`, so a document's `\refstepcounter` wrapper runs at the section only
+% engines: rust INT081T "Steps: 0." (the binding's dispatch replaced the wrapper); HYPREFSTEP "Steps: 2." (the
+%          kernel's equation steps through `\refstepcounter`'s current meaning, `ref_step_counter_planned`)
+% expect:  0 errors, 0 warnings; "Steps: 1."
+% status:  RED (INT081T, HYPREFSTEP)
+% moves:   post-merge
+% preload: ar5iv.sty
+\documentclass{article}
+\newcounter{mine}
+\makeatletter
+\let\my@rsc\refstepcounter
+\def\refstepcounter#1{\my@rsc{#1}\stepcounter{mine}}
+\makeatother
+\usepackage{hyperref}
+\begin{document}
+\section{Intro}\label{s:a}
+\begin{equation}a\end{equation}
+Steps: \themine.
+\end{document}

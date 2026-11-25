@@ -843,8 +843,8 @@ pub fn ref_step_counter_by_meaning(ctype: &str) -> Result<HashMap<Stored>> {
 /// A counter step as LaTeX's caption, equation, item and section steps are: `\refstepcounter`
 /// with its current meaning (latex.ltx:17391-17399 `\refstepcounter\@captype`, :15737-15738), so a
 /// rebinding applies — floatrow measures each floatbox under `\FR@loc@`, whose `\refstepcounter`
-/// is a local `\advance` undone with the box (floatrow.sty:543-556); hyperref's and cleveref's wrap
-/// the kernel's; crossreference.sty and old varioref copy it. As caption does
+/// is a local `\advance` undone with the box (floatrow.sty:543-556); cleveref's (and hyperref's, on a
+/// format before 2024-11-01) wrap the kernel's; crossreference.sty and old varioref copy it. As caption does
 /// (caption.sty:551-570): `before` (its prepare hook) is digested first, and a continued float's
 /// step suppresses the counter's own `\stepcounter` for the length of the `\refstepcounter`
 /// (`\caption@@refcounter`), so the number repeats without resets. With the kernel meaning this is
