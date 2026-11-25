@@ -138,7 +138,12 @@ struct Cli {
   /// the lease MUST stay above this with margin, so a lease expiry reliably
   /// means a *dead* worker (not a slow-but-live one) — otherwise the reaper
   /// double-leases a paper still being converted. At 180s here the lease is
-  /// 240s (60s margin). Move the two together.
+  /// 240s (60s margin). Move the two together. One paper may outlive it: when
+  /// no dump matches the worker's TeX tree, its first paper builds the formats
+  /// off this clock (`watchdog::off_the_clock`): its bound is the timeout plus
+  /// the build's own (`format_dumps`: the lock's 300 s wait and 300 s for the
+  /// build), 180 + 600 s, and only that paper is re-leased. The image's prebuilt dumps
+  /// (Dockerfile `--init`, `tools/make_formats.sh`) keep it from happening.
   ///
   /// History: 60s→120s (8-way contention pushed 21-48s standalone runs past
   /// 60s: 2306.16591, 2307.05570, 2312.13092, 2404.17751, 2311.03376,

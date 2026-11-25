@@ -2550,19 +2550,23 @@ impl Graphics {
     installed
   }
 
-  /// On Windows, a short-named link (or copy) of `source` beside it when its full path reaches MAX_PATH (260): the
-  /// converters (ImageMagick, mutool, Ghostscript) cannot open such a path, and a figure name of ~220 characters in a
-  /// temp directory reaches it. Removed when dropped. Elsewhere, and for a shorter path, `None`.
+  /// On Windows, a short-named link (or copy) of `source` in the temporary directory, never the user's project, when
+  /// its full path reaches MAX_PATH (260): the converters (ImageMagick, mutool, Ghostscript) cannot open such a path,
+  /// and a figure name of ~220 characters in a temp directory reaches it. Removed when dropped, or by an exit's sweep.
+  #[cfg(windows)]
   fn reachable_source(source: &str) -> Option<crate::writer::Staged> {
-    let long = std::path::absolute(source).is_ok_and(|p| p.as_os_str().len() >= 260);
-    if !cfg!(windows) || !long {
+    const MAX_PATH: usize = 260;
+    if std::path::absolute(source).map_or(true, |p| p.as_os_str().len() < MAX_PATH) {
       return None;
     }
-    let alias = crate::writer::Staged::beside(Path::new(source));
-    (std::fs::hard_link(source, alias.path()).is_ok()
-      || std::fs::copy(source, alias.path()).is_ok())
-    .then_some(alias)
+    let alias = crate::writer::Staged::alias(Path::new(source)).ok()?;
+    // A temporary directory that long leaves the long path, as before: no shorter one is ours to write.
+    (alias.path().as_os_str().len() < MAX_PATH).then_some(alias)
   }
+
+  /// Elsewhere a path of any length opens: `None`.
+  #[cfg(not(windows))]
+  fn reachable_source(_source: &str) -> Option<crate::writer::Staged> { None }
 
   /// Convert a graphics file using ImageMagick's `convert` command.
   /// Perl: image_graphicx_complex via Image::Magick / convert CLI.
@@ -3666,6 +3670,30 @@ mod tests {
   // raster crop test, so its import is ungated (the Windows `cargo check`).
   use crate::test_env::EnvGuard;
   use crate::test_env::TempDir;
+
+  /// A figure whose full path reaches MAX_PATH is converted from an alias the converters can open: shorter, not in the
+  /// figure's directory (the user's project), the same bytes, gone when dropped. A short path takes none.
+  #[cfg(windows)]
+  #[test]
+  fn a_figure_path_past_max_path_is_reached_through_a_short_alias() {
+    let tmp = TempDir::new("reachable-source");
+    let dir = tmp.path().join("d".repeat(120)).join("e".repeat(120));
+    std::fs::create_dir_all(&dir).unwrap();
+    let figure = dir.join("figure.pdf");
+    std::fs::write(&figure, b"%PDF-1.4 figure").unwrap();
+    let source = std::path::absolute(&figure).unwrap();
+    assert!(source.as_os_str().len() >= 260, "{}", source.display());
+    let alias = Graphics::reachable_source(source.to_str().unwrap()).expect("an alias");
+    let path = alias.path().to_path_buf();
+    assert!(path.as_os_str().len() < 260, "{}", path.display());
+    assert_ne!(path.parent(), Some(dir.as_path()));
+    assert_eq!(std::fs::read(&path).unwrap(), b"%PDF-1.4 figure");
+    drop(alias);
+    assert!(!path.exists(), "the alias outlived its drop");
+    let short = tmp.path().join("figure.pdf");
+    std::fs::write(&short, b"%PDF-1.4").unwrap();
+    assert!(Graphics::reachable_source(short.to_str().unwrap()).is_none());
+  }
 
   /// A conversion request for `source` to `ext` (no page, no transform: its stem is proposed).
   fn stem_request(source: &str, ext: &str) -> Request {

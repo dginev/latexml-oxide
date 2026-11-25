@@ -8,10 +8,11 @@
 //!
 //! This module provides a main-level `Watchdog` that spawns a dedicated thread
 //! at construction, wakes after the specified number of seconds, and — if the
-//! watchdog has not yet been cancelled — prints a message and calls
-//! `std::process::abort()`. That guarantees the process dies within
-//! `timeout + poll_interval` of the configured deadline, regardless of what
-//! the main thread is doing.
+//! watchdog has not yet been cancelled — prints a message and exits the process
+//! ([`EXIT_TIMEOUT`]). The process dies within `timeout + poll_interval`,
+//! regardless of what the main thread is doing, plus the time one-time setup
+//! spent [`off_the_clock`] (the format build): only its own bound ends that setup.
+//! `--timeout 0` arms no watchdog: no deadline, and no bound on the setup.
 //!
 //! # Design notes
 //!
@@ -19,9 +20,8 @@
 //!   low without burning CPU.
 //! - `Drop` on the `Watchdog` handle cancels the watchdog thread, so RAII usage (`let _wd =
 //!   Watchdog::new(secs)`) is sufficient.
-//! - We use `std::process::abort()` rather than `panic!` because panic may unwind or be caught by a
-//!   surrounding `catch_unwind`, which would defeat the safety guarantee. `abort()` delivers
-//!   `SIGABRT` and always terminates the process.
+//! - We exit ([`exit_now`]) rather than `panic!` because panic may unwind or be caught by a
+//!   surrounding `catch_unwind`, which would defeat the safety guarantee.
 //! - The existing cooperative `stomach::check_timeout()` path is retained: on most conversions it
 //!   fires before the hard abort, giving callers a nice `Err(Fatal)` with proper error propagation.
 //!   The watchdog is a safety net for the pathological cases where cooperative polling doesn't
@@ -902,37 +902,95 @@ pub fn park_if_exiting() {
   }
 }
 
-/// One-time setup kept off every deadline ([`off_the_clock`]): the one running now (its start and bound), and the time
-/// the finished ones took.
-static SETUP: std::sync::Mutex<(Option<(Instant, Duration)>, Duration)> =
-  std::sync::Mutex::new((None, Duration::ZERO));
+/// Setup kept off every deadline ([`off_the_clock`]), read without a lock (`stomach::check_timeout` is on the hot path):
+/// the time the finished setups took, and the running one's start (nanoseconds from [`epoch`], plus one; 0: none).
+static SETUP_DONE_NS: AtomicU64 = AtomicU64::new(0);
+static SETUP_SINCE_NS: AtomicU64 = AtomicU64::new(0);
 
-fn setup() -> std::sync::MutexGuard<'static, (Option<(Instant, Duration)>, Duration)> {
-  SETUP
+/// The running setup's nesting depth, what it is and its bound (the outermost call's): taken by the setup's calls and
+/// the watchdog's poll, never by a deadline check.
+static SETUP_RUNNING: std::sync::Mutex<(u32, &str, Duration)> =
+  std::sync::Mutex::new((0, "", Duration::ZERO));
+
+fn setup_running() -> std::sync::MutexGuard<'static, (u32, &'static str, Duration)> {
+  SETUP_RUNNING
     .lock()
     .unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 
-/// Runs `work`, one-time setup that is not the conversion's — the format build for the host's TeX tree — off the
-/// watchdog's deadline, which moves back by the time it took; while it runs, only `bound` ends it.
-pub fn off_the_clock<T>(bound: Duration, work: impl FnOnce() -> T) -> T {
-  let started = Instant::now();
-  setup().0 = Some((started, bound));
-  let result = work();
-  let mut setup = setup();
-  setup.0 = None;
-  setup.1 += started.elapsed();
-  result
+fn epoch() -> Instant {
+  static EPOCH: std::sync::OnceLock<Instant> = std::sync::OnceLock::new();
+  *EPOCH.get_or_init(Instant::now)
 }
 
-/// Whether a watchdog started after `setup_before` of setup has passed its `deadline`, or a running setup its bound.
-fn past_deadline(deadline: Instant, setup_before: Duration) -> bool {
-  let (running, setup_done) = *setup();
-  let now = Instant::now();
-  match running {
-    Some((started, bound)) => now >= started + bound,
-    None => now >= deadline + setup_done.saturating_sub(setup_before),
+fn nanos_since_epoch(at: Instant) -> u64 {
+  u64::try_from(at.saturating_duration_since(epoch()).as_nanos()).unwrap_or(u64::MAX)
+}
+
+/// Runs `work`, one-time setup that is not the conversion's (`what`: the format build for the host's TeX tree), off
+/// every deadline: the watchdog's and the cooperative one (`stomach::set_timeout`) move back by the time it takes,
+/// and while it runs only `bound` ends it, a watchdog's breach (exit 124). Calls nest: the outermost one's time and
+/// bound count. Without a watchdog (`--timeout 0`) nothing bounds it.
+pub fn off_the_clock<T>(what: &'static str, bound: Duration, work: impl FnOnce() -> T) -> T {
+  let _running = OffTheClock::enter(what, bound);
+  work()
+}
+
+/// One [`off_the_clock`] call's share of the running setup; its drop ends the setup when it is the outermost, a
+/// panic's unwinding included.
+struct OffTheClock;
+
+impl OffTheClock {
+  fn enter(what: &'static str, bound: Duration) -> Self {
+    let mut running = setup_running();
+    if running.0 == 0 {
+      *running = (0, what, bound);
+      SETUP_SINCE_NS.store(nanos_since_epoch(Instant::now()) + 1, Ordering::Release);
+    }
+    running.0 += 1;
+    OffTheClock
   }
+}
+
+impl Drop for OffTheClock {
+  fn drop(&mut self) {
+    let mut running = setup_running();
+    running.0 -= 1;
+    if running.0 == 0 {
+      let since = SETUP_SINCE_NS.load(Ordering::Acquire).saturating_sub(1);
+      let took = nanos_since_epoch(Instant::now()).saturating_sub(since);
+      // Added before the start is cleared: a reader that sees no running setup sees its time (one between may count
+      // it twice, a later deadline, never an early one).
+      SETUP_DONE_NS.fetch_add(took, Ordering::AcqRel);
+      SETUP_SINCE_NS.store(0, Ordering::Release);
+    }
+  }
+}
+
+/// The time [`off_the_clock`] setup has taken in this process so far, the running one's included.
+pub fn time_off_the_clock() -> Duration {
+  let since = SETUP_SINCE_NS.load(Ordering::Acquire);
+  let done = SETUP_DONE_NS.load(Ordering::Acquire);
+  let running = since.checked_sub(1).map_or(0, |since| {
+    nanos_since_epoch(Instant::now()).saturating_sub(since)
+  });
+  Duration::from_nanos(done.saturating_add(running))
+}
+
+/// Whether `deadline`, set when [`time_off_the_clock`] read `off_at_set`, has passed once the setup since is taken off
+/// the clock: the one test of both the watchdog and the cooperative deadline.
+pub fn deadline_passed(deadline: Instant, off_at_set: Duration) -> bool {
+  let now = Instant::now();
+  // The setup only defers a deadline: before it, no atomic is read.
+  now > deadline && now > deadline + time_off_the_clock().saturating_sub(off_at_set)
+}
+
+/// The running setup and its bound, once it has run past that bound.
+fn setup_past_bound() -> Option<(&'static str, Duration)> {
+  let (depth, what, bound) = *setup_running();
+  let since = SETUP_SINCE_NS.load(Ordering::Acquire).checked_sub(1)?;
+  let ran = Duration::from_nanos(nanos_since_epoch(Instant::now()).saturating_sub(since));
+  (depth > 0 && ran >= bound).then_some((what, bound))
 }
 
 pub struct Watchdog {
@@ -965,23 +1023,33 @@ impl Watchdog {
   }
 
   fn run(cancelled: Arc<AtomicBool>, timeout_secs: u64, max_rss_kb: u64) {
-    let deadline = (timeout_secs > 0).then(|| Instant::now() + Duration::from_secs(timeout_secs));
-    let setup_before = setup().1;
+    let deadline = (timeout_secs > 0).then(|| {
+      (
+        Instant::now() + Duration::from_secs(timeout_secs),
+        time_off_the_clock(),
+      )
+    });
     let poll_interval = Duration::from_millis(100);
     loop {
       if cancelled.load(Ordering::Relaxed) {
         return; // cancelled: graceful exit.
       }
-      if let Some(deadline) = deadline
-        && past_deadline(deadline, setup_before)
-      {
+      let breach = deadline.and_then(|(deadline, off_at_set)| match setup_past_bound() {
+        Some((what, bound)) => Some(format!(
+          "{what} ran past its own bound of {}s (kept off the {timeout_secs}s timeout)",
+          bound.as_secs()
+        )),
+        None => deadline_passed(deadline, off_at_set)
+          .then(|| format!("main-level wall-clock timeout after {timeout_secs}s")),
+      });
+      if let Some(breach) = breach {
         // Claimed first: a normal end claimed before it (the result being written) stands the breach down.
         if cancelled.load(Ordering::Relaxed) || !claim_exit(EXIT_TIMEOUT) {
           return;
         }
         // Unlocked: a thread stuck while holding the stderr lock must not hold up the exit.
         write_stderr_unlocked(format_args!(
-          "Fatal:timeout:wallclock latexml-oxide: main-level wall-clock timeout after {timeout_secs}s — exiting process\n"
+          "Fatal:timeout:wallclock latexml-oxide: {breach} — exiting process\n"
         ));
         // Run the optional pre-exit hook (e.g. cortex_worker writing a
         // structured Status:conversion:3 placeholder to its --output path)
@@ -1125,6 +1193,108 @@ mod tests {
     assert!(stderr.contains("stood-down"), "{stderr}");
     assert!(!stderr.contains("Fatal:"), "{stderr}");
     assert!(!stderr.contains("hook-ran"), "the hook ran: {stderr}");
+  }
+
+  /// Setup run [`off_the_clock`] moves a breach back by its time, not off: the watchdog armed before a 2 s setup ends the
+  /// process at its 1 s deadline plus the setup's 2 s; and a setup past its own bound ends it then, saying so (exit
+  /// 124 both). Run here, it is the child.
+  #[test]
+  fn a_setup_moves_the_breach_back_and_runs_under_its_own_bound() {
+    const CHILD: &str = "LATEXML_WATCHDOG_SETUP_CHILD";
+    if let Ok(mode) = std::env::var(CHILD) {
+      let _watchdog = Watchdog::new(1);
+      let (bound, setup) = match mode.as_str() {
+        "moved" => (60, 2),
+        _ => (2, 20),
+      };
+      off_the_clock("the test setup", Duration::from_secs(bound), || {
+        thread::sleep(Duration::from_secs(setup))
+      });
+      thread::sleep(Duration::from_secs(10));
+      exit_now(0);
+    }
+    for (mode, line, at_least, below) in [
+      ("moved", "main-level wall-clock timeout after 1s", 3, 12),
+      (
+        "bound",
+        "the test setup ran past its own bound of 2s",
+        2,
+        15,
+      ),
+    ] {
+      let started = Instant::now();
+      let out = std::process::Command::new(std::env::current_exe().unwrap())
+        .args([
+          "watchdog::tests::a_setup_moves_the_breach_back_and_runs_under_its_own_bound",
+          "--exact",
+          "--nocapture",
+          "--test-threads=1",
+        ])
+        .env(CHILD, mode)
+        .output()
+        .unwrap();
+      let took = started.elapsed();
+      let stderr = String::from_utf8_lossy(&out.stderr);
+      assert_eq!(out.status.code(), Some(EXIT_TIMEOUT), "{mode}: {stderr}");
+      assert!(stderr.contains(line), "{mode}: {stderr}");
+      assert!(
+        took >= Duration::from_secs(at_least) && took < Duration::from_secs(below),
+        "{mode}: the breach came after {took:?}"
+      );
+    }
+  }
+
+  /// The cooperative deadline (`stomach::set_timeout`), set before a setup (cortex_worker, the LSP server), moves back
+  /// by it too; nested calls count their time once; a panic ends the setup.
+  #[test]
+  fn a_setup_moves_the_cooperative_deadline_once_and_ends_on_a_panic() {
+    crate::stomach::set_timeout(1);
+    off_the_clock("the test setup", Duration::from_secs(60), || {
+      thread::sleep(Duration::from_secs(2))
+    });
+    assert!(
+      !crate::stomach::conversion_deadline_passed(),
+      "the setup counted towards the deadline"
+    );
+    thread::sleep(Duration::from_millis(1200));
+    assert!(
+      crate::stomach::conversion_deadline_passed(),
+      "the deadline was dropped, not moved"
+    );
+    crate::stomach::set_timeout(0);
+
+    let (before, started) = (time_off_the_clock(), Instant::now());
+    off_the_clock("outer", Duration::from_secs(60), || {
+      thread::sleep(Duration::from_millis(200));
+      off_the_clock("inner", Duration::from_secs(1), || {
+        thread::sleep(Duration::from_millis(200))
+      });
+      assert_ne!(
+        SETUP_SINCE_NS.load(Ordering::Acquire),
+        0,
+        "the inner call ended the outer one"
+      );
+      assert_eq!(*setup_running(), (1, "outer", Duration::from_secs(60)));
+      thread::sleep(Duration::from_millis(200));
+    });
+    let (took, wall) = (time_off_the_clock() - before, started.elapsed());
+    assert!(
+      took >= Duration::from_millis(600) && took <= wall,
+      "{took:?} off the clock in {wall:?}"
+    );
+
+    let panicked = std::panic::catch_unwind(|| {
+      off_the_clock("panicking", Duration::from_secs(60), || {
+        panic!("the setup panicked")
+      })
+    });
+    assert!(panicked.is_err());
+    assert_eq!(
+      SETUP_SINCE_NS.load(Ordering::Acquire),
+      0,
+      "the panic left the setup running"
+    );
+    assert_eq!(setup_running().0, 0);
   }
 
   /// A registered path is removed by the sweep an exit runs; one whose guard was dropped (its owner removed it, or
