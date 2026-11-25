@@ -800,6 +800,18 @@ Rules that keep this file honest and mergeable:
     form hit an experimental mimalloc build on 1502.06095 on 2026-11-21, before both changes. Open leads: a kernel
     core dump under load (a single flipped bit would mean hardware), CPU boost on/off, and whether nextest's
     256 MiB thread stacks matter; 3
+  - UTILDRY — shared helpers live in `latexml_core::util` and the whole workspace reuses them (DG ruling and standing
+    refactor permission, 2026-11-24); paths first, through `util::pathname`. Rule: a path comparison takes both sides
+    from one family, lexical vs lexical (Perl's naming and relative-URL semantics) or resolved vs resolved (where bytes
+    land), never a fallback across them (`canonicalize(x).map_or_else(|_| absolute(x), …)`). Witness: the rc3 Windows
+    release guards, fixed by `pathname::is_contained_resolved` in `Graphics::resolves_inside_site_or_dest`, guard
+    `batchfix995_paths_spelled_through_a_link_keep_their_names`; on Unix `getcwd()` resolves links, so only absolute
+    paths spelled through a link reproduce the class, and Windows tests run on PRs only as `cargo check`. Backlog:
+    Gemini's U1–U3 study (GEMINI.md, 2026-11-24 20:25 and 20:28): real-vs-lexical sites (`content.rs` 332/2502/2759,
+    `title_page_check.rs` 1561-1591, `xslt.rs` 461/613/915, `post.rs` 952 `--sitedirectory`), Windows separator and
+    drive-letter sites (`graphics_sty.rs` 633, `svg_sty.rs` 214, 12 `rsplit('/')` basenames), then byte-identical
+    DRY steps (`radix`, hex, whitespace collapse, `Staged` into `util::fs`, XML escaping, number formatting), A/B-gated
+    where output can move. Each path fix needs a red test first (Windows CI dispatch or a Unix link test); 3
   - SPLITDOMNS — the whole-DOM split (`latexml_post/src/split.rs`) loses a page's non-`ltx` namespaces: xy-pic's svg
     inside math raises `malformed:namespace` Warnings (1502.06095: 344, 1609.07593: 1,377 under `--splitat=section`)
     and 2606.28974 loses an `aria-hidden`; the streamed split, the default for split runs since OXIDIZED_DESIGN_DIVERGENCES
