@@ -73,7 +73,7 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (397 items on 2026-11-25 on `int/towards_v0_8_1`: 397 open, weight 894, 43 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (396 items on 2026-11-25 on `int/towards_v0_8_1`: 396 open, weight 893, 43 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
 
 
   - ODR6 — OD ruling 12 (recorded in OD #449): `dump_reader.rs`'s "add-only" docstrings (:365, :574) corrected, then a removal trial of the skip lists against CLAUDE.md rule 2; 1
@@ -851,10 +851,6 @@ Rules that keep this file honest and mergeable:
     fallbacks (a late navigation, resource, root date or `<?latexml?>` PI; a nested `ltx:resource`); 2
   - PARTUP — a split `\part` book's chapter pages carry no `up` link to their part page, which Perl's carries
     (pre-existing, seen while pruning the head links, OXIDIZED_DESIGN_DIVERGENCES #1134); 2
-  - SVGPATHOPT — `\usepackage[svgpath={figs/}]{svg}` keeps the braces: `svg_sty.rs`'s option parse takes the text after
-    `svgpath=` as the path, so `{figs/}` (or a `{{a/}{b/}}` list) is joined under the source directory as written and
-    no SVG resolves, where `\svgpath{{figs/}}` works; parse the option's value with `\svgpath`'s list reading (svg.sty
-    `svgpath` key → `\svgpath`). Found by the F4 review, 2026-11-25; reach unmeasured; 1
   - SPLITFIXR — SPLITFIX's review residuals (SPLITIDATTR and SPLITNAMES fixed on int, one `PageNamer` for both split
     paths; witness 1502.05726): (a) pages are named level by level, Perl `prenamePages` (`Split.pm` L87-93) names a
     child then recurses, so on a collision the later page in document order keeps the name (`order.tex`: `\label{y}`
@@ -878,20 +874,17 @@ Rules that keep this file honest and mergeable:
     working directory (`$PWD` when it names the same directory as `current_dir()`, as `pwd -L`; `current_dir()`
     otherwise, e.g. a child started with a working directory), then grep every `absolute(` caller for a comparison with
     a resolved path; drop #1009's resolved fallback only if the rule then holds for programmatic callers too; 3
-  - KEPTDEDUP — two `\includegraphics` of different files with identical bytes both point at the first file's path,
-    even where each is referenced in place and nothing is copied (`figs/a`, `figs/b` → `data="figs/a.svg"` twice; under
-    `--sitedirectory` a chapter links another child's `../children/c1/images/A.svg`), so a page silently depends on
-    another folder's file; Perl keeps each node's own path (`Post/Graphics.pm` L289-300). A kept copy's key is
-    `bytes: "copy|{identity}"` (`graphics.rs` ~1280) and `resource_cache.rs` `place()` checks the content key
-    `_content_{bytes}` (~203) before the kept path: skip the content key for a kept-in-place copy, keep the dedup for
-    conversions and generated `x*` copies (OD #24). rc1 and rc4 alike (GENUINE-RUST-ONLY, found by the Nasser workflow
-    check 2026-11-25; repro `kept_path_dedup` in its scratch); 1
-  - LTCAPDUP — a longtable with `\caption{T}\\ … \endfirsthead \caption[]{T (continued)}\\ … \endhead … \endfoot`
-    prints "Table 1: T (continued)" as a second `<figcaption>` under the table, where pdflatex shows it on continuation
-    pages only: `\endhead` after `\endfirsthead` drops the head rows but leaves `LONGTABLE_CAPTIONS` set, and the
-    `\endfoot` grab adopts it (Perl `longtable.sty.ltxml` L101-120, ours `longtable_sty.rs` ~128-160; Perl alike,
-    verified same-host 2026-11-25). Clear the captions when a group's rows are discarded; guard: one `<figcaption>`.
-    Reach ≤ 788 (`who_uses.py --cs endhead --cs endfoot --cs caption --env longtable --and`, an upper bound); 1
+  - LTBODYCAP — a longtable `\caption{Bottom}` in the body after the head's `\caption` is dropped without a Warning
+    (pdflatex prints it as a row, with a List of Tables entry): `longtable_sty.rs` `\@@longtable` after_digest takes
+    the head's captions before the body's (Perl `longtable.sty.ltxml` `HEAD_CAPTIONS || CAPTIONS` alike). Keep the
+    body caption where it stands; repro `alignment-bindings/longtable_body_caption_after_a_head_caption_red.tex`
+    (synthetic, found probing LTCAPDUP's siblings in FILL1); 1
+  - LTFILLCAP — a longtable caption pdflatex prints only on continuation pages still shows when the group that is
+    shown has none: a `\caption` only in `\endhead` with an uncaptioned `\endfirsthead`, or a `\endfoot` caption
+    with an uncaptioned `\endlastfoot`, gives "Table 2: …" where a one-page pdflatex table has no caption
+    (`longtable_sty.rs` ~150-169, the fill-in from another group; base and Perl alike). Fill in only when the shown
+    group is absent, not when it is present without a caption. Found by the FILL1 review and Gemini Neon (R3,
+    2026-11-25); probe `lt2.tex` tables 2 and 3; 1
   - NOTETAGSWS — a footnote pop-up's text starts with an extra space: the core XML is re-parsed before post (the spill
     handoff) and the indentation inside `<ltx:tags>` survives `xsl:preserve-space elements="ltx:note"`
     (`LaTeXML-meta-xhtml.xsl:37`); Perl's own two-step `latexmlpost` on the same XML does the same, only `latexmlc`'s

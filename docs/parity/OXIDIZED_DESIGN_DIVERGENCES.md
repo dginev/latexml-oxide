@@ -250,7 +250,9 @@ single conversion job and a single output file in the bundle; every
 `<ltx:graphics>` node that resolved to that content references the
 shared dest. A copy that keeps its source-relative path (Perl
 `Post/Graphics.pm` L289-300) is the exception: it names its own file,
-as Perl's does, and shares none (`resource_cache.rs` `place`; guard
+as Perl's does, and shares none; if another source already owns that
+path, it falls back to a generated `xN` name and then shares by
+content like any other copy (`resource_cache.rs` `place`, #1157; guard
 `batchfix995_sitedirectory_keeps_the_relative_image_path`).
 
 **Perl behavior:** `LaTeXML::Post::Graphics::process` walks

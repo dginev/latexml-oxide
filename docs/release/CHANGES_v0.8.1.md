@@ -9,6 +9,15 @@ top of its group.
 
 ### Unreleased
 
+  - **Identical images keep their own paths.** Two `\includegraphics` of different files with the same bytes each
+    link their own file, as Perl does (`Post/Graphics.pm` L289-300), also under `--sitedirectory`; before, both linked
+    the first file's path, so a page silently depended on another folder's file. Converted images and generated `xN`
+    copies still share one file per content (OXIDIZED_DESIGN_DIVERGENCES #24).
+  - **One longtable caption.** A `\caption[]{… (continued)}` in `\endhead` no longer shows as a second caption at the
+    table's foot, and a `\endfoot` caption after `\endlastfoot` no longer moves to the head (Perl does both;
+    KNOWN_PERL_ERRORS #1333).
+  - **`\usepackage[svgpath={figs/}]{svg}` finds its SVGs,** reading the option as svg.sty's `\svgpath{{…}}`
+    (svg.sty:546-556). As in pdflatex, the option holds one path: `svgpath={{a/}{b/}}` is not a list.
   - **Split pages no longer overwrite each other or leave the destination.** Under `--splitnaming=label`/
     `labelrelative`, two labels that name the same file (`dup` and `dup/`, `./x` and `x`, or `index` beside
     `index.html`) wrote both pages to one file, losing one (1502.05726 lost two appendix subsections); the second page

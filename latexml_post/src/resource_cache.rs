@@ -10,18 +10,18 @@
 //! key (the content digest replaces Perl's timestamp check) written again into the name its source owns.
 //! `_content_<bytes>` lets a source with the same bytes share that file while its owner is named in the same run with
 //! them (the pages of one document); another document's file is never shared, as that document may write other bytes
-//! into it later, under a page this run does not rewrite. A copy keeping its path shares none (Perl L289-300). Divergences (OXIDIZED_DESIGN_DIVERGENCES #1157): an entry
-//! stores the name only (Perl's width and height let it skip a conversion, which the content-addressed
-//! `graphics_cache` serves here); a converted or generated name is kept across an edit (Perl generates a new `xN`);
-//! a kept name (a copy's relative path, a converted image's stem) another source owns falls back to a generated `xN`,
-//! where Perl overwrote it (issue 995); and a stored name is written only when the request could have been given it
-//! ([`Checks`]). Each [`resolve`] is one `IMMEDIATE` transaction, so processes naming into one folder at once through
-//! the file never hand out one name to two sources. A name new to the store is never given over a file in the folder
-//! the request may not write ([`Checks::on_disk`]): with the store on its file (a new one too, made where a cache was
-//! deleted) any file it does not own; in memory in place of its file (it could not be opened, or the transaction
-//! failed and runs again there) a file holding other bytes than the request writes, so a rerun takes its own files
-//! again. One that could not copy the file's entries does not know a file's owner: a file of another document holding
-//! the same bytes is taken as the request's own (OD #1157 (10)).
+//! into it later, under a page this run does not rewrite. A copy keeping its path shares none (Perl L289-300).
+//! Divergences (OXIDIZED_DESIGN_DIVERGENCES #1157): an entry stores the name only (Perl's width and height let it skip
+//! a conversion, which the content-addressed `graphics_cache` serves here); a converted or generated name is kept
+//! across an edit (Perl generates a new `xN`); a kept name (a copy's relative path, a converted image's stem) another
+//! source owns falls back to a generated `xN`, where Perl overwrote it (issue 995); and a stored name is written only
+//! when the request could have been given it ([`Checks`]). Each [`resolve`] is one `IMMEDIATE` transaction, so
+//! processes naming into one folder at once through the file never hand out one name to two sources. A name new to the
+//! store is never given over a file in the folder the request may not write ([`Checks::on_disk`]): with the store on
+//! its file (a new one too, made where a cache was deleted) any file it does not own; in memory in place of its file
+//! (it could not be opened, or the transaction failed and runs again there) a file holding other bytes than the request
+//! writes, so a rerun takes its own files again. One that could not copy the file's entries does not know a file's
+//! owner: a file of another document holding the same bytes is taken as the request's own (OD #1157 (10)).
 
 use std::collections::HashMap;
 
