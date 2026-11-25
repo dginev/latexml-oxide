@@ -1762,15 +1762,10 @@ fn run_post_processing_inner(
       && pages_rendered.is_multiple_of(1024)
       && std::env::var("LATEXML_POST_MEMDIAG").is_ok()
     {
-      // SAFETY: `mallinfo2` is a read-only glibc allocator stat query with no pointer inputs.
-      let mi = unsafe { libc::mallinfo2() };
+      let (c_live_mb, c_free_mb) = crate::heap_trim::c_heap_mb();
       let rss_mb = latexml_core::watchdog::process_rss_kb().unwrap_or(0) / 1024;
       eprintln!(
-        "memdiag: pages={} RSS={}MB C-live={}MB C-free={}MB",
-        pages_rendered,
-        rss_mb,
-        mi.uordblks / (1024 * 1024),
-        mi.fordblks / (1024 * 1024)
+        "memdiag: pages={pages_rendered} RSS={rss_mb}MB C-live={c_live_mb}MB C-free={c_free_mb}MB"
       );
     }
     let rendered = match resident {

@@ -13,18 +13,32 @@ use std::cell::Cell;
 /// The page cadence of [`sample`] in the render loops: one `/proc/self/status` read per this many pages.
 pub const SAMPLE_PAGES: usize = 64;
 
-/// Release the free pages of both heaps: glibc's (`malloc_trim`) and mimalloc's (`mi_collect`).
+/// Release the free pages of both heaps: glibc's (`malloc_trim`) and mimalloc's ([`collect_rust_heap`]).
 pub fn release_free_heap() {
   #[cfg(target_os = "linux")]
   // SAFETY: `malloc_trim(0)` only advises glibc to release unused heap pages; no Rust refs are affected.
   unsafe {
     libc::malloc_trim(0);
   }
+  collect_rust_heap();
+}
+
+/// Purge mimalloc's free pages (the Rust global allocator's; a no-op under `dhat-heap`, which replaces it).
+pub fn collect_rust_heap() {
   #[cfg(not(feature = "dhat-heap"))]
   // SAFETY: `mi_collect(true)` only purges unused mimalloc pages; live allocations remain valid.
   unsafe {
     libmimalloc_sys::mi_collect(true);
   }
+}
+
+/// glibc's heap in MB, (live, freed but retained): `mallinfo2`'s `uordblks` and `fordblks`, all arenas. libxml2
+/// and libxslt allocate there, Rust through mimalloc; diagnostic only.
+#[cfg(target_os = "linux")]
+pub fn c_heap_mb() -> (usize, usize) {
+  // SAFETY: `mallinfo2` is a read-only glibc allocator stat query with no pointer inputs.
+  let mi = unsafe { libc::mallinfo2() };
+  (mi.uordblks / (1024 * 1024), mi.fordblks / (1024 * 1024))
 }
 
 thread_local! {

@@ -1607,8 +1607,7 @@ impl DigestionAPI for Core {
         let trace_spill = std::env::var_os("LXML_TRACE_NODE_BOXES").is_some();
         #[cfg(target_os = "linux")]
         let c_live_before = if trace_spill {
-          // SAFETY: `mallinfo2` is a read-only glibc allocator stat query with no pointer inputs.
-          unsafe { libc::mallinfo2() }.uordblks / (1024 * 1024)
+          crate::heap_trim::c_heap_mb().0
         } else {
           0
         };
@@ -1616,8 +1615,7 @@ impl DigestionAPI for Core {
         let t_spill_dur = t_spill.elapsed();
         #[cfg(target_os = "linux")]
         if trace_spill {
-          // SAFETY: `mallinfo2` is a read-only glibc allocator stat query with no pointer inputs.
-          let c_live_after = unsafe { libc::mallinfo2() }.uordblks / (1024 * 1024);
+          let c_live_after = crate::heap_trim::c_heap_mb().0;
           eprintln!(
             "streaming: spill C-live {c_live_before} -> {c_live_after} MB ({runs_spilled} runs)"
           );
@@ -1684,11 +1682,7 @@ impl DigestionAPI for Core {
           // freed-but-retained. Together with RSS this separates C live
           // growth / C fragmentation / Rust growth.
           #[cfg(target_os = "linux")]
-          let (c_live_mb, c_free_mb) = {
-            // SAFETY: `mallinfo2` is a read-only glibc allocator stat query with no pointer inputs.
-            let mi = unsafe { libc::mallinfo2() };
-            (mi.uordblks / (1024 * 1024), mi.fordblks / (1024 * 1024))
-          };
+          let (c_live_mb, c_free_mb) = crate::heap_trim::c_heap_mb();
           #[cfg(not(target_os = "linux"))]
           let (c_live_mb, c_free_mb) = (0usize, 0usize);
           let spine_children = document
