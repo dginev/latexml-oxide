@@ -1,0 +1,23 @@
+% witness: synthetic (a `\ref` left open: a blank line in it, a missing `\endref` before `\endRefs`)
+% oracle:  pdftex (\input amstex) 7 errors ("AmS-TeX error: You seem to have a missing or misspelled \endref" at
+%          amsppt.sty:888's `\def\par{\add@missing\endref}`), every word printed: "[A] A. Author, First." "J (1990)."
+%          "[B] B. Writer, Second, K (1991)." "After the references."
+% engines: rust INT081T = 0 errors, 0 warnings, "B. Writer, Second, K (1991)" and "After the references." lost (the
+%          expanding field read ran to the end); rust AMSPPTRES = "1991 After the references." printed where the
+%          last field stands, "B. Writer, Second, K" lost (its `\endref` never read), counted by 1 Warning
+%          (expected:\@end@bibfield); perl 0 errors, 0 warnings, the words INT081T loses lost
+% expect:  the missing `\endref` inserted at the `\par` as amsppt.sty:888 does, with an Error; every word kept
+% status:  RED (AMSPPTRES)
+% moves:   post-merge (amsppt's `\par` inside a reference: `\add@missing\endref`)
+\input amstex
+\documentstyle{amsppt}
+\document
+Text.
+\Refs
+\ref\key A\by A. Author\paper First
+
+\jour J\yr 1990\endref
+\ref\key B\by B. Writer\paper Second\jour K\yr 1991
+\endRefs
+After the references.
+\enddocument

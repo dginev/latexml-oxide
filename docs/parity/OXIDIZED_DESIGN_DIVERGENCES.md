@@ -15170,14 +15170,18 @@ another bound package's guard a style inlines (`\csname epsf.sty\endcsname`: rea
 self-restoring `\title` met the lock (#500) and recursed to `Fatal:oom`; through the binding they keep their markup,
 but lose what the copy adds to amsppt: math0410032's lecture macros `\Lecture`, `\Author`, `\xca`, `\Bibliography`,
 math0610862's `\Refst`, `\subrefhead`, 1003.5377's `\SecondPage` are undefined (Errors; repro
-amstex/amstex_copy_additions_are_kept_red). Residual: math0610862's jmhppt.sty, which read raw raised 8 errors (no
-markup), is back at its Oct-8 `Fatal:TooManyErrors`, so math0205237: the binding reads each `\ref` field expanding
-(`\@bibfield … XUntil`, amsppt_sty.rs, Perl amsppt.sty.ltxml:439), and the paper's `\noOf` (jmhlab.tex:210) puts
-`\make@ref` there: the expanding read expands the targets of its assignments, `\global\@fwdreftrue`'s
-`\let\if@fwdref\iftrue` evaluated as a conditional (the repro's `Error:expected:\fi \iffalse`, the bibitem empty), a
-`\def`'s name (the paper's 50 "Missing control sequence inserted", 49 "Attempt to close"); TeX boxes each field
-(amsppt.sty:956-965 `\makerefbox`, `\setbox\curbox\vbox\bgroup`), where the `\let` is executed. Perl reads the same
-(KNOWN_PERL_ERRORS #1298); repro amstex/amsppt_bibfield_expands_a_conditional_red. Repros amstex/{amstex_copied_style_takes_the_binding, amstex_amsppt_guard_test_is_no_copy,
+amstex/amstex_copy_additions_are_kept_red; read after the binding as OD #731 reads a declared copy, a command the copy
+adds that feeds one the binding owns prints nothing: math0410032's lecture titles,
+amstex/amstex_copy_addition_feeds_the_binding_red). math0610862's jmhppt.sty, which read raw raised 8 errors (no markup), was at its Oct-8 `Fatal:TooManyErrors` through
+the binding, so math0205237: the binding read each `\ref` field expanding (`\@bibfield … XUntil`, Perl
+amsppt.sty.ltxml:439), and the paper's `\noOf` (jmhlab.tex:210) puts `\make@ref` there, whose `\global\@fwdreftrue`
+(`\let\if@fwdref\iftrue`) the read evaluated as a conditional. TeX boxes each field (amsppt.sty:956-965
+`\makerefbox`, `\setbox\curbox\vbox\bgroup`), where the `\let` is executed; so the binding digests it (AMSPPTRES;
+KNOWN_PERL_ERRORS #1298; repro amstex/amsppt_bibfield_is_digested): math0610862 2 Errors (`\Refst`, `\subrefhead`).
+A field the input ends in (a field marker outside a `\ref`, math9204232's `\Refs\ra\key{HM2}`; an unclosed `\ref`) is
+printed where it stands, counted by the body's "expected" Warning: math9204232 keeps its 5 references, which pdftex
+and Perl drop (repro amstex/amsppt_stray_field_after_refs).
+Repros amstex/{amstex_copied_style_takes_the_binding, amstex_amsppt_guard_test_is_no_copy,
 amstex_inlined_package_guard_is_read}; guards `perfect_kernel_batchregfixd::{amsppt_copy_takes_the_binding,
 only_an_amsppt_copy_takes_the_binding}`. amstex.tex's `\Invalid@` (:251-252), with which such a style marks the
 commands it disallows, is defined. amams.sty redefines `\ifdefined` (amams.sty:1099, a three-argument label test,

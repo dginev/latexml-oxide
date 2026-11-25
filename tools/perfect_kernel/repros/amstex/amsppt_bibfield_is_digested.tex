@@ -2,12 +2,11 @@
 % oracle:  pdftex (\input amstex, \documentstyle{amsppt}) this file: 0 errors, 1 "Citation x undefined" message;
 %          "??. A. Author, Title, J (1990)."
 % engines: rust REGFIXD = 1 error (expected:\fi \iffalse: the binding's expanding `\@bibfield … XUntil` read,
-%          amsppt_sty.rs / Perl amsppt.sty.ltxml:439, evaluates `\global\@fwdreftrue`'s `\let\if@fwdref\iftrue`
-%          as a conditional), the bibitem empty; perl the same read (KNOWN_PERL_ERRORS #1298; math0610862
-%          Fatal:too_many_errors, 101 errors)
-% expect:  0 errors; one bibitem "??. A. Author, Title, J (1990)."
-% status:  RED (REGFIXD)
-% moves:   post-merge (digest each field as amsppt.sty:956-965 `\makerefbox` boxes it, not an expanding read)
+%          Perl amsppt.sty.ltxml:439, evaluates `\global\@fwdreftrue`'s `\let\if@fwdref\iftrue` as a conditional),
+%          the bibitem empty; perl the same read (KNOWN_PERL_ERRORS #1298; math0610862 Fatal:too_many_errors, 101
+%          errors); rust AMSPPTRES = each field digested as amsppt.sty:956-965 `\makerefbox` boxes it: 0 errors
+% expect:  0 errors, 0 warnings; one bibitem, tag "??", "A. Author, Title, J (1990)."
+% status:  RED (REGFIXD) -> GREEN (AMSPPTRES); guard perfect_kernel_batchamsppt::amsppt_heads_and_theorems
 \input amstex
 \documentstyle{amsppt}
 \catcode`\@=11
@@ -20,8 +19,10 @@
 \def\noOf#1{\no \make@ref{#1}}
 \catcode`\@=12
 \document
+\head 1. Intro\endhead
 Text.
 \Refs
 \ref\noOf{x}\by A. Author\paper Title\jour J\yr 1990\endref
 \endRefs
 \enddocument
+

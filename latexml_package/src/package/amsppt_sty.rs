@@ -603,9 +603,9 @@ LoadDefinitions!({
   // Architecture: AmS-TeX bibliography uses field-marker macros
   // (`\key`, `\by`, `\paper`, `\jour`, etc.) that each terminate the
   // previous field via `\@end@bibfield` and start the next via
-  // `\@bibfield{<name>}`. `\@bibfield` is an `XUntil:\@end@bibfield`
-  // macro that captures the trailing tokens into state under
-  // `amsbibitem@<field>`. After all fields are read, `\endref` calls
+  // `\@bibfield{<name>}`. `\@bibfield` digests the field up to the next
+  // `\@end@bibfield` and stores it under `amsbibitem@<field>` (below).
+  // After all fields are read, `\endref` calls
   // `\@fill@bibitem` which reads the captured fields back from state
   // and emits formatted output via `\@bibitem@field` and `\@bibitem@tag`
   // constructors.
@@ -654,36 +654,59 @@ LoadDefinitions!({
   DefConstructor!("\\@bibblock", "<ltx:bibblock>");
   DefConstructor!("\\@end@bibblock", "</ltx:bibblock>");
 
-  // Perl L446-453: `\@bibfield{type} XUntil:\@end@bibfield` — captures
-  // the trailing tokens into `amsbibitem@<field>` state, after trimming
-  // leading/trailing T_SPACE.
-  DefMacro!("\\@bibfield{} XUntil:\\@end@bibfield", sub[args] {
-    let field = args[0].clone().into_tokens_result()?.to_string();
-    let tokens = args[1].clone().into_tokens_result()?;
-    let mut tk_vec: Vec<Token> = tokens.unlist();
-    // A `\nofrills` in the field (amsppt.sty:877-882: the box being filled joins `\nofrills@list`), the reference's own
-    // `\lx@amsppt@nofrills` there, which the expanding read keeps: the field is printed without its frills (below).
-    let before = tk_vec.len();
-    tk_vec.retain(|t| *t != T_CS!("\\nofrills"));
-    if tk_vec.len() < before {
+  // A field is digested up to the next field's `\@end@bibfield`, as amsppt.sty:956-965 `\makerefbox` sets it in a box
+  // (`\setbox\curbox\vbox\bgroup`), its assignments executed; it is kept when it prints something (`\ifdim\wd\@ne>\z@`)
+  // and printed by `\lx@amsppt@field`. Perl's `XUntil` read (L446-453) expands it, and a `\global\@fwdreftrue` in it is
+  // read as a conditional (KNOWN_PERL_ERRORS #1298; math0610862's `\noOf`, math0205237).
+  DefPrimitive!("\\@bibfield{}", sub[(field)] {
+    let field = field.to_string();
+    assign_value("amsbibitem@nofrills@here", Stored::Bool(false), Some(Scope::Global));
+    let depth = lookup_int("amsbibitem@depth") + 1;
+    assign_value("amsbibitem@depth", Stored::Int(depth), Some(Scope::Global));
+    assign_value("amsbibitem@ended", Stored::Int(0), Some(Scope::Global));
+    begin_mode("restricted_horizontal")?;
+    let mut body = digest_next_body(Some(T_CS!("\\@end@bibfield")))?;
+    end_mode("restricted_horizontal")?;
+    assign_value("amsbibitem@depth", Stored::Int(depth - 1), Some(Scope::Global));
+    // A field the input ended in (a `\ref` never closed, a stray `\key` after `\Refs`: math9204232) is printed where it
+    // stands: what it holds was the rest of the document. Its "expected" Warning counts it.
+    if lookup_int("amsbibitem@ended") != depth {
+      return Ok(body);
+    }
+    // (the field's spaces at either end, as Perl trims its tokens; TeX's `\unskip\unskip`)
+    while body.last().is_some_and(is_spacing_item) {
+      body.pop();
+    }
+    let lead = body.iter().take_while(|d| is_spacing_item(d)).count();
+    body.drain(..lead);
+    if lookup_bool("amsbibitem@nofrills@here") {
       assign_value(&format!("amsbibitem@{field}@nofrills"), Stored::Bool(true), None);
     }
-    while tk_vec.first().map(|t| t.get_catcode() == Catcode::SPACE).unwrap_or(false) {
-      tk_vec.remove(0);
+    if body.iter().any(typesets_content) {
+      let mut value = vec![T_CS!("\\lx@amsppt@field"), T_BEGIN!()];
+      value.extend(field.chars().map(|ch| T_OTHER!(ch.to_string())));
+      value.push(T_END!());
+      assign_value(&format!("amsbibitem@{field}"), Stored::Tokens(Tokens::new(value)), None);
+      assign_value(&format!("amsbibitem@{field}@boxes"), Stored::VecDigested(body), None);
     }
-    while tk_vec.last().map(|t| t.get_catcode() == Catcode::SPACE).unwrap_or(false) {
-      tk_vec.pop();
-    }
-    if !tk_vec.is_empty() {
-      let key = format!("amsbibitem@{}", field);
-      assign_value(&key, Stored::Tokens(Tokens::new(tk_vec)), None);
-    }
-    Ok(Tokens!())
+    Ok(Vec::new())
   });
-  Let!("\\@end@bibfield", "\\relax");
-  // amsppt.sty:877 `\nofrills` in a reference marks the field being filled; elsewhere it is the AmSTeX pool's no-op
-  // (amstex.rs). In a reference it is this unexpandable marker, which `\@bibfield`'s expanding read keeps and takes out.
-  DefPrimitive!("\\lx@amsppt@nofrills", None);
+  // (Perl L452 `\relax`; the depth of the field it ends, for `\@bibfield`)
+  DefPrimitive!("\\@end@bibfield", {
+    assign_value("amsbibitem@ended", Stored::Int(lookup_int("amsbibitem@depth")), Some(Scope::Global));
+  });
+  // The field `\@bibfield` set, where `\@fill@bibitem` prints it (amsppt.sty:1053-1066 `\unhbox`).
+  DefPrimitive!("\\lx@amsppt@field{}", sub[(field)] {
+    match lookup_value(&format!("amsbibitem@{field}@boxes")) {
+      Some(Stored::VecDigested(boxes)) => Ok(boxes),
+      _ => Ok(Vec::new()),
+    }
+  });
+  // amsppt.sty:877 `\nofrills` in a reference marks the field being filled (`\xdef\nofrills@list{…\do\curbox}`);
+  // elsewhere it is the AmSTeX pool's no-op (amstex.rs).
+  DefPrimitive!("\\lx@amsppt@nofrills", {
+    assign_value("amsbibitem@nofrills@here", Stored::Bool(true), Some(Scope::Global));
+  });
 
   // Perl L442-445: \@bibitem@field / \@bibitem@tag constructors.
   DefConstructor!("\\@bibitem@field{}{}",
@@ -925,7 +948,7 @@ LoadDefinitions!({
 
   // Perl L460-493: field-marker macros — each terminates the current
   // field and opens the next. The trailing `\it`/`\bf` for paper/book/
-  // vol gets prepended to the captured tokens (XUntil reads through it).
+  // vol is the field's first, digested with it (amsppt.sty's `\makerefbox` #3).
   DefMacro!("\\key",       "\\@end@bibfield\\@bibfield{key}");
   DefMacro!("\\no",        "\\@end@bibfield\\@bibfield{refnum}");
   DefMacro!("\\by",        "\\@end@bibfield\\@bibfield{authors}");

@@ -15,6 +15,8 @@ type Row = (
 /// `\proclaim` of two paragraphs in its section (math9201249); every head (`\head`, `\subhead`, `\subsubhead`,
 /// `\subheading{}`, `\specialhead`) holding its body and the lower units; the five block kinds numbered by one counter;
 /// `\Refs` as back matter after the open heads, and a `\specialhead References` heading the bibliography (math0304264);
+/// a `\ref` field digested as amsppt's `\makerefbox` boxes it, its `\global\@fwdreftrue` executed (math0610862), and
+/// `\paper`'s `\it` held in its field: the final period upright (amsppt.sty:956-965; it was italic before AMSPPTRES);
 /// `\roster` keeping its items, tagged as amsppt.sty:723-736 prints them (`\item`, `\item"(b)"`, `\item[5]`, the document's
 /// `\therosteritem`), nested in a `\proclaim`, and `\roster\runinitem` (alg-geom9502009).
 #[test]
@@ -71,7 +73,7 @@ fn amsppt_heads_and_theorems() {
         (
           "bibliography",
           "bib",
-          r#"<bibliography inlist="toc" xml:id="bib"><title>References</title><biblist><bibitem key="1" xml:id="bibliography0.bibx1"><tags><tag role="refnum">1</tag></tags><bibblock><text class="ltx_bib_authors" xml:id="bibliography0.bibx1.1">A. Author</text>, <text class="ltx_bib_paper" font="italic" xml:id="bibliography0.bibx1.2">Title</text><text font="italic" xml:id="bibliography0.bibx1.3">.</text></bibblock></bibitem></biblist></bibliography>"#,
+          r#"<bibliography inlist="toc" xml:id="bib"><title>References</title><biblist><bibitem key="1" xml:id="bibliography0.bibx1"><tags><tag role="refnum">1</tag></tags><bibblock><text class="ltx_bib_authors" xml:id="bibliography0.bibx1.1">A. Author</text>, <text class="ltx_bib_paper" font="italic" xml:id="bibliography0.bibx1.2">Title</text>.</bibblock></bibitem></biblist></bibliography>"#,
         ),
       ],
     ),
@@ -88,9 +90,17 @@ fn amsppt_heads_and_theorems() {
         (
           "bibliography",
           "bib",
-          r#"<bibliography inlist="toc" xml:id="bib"><title>References</title><biblist><bibitem key="1" xml:id="bibliography0.bibx1"><tags><tag role="refnum">1</tag></tags><bibblock><text class="ltx_bib_authors" xml:id="bibliography0.bibx1.1">A. Author</text>, <text class="ltx_bib_paper" font="italic" xml:id="bibliography0.bibx1.2">Title</text><text font="italic" xml:id="bibliography0.bibx1.3">.</text></bibblock></bibitem></biblist></bibliography>"#,
+          r#"<bibliography inlist="toc" xml:id="bib"><title>References</title><biblist><bibitem key="1" xml:id="bibliography0.bibx1"><tags><tag role="refnum">1</tag></tags><bibblock><text class="ltx_bib_authors" xml:id="bibliography0.bibx1.1">A. Author</text>, <text class="ltx_bib_paper" font="italic" xml:id="bibliography0.bibx1.2">Title</text>.</bibblock></bibitem></biblist></bibliography>"#,
         ),
       ],
+    ),
+    (
+      include_str!("../../../tools/perfect_kernel/repros/amstex/amsppt_bibfield_is_digested.tex"),
+      &[(
+        "bibliography",
+        "bib",
+        r#"<bibliography inlist="toc" xml:id="bib"><title>References</title><biblist><bibitem key="??" xml:id="bibliography0.bibx1"><tags><tag role="refnum">??</tag></tags><bibblock><text class="ltx_bib_authors" xml:id="bibliography0.bibx1.1">A. Author</text>, <text class="ltx_bib_paper" font="italic" xml:id="bibliography0.bibx1.2">Title</text>, <text class="ltx_bib_journal" xml:id="bibliography0.bibx1.3">J</text> (<text class="ltx_bib_year" xml:id="bibliography0.bibx1.4">1990</text>).</bibblock></bibitem></biblist></bibliography>"#,
+      )],
     ),
     (
       include_str!("../../../tools/perfect_kernel/repros/amstex/amsppt_roster_keeps_its_items.tex"),
@@ -122,6 +132,20 @@ fn amsppt_heads_and_theorems() {
     // no paragraph is left at the document's level (whose ids would be `p1`, `p2`, …)
     assert!(!xml.contains(r#"xml:id="p1""#), "{xml}");
   }
+  // a field marker outside a `\ref` (math9204232's `\Refs\ra\key{HM2}`) runs to the end of the input: printed where it
+  // stands, the references after it kept (pdftex 5 `!`, the references lost; Perl 0 Errors, lost)
+  assert_elements_with(
+    include_str!("../../../tools/perfect_kernel/repros/amstex/amsppt_stray_field_after_refs.tex"),
+    AR5IV,
+    (0, 1),
+    &["expected:\\@end@bibfield"],
+    &[(
+      "bibliography",
+      "bib",
+      r#"<bibliography inlist="toc" xml:id="bib"><title>References</title><biblist><bibitem xml:id="bib.1"><bibblock>B2
+</bibblock></bibitem><bibitem key="A" xml:id="bibliography0.bibx1"><tags><tag role="refnum">A</tag></tags><bibblock><text class="ltx_bib_authors" xml:id="bibliography0.bibx1.1">A. Author</text>, <text class="ltx_bib_paper" font="italic" xml:id="bibliography0.bibx1.2">First</text>, <text class="ltx_bib_journal" xml:id="bibliography0.bibx1.3">J</text> (<text class="ltx_bib_year" xml:id="bibliography0.bibx1.4">1990</text>).</bibblock></bibitem><bibitem key="B2" xml:id="bibliography0.bibx2"><tags><tag role="refnum">B2</tag></tags><bibblock><text class="ltx_bib_authors" xml:id="bibliography0.bibx2.1">B. Writer</text>, <text class="ltx_bib_paper" font="italic" xml:id="bibliography0.bibx2.2">Second</text>, <text class="ltx_bib_journal" xml:id="bibliography0.bibx2.3">K</text> (<text class="ltx_bib_year" xml:id="bibliography0.bibx2.4">1991</text>).</bibblock></bibitem></biblist></bibliography>"#,
+    )],
+  );
   // the error side of `\roster\runinitem`: elsewhere `\runinitem` is undefined, as in TeX (pdftex 1 `!`, Perl 1 Error)
   assert_elements_with(
     include_str!("../../../tools/perfect_kernel/repros/amstex/amsppt_roster_runinitem_stray.tex"),
