@@ -1303,6 +1303,88 @@ mod split_nav_relations {
     ]);
   }
 
+  /// A `--sitedirectory` above the destination moves no navigation link (issue 1006): with a relative `--dest`, Split
+  /// named its pages `./Ch1.html` beside the root's `index.html`, and the site-relative locations kept those two
+  /// spellings, so a chapter's `up` read `../index.html` and the root's `next` `./Ch1.html`. Perl names a page with
+  /// `pathname_make` (`Split.pm` L185-191): `Ch1.html`. Every page's head links match the run without the site
+  /// directory, on both split paths (the streamed default and the whole-DOM one) and with pages in folders
+  /// (`idrelative`).
+  #[test]
+  fn split_navigation_ignores_an_ancestor_site_directory() {
+    const DOC: &str = "\\documentclass[12pt,oneside]{book}\n\\begin{document}\n\\title{my book}\\maketitle\n\
+                       \\tableofcontents\n\\chapter{chapter 1}\n\\section{section 1}\n\\subsection{sub 1}\ntest\n\
+                       \\section{section 2}\ntest\n\\end{document}\n";
+    for stream in ["1", "0"] {
+      for naming in [None, Some("idrelative")] {
+        let pages = |site: bool| {
+          let work = tempfile::tempdir().expect("tempdir");
+          let book = work.path().join("book");
+          std::fs::create_dir_all(&book).unwrap();
+          std::fs::write(book.join("index.tex"), DOC).unwrap();
+          let site_arg = format!("--sitedirectory={}", work.path().display());
+          let mut args = vec![
+            "index.tex",
+            "--splitat=section",
+            "--format=html5",
+            "--dest=index.html",
+          ];
+          if site {
+            args.push(&site_arg);
+          }
+          let naming_arg = naming.map(|n| format!("--splitnaming={n}"));
+          if let Some(n) = naming_arg.as_deref() {
+            args.push(n);
+          }
+          let out = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+            .args(&args)
+            .env("LATEXML_POST_STREAM_SPLIT", stream)
+            .current_dir(&book)
+            .output()
+            .expect("spawn latexml_oxide");
+          assert!(
+            out.status.success(),
+            "conversion failed (site {site}, stream {stream}, {naming:?}):\n{}",
+            String::from_utf8_lossy(&out.stderr)
+          );
+          let mut pages: Vec<(String, Vec<String>)> = Vec::new();
+          let mut dirs = vec![book.clone()];
+          while let Some(dir) = dirs.pop() {
+            for entry in std::fs::read_dir(&dir).unwrap().flatten() {
+              let path = entry.path();
+              if path.is_dir() {
+                dirs.push(path);
+              } else if path.extension().is_some_and(|e| e == "html") {
+                let name = path
+                  .strip_prefix(&book)
+                  .unwrap()
+                  .to_string_lossy()
+                  .replace('\\', "/");
+                pages.push((name, head_links(&std::fs::read_to_string(&path).unwrap())));
+              }
+            }
+          }
+          pages.sort();
+          pages
+        };
+        let (plain, sited) = (pages(false), pages(true));
+        assert_eq!(sited, plain, "stream {stream}, {naming:?}");
+        let up = |page: &str, href: &str| {
+          let links = &plain.iter().find(|(name, _)| name == page).unwrap().1;
+          assert!(
+            links
+              .iter()
+              .any(|l| l.starts_with(&format!(r#"<link rel="up" href="{href}""#))),
+            "{page}: {links:?}"
+          );
+        };
+        match naming {
+          None => up("Ch1.html", "index.html"),
+          Some(_) => up("Ch1/S1.html", "index.html"),
+        }
+      }
+    }
+  }
+
   /// The back matter belongs to no part (OXIDIZED_DESIGN_DIVERGENCES #1147, row R BACKMATTERPART): split at
   /// `chapter`, the bibliography is a page of the root, so its title has no "‣ Part II B", its `up` is the root (no
   /// link, as a part page's), and the first part's chapter links it too. Red (INT081C, Perl the same): "Bibliography ‣

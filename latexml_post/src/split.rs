@@ -4,8 +4,6 @@
 //! Splits a document into multiple pages based on an XPath expression
 //! that identifies section-level elements to extract as separate documents.
 
-use std::path::Path;
-
 use libxml::tree::Node;
 use rustc_hash::FxHashMap as HashMap;
 
@@ -442,23 +440,20 @@ impl Split {
     let ext = doc
       .get_destination_extension()
       .unwrap_or_else(|| "xml".to_string());
-    let parent_dir = Path::new(parent_path)
-      .parent()
-      .and_then(|p| p.to_str())
-      .unwrap_or(".");
+    page_pathname(parent_path, &name, &ext, as_dir)
+  }
+}
 
-    // Normalize empty parent_dir to "."
-    let parent_dir = if parent_dir.is_empty() {
-      "."
-    } else {
-      parent_dir
-    };
-
-    if as_dir {
-      format!("{}/{}/index.{}", parent_dir, name, ext)
-    } else {
-      format!("{}/{}.{}", parent_dir, name, ext)
-    }
+/// A page's pathname beside its parent's, or (`as_dir`) as `index` in a folder of its name there: Perl
+/// `Split::getPageName`'s `pathname_make` (`Split.pm` L185-191). A root named `index.html` gives `Ch1.html`, never
+/// `./Ch1.html`, whose site-relative location no longer matched the root's (issue 1006: `../index.html` links).
+pub(crate) fn page_pathname(parent_path: &str, name: &str, ext: &str, as_dir: bool) -> String {
+  use latexml_core::util::pathname::{concat, directory, make};
+  let dir = directory(parent_path);
+  if as_dir {
+    make(Some(&concat(&dir, name)), Some("index"), Some(ext))
+  } else {
+    make(Some(&dir), Some(name), Some(ext))
   }
 }
 

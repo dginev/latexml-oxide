@@ -1235,21 +1235,7 @@ impl Splitter {
       _ => false,
     };
     name = name.replace(':', "_");
-    let parent_path = &self.metas[parent].name;
-    let parent_dir = Path::new(parent_path)
-      .parent()
-      .and_then(|p| p.to_str())
-      .unwrap_or(".");
-    let parent_dir = if parent_dir.is_empty() {
-      "."
-    } else {
-      parent_dir
-    };
-    if as_dir {
-      format!("{}/{}/index.{}", parent_dir, name, ext)
-    } else {
-      format!("{}/{}.{}", parent_dir, name, ext)
-    }
+    crate::split::page_pathname(&self.metas[parent].name, &name, ext, as_dir)
   }
 
   /// The `inlist="toc"` lookahead pass: for each tree level where any page's
