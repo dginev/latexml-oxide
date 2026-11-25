@@ -127,6 +127,8 @@ The highlights since 0.7.6 (2026-08-23). Every change, with its guard tests and 
   never Errors, Fatals or the final verdict; the log keeps everything.
 - `--dest`, `--sitedirectory` and `--sourcedirectory` expand a leading `~` and resolve `./` and `..` before use, as
   latexmlc does (issue 1006).
+- `--timeout` no longer covers the one-time format build a TeX tree the bundled formats don't match needs; under a
+  non-zero `--timeout` that build has its own 10-minute bound.
 - The cortex worker never loads a runtime `.rhai` binding shipped in a source, whatever its build features.
 - Under `ulimit -v`, set `MALLOC_ARENA_MAX=2` and `MIMALLOC_ARENA_RESERVE=128MiB`
   ([`docs/ENVIRONMENT.md`](docs/ENVIRONMENT.md)).
