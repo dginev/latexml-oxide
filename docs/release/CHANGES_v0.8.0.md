@@ -43,6 +43,22 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
 
 ## Changes
 
+### 0.8.0-rc5
+
+  - **A negative argument count no longer exhausts memory.** `\newcommand\foo[-1]{x}` read its count as an unsigned
+    number, so it wrapped to 2^64 and the conversion died with `Fatal:oom:alloc_failed` (or took the machine's memory
+    without a limit). Every declarator taking a LaTeX argument count (`\newcommand`, `\renewcommand`,
+    `\providecommand`, `\DeclareRobustCommand`, `\newenvironment`, `\renewenvironment`, `\DeclareTextCommand`,
+    etoolbox's `\newrobustcmd`, twoopt's `\newcommandtwoopt`, mathtools' `\DeclarePairedDelimiterX`, listings'
+    `\lstnewenvironment`, array's `\newcolumntype`, tcolorbox's `\newtcbinputlisting`, `\lxDefMath`) now checks it
+    in one place: a count outside 0 to 9 is TeX's "You already have nine parameters", reported as an Error, and then
+    read as 0 (a negative count, as Perl) or 9 (`[10]`, the nine parameters TeX keeps; Perl took ten)
+    (KNOWN_PERL_ERRORS #1336).
+  - **A character beyond the Basic Multilingual Plane is kept as itself in text.** The font-map lookup compared only
+    the low 16 bits of a code point, so U+20041 (a CJK Extension B ideograph) printed as `A`, U+10000 as `Γ` and
+    U+30021 as `!`, in `\texttt` and every other font alike. The whole code point is now compared, as Perl and XeTeX
+    do; characters in the Basic Multilingual Plane are unchanged.
+
 ### 0.8.0-rc4
 
   - **A `--sitedirectory` named through a symbolic link is accepted again.** rc3 (#1001) took Perl's check that the

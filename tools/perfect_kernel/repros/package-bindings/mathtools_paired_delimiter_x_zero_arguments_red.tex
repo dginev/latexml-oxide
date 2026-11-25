@@ -1,0 +1,14 @@
+% witness: synthetic (INTW5, found beside the argument-count check)
+% oracle:  pdflatex 1 `!` (Package mathtools Error: Macro need 1 or more arguments), "A[(i)] B[(i)z]"
+% engines: Perl 0 errors, tex="(i)" and tex="(i)z"; rust 9fa31b9a7ad 1 error (Missing $ inserted) and 1 warning
+%          (unparsed_math), tex="(i)]B[" and tex="]": the declared command reads one argument anyway
+%          (mathtools_sty.rs `declare_paired_delimiter_x`, `n.max(1)`), here the closing `$`
+% expect:  1 error (mathtools's own), 0 warnings; tex="(i)" and tex="(i)z"
+% status:  RED
+% moves:   post-merge
+\documentclass{article}
+\usepackage{mathtools}
+\DeclarePairedDelimiterX\ci[0]{(}{)}{i}
+\begin{document}
+A[$\ci$] B[$\ci z$]
+\end{document}

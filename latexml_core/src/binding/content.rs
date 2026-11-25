@@ -6616,13 +6616,26 @@ fn halve_param_tokens(tks: &Tokens) -> Tokens {
   Tokens::new(out)
 }
 
+/// LaTeX's argument count `[n]`, 0 to 9: latex.ltx:1276-1283 `\@yargd@f` writes `#1`…`#9` and then the count, so a
+/// count outside is tex.web §476's "You already have nine parameters". An Error, then the count clamped into range.
+pub fn latex_arg_count(nargs: i64) -> Result<usize> {
+  let count = nargs.clamp(0, 9);
+  if count != nargs {
+    Error!(
+      "misdefined",
+      s!("[{nargs}]"),
+      "You already have nine parameters",
+      s!("a LaTeX command takes 0 to 9 arguments; [{nargs}] is read as [{count}]")
+    );
+  }
+  Ok(count as usize)
+}
+
 /// Convert a LaTeX-style argument spec to our Package form.
 /// Ie. given $nargs and $optional, being the two optional arguments to
 /// something like \newcommand, convert it to the form we use
-pub fn convert_latex_args(
-  mut nargs: usize,
-  optional: Option<Tokens>,
-) -> Result<Option<Parameters>> {
+pub fn convert_latex_args(nargs: i64, optional: Option<Tokens>) -> Result<Option<Parameters>> {
+  let mut nargs = latex_arg_count(nargs)?;
   let mut params = Vec::new();
   if let Some(tks) = optional {
     // The kernel stores an optional default through TWO `\def` bodies —
@@ -6679,10 +6692,11 @@ pub fn convert_latex_args(
 /// builds a signature of `[Default d1][Default d2]{…}…` where the remaining
 /// `n - 2` args are plain required.
 pub fn convert_twoopt_args(
-  mut nargs: usize,
+  nargs: i64,
   opt1: Option<Tokens>,
   opt2: Option<Tokens>,
 ) -> Result<Option<Parameters>> {
+  let mut nargs = latex_arg_count(nargs)?;
   let mut params = Vec::new();
   if let Some(tks) = opt1 {
     params.push(

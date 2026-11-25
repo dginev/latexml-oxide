@@ -940,13 +940,15 @@ LoadDefinitions!({
   // `\delimsize` outside any group: with `\delimsize` in the delimiters (`[\cbig]` where `\cbig#1` is
   // `\mathopen{\hbox{$\big#1$}}`) the size read the delimiter's `\delimsize` as its argument and the closing `$` of
   // its box was swallowed — 2609.17447, 100 such pairs, Fatal TooManyErrors.
-  fn declare_paired_delimiter_x(cs: Token, n: usize, pre: Vec<Token>, ldel: Vec<Token>, rdel: Vec<Token>,
+  fn declare_paired_delimiter_x(cs: Token, n: i64, pre: Vec<Token>, ldel: Vec<Token>, rdel: Vec<Token>,
     post: Vec<Token>, body: Vec<Token>) -> Result<()> {
     use latexml_core::definition::ExpansionBody;
     let cmd = cs.to_string();
     let inner_cs_name = s!("{}@inner", cmd);
     let lsize_cs_name = s!("{}@lsize", cmd);
     let rsize_cs_name = s!("{}@rsize", cmd);
+    // (its `\newcommand…[#2]`, mathtools.sty:961-963)
+    let n = latex_arg_count(n)?;
     let param_spec: String = (0..n.max(1)).map(|_| "{}").collect();
     // The precode, the delimiters and the postcode are in the command the arguments are read by, as mathtools.sty:953-988
     // generates it, so they may use them (`\DeclarePairedDelimiterXPP\expect[2]{\mathbb{E}_{#1}}[]{}{#2}`, 2310.04475;
@@ -997,11 +999,11 @@ LoadDefinitions!({
     Ok(())
   }
   DefPrimitive!("\\DeclarePairedDelimiterX DefToken [Number] {} {} {}", sub[(cs, nargs, ldel, rdel, body)] {
-    declare_paired_delimiter_x(cs, nargs.value_of() as usize, Vec::new(), ldel.unlist(), rdel.unlist(), Vec::new(),
+    declare_paired_delimiter_x(cs, nargs.value_of(), Vec::new(), ldel.unlist(), rdel.unlist(), Vec::new(),
       body.unlist())?;
   });
   DefPrimitive!("\\DeclarePairedDelimiterXPP DefToken [Number] {} {} {} {} {}", sub[(cs, nargs, pre, ldel, rdel, post, body)] {
-    declare_paired_delimiter_x(cs, nargs.value_of() as usize, pre.unlist(), ldel.unlist(), rdel.unlist(),
+    declare_paired_delimiter_x(cs, nargs.value_of(), pre.unlist(), ldel.unlist(), rdel.unlist(),
       post.unlist(), body.unlist())?;
   });
 
