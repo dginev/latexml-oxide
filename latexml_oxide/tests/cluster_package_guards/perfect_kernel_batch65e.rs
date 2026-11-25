@@ -3,7 +3,7 @@
 //! item, a collcell macro handed the template's `\ignorespaces`, the OmniBus theorem set replacing an author's macro, a
 //! refused `\author` replayed half-way, ptephy's affiliation list copied into every author, and hyperref's
 //! letltxmacro. Repros under `tools/perfect_kernel/repros/`.
-use latexml::util::test::{assert_element, xml_elements};
+use latexml::util::test::{assert_element, assert_no_element, xml_elements};
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
 
@@ -296,7 +296,7 @@ fn ptephy_name_lines_after_break_stay_names() {
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>C.\u{a0}Three</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">1</text></sup>Univ A</contact></creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>D.\u{a0}Four</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\"><text font=\"italic\" xml:id=\"id4.1\">2</text></sup>Univ B</contact></creator>",
   ]);
-  assert!(xml_elements(&xml, "pubnote", &[]).is_empty(), "{xml}");
+  assert_no_element(&xml, "pubnote", &[]);
 }
 
 /// A symbol mark nothing answers is shown on every author carrying it; a contact or note the author holds for another

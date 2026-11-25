@@ -9,6 +9,12 @@ top of its group.
 
 ### Unreleased
 
+  - **Tests: guards read whole elements.** The shared test helpers (`latexml_oxide/src/util/test.rs`) gain
+    `xml_elements`, `element_count`, `assert_all_elements`, `assert_no_element` and `markup_text`, which match an
+    attribute at its start (`id="p1"` is not `xml:id="p1"`), skip comments, CDATA and processing instructions, and read
+    an element whole; `assert_no_element` also fails on a matching start tag left open. Listing guards pin whole
+    `<listingline>` elements. `LATEXML_TEST_SHADOW=<absolute dir>` logs every `xml_element` call that disagrees with the
+    new reading (0 on the whole suite) and fails when it cannot write. No conversion output changes.
   - **amsppt (AMS-TeX preprint) references keep their fields.** Each `\ref` field is digested as amsppt's `\makerefbox`
     boxes it, so field macros that assign (math0610862's `\noOf`) no longer misfire: math0610862 and math0205237 no
     longer end in `Fatal:TooManyErrors` (101 Errors → 2; +1,985 and +2,144 words), and math9204232's 5 references are

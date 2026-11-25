@@ -634,7 +634,8 @@ pub fn error_count(log: &str) -> usize {
 ///
 /// Under `LATEXML_TEST_SHADOW=<dir>`, a call whose result differs from the first of [`xml_elements`] is appended to
 /// `<dir>/<pid>.tsv` (caller, tag, attributes, this result, that one); this result stays the one returned. `<dir>` must be
-/// absolute (a test's working directory is its crate's); a relative one, or a log it cannot write, panics the call.
+/// absolute (a test's working directory is its crate's) and is made at the first call, so its presence after a run shows
+/// the hook was on; a relative one, or a log it cannot write, panics the call.
 #[track_caller]
 pub fn xml_element(xml: &str, tag: &str, attrs: &[&str]) -> Option<String> {
   let found = first_element_by_substring(xml, tag, attrs);
@@ -652,8 +653,13 @@ pub fn xml_element(xml: &str, tag: &str, attrs: &[&str]) -> Option<String> {
 }
 
 /// `LATEXML_TEST_SHADOW`: the directory [`xml_element`] logs its disagreements with [`xml_elements`] to.
-static TEST_SHADOW: LazyLock<Option<PathBuf>> =
-  LazyLock::new(|| shadow_dir(std::env::var_os("LATEXML_TEST_SHADOW")));
+static TEST_SHADOW: LazyLock<Option<PathBuf>> = LazyLock::new(|| {
+  let dir = shadow_dir(std::env::var_os("LATEXML_TEST_SHADOW"))?;
+  // Made at the first call, so its presence after a run proves the hook was on: a run with no flips writes no row.
+  std::fs::create_dir_all(&dir)
+    .unwrap_or_else(|e| panic!("LATEXML_TEST_SHADOW: cannot create {}: {e}", dir.display()));
+  Some(dir)
+});
 
 /// The shadow directory of a `LATEXML_TEST_SHADOW` value: unset or empty is none; a relative path panics.
 fn shadow_dir(value: Option<std::ffi::OsString>) -> Option<PathBuf> {
@@ -876,8 +882,8 @@ pub fn assert_element(xml: &str, tag: &str, attrs: &[&str], expected: &str) {
 /// Every element `<tag …>…</tag>` of `xml` whose start tag carries every `attrs` fragment, in document order, nested
 /// ones included, each whole and normalized as [`xml_element`] returns it. Unlike [`xml_element`], markup inside a
 /// comment, CDATA section or processing instruction is no element; a `name=…` fragment matches at an attribute's start
-/// only (`id="p1"` is not `xml:id="p1"`), any other fragment anywhere in the start tag; an HTML void element (`<br>`)
-/// is its start tag.
+/// only (`id="p1"` is not `xml:id="p1"`), any other fragment anywhere in the start tag; an HTML void element left open
+/// (`<br>`) is its start tag. The scan reads XML: an HTML page's `<script>`/`<style>` text is not skipped.
 pub fn xml_elements(xml: &str, tag: &str, attrs: &[&str]) -> Vec<String> {
   element_spans(xml, tag, attrs)
     .into_iter()
