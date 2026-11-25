@@ -211,3 +211,38 @@ fn a_placeholder_bibitem_is_the_bibliography_width() {
     r#"<bibitem key="b" xml:id="bib.bib2"><tags><tag role="number">2</tag><tag role="refnum">[2]</tag><tag role="key">b</tag></tags><bibblock> Entry B.</bibblock></bibitem>"#,
   );
 }
+
+/// A `\graphicspath` or `svgpath` entry that is absolute as this platform reads it is searched as written, not joined
+/// under the source directory: Perl `graphics.sty.ltxml` L257 and `svg.sty.ltxml` L43
+/// `pathname_absolute(pathname_canonical($dir), $root)`. Red on Windows only (UTILDRY F4): a `C:/…` entry does not
+/// start with `/`, so it was joined under the source directory and the figure was missing. The figures lie outside the
+/// source directory, under the target's temporary directory (a runner's `%TEMP%` can hold an 8.3 `~1`); `_` and `~` are
+/// read as text.
+#[test]
+fn an_absolute_graphics_path_is_searched_as_written() {
+  let figs = tempfile::tempdir_in(env!("CARGO_TARGET_TMPDIR")).expect("tempdir");
+  std::fs::write(
+    figs.path().join("f4_plot.pdf"),
+    repro!("package-bindings/eps_as_pdf_one.pdf"),
+  )
+  .unwrap();
+  std::fs::write(
+    figs.path().join("f4_icon.svg"),
+    "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"10\"><rect width=\"20\" height=\"10\"/></svg>\n",
+  )
+  .unwrap();
+  let dir = figs.path().to_string_lossy().replace('\\', "/");
+  let tex = format!(
+    "\\documentclass{{article}}\n\\catcode`\\_=12 \\catcode`\\~=12\n\\usepackage{{graphicx}}\n\
+     \\usepackage[svgpath={{{dir}/}}]{{svg}}\n\\graphicspath{{{{{dir}/}}}}\n\\begin{{document}}\n\
+     \\includegraphics{{f4_plot}} \\includesvg{{f4_icon}}\n\\end{{document}}\n"
+  );
+  let (log, xml) = convert_files_with(&tex, &[], Some(PRELOAD));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  for figure in ["f4_plot.pdf", "f4_icon.svg"] {
+    assert!(
+      xml.contains(&format!("{dir}/{figure}\"")),
+      "{figure} not found under {dir}:\n{xml}"
+    );
+  }
+}

@@ -629,8 +629,11 @@ LoadDefinitions!({
       // (acmart, 9 figures, all lost under both Perl and Rust-before).
       let dir = dir.trim().trim_matches('"').trim();
       if !dir.is_empty() {
-        // Perl: pathname_absolute(pathname_canonical($dir), $root)
-        let path = if root.is_empty() || dir.starts_with('/') {
+        // Perl: pathname_absolute(pathname_canonical($dir), $root) — absolute as this platform reads it (`C:/figs/` on
+        // Windows, `~/figs/`), never by a leading `/`, which joined a drive-letter entry under the root.
+        let path = if pathname::is_absolute(dir) {
+          pathname::canonical(dir)
+        } else if root.is_empty() {
           dir.to_string()
         } else {
           s!("{}/{}", root, dir)

@@ -211,7 +211,7 @@ fn svg_search_path(path: &str) -> String {
   let root = with_value("SOURCEDIRECTORY", |v| {
     v.map(|s| s.to_string()).unwrap_or_default()
   });
-  if root.is_empty() || canonical.starts_with('/') {
+  if root.is_empty() || pathname::is_absolute(&canonical) {
     canonical
   } else {
     s!("{root}/{canonical}")
