@@ -22569,6 +22569,10 @@ latexmlc --splitat=section --format=html5 --sitedirectory="$(dirname "$PWD")" --
 Perl (same host): `The destination directory (.) must be within the siteDirectory (…/link)`, exit 255, no pages.
 The Rust port took the same check in 0.8.0-rc3 (#1001) and refused the same way; 0.8.0-rc1/rc2 had no check and
 converted. Fixed in Rust by accepting a destination the site contains either as written (Perl's test) or with both
-sides resolved (`pathname::resolved`), so the check refuses only a destination outside the site in both forms. Guard: `cluster_xslt_split`
-`split_nav_relations::split_navigation_ignores_an_ancestor_site_directory` (its site-through-a-link row, Unix; macOS
-CI's temporary directories exercise it everywhere).
+sides resolved (`pathname::resolved`), so the check refuses only a destination outside the site in both forms.
+The same mix renamed an image the site keeps at its own path (`pic.png` became `x1.png`, a second copy written):
+`latexml_post` `graphics.rs` `kept_path` takes the same either-form test. Guard: `cluster_xslt_split`
+`split_nav_relations::split_navigation_ignores_an_ancestor_site_directory` (its site-through-a-link rows on Unix,
+which compare page links and image references with the run without a link; on macOS every ancestor row of the
+guard takes this path). Stylesheet URLs from such a site are still spelled through the link (`../../link/LaTeXML.css`,
+rc1 alike): row R PATHFAMILY.

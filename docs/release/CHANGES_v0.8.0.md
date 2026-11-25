@@ -52,7 +52,9 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     alike), or any site named through a link, ended in "Fatal: The destination directory (.) must be within the
     siteDirectory" with no pages; rc1 and rc2 converted. The destination is now inside when it is so as written or with
     both sides resolved, so only one outside the site in both forms is refused (KNOWN_PERL_ERRORS #1334; Perl refuses
-    the same way). Found by macOS CI on the issue 1006 guard, whose temporary directories are under `/var`.
+    the same way). The same mix renamed a figure kept at its own path to `x1.png` beside a second copy; it keeps its
+    name again. Found by macOS CI on the issue 1006 guard, whose temporary directories are under `/var`. Stylesheet
+    URLs from a site named through a link are still spelled through it (`../../link/LaTeXML.css`), as in rc1.
   - **Split pages keep their navigation under `--sitedirectory` and a `./`-spelled `--dest`.** With a relative
     `--dest=index.htm` and an ancestor `--sitedirectory`, rc3's chapter up/prev links read `../index.htm` and the
     root's next `./Ch1.htm` (issue 1006). Split named its pages `./Ch1.htm` beside the root, so the two spellings of one folder
