@@ -35,6 +35,7 @@ a line says otherwise, it applies to every download:
   Embedded XSLT, CSS, RelaxNG, Profiles, JS ............ public domain           (sec 2.1)
   Embedded SVG 1.1 RELAX NG schema ..................... W3C + Mozilla           (sec 2.2)
   Schema-docs Ayu colour palette ....................... MIT (rustdoc)           (sec 2.3)
+  ar5iv.css (ar5iv-css), release builds ................ MIT                     (sec 2.4)
   libxml2 / libxslt / libexslt ......................... MIT                     (sec 3.1)
   zlib + GNU libiconv — Windows .exe only .............. Zlib + LGPL-2.1+        (sec 3.1)
   libzmq — in `cortex_worker` only, not in any download  LGPL-3.0 + exception    (sec 3.1)
@@ -165,6 +166,38 @@ values, taken from rustdoc's Ayu theme:
 Colour values are arguably facts and may attract no copyright at all, but rustdoc
 carried Ayu's credit forward and we took the values from rustdoc, so we carry
 both — in gratitude, as in 2.1. The rest of the file is ours and CC0.
+
+2.4 ar5iv-css  (the bundled `ar5iv.css`; release builds and the CLI container image)
+------------------------------------------------------------------------------------
+
+`--css=ar5iv.css` writes out ar5iv-css's `dist/ar5iv.min.css`, embedded in the
+release binaries at the release and commit `tools/ar5iv-css.pin` names, with a
+banner naming that release and this license prepended. Builds from source (cargo
+install, crates.io, docs.rs) do not embed it.
+
+  * ar5iv-css  —  https://github.com/dginev/ar5iv-css
+
+MIT License
+
+Copyright (c) 2021 Deyan Ginev
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 
 --------------------------------------------------------------------------------
 3. Linked native (C) libraries, and embedded third-party data

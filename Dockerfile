@@ -279,6 +279,17 @@ RUN set -ex \
       --profile maxperf --bin latexml_oxide \
  && strip --strip-all target/maxperf/latexml_oxide \
  && cp target/maxperf/latexml_oxide /usr/local/bin/latexml_oxide
+# Where docker.yml placed the bundled ar5iv.css (resources/ar5iv-css/, tools/ar5iv-css.pin), the binary must write
+# it from its embedded copy (the banner is added at embed time) and link it alone under --nodefaultresources.
+RUN set -ex \
+ && if [ -f resources/ar5iv-css/ar5iv.min.css ]; then \
+      mkdir /tmp/a5 \
+      && printf '\\documentclass{article}\n\\begin{document}\nHello.\n\\end{document}\n' > /tmp/a5.tex \
+      && latexml_oxide --css=ar5iv.css --nodefaultresources --dest=/tmp/a5/main.html /tmp/a5.tex \
+      && grep -q 'href="ar5iv.css"' /tmp/a5/main.html \
+      && head -c 16 /tmp/a5/ar5iv.css | grep -q '/\*! ar5iv-css' \
+      && rm -rf /tmp/a5 /tmp/a5.tex; \
+    fi
 
 FROM texbase AS cli
 COPY --from=build-cli /usr/local/bin/latexml_oxide /usr/local/bin/latexml_oxide

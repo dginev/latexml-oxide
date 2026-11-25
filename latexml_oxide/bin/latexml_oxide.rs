@@ -393,7 +393,8 @@ struct Cli {
   embed: bool,
 
   // === Repeatable flags ===
-  /// Add a CSS stylesheet link to the HTML output (repeatable).
+  /// Add a CSS stylesheet link to the HTML output (repeatable). Release builds bundle
+  /// `ar5iv.css`: use `--css=ar5iv.css --nodefaultresources`.
   #[arg(long = "css", value_name = "URL")]
   css_files: Vec<String>,
 

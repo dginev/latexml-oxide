@@ -45,6 +45,16 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
 
 ### 0.8.0-rc5
 
+  - **The release binaries bundle `ar5iv.css`.** `--css=ar5iv.css --nodefaultresources` writes the ar5iv-css
+    stylesheet beside the page, from the binary, as its only stylesheet; with the defaults kept, LaTeXML.css still
+    comes first and its unlayered rules win over ar5iv.css's layered ones. The copy is ar5iv-css 0.9.5
+    (`dist/ar5iv.min.css` at commit `cf36205fde48`), pinned with its SHA-256 in `tools/ar5iv-css.pin`, fetched by the
+    release pipeline only and never committed, with its MIT notice prepended (THIRD-PARTY-NOTICES 2.4). A build from
+    source does not have it: `--css=ar5iv.css` there gives one Warning, "ar5iv.css is bundled only in release builds;
+    pass a path to a local copy". Default output is unchanged. Guards: `split_css_links::
+    bundled_ar5iv_css_follows_latexml_css`, `build_rerun::tests::tracks_only_what_exists`, and the
+    `tools/release_smoke.sh` check on every release leg.
+
   - **A conversion closing its `LaTeXML-oxide.cache` at the same moment as another no longer leaves
     `LaTeXML-oxide.cache-wal`/`-shm` behind,** also when the destination is reached through a symbolic link, as every
     macOS temporary folder is. SQLite removes them only when one close gets the file's exclusive lock on its single try;

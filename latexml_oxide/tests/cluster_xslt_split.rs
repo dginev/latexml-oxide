@@ -1128,6 +1128,95 @@ mod split_css_links {
     }
   }
 
+  /// `--css=ar5iv.css` names the bundled ar5iv-css stylesheet, embedded only in release builds
+  /// (`tools/ar5iv-css.pin`). Embedded: it is written beside the page and linked after LaTeXML.css, and with
+  /// `--nodefaultresources` it is the page's only stylesheet. Not embedded (dev, CI): one Warning says so.
+  #[test]
+  fn bundled_ar5iv_css_follows_latexml_css() {
+    let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
+    let xml = "<?xml version=\"1.0\"?><document xmlns=\"http://dlmf.nist.gov/LaTeXML\">\
+               <resource src=\"LaTeXML.css\" type=\"text/css\"/><title>T</title><para><p>x</p></para></document>";
+    let css = ["ar5iv.css".to_string()];
+    let link = |name: &str| format!("<link rel=\"stylesheet\" href=\"{name}\" type=\"text/css\">");
+    let bundled = latexml_post::xslt::ar5iv_css_bundled();
+    for default_resources in [true, false] {
+      let dir = tempfile::tempdir().expect("tempdir");
+      let dest = dir.path().join("main.html").to_string_lossy().into_owned();
+      latexml_core::common::error::initialize_report();
+      let out = latexml::post::run_post_processing_logged(xml, &latexml::post::PostOptions {
+        destination: Some(&dest),
+        default_resources,
+        css_files: &css,
+        ..super::xslt_failure_is_fatal::post_options("LaTeXML-html5.xsl")
+      });
+      latexml_core::common::error::initialize_report();
+      assert_eq!(out.status_code, if bundled { 0 } else { 1 }, "{}", out.log);
+      let html = std::fs::read_to_string(dir.path().join("main.html")).unwrap();
+      let head = html.split("</head>").next().unwrap_or(&html);
+      let (base_at, ar5iv_at) = (
+        head.find(&link("LaTeXML.css")),
+        head.find(&link("ar5iv.css")),
+      );
+      assert!(ar5iv_at.is_some(), "{head}");
+      if default_resources {
+        assert!(
+          base_at < ar5iv_at && base_at.is_some(),
+          "LaTeXML.css first: {head}"
+        );
+      } else {
+        assert_eq!(base_at, None, "--nodefaultresources: {head}");
+      }
+      let written = std::fs::read_to_string(dir.path().join("ar5iv.css")).ok();
+      if bundled {
+        assert_eq!(out.log.matches("Warning:").count(), 0, "{}", out.log);
+        let written = written.expect("ar5iv.css written beside the page");
+        assert!(
+          written.starts_with("/*! ar5iv-css ")
+            && written.contains("MIT License")
+            && written.len() > 1000,
+          "{}",
+          &written[..written.len().min(200)]
+        );
+      } else {
+        assert_eq!(out.log.matches("Warning:").count(), 1, "{}", out.log);
+        assert_eq!(
+          out
+            .log
+            .matches("ar5iv.css is bundled only in release builds; pass a path to a local copy")
+            .count(),
+          1,
+          "{}",
+          out.log
+        );
+        assert_eq!(written, None);
+      }
+      assert_eq!(out.log.matches("Error:").count(), 0, "{}", out.log);
+    }
+    // A path the user wrote keeps the plain message (a release build serves its basename, as for LaTeXML.css).
+    if !bundled {
+      let dir = tempfile::tempdir().expect("tempdir");
+      let dest = dir.path().join("main.html").to_string_lossy().into_owned();
+      let css = ["nosuch/ar5iv.css".to_string()];
+      latexml_core::common::error::initialize_report();
+      let out = latexml::post::run_post_processing_logged(xml, &latexml::post::PostOptions {
+        destination: Some(&dest),
+        css_files: &css,
+        ..super::xslt_failure_is_fatal::post_options("LaTeXML-html5.xsl")
+      });
+      latexml_core::common::error::initialize_report();
+      assert_eq!(out.log.matches("Warning:").count(), 1, "{}", out.log);
+      assert_eq!(
+        out
+          .log
+          .matches("Couldn't find resource file nosuch/ar5iv.css")
+          .count(),
+        1,
+        "{}",
+        out.log
+      );
+    }
+  }
+
   /// `my.css`, which `@import`s `base.css`.
   fn write_importing_css(dir: &Path) {
     std::fs::write(dir.join("my.css"), "@import \"base.css\";\n.x{color:red}\n").unwrap();

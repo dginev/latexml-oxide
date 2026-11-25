@@ -561,6 +561,15 @@ impl XSLT {
               e
             );
           }
+        } else if src == embedded_resources::AR5IV_CSS_NAME {
+          // The bare name only: a path the user wrote that is missing gets the plain message below.
+          Warn!(
+            "missing_file",
+            src,
+            "{} is bundled only in release builds; pass a path to a local copy",
+            src
+          );
+          return src.to_string();
         } else {
           Warn!(
             "missing_file",
@@ -1241,6 +1250,12 @@ mod embedded_resources {
     ),
   ];
 
+  // `AR5IV_CSS`: ar5iv-css's `dist/ar5iv.min.css`, embedded only where the release fetched it (latexml_post/build.rs).
+  include!(concat!(env!("OUT_DIR"), "/embedded_ar5iv_css.rs"));
+
+  /// The name `--css` requests the bundled ar5iv-css stylesheet by.
+  pub const AR5IV_CSS_NAME: &str = "ar5iv.css";
+
   /// Return the embedded bytes for `basename` if it's one of the
   /// bundled CSS/JS assets, or `None` otherwise. Callers write the
   /// returned slice straight to the destination directory — no temp
@@ -1250,8 +1265,16 @@ mod embedded_resources {
       .iter()
       .chain(JS_FILES.iter())
       .find_map(|(n, c)| (*n == basename).then_some(c.as_bytes()))
+      .or_else(|| {
+        AR5IV_CSS
+          .filter(|_| basename == AR5IV_CSS_NAME)
+          .map(str::as_bytes)
+      })
   }
 }
+
+/// Whether this build embeds `ar5iv.css` (release builds; `tools/ar5iv-css.pin`), so `--css=ar5iv.css` needs no file.
+pub fn ar5iv_css_bundled() -> bool { embedded_resources::AR5IV_CSS.is_some() }
 
 // ======================================================================
 // File search helpers

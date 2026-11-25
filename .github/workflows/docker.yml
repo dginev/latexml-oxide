@@ -145,6 +145,17 @@ jobs:
             printf 'toolchain=%s\n' "$toolchain"
             printf 'cargo_locked=%s\n' "$cargo_locked"
           } >> "$GITHUB_OUTPUT"
+      # The bundled ar5iv.css (tools/ar5iv-css.pin): the release run's own copy when called from release.yml, else
+      # fetched here at the pinned commit; either way SHA-256-checked. `COPY . .` takes it into the build.
+      - name: collect the bundled ar5iv.css
+        if: ${{ inputs.use_build_inputs }}
+        uses: actions/download-artifact@v6
+        with:
+          name: ar5iv-css
+          path: resources/ar5iv-css/
+      - name: fetch or verify the bundled ar5iv.css
+        # A dispatch may build a tag older than the bundled ar5iv.css (0.8.0-rc5); it has no script.
+        run: if [ -f tools/fetch_ar5iv_css.sh ]; then bash tools/fetch_ar5iv_css.sh; fi
       - name: git sha
         id: meta
         # The binary's own rule (make_release.sh: `git rev-parse --short HEAD` on a full clone), so the image and

@@ -20,6 +20,9 @@ $ latexmlmath_oxide 'a^2+b^2=c^2'
 
 `--format` takes `html5` (or `html`), `xhtml`, `xml`, or `epub` (a zipped EPUB 3) — inferred from the
 `--destination` extension when omitted. `--help` lists every option.
+For the [ar5iv](https://github.com/dginev/ar5iv-css) look, the prebuilt release binaries bundle `ar5iv.css`:
+`--css=ar5iv.css --nodefaultresources` writes it beside the page in place of `LaTeXML.css` (it layers its rules, so
+LaTeXML.css, if kept, would override them). A build from source lacks it; pass the path to a local copy instead.
 Working from a checkout instead of an installed binary? Prefix with
 `cargo run --bin latexml_oxide --`.
 

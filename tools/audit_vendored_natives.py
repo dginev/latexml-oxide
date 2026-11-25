@@ -560,13 +560,19 @@ AUDITED_RESOURCES = {
         "((c) Karl Berry & Olaf Weber, LGPLv2.1+) -- kpathsea is attributed in 3.2. "
         "Gitignored build artifacts, so this prefix is usually empty outside a release."
     ),
+    "resources/ar5iv-css/": (
+        "ar5iv-css's dist/ar5iv.min.css (MIT, (c) 2021 Deyan Ginev), the release-only bundled "
+        "ar5iv.css: fetched at the commit tools/ar5iv-css.pin names by tools/fetch_ar5iv_css.sh, "
+        "embedded by latexml_post/build.rs behind an MIT banner. Attributed in THIRD-PARTY-NOTICES 2.4. "
+        "Gitignored, so this prefix is usually absent outside a release."
+    ),
 }
 
 
-# Prefixes that may legitimately be absent from a checkout. `resources/dumps/` is
-# gitignored and generated at release time, so git does not even create the directory in
-# a fresh clone -- demanding it exist would fail every normal build.
-RESOURCE_PREFIX_MAY_BE_ABSENT = {"resources/dumps/"}
+# Prefixes that may legitimately be absent from a checkout. `resources/dumps/` and
+# `resources/ar5iv-css/` are gitignored and generated at release time, so git does not even
+# create the directory in a fresh clone -- demanding it exist would fail every normal build.
+RESOURCE_PREFIX_MAY_BE_ABSENT = {"resources/dumps/", "resources/ar5iv-css/"}
 
 
 def audit_resources(verbose):

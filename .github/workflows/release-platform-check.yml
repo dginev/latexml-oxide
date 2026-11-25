@@ -60,6 +60,13 @@ jobs:
           "$bin" --version
           echo "path=$bin" >> "$GITHUB_OUTPUT"
 
+      # The published binary converts with resources/ moved aside, and `--css=ar5iv.css --nodefaultresources` writes
+      # the bundled ar5iv.css beside the page (tools/release_smoke.sh, also run by every release leg before publishing).
+      # Not on a pull request: that checks the newest published release, which may predate the bundled ar5iv.css.
+      - name: Conversion smoke and the bundled ar5iv.css
+        if: ${{ github.event_name != 'pull_request' }}
+        run: bash tools/release_smoke.sh "${{ steps.bin.outputs.path }}" latexml_oxide/tests/hello/hello.tex
+
       - name: Split document, fleet vs serial
         run: bash tools/render_platform_check.sh "${{ steps.bin.outputs.path }}" "$RUNNER_TEMP/rpc"
 
