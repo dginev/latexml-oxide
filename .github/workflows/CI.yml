@@ -548,8 +548,8 @@ jobs:
       # expensive build so it fails fast. See docs/XMLID_ACCESSOR_AUDIT_2026-06-08.md.
       - name: lint (xml:id accessor footgun)
         run: tools/lint_xmlid_accessor.sh
-      # NOTE: CI intentionally does NOT enable the `cortex` feature.
-      # Cortex worker is a production deployment artifact, built separately.
+      # NOTE: this job does NOT enable the `cortex` feature; the `cortex` job
+      # below tests and lints the cortex_worker binary.
       #
       # All cargo steps below run under the dedicated `ci` profile,
       # which has per-package codegen-units splits to keep peak RSS
@@ -615,6 +615,78 @@ jobs:
         if: always()
         shell: bash
         run: bash tools/test_skip_summary.sh
+
+  # cortex_worker, the fleet's binary: the `test` job leaves the `cortex` feature off, and `lint` never
+  # compiles bin/cortex_worker.rs or the two test targets that need it. This job runs the binary's unit
+  # tests, those two targets (they convert `article` documents, hence TeX Live and the dumps, keyed and
+  # cached as in `test`) and clippy over them. zeromq-src builds libzmq with `cc` (no cmake).
+  cortex:
+    name: cortex_worker (tests + clippy)
+    needs: changes
+    if: needs.changes.outputs.not_docs == 'true'
+    runs-on: ubuntu-26.04
+    # A cold cache builds the workspace (~20 min) and, on a dump-cache miss, the formats (7-11 min).
+    timeout-minutes: 60
+    env:
+      CARGO_BUILD_JOBS: "2"
+      CARGO_INCREMENTAL: "0"
+      CARGO_NET_GIT_FETCH_WITH_CLI: "true"
+      RUSTFLAGS: "-C link-arg=-fuse-ld=mold"
+      RUST_BACKTRACE: "1"
+      RUSTUP_TOOLCHAIN: ${{ inputs.toolchain }}
+      CARGO_LOCKED: ${{ inputs.use_build_inputs && '1' || '0' }}
+    steps:
+      - uses: actions/checkout@v6
+      - name: fetch pinned Cargo.lock
+        if: ${{ inputs.use_build_inputs }}
+        uses: actions/download-artifact@v6
+        with:
+          name: build-inputs
+          path: .
+      - name: install dependencies
+        timeout-minutes: 20
+        run: |
+          tools/ci_apt_install.sh \
+            libxml2-dev libxml2-utils libxslt1-dev libkpathsea-dev libkpathsea6 mold texlive
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ inputs.toolchain || 'nightly' }}
+          components: clippy
+      # Only `main` saves; see the lint job's rust-cache note.
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+          key: cortex
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      # The same key as `test`'s, so either job's dumps serve the other.
+      - name: TeX Live fingerprint (dump cache key)
+        id: tlfp
+        run: bash tools/ci_tex_fingerprint.sh
+      - name: cache engine dumps
+        id: dumps
+        uses: actions/cache@v4
+        with:
+          path: resources/dumps
+          key: dumps-v1-${{ runner.os }}-tl${{ steps.tlfp.outputs.year }}-${{ steps.tlfp.outputs.sources }}-${{ hashFiles('latexml_core/src/**', 'latexml_engine/src/**', 'latexml_codegen/src/**', 'latexml_oxide/src/ini_tex.rs') }}
+      - name: make formats
+        if: steps.dumps.outputs.cache-hit != 'true'
+        env:
+          PROFILE: ci
+        run: tools/make_formats.sh
+      - name: install cargo-nextest
+        uses: taiki-e/install-action@nextest
+      - name: cortex_worker tests
+        run: |
+          locked=()
+          if [ "${CARGO_LOCKED:-0}" = "1" ]; then locked=(--locked); fi
+          cargo nextest run ${locked[@]+"${locked[@]}"} --cargo-profile ci --profile ci -p latexml --features cortex \
+            --bin cortex_worker --test cortex_worker_exit_reports --test cortex_worker_untrusted_bindings
+      - name: cortex_worker clippy
+        run: |
+          locked=()
+          if [ "${CARGO_LOCKED:-0}" = "1" ]; then locked=(--locked); fi
+          cargo clippy ${locked[@]+"${locked[@]}"} --profile ci -p latexml --features cortex --bin cortex_worker \
+            --test cortex_worker_exit_reports --test cortex_worker_untrusted_bindings -- -D warnings
 
   # macOS mirror of the Linux job above (issue #217): the same `ci` profile and
   # make-formats → build → test flow; only the platform deps differ (Homebrew
@@ -832,14 +904,14 @@ jobs:
   # repo-settings change that must land WITH this workflow.
   ci-success:
     name: CI success
-    needs: [changes, lint, miri, notex, asan, test, macos-build, macos]
+    needs: [changes, lint, miri, notex, asan, test, cortex, macos-build, macos]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: verify no required job failed
         run: |
-          results='${{ needs.changes.result }} ${{ needs.lint.result }} ${{ needs.miri.result }} ${{ needs.notex.result }} ${{ needs.asan.result }} ${{ needs.test.result }} ${{ needs.macos-build.result }} ${{ needs.macos.result }}'
+          results='${{ needs.changes.result }} ${{ needs.lint.result }} ${{ needs.miri.result }} ${{ needs.notex.result }} ${{ needs.asan.result }} ${{ needs.test.result }} ${{ needs.cortex.result }} ${{ needs.macos-build.result }} ${{ needs.macos.result }}'
           echo "upstream job results: $results"
           for r in $results; do
             case "$r" in

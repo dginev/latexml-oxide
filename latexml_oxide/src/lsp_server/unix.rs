@@ -490,7 +490,8 @@ fn run_body_child(
   // its wall-clock or RAM budget — including native hangs (libxslt, Marpa)
   // the cooperative deadline can't see. The child self-terminates; the parent
   // reaps it (`finish` maps the exit code). Held for the whole conversion.
-  let _watchdog = latexml_core::watchdog::Watchdog::with_limits(timeout_secs, max_rss_kb);
+  let _watchdog =
+    latexml_core::watchdog::Watchdog::with_limits(timeout_secs, max_rss_kb, Some("--max-memory"));
   let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
     // Re-arm the cooperative deadline FRESH from this child's clock. The child
     // inherits the parent's thread-local CONVERSION_DEADLINE via COW (set

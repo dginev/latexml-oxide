@@ -153,10 +153,12 @@ struct Cli {
   /// `Watchdog` exits with code 137 if RSS exceeds this, giving a clean
   /// `Fatal:oom:rss` artifact instead of relying solely on the external
   /// `ulimit -v` (which the OS enforces by failing an allocation, harder to
-  /// attribute). Defaults to 6 GiB, matching the sandbox `ulimit -v`. The same
+  /// attribute). Defaults to 6 GiB; the fleet's harness children run at 5376 MiB
+  /// and `tools/benchmark_canvas.sh` passes the same, under its 8 GiB `ulimit -v`. The same
   /// value is the cooperative memory fuse (a located `Fatal`, polled during
   /// digestion) and sets the streaming watermarks, in every mode; a harness
-  /// sets its children's to `--child-mem-limit-mb` − 256 MiB.
+  /// sets its children's to `--child-mem-limit-mb` − 256 MiB, else the harness's
+  /// own `--max-rss-mb`.
   #[arg(long, default_value = "6144")]
   max_rss_mb: u64,
 
@@ -383,8 +385,11 @@ impl LatexmlWorker {
     //   2. Cooperative stomach::set_timeout gives a graceful Err(Fatal) for the common case where
     //      digestion polls check_timeout.
     // Watchdog cancels automatically on drop at end of this function.
-    let _watchdog =
-      latexml_core::watchdog::Watchdog::with_limits(self.profile.timeout, self.profile.max_rss_kb);
+    let _watchdog = latexml_core::watchdog::Watchdog::with_limits(
+      self.profile.timeout,
+      self.profile.max_rss_kb,
+      Some("--max-rss-mb"),
+    );
     if self.profile.timeout > 0 {
       latexml_core::stomach::set_timeout(self.profile.timeout);
     }

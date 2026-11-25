@@ -1172,7 +1172,11 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   // `--init` mode runs without a watchdog.
   let max_memory = resolve_max_memory(cli.max_memory);
   let _watchdog = cli.init.is_none().then(|| {
-    latexml_core::watchdog::Watchdog::with_limits(cli.timeout, max_memory.saturating_mul(1024))
+    latexml_core::watchdog::Watchdog::with_limits(
+      cli.timeout,
+      max_memory.saturating_mul(1024),
+      Some("--max-memory"),
+    )
   });
 
   // --whatsin=archive: extract archive to temp directory, find main .tex file

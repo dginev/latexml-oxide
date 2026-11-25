@@ -285,6 +285,6 @@ Not covered: a death between a conversion's end and its result reaching the sink
 idle by then) — the lease reaper is still the net there. Guards: the unit tests in
 `exit_report.rs`, and `latexml_oxide/tests/cortex_worker_exit_reports.rs`, which runs a
 one-worker harness against an in-test dispatcher for each cause (the faults come from
-`CORTEX_WORKER_TEST_FAULT`, compiled into debug-assertion builds only; CI never enables the
-`cortex` feature, so run locally with
+`CORTEX_WORKER_TEST_FAULT`, compiled into debug-assertion builds only; CI's `cortex` job runs it with
+the binary's unit tests, locally
 `cargo test -p latexml --features cortex --test cortex_worker_exit_reports`).

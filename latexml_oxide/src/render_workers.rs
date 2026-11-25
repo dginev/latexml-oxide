@@ -944,8 +944,8 @@ pub fn worker_main(manifest_path: &str) -> i32 {
       } else {
         watchdog_kb
       };
-      let _watchdog =
-        (watchdog_kb > 0).then(|| latexml_core::watchdog::Watchdog::with_limits(0, watchdog_kb));
+      let _watchdog = (watchdog_kb > 0)
+        .then(|| latexml_core::watchdog::Watchdog::with_limits(0, watchdog_kb, None));
       let code = match render_manifest_pages(manifest) {
         #[cfg(feature = "test-utils")]
         Ok(_) if test_fault().as_deref() == Some("unreported") => {

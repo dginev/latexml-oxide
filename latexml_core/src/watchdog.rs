@@ -902,36 +902,61 @@ pub fn park_if_exiting() {
   }
 }
 
+/// The memory breach's line. The fleet classifies on its `Fatal:oom:rss` prefix; the advice names the flag that set
+/// the ceiling (`cortex_worker` has no `--max-memory`, row R CORTEXRSS), or none.
+fn oom_rss_message(rss_kb: u64, max_rss_kb: u64, memory_knob: Option<&str>) -> String {
+  let advice = match memory_knob {
+    Some(knob) => format!(": rerun with a higher {knob} on a machine with enough free RAM"),
+    None => String::new(),
+  };
+  format!(
+    "Fatal:oom:rss latexml-oxide: resident memory {}MB exceeded the {}MB ceiling — exiting process. This document \
+     needs a larger ceiling{advice}.",
+    rss_kb / 1024,
+    max_rss_kb / 1024
+  )
+}
+
 pub struct Watchdog {
   cancelled: Arc<AtomicBool>,
 }
 
 impl Watchdog {
   /// Create a wall-clock-only watchdog. `timeout_secs = 0` disables it.
-  /// Equivalent to [`Watchdog::with_limits(timeout_secs, 0)`].
-  pub fn new(timeout_secs: u64) -> Self { Self::with_limits(timeout_secs, 0) }
+  /// Equivalent to [`Watchdog::with_limits(timeout_secs, 0, None)`].
+  pub fn new(timeout_secs: u64) -> Self { Self::with_limits(timeout_secs, 0, None) }
 
   /// Create a watchdog guarding a wall-clock deadline **and** a resident-memory
   /// ceiling. `timeout_secs = 0` disables the time guard; `max_rss_kb = 0`
-  /// disables the memory guard. With both `0` this is a no-op handle.
+  /// disables the memory guard. With both `0` this is a no-op handle. `memory_knob` is the flag that set the
+  /// ceiling (`--max-memory`, `cortex_worker`'s `--max-rss-mb`), for the breach's Fatal to name; `None` names none.
   ///
   /// The thread polls `cancelled`, the deadline, and RSS every `poll_interval`.
   /// On a time breach it exits [`EXIT_TIMEOUT`]; on a memory breach,
   /// [`EXIT_OOM`]. The memory guard is inactive where [`process_rss_kb`]
   /// returns `None` (non-Linux); see the module portability note.
-  pub fn with_limits(timeout_secs: u64, max_rss_kb: u64) -> Self {
+  pub fn with_limits(
+    timeout_secs: u64,
+    max_rss_kb: u64,
+    memory_knob: Option<&'static str>,
+  ) -> Self {
     let cancelled = Arc::new(AtomicBool::new(false));
     if timeout_secs > 0 || max_rss_kb > 0 {
       let c = cancelled.clone();
       thread::Builder::new()
         .name("latexml-watchdog".to_string())
-        .spawn(move || Self::run(c, timeout_secs, max_rss_kb))
+        .spawn(move || Self::run(c, timeout_secs, max_rss_kb, memory_knob))
         .expect("watchdog thread spawn failed");
     }
     Self { cancelled }
   }
 
-  fn run(cancelled: Arc<AtomicBool>, timeout_secs: u64, max_rss_kb: u64) {
+  fn run(
+    cancelled: Arc<AtomicBool>,
+    timeout_secs: u64,
+    max_rss_kb: u64,
+    memory_knob: Option<&'static str>,
+  ) {
     let deadline = (timeout_secs > 0).then(|| Instant::now() + Duration::from_secs(timeout_secs));
     let poll_interval = Duration::from_millis(100);
     loop {
@@ -971,11 +996,8 @@ impl Watchdog {
           return;
         }
         write_stderr_unlocked(format_args!(
-          "Fatal:oom:rss latexml-oxide: resident memory {}MB exceeded the {}MB ceiling — exiting \
-           process. This document needs a larger ceiling: rerun with a higher --max-memory on a \
-           machine with enough free RAM.\n",
-          rss / 1024,
-          max_rss_kb / 1024
+          "{}\n",
+          oom_rss_message(rss, max_rss_kb, memory_knob)
         ));
         run_pre_exit_hook(EXIT_OOM);
         kill_registered_children();
@@ -1002,6 +1024,23 @@ mod tests {
   /// still converting (libxml2's `.fini_array` `xmlCleanupParser` freed the globals a render worker read: its SIGSEGV).
   /// The child plants two markers only `exit` would act on: a thread-local destructor of the breaching thread (glibc's
   /// exit handlers) and a line left in stdout's buffer (`std::process::exit`'s flush). Run here, it is the child.
+  /// The memory breach names the flag that set the ceiling, or none: `cortex_worker` has no `--max-memory`.
+  #[test]
+  fn the_oom_fatal_names_the_knob_that_set_it() {
+    let head = "Fatal:oom:rss latexml-oxide: resident memory 5400MB exceeded the 5376MB ceiling — exiting process. \
+                This document needs a larger ceiling";
+    let (rss, ceiling) = (5400 * 1024, 5376 * 1024);
+    assert_eq!(
+      oom_rss_message(rss, ceiling, Some("--max-rss-mb")),
+      format!("{head}: rerun with a higher --max-rss-mb on a machine with enough free RAM.")
+    );
+    assert_eq!(
+      oom_rss_message(rss, ceiling, Some("--max-memory")),
+      format!("{head}: rerun with a higher --max-memory on a machine with enough free RAM.")
+    );
+    assert_eq!(oom_rss_message(rss, ceiling, None), format!("{head}."));
+  }
+
   #[test]
   fn a_breach_ends_the_process_without_exit_handlers() {
     const CHILD: &str = "LATEXML_WATCHDOG_BREACH_CHILD";
@@ -1016,8 +1055,8 @@ mod tests {
       let _ = std::io::stdout().write_all(b"buffered-stdout");
       let cancelled = Arc::new(AtomicBool::new(false));
       match breach.as_str() {
-        "timeout" => Watchdog::run(cancelled, 1, 0),
-        _ => Watchdog::run(cancelled, 0, 1),
+        "timeout" => Watchdog::run(cancelled, 1, 0, None),
+        _ => Watchdog::run(cancelled, 0, 1, Some("--max-memory")),
       }
       unreachable!("the breach exits");
     }
@@ -1071,7 +1110,7 @@ mod tests {
         write_stderr_unlocked(format_args!("hook-ran\n"))
       }));
       claim_normal_end();
-      Watchdog::run(Arc::new(AtomicBool::new(false)), 1, 0);
+      Watchdog::run(Arc::new(AtomicBool::new(false)), 1, 0, None);
       write_stderr_unlocked(format_args!("stood-down\n"));
       park_if_exiting();
       exit_now(0);

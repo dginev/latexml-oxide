@@ -2461,13 +2461,7 @@ fn cycle_guard_record(st: &mut Stomach, d: &Digested, progress: usize) {
     {
       st.pending_cycle_fatal = Some((
         ErrorCategory::MemoryBudget,
-        s!(
-          "Box-list runaway: {} accumulated boxes exceeded the hard cap of {} \
-           (unbounded digestion with no detectable cycle); raise --max-memory, \
-           or --max-memory=0 to lift the ceiling",
-          st.box_list.len(),
-          cap
-        ),
+        box_count_runaway_message(st.box_list.len(), cap),
       ));
       return;
     }
@@ -2492,17 +2486,7 @@ fn cycle_guard_record(st: &mut Stomach, d: &Digested, progress: usize) {
       if est > budget {
         st.pending_cycle_fatal = Some((
           ErrorCategory::MemoryBudget,
-          s!(
-            "Box-list memory runaway: ~{} MB estimated across {} boxes exceeded \
-             the {} MB budget (unbounded accumulation); raise --max-memory, or \
-             --max-memory=0 to lift the ceiling. NOTE: the estimate is a LOWER \
-             BOUND (each box is walked at most {} nodes deep), so true RSS at \
-             this point is typically several times larger",
-            est / 1_000_000,
-            len,
-            budget / 1_000_000,
-            crate::digested::EB_BUDGET
-          ),
+          box_bytes_runaway_message(est, len, budget),
         ));
         return;
       }
@@ -2540,6 +2524,35 @@ fn cycle_guard_record(st: &mut Stomach, d: &Digested, progress: usize) {
       ));
     }
   }
+}
+
+/// How to raise the memory ceiling the box caps ride: `--max-memory` only when that flag set the fuse
+/// (`MEMORY_CEILING_MIB`); `cortex_worker`'s fuse is its `--max-rss-mb`, an embedder's the env (row R CORTEXRSS).
+fn memory_ceiling_advice() -> &'static str {
+  match MEMORY_CEILING_MIB.get() {
+    Some(_) => "raise --max-memory, or --max-memory=0 to lift the ceiling",
+    None => "the cap rides the cooperative memory fuse; raise that ceiling",
+  }
+}
+
+fn box_count_runaway_message(len: usize, cap: usize) -> String {
+  format!(
+    "Box-list runaway: {len} accumulated boxes exceeded the hard cap of {cap} (unbounded digestion with no \
+     detectable cycle); {}",
+    memory_ceiling_advice()
+  )
+}
+
+fn box_bytes_runaway_message(est: usize, len: usize, budget: usize) -> String {
+  format!(
+    "Box-list memory runaway: ~{} MB estimated across {len} boxes exceeded the {} MB budget (unbounded \
+     accumulation); {}. NOTE: the estimate is a LOWER BOUND (each box is walked at most {} nodes deep), so true \
+     RSS at this point is typically several times larger",
+    est / 1_000_000,
+    budget / 1_000_000,
+    memory_ceiling_advice(),
+    crate::digested::EB_BUDGET
+  )
 }
 
 /// Hard, platform-independent ceiling on `box_list` length — `None` when the
@@ -4885,9 +4898,9 @@ mod resource_fatal_teardown_tests {
 #[cfg(test)]
 mod memory_cap_tests {
   use super::{
-    apply_memory_ceiling, box_bytes_budget, box_count_cap, check_timeout, resolve_rss_cap,
-    set_memory_cap, soft_cap_from_ceiling, soft_yield_urgency, spill_mark,
-    take_streaming_restart_signal,
+    apply_memory_ceiling, box_bytes_budget, box_bytes_runaway_message, box_count_cap,
+    box_count_runaway_message, check_timeout, resolve_rss_cap, set_memory_cap,
+    soft_cap_from_ceiling, soft_yield_urgency, spill_mark, take_streaming_restart_signal,
   };
   use crate::common::error::initialize_report;
 
@@ -4988,6 +5001,41 @@ mod memory_cap_tests {
     );
     set_memory_cap(None);
     take_streaming_restart_signal();
+    crate::watchdog::reset_memory_fatal();
+  }
+
+  /// The box-list caps ride the same fuse, so their Fatals name `--max-memory` only when that flag set it too.
+  #[test]
+  fn the_box_cap_fatals_name_the_knob_that_set_it() {
+    const CLI_ADVICE: &str = "raise --max-memory, or --max-memory=0 to lift the ceiling";
+    apply_memory_ceiling(6144);
+    assert_eq!(
+      box_count_runaway_message(2_000_000, 1_999_933),
+      format!(
+        "Box-list runaway: 2000000 accumulated boxes exceeded the hard cap of 1999933 (unbounded digestion with \
+         no detectable cycle); {CLI_ADVICE}"
+      )
+    );
+    assert!(
+      box_bytes_runaway_message(3_300_000_000, 250_000, 3_221_225_472).starts_with(&format!(
+        "Box-list memory runaway: ~3300 MB estimated across 250000 boxes exceeded the 3221 MB budget (unbounded \
+         accumulation); {CLI_ADVICE}. NOTE: the estimate is a LOWER BOUND"
+      ))
+    );
+    set_memory_cap(Some(5376 * 1024 * 1024)); // cortex_worker's --max-rss-mb
+    const FUSE_ADVICE: &str = "the cap rides the cooperative memory fuse; raise that ceiling";
+    let count = box_count_runaway_message(2_333_158, 2_333_157);
+    assert!(
+      count.ends_with(&format!("detectable cycle); {FUSE_ADVICE}")),
+      "{count}"
+    );
+    let bytes = box_bytes_runaway_message(3_800_000_000, 250_000, 3_758_096_384);
+    assert!(
+      bytes.contains(&format!("(unbounded accumulation); {FUSE_ADVICE}. NOTE:"))
+        && !bytes.contains("--max-memory"),
+      "{bytes}"
+    );
+    set_memory_cap(None);
   }
 
   // The override path is thread-local (race-free across libtest threads) and
