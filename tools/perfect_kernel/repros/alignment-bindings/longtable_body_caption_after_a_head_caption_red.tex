@@ -1,0 +1,23 @@
+% mechanism: latexml_package longtable_sty.rs `\@@longtable` after_digest: the head's caption is the table's, and a
+%   `\caption` in the body after it (LONGTABLE_CAPTIONS left at the end) is dropped; longtable prints both (the body
+%   caption as a row, LoT entries for both). Perl the same (longtable.sty.ltxml `HEAD_CAPTIONS || CAPTIONS`).
+% witness: synthetic (found probing LTCAPDUP's siblings, FILL1)
+% oracle:  pdflatex 0 errors: "Table 1: Main title", A B, 1 2, "Table 1: Bottom", 1 2
+% engines: rust=RED perl=RED (read: the after_digest takes HEAD_CAPTIONS before CAPTIONS)
+% expect:  both captions kept (head caption "Main title", the body caption "Bottom" where it stands or as a second
+%          caption), 0 errors; head INT081P and FILL1: "Bottom" lost, 0 warnings (a silent loss)
+% moves:   post-merge
+% status:  RED
+\documentclass{article}
+\usepackage{longtable}
+\begin{document}
+\begin{longtable}{cc}
+\caption{Main title}\label{t}\\ A & B\\
+\endfirsthead
+\caption[]{Main title (continued)}\\ A & B\\
+\endhead
+1 & 2\\
+\caption{Bottom}\\
+1 & 2\\
+\end{longtable}
+\end{document}

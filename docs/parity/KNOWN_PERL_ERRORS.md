@@ -22822,3 +22822,29 @@ pdflatex (2 passes) prints "(Maes, 1995)" and "Maes (1995)"; Perl (same host) an
 #1161). Witnesses 2505.11584 (apalike.bst, 37 citations), 2605.20003 (a braced `(`), 2605.02429 (a braced `(` in
 numbers mode: the label spilled into the entry); guards
 `perfect_kernel_batchnatbib::{natbib_apalike_label_splits_at_comma, natbib_citename_label_splits_at_comma}`.
+
+## 1333. Perl's longtable gives a discarded `\endhead`'s caption to the foot: "Table 1: Main title (continued)" twice
+
+longtable.sty sets `\endfirsthead` on the first page, `\endhead` on the others, `\endfoot` on all but the last and
+`\endlastfoot` on the last (longtable.sty:239, :506); HTML has one page, the first and the last. Perl's
+`\lx@longtable@grab` (longtable.sty.ltxml:101-120) keeps the first head's and the last foot's rows, but a group it
+discards (a `\endhead` after `\endfirsthead`, a `\endfoot` after `\endlastfoot`) leaves its caption in
+`LONGTABLE_CAPTIONS`, and the next group grabbed, a foot, takes it as its own. Minimal trigger:
+
+```tex
+\documentclass{article}\usepackage{longtable}\begin{document}\begin{longtable}{cc}
+\caption{Main title}\\ A & B\\ \endfirsthead
+\caption[]{Main title (continued)}\\ A & B\\ \endhead
+\multicolumn{2}{r}{Continued on next page}\\ \endfoot
+\endlastfoot
+1 & 2\\ \end{longtable}\end{document}
+```
+
+pdflatex prints "Table 1: Main title" once on its one page; Perl (same host) and the Rust port before the fix add a
+foot caption "Table 1: Main title (continued)"; a `\endfoot` after a captioned `\endlastfoot` put its caption at the
+head. Fixed in Rust (`longtable_sty.rs` `\lx@longtable@grab`): every grab takes the captions since the previous one,
+the first head's and the last foot's win, and another group's caption fills in only where its part has none (a
+caption printed on the other pages only, kept as Perl keeps it). The Rust port also read a head as not yet grabbed when
+its rows were empty (a first head of its caption alone, the caption row dropped, OD #103), where Perl tests
+`LONGTABLE_HEAD` set. Synthetic (row R LTCAPDUP); guard
+`perfect_kernel_batchga5::batchga5_meaning_rows` row `longtable_continued_caption_stays_out_of_the_foot`.

@@ -108,6 +108,39 @@ const ROWS: &[Row] = &[
       "After TEXT.",
     ],
   },
+  // FILL1 LTCAPDUP: a group's caption never passes to the next grabbed group (`\endhead` after `\endfirsthead`, a
+  // first head of its caption alone, `\endfoot` with no `\endlastfoot`, `\endfoot` after `\endlastfoot`); one
+  // caption a table, at the head or the foot that shows (base INT081P: each a second, "(continued)" caption)
+  Row {
+    name:     "longtable_continued_caption_stays_out_of_the_foot",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/alignment-bindings/longtable_continued_caption_stays_out_of_the_foot.tex"
+    ),
+    counts:   (0, 0),
+    elements: &[
+      (
+        "table",
+        "xml:id=\"S0.T1\"",
+        r#"<table inlist="lot" labels="LABEL:t" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><caption><tag close=": ">Table 1</tag>Main title</caption><toccaption><tag close=" ">1</tag>Main title</toccaption><tabular xml:id="S0.T1.1"><thead><tr xml:id="S0.T1.1.1"><td align="center" thead="column" xml:id="S0.T1.1.1.1">A</td><td align="center" thead="column" xml:id="S0.T1.1.1.2">B</td></tr></thead><tbody><tr xml:id="S0.T1.1.2"><td align="center" xml:id="S0.T1.1.2.1">1</td><td align="center" xml:id="S0.T1.1.2.2">2</td></tr></tbody></tabular></table>"#,
+      ),
+      (
+        "table",
+        "xml:id=\"S0.T2\"",
+        r#"<table inlist="lot" xml:id="S0.T2"><tags><tag>Table 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Table 2</tag></tags><caption><tag close=": ">Table 2</tag>Main title</caption><toccaption><tag close=" ">2</tag>Main title</toccaption><tabular xml:id="S0.T2.1"><tr xml:id="S0.T2.1.1"><td align="center" xml:id="S0.T2.1.1.1">1</td><td align="center" xml:id="S0.T2.1.1.2">2</td></tr></tabular></table>"#,
+      ),
+      (
+        "table",
+        "xml:id=\"S0.T3\"",
+        r#"<table inlist="lot" xml:id="S0.T3"><tags><tag>Table 3</tag><tag role="refnum">3</tag><tag role="typerefnum">Table 3</tag></tags><caption><tag close=": ">Table 3</tag>Main title</caption><toccaption><tag close=" ">3</tag>Main title</toccaption><tabular xml:id="S0.T3.1"><thead><tr xml:id="S0.T3.1.1"><td align="center" thead="column" xml:id="S0.T3.1.1.1">A</td><td align="center" thead="column" xml:id="S0.T3.1.1.2">B</td></tr></thead><tbody><tr xml:id="S0.T3.1.2"><td align="center" xml:id="S0.T3.1.2.1">1</td><td align="center" xml:id="S0.T3.1.2.2">2</td></tr></tbody><tfoot><tr xml:id="S0.T3.1.3"><td align="right" colspan="2" thead="column" xml:id="S0.T3.1.3.1">Continued on next page</td></tr></tfoot></tabular></table>"#,
+      ),
+      (
+        "table",
+        "xml:id=\"S0.T4\"",
+        r#"<table inlist="lot" xml:id="S0.T4"><tags><tag>Table 4</tag><tag role="refnum">4</tag><tag role="typerefnum">Table 4</tag></tags><tabular xml:id="S0.T4.1"><thead><tr xml:id="S0.T4.1.1"><td align="center" thead="column" xml:id="S0.T4.1.1.1">A</td><td align="center" thead="column" xml:id="S0.T4.1.1.2">B</td></tr></thead><tbody><tr xml:id="S0.T4.1.2"><td align="center" xml:id="S0.T4.1.2.1">1</td><td align="center" xml:id="S0.T4.1.2.2">2</td></tr></tbody></tabular><caption><tag close=": ">Table 4</tag>Main title</caption><toccaption><tag close=" ">4</tag>Main title</toccaption></table>"#,
+      ),
+    ],
+    holds:    &["After TEXT."],
+  },
   // tabularx's binding lets `\verb` to its `\TX@verb` in the environment, the kernel's after it (2404.06128,
   // 2309.04295)
   Row {
