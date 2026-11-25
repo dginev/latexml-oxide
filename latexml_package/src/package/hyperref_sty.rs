@@ -594,33 +594,35 @@ LoadDefinitions!({
   // that undoes the wrapping relies on it: pittetd.cls `\AtBeginDocument{\let\maketitle\HyOrg@maketitle}` left
   // `\maketitle` undefined (1509.06375: 101 errors then Fatal; Perl's binding saves none either).
   Let!("\\HyOrg@maketitle", "\\maketitle");
-  // Perl `hyperref.sty.ltxml:383` only does `Let('\H@refstepcounter',
-  // '\refstepcounter')`. We go one step further and mirror the real
-  // `hyperref.sty:6631+6638-6657`: redefine `\refstepcounter` to
-  // dispatch through `\H@refstepcounter`. This is what real-world
-  // packages assume — most notably `cleveref.sty:2045-2053` patches
-  // `\H@refstepcounter` (under `\@ifpackageloaded{hyperref}`) to set
-  // `\cref@currentlabel`. Without the dispatch, that patch is dead
-  // code: `\refstepcounter` stays bound to the kernel primitive,
-  // `\cref@currentlabel` keeps its `\ALG@beginalgorithmic` placeholder
-  // `[line][\arabic{ALG@line}][\cref@currentprefix]\theALG@line`,
-  // and the cleveref-augmented `\ALG@step` then does
-  // `\xdef\cref@currentprefix{\cref@currentprefix}` — a runaway
-  // self-expansion that Perl LaTeXML catches with an in-engine
-  // recursion guard (`Expandable.pm:81-89`), but Rust hangs at the
-  // worker wall-clock guard.
-  // Witness: 2403.15855 (Springer Nature `sn-jnl` class). The anchor
-  // `\Hy@raisedlink` carries is kept (below, 57cn); `\hyper@anchorstart`/
-  // `\hyper@anchorend` are still skipped (SYNC_STATUS) — only the dispatch
-  // matters here.
   // The kernel's own, whatever `\refstepcounter` is now, as hyperref.sty:6651 `\let\H@refstepcounter
   // \@kernel@refstepcounter`: our kernel's is `\lx@kernel@refstepcounter` (latex_constructs/sect08.rs; the dump's
   // `\@kernel@refstepcounter` is latex.ltx:14969's raw macro, which bypasses the binding's counter and ID handling).
   // Loaded again — a document's own `\usepackage{hyperref}` after the revtex classes' preload, revtex4_support_sty.rs
-  // — `\refstepcounter` is this one, and `\H@refstepcounter` saved as it called itself, a PushbackLimit Fatal under
-  // cleveref (2207.13707).
+  // — `\H@refstepcounter` saved as `\refstepcounter` called itself, a PushbackLimit Fatal under cleveref (2207.13707).
   Let!("\\H@refstepcounter", "\\lx@kernel@refstepcounter");
-  DefMacro!("\\refstepcounter{}", "\\H@refstepcounter{#1}");
+  // hyperref.sty:6656-6714: on a format from 2024-11-01 hyperref leaves `\refstepcounter` alone (it plugs the kernel's
+  // `refstepcounter` sockets, latex.ltx:14951-14968), so a document's `\let\H@refstepcounter\refstepcounter` is no
+  // cycle (2609.30372; OXIDIZED_DESIGN_DIVERGENCES #1100); an older one dispatches through `\H@refstepcounter`, as Perl
+  // never did (hyperref.sty.ltxml:385).
+  // For cleveref before 2018/03/28, which sets its label data only in `\H@refstepcounter` under hyperref
+  // (cleveref.sty:2044-2053), hyperref's `hyperref/fixcleveref` plug (hyperref.sty:6662-6672) updates it after the
+  // kernel's step; else algorithmicx's `\ALG@step` read its placeholder and `\xdef`d `\cref@currentprefix` into itself
+  // (2403.15855, sn-jnl).
+  RawTeX!(
+    r"\@ifl@t@r\fmtversion{2024/11/01}{\AddToHook{package/cleveref/after}{\@ifpackagelater{cleveref}{2018/03/28}{}%
+{\lx@hyperref@fixcleveref}}}{\def\refstepcounter#1{\H@refstepcounter{#1}}}"
+  );
+  // The plug's update after the step cleveref took for the kernel's (firstaid's `\firstaid@cref@updatelabeldata`,
+  // latex2e-first-aid-for-external-files.ltx:238-247, cleveref.sty:50-56), and in cleveref's `\refstepcounter@noarg`,
+  // its `\let` copy (cleveref.sty:2054); once, however often hyperref loads.
+  RawTeX!(
+    r"\def\lx@hyperref@fixcleveref{\let\lx@hyperref@fixcleveref\relax
+\ifx\refstepcounter@noarg\cref@old@refstepcounter\def\refstepcounter@noarg{\cref@old@refstepcounter}\fi
+\let\lx@hyperref@cref@step\cref@old@refstepcounter
+\def\cref@old@refstepcounter##1{\lx@hyperref@cref@step{##1}\cref@constructprefix{##1}{\cref@result}%
+\@ifundefined{cref@##1@alias}{\def\@tempa{##1}}{\def\@tempa{\csname cref@##1@alias\endcsname}}%
+\protected@edef\cref@currentlabel{[\@tempa][\arabic{##1}][\cref@result]\csname p@##1\endcsname\csname the##1\endcsname}}}"
+  );
 
   // Blech...
   DefMacro!(

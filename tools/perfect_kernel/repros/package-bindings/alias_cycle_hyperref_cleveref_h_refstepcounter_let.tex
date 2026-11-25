@@ -1,0 +1,23 @@
+% witness: 2609.30372 (hyperref, then cleveref, then `\AtBeginDocument{\let\H@refstepcounter\refstepcounter}`)
+% oracle:  pdflatex 0 errors: sections 1 and 2, equation (1), Theorem 1; "See section 1, eq. (1) and theorem 1."
+% engines: rust INT081T = Fatal:Timeout:Recursion (cleveref's `\refstepcounter@noarg` is the `\refstepcounter` it
+%          found, our hyperref dispatch through `\H@refstepcounter`, which the `\let` made cleveref's `\refstepcounter`);
+%          Perl not run
+% expect:  0 errors, 0 warnings; sections 1 and 2, equation (1), theorem 1, each `\cref` resolved
+% status:  RED (INT081T) -> GREEN (HYPREFSTEP)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{hyperref}
+\usepackage[nosort]{cleveref}
+\makeatletter
+\AtBeginDocument{\let\H@refstepcounter\refstepcounter}
+\makeatother
+\newtheorem{theorem}{Theorem}
+\begin{document}
+\section{Intro}\label{s:a}
+\begin{equation}a=b\label{e:a}\end{equation}
+\begin{theorem}\label{t:a}T\end{theorem}
+\section{Next}
+See \cref{s:a}, \cref{e:a} and \cref{t:a}.
+\end{document}

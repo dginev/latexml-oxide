@@ -2,8 +2,8 @@
 //! that called another user-level command by name, or aliased two unconditionally, where the real package keeps them
 //! apart, so a class's or paper's own `\let`/`\def` closed a loop. Repros `tools/perfect_kernel/repros/package-bindings/
 //! alias_cycle_*`. Each guard is one binding's code path: a delegation through a saved internal (apacite, slashed), an
-//! alias under its package's test (amsmath), a dispatch kept to its own load (hyperref under revtex), `\protected`
-//! commands (physics).
+//! alias under its package's test (amsmath), a dispatch kept to its own load (hyperref under revtex) and to its format
+//! (hyperref), `\protected` commands (physics).
 use latexml::util::test::convert_with;
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
@@ -77,6 +77,91 @@ fn revtex_preload_leaves_ltxutil_refstepcounter_alone() {
     "    <para xml:id=\"S1.p1\">\n      <p>x</p>\n    </para>\n  </section>"
   );
   assert!(xml.contains(section), "{xml}");
+}
+
+/// hyperref on a 2024-11-01 format leaves `\refstepcounter` alone (hyperref.sty:6656-6714), so a document's
+/// `\let\H@refstepcounter\refstepcounter` is no cycle, alone or after cleveref, whose `\refstepcounter@noarg` is the
+/// kernel's (2609.30372: Timeout:Recursion); hyperref's `hyperref/fixcleveref` plug still sets cleveref's label data,
+/// which algorithmicx's `\ALG@step` reads (2403.15855).
+#[test]
+fn hyperref_leaves_refstepcounter_to_the_kernel() {
+  let section = |n: &str, cref: &str, title: &str| {
+    format!(
+      "<tags>\n      <tag>{n}</tag>\n      <tag role=\"autoref\">section\u{a0}{n}</tag>\n{cref}\
+       \x20     <tag role=\"refnum\">{n}</tag>\n      <tag role=\"typerefnum\">§{n}</tag>\n    </tags>\n    \
+       <title><tag close=\" \">{n}</tag>{title}</title>"
+    )
+  };
+  let cref_section = concat!(
+    "      <tag role=\"creftype\">section</tag>\n      <tag role=\"creftypecap\">Section</tag>\n",
+    "      <tag role=\"creftypeplural\">sections</tag>\n      <tag role=\"creftypepluralcap\">Sections</tag>\n"
+  );
+  let (log, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/package-bindings/alias_cycle_hyperref_h_refstepcounter_let.tex"
+    ),
+    None,
+  );
+  assert_eq!(counts(&log), (0, 0), "{log}");
+  for (n, title) in [("1", "Intro"), ("2", "Next")] {
+    assert!(xml.contains(&section(n, "", title)), "{xml}");
+  }
+  for whole in [
+    concat!(
+      "<tags>\n          <tag>(1)</tag>\n",
+      "          <tag role=\"autoref\">Equation\u{a0}1</tag>\n",
+      "          <tag role=\"refnum\">1</tag>\n        </tags>"
+    ),
+    r#"<p>See <ref labelref="LABEL:s:a"/> and (<ref labelref="LABEL:e:a"/>).</p>"#,
+    r#"<caption><tag close=": ">Figure 1</tag>Cap</caption>"#,
+  ] {
+    assert!(xml.contains(whole), "{xml}");
+  }
+
+  let (log, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/package-bindings/alias_cycle_hyperref_cleveref_h_refstepcounter_let.tex"
+    ),
+    None,
+  );
+  assert_eq!(counts(&log), (0, 0), "{log}");
+  for (n, title) in [("1", "Intro"), ("2", "Next")] {
+    assert!(xml.contains(&section(n, cref_section, title)), "{xml}");
+  }
+  for whole in [
+    "<tag>(1)</tag>\n          <tag role=\"autoref\">Equation\u{a0}1</tag>",
+    "<tags>\n        <tag>Theorem 1</tag>",
+    concat!(
+      r#"See <ref labelref="LABEL:s:a" show="creftype~creflabel"/>, "#,
+      r#"<ref labelref="LABEL:e:a" show="creftype~creflabel"/> and "#,
+      r#"<ref labelref="LABEL:t:a" show="creftype~creflabel"/>.</p>"#
+    ),
+  ] {
+    assert!(xml.contains(whole), "{xml}");
+  }
+
+  let (log, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/package-bindings/hyperref_cleveref_algorithmic_label_data.tex"
+    ),
+    None,
+  );
+  assert_eq!(counts(&log), (0, 0), "{log}");
+  assert!(xml.contains(&section("1", cref_section, "Intro")), "{xml}");
+  for (n, labels) in [("1", " labels=\"LABEL:l:a\""), ("2", "")] {
+    let line = format!(
+      "<listingline{labels} xml:id=\"algx1.l{n}\"><tags>\n            <tag><text fontsize=\"80%\">{n}:</text></tag>\n\
+       \x20           <tag role=\"autoref\">{n}</tag>\n            <tag role=\"refnum\">{n}</tag>\n          </tags>",
+    );
+    assert!(xml.contains(&line), "{xml}");
+  }
+  assert!(
+    xml.contains(concat!(
+      r#"See <ref labelref="LABEL:l:a" show="creftype~creflabel"/> and "#,
+      r#"<ref labelref="LABEL:s:a" show="creftype~creflabel"/>.</p>"#
+    )),
+    "{xml}"
+  );
 }
 
 /// physics.sty's `\DeclareDocumentCommand`s are `\protected`, so `\pdv` in ifthen's `\equal` edef (algpseudocode's
