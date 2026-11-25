@@ -25,6 +25,11 @@ top of its group.
     (`\label{../esc}`) is an Error, and the page is written inside under its id. Under `labelrelative` an unlabelled
     page is named relative to its parent's id, as in LaTeXML (`sec/SS1.html`, was `sec/S1.SS1.html`). One page namer
     serves both split paths (OXIDIZED_DESIGN_DIVERGENCES #1164).
+  - **Split pages are named in Perl's order, each page before its children,** on both split paths: when two labels
+    give the same file, the earlier page in the document keeps it and the later one takes its id (Perl writes both to
+    one file, which keeps the later page). Under `--splitnaming=labelrelative`, a page whose label climbs out of its
+    parent's folder (`\label{../up}`) now gets links that resolve. Collision and escape messages print page paths
+    relative to the destination, EPUB included, and print a bare destination's directory as `.`.
   - **Eleven fewer `unsafe` sites (issue 937, phases 1 and 3):** the cortex log mirror, the crash-cause record, `getpid`
     and the watchdog's stderr line use safe `rustix` calls; `getrusage` has one call site; `--init` no longer writes
     `LATEXML_INI_MODE` into the process environment (an in-process switch; the variable is still read). 69 `unsafe`

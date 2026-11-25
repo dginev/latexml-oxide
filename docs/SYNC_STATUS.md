@@ -73,7 +73,7 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (396 items on 2026-11-25 on `int/towards_v0_8_1`: 396 open, weight 893, 43 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (396 items on 2026-11-25 on `int/towards_v0_8_1`: 396 open, weight 892, 43 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
 
 
   - ODR6 — OD ruling 12 (recorded in OD #449): `dump_reader.rs`'s "add-only" docstrings (:365, :574) corrected, then a removal trial of the skip lists against CLAUDE.md rule 2; 1
@@ -851,20 +851,19 @@ Rules that keep this file honest and mergeable:
     fallbacks (a late navigation, resource, root date or `<?latexml?>` PI; a nested `ltx:resource`); 2
   - PARTUP — a split `\part` book's chapter pages carry no `up` link to their part page, which Perl's carries
     (pre-existing, seen while pruning the head links, OXIDIZED_DESIGN_DIVERGENCES #1134); 2
-  - SPLITFIXR — SPLITFIX's review residuals (SPLITIDATTR and SPLITNAMES fixed on int, one `PageNamer` for both split
-    paths; witness 1502.05726): (a) pages are named level by level, Perl `prenamePages` (`Split.pm` L87-93) names a
-    child then recurses, so on a collision the later page in document order keeps the name (`order.tex`: `\label{y}`
-    on A1 and `\label{y/}` on B) — name in document order on both paths; (b) the collision guard checks file sets, not
-    which content sits in which file — assert each file's heading on both stream settings; (c) under `labelrelative`
-    a child `\label{../up}` under a foldered parent lands at `out/FOO1/../up.html` and its links are computed from the
-    unresolved path (6 dead `../index.html`) — return the resolved relative name; (d) the Error prints `()` for
-    `--dest=index.html` (Perl prints `.`, Post.pm L697) and messages print absolute or EPUB temporary paths — print
-    paths relative to the destination; (e) a KNOWN_PERL_ERRORS entry: `pathname_is_contained` (Pathname.pm L186)
-    misses a bare `..` (`\label{../esc}` writes outside the site, `../../esc` Fatals); (f) SPLITCASE: on a
-    case-insensitive filesystem `\label{Intro}`/`\label{intro}` still collide (the issued-path key is case-sensitive);
-    (g) SPLITRELDOTS: `\label{sec:../../up}` under `labelrelative` gives `out/sec/up.html`, Perl `out/up.html`; (h) the
-    index/bibliography pages (`collector.rs:161`, `A.html`) never consult the namer (a `\label{A}` page could collide;
-    unprobed); (i) 1801.04036 under `--splitnaming=label`: whole-DOM W=1548 vs streamed W=17 (base alike); 3
+  - SPLITFIXR — SPLITFIX's residuals after SPLITFIX2 (pages named in document order on both paths, a climbing
+    `labelrelative` name resolved lexically, messages relative to the destination; KNOWN_PERL_ERRORS #1329 names the
+    split trigger; witness 1502.05726): (d′) under EPUB the outside-the-destination Error still prints the sandbox
+    `/tmp/.tmpXXXX/OPS` as the directory: print it in the package's frame (`OPS`), not by making the sandbox the site
+    directory as Perl's archive mode does (`LaTeXML.pm` L206/L210), which would move the boundary to the sandbox root;
+    (f) SPLITCASE: on a case-insensitive filesystem `\label{Intro}`/`\label{intro}` still collide (the issued-path
+    key is case-sensitive; unprobed); (g) SPLITRELDOTS: `\label{sec:../../x}` under `labelrelative` gives
+    `out/sec/x.html`, Perl `out/x.html` (the name is collapsed before the parent's is stripped; links resolve);
+    (i) 1801.04036 under `--splitnaming=label`: whole-DOM W=1548 (1531 `malformed:namespace`) vs streamed W=17 (base
+    alike); (j) `\label{..}` is flagged as climbing though its page `out/S1/...html` climbs nowhere (harmless; the
+    `...html` name is Perl's `pathname_make` too); (k) Perl 0.8.8 stalls past 200 s on `--splitpath='//ltx:p |
+    //ltx:p/ltx:text'` after its default-ID conflict Warning (a suspected Perl hang, unconfirmed). The index and
+    bibliography pages go through the namer (checked; no per-letter pages exist); 2
   - PATHFAMILY — `pathname::absolute` is not one path family: it joins a relative path onto `current_dir()`, which the
     OS reports resolved (macOS `/var` is `/private/var`), while an absolute argument stays lexical, against DG's rule
     (2026-11-24: never compare a resolved path with a lexical one). It made #1001's site-directory check refuse a site
