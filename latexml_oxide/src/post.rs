@@ -918,6 +918,19 @@ fn run_post_processing_inner(
     whatsout,
     nocache,
   } = *opts;
+  // Perl `Common/Config.pm` L395-397: the destination and the source and site directories are canonical before post
+  // reads them, so the root's spelling is its split pages' (`./out/index.html` is `out/index.html`, issue 1006).
+  let canonical = |path: Option<&str>| path.map(latexml_core::util::pathname::canonical);
+  let (destination, source_directory, site_directory) = (
+    canonical(destination),
+    canonical(source_directory),
+    canonical(site_directory),
+  );
+  let (destination, source_directory, site_directory) = (
+    destination.as_deref(),
+    source_directory.as_deref(),
+    site_directory.as_deref(),
+  );
 
   // Perl's document cache, shared by the document and every page of it (`Post.pm` L687-690), closed (its side files
   // checkpointed away) when post ends, before anything is packed.

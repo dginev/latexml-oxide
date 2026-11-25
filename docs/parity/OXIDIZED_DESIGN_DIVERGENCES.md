@@ -21849,7 +21849,7 @@ until they move into the binding module's `//!` doc comment (a code PR; this PR 
 | nicematrix.sty | `nicematrix_sty.rs` | nicematrix `\begin{<x>NiceMatrix}` renders as a real math array with `\CodeBefore` cell colors | #145 |
 | tabto.sty | `tabto_sty.rs` | `\tabto` (tabto-ltx) approximated as `\hfill` — right-justified algorithm comments flush inline | #151 |
 | minted.sty | `minted_sty.rs` | `minted` renders Pygments syntax colors from a committed `_minted/` frozencache | #157 |
-| OmniBus | `omnibus_cls.rs` | OmniBus captures `\orcid` and no-ops the running-head registers `\lefttitle`/`\righttitle` | #160 |
+| OmniBus | `omnibus_cls.rs` | OmniBus captures `\orcid` and no-ops the running-head registers `\lefttitle`/`\righttitle` and the journal year `\jyear{…}` | #160 |
 | algpseudocodex.sty | `algpseudocodex_sty.rs` | algpseudocodex.sty package binding | #214 |
 | algorithm2e.sty | `algorithm2e_sty.rs` | algorithm2e's `{procedure}`/`{function}` are bound like `{algorithm}` (Perl: raw, the caption lost) | #279 |
 | quotchap.sty | `quotchap_sty.rs` | quotchap's quotations are epigraphs where they are written (Perl: lost) | #287 |
@@ -24827,3 +24827,21 @@ as natbib does: author "Smith", year "Jones".
 `index-bib/natbib_{apalike,citename}_label_splits_at_comma`); repinned: `perfect_kernel_batch70a::
 natbib_entry_constructor_is_binding_private` (author "Batselier et al.", no full authors),
 `perfect_kernel_batch56::apacite_old_bbl_keeps_its_declared_italics` (no full authors).
+
+### 1164. A split page named after a label: no `~` expansion, no absolute path (issue 1006)
+
+**Perl behavior**: `Split::getPageName` (Split.pm L185-191) builds the page path with `pathname_make`, which runs
+`pathname_canonical` over the whole path, the label included: under `--splitnaming=label` a page `\label{~one}` is
+`$HOME` + `one.html`, outside the site directory (Perl then stops: "The destination directory … must be within the
+siteDirectory"), and `\label{/x}` beside a root with no directory is the absolute `/x.html`.
+**Rust behavior**: `split::page_name_segments` takes the label's path segments as Perl's `pathname_canonical` leaves
+them (`Pathname.pm` L126-128: no `.` segment, a `name/..` pair collapsed, `a/../b` is `b`), and drops empty segments too
+(Perl keeps `a//b`, and a trailing `/` makes its page the hidden `a/.html`; ours is `a/b.html`, `a.html`), but with no
+`~` expansion and no root, so the page is
+`~one.html` or `x.html` in the destination, as rc3 wrote them; a label of separators alone (`\label{/}`) is an empty
+name and takes the page's `xml:id`, Perl's `!$name` branch (`Split.pm` L167-175). A `../` in the label is kept, so `\label{../esc}`
+still lies outside the destination, where Perl and rc3 put it, and its links keep the `../`. The parent page's
+directory is taken as written too, so the child of a `~one.html` page lies beside it, not under `$HOME`. **Why**: the
+label is the document's text, not a path the user gave; expanding it writes outside the destination and leaks a
+filesystem path into the links. A candidate patch for Perl. **Guard**
+`split_nav_relations::split_label_names_stay_in_the_destination`.

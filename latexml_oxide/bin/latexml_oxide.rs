@@ -939,7 +939,18 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   // a REPORT increment), so every final-status declaration folds
   // `max(REPORT, phase codes)`, exactly as cortex_worker does.
   let mut phase_status_max: usize = 0;
-  let cli = Cli::parse();
+  let mut cli = Cli::parse();
+  // Perl `Config.pm` L395-397: the destination and the source and site directories are canonical before anything reads
+  // them, so the CLI and post write one spelling (`~/out/index.html`, `./out/index.html`; issue 1006).
+  for path in [
+    &mut cli.dest,
+    &mut cli.sitedirectory,
+    &mut cli.sourcedirectory,
+  ] {
+    if let Some(path) = path.as_mut() {
+      *path = latexml_core::util::pathname::canonical(path);
+    }
+  }
   // Perl `_prepare_options`: collapse every `--opt`/`--noopt` pair to its
   // rightmost-wins value once, up front. The rest of `real_main` reads `resolved`
   // rather than re-deciding at each site.
