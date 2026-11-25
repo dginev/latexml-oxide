@@ -1,0 +1,19 @@
+% witness: synthetic (found by HYPREFSTEP2 on the reviewer's probe p2_clev, `\Cref{c:a}`)
+% oracle:  pdflatex 0 errors: "See lemma 1 and mything 1." — the `\label` after a bare `\refstepcounter{myc}` takes
+%          myc's type and number (cleveref's label data, latex.ltx:14956-14962 `\@currentcounter`)
+% engines: rust INT081T, HYPREFSTEP2: "See lemma 1 and lemma 1." (`c:a` labels the lemma, the last labelled object)
+% expect:  0 errors, 0 warnings; "See lemma 1 and mything 1."
+% status:  RED (INT081T, HYPREFSTEP2)
+% moves:   post-merge
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{cleveref}
+\newtheorem{lem}{Lemma}
+\crefname{lem}{lemma}{lemmas}
+\newcounter{myc}
+\crefname{myc}{mything}{mythings}
+\begin{document}
+\begin{lem}\label{le:b} True. \end{lem}
+\refstepcounter{myc}\label{c:a}
+See \cref{le:b} and \cref{c:a}.
+\end{document}

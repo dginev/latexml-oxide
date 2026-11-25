@@ -79,10 +79,11 @@ fn revtex_preload_leaves_ltxutil_refstepcounter_alone() {
   assert!(xml.contains(section), "{xml}");
 }
 
-/// hyperref on a 2024-11-01 format leaves `\refstepcounter` alone (hyperref.sty:6656-6714), so a document's
+/// hyperref on a 2024-11-01 format leaves `\refstepcounter` alone (hyperref.sty:6658-6714), so a document's
 /// `\let\H@refstepcounter\refstepcounter` is no cycle, alone or after cleveref, whose `\refstepcounter@noarg` is the
 /// kernel's (2609.30372: Timeout:Recursion); hyperref's `hyperref/fixcleveref` plug still sets cleveref's label data,
-/// which algorithmicx's `\ALG@step` reads (2403.15855).
+/// which algorithmicx's `\ALG@step` reads (2403.15855), cleveref loaded before hyperref too, where the hook runs at
+/// once (1811.08194, 1909.08399: only cleveref's own load-order Error, as pdflatex).
 #[test]
 fn hyperref_leaves_refstepcounter_to_the_kernel() {
   let section = |n: &str, cref: &str, title: &str| {
@@ -140,28 +141,46 @@ fn hyperref_leaves_refstepcounter_to_the_kernel() {
     assert!(xml.contains(whole), "{xml}");
   }
 
-  let (log, xml) = convert_with(
-    include_str!(
-      "../../../tools/perfect_kernel/repros/package-bindings/hyperref_cleveref_algorithmic_label_data.tex"
+  // Cleveref before hyperref: its own load-order Error only (pdflatex: 1 `!`).
+  for (tex, errors) in [
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/package-bindings/hyperref_cleveref_algorithmic_label_data.tex"
+      ),
+      0,
     ),
-    None,
-  );
-  assert_eq!(counts(&log), (0, 0), "{log}");
-  assert!(xml.contains(&section("1", cref_section, "Intro")), "{xml}");
-  for (n, labels) in [("1", " labels=\"LABEL:l:a\""), ("2", "")] {
-    let line = format!(
-      "<listingline{labels} xml:id=\"algx1.l{n}\"><tags>\n            <tag><text fontsize=\"80%\">{n}:</text></tag>\n\
-       \x20           <tag role=\"autoref\">{n}</tag>\n            <tag role=\"refnum\">{n}</tag>\n          </tags>",
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/package-bindings/hyperref_after_cleveref_algorithmic_label_data.tex"
+      ),
+      1,
+    ),
+  ] {
+    let (log, xml) = convert_with(tex, None);
+    assert_eq!(counts(&log), (errors, 0), "{log}");
+    assert_eq!(
+      log
+        .matches("cleveref must be loaded after hyperref!")
+        .count(),
+      errors,
+      "{log}"
     );
-    assert!(xml.contains(&line), "{xml}");
+    assert!(xml.contains(&section("1", cref_section, "Intro")), "{xml}");
+    for (n, labels) in [("1", " labels=\"LABEL:l:a\""), ("2", "")] {
+      let line = format!(
+        "<listingline{labels} xml:id=\"algx1.l{n}\"><tags>\n            <tag><text fontsize=\"80%\">{n}:</text></tag>\n\
+         \x20           <tag role=\"autoref\">{n}</tag>\n            <tag role=\"refnum\">{n}</tag>\n          </tags>",
+      );
+      assert!(xml.contains(&line), "{xml}");
+    }
+    assert!(
+      xml.contains(concat!(
+        r#"See <ref labelref="LABEL:l:a" show="creftype~creflabel"/> and "#,
+        r#"<ref labelref="LABEL:s:a" show="creftype~creflabel"/>.</p>"#
+      )),
+      "{xml}"
+    );
   }
-  assert!(
-    xml.contains(concat!(
-      r#"See <ref labelref="LABEL:l:a" show="creftype~creflabel"/> and "#,
-      r#"<ref labelref="LABEL:s:a" show="creftype~creflabel"/>.</p>"#
-    )),
-    "{xml}"
-  );
 }
 
 /// physics.sty's `\DeclareDocumentCommand`s are `\protected`, so `\pdv` in ifthen's `\equal` edef (algpseudocode's

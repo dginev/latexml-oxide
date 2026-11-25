@@ -2,7 +2,7 @@
 % oracle:  pdflatex 0 errors: lines "1: x", "2: y"; "See section 1 and section 1." (TL 2025's first aid gives the
 %          line label the section's data; our `\cref` reads the label's own object)
 % engines: rust INT081T 0 errors (cleveref's label data set in its `\H@refstepcounter`, which our hyperref dispatch
-%          ran); HYPREFSTEP with hyperref's `hyperref/fixcleveref` plug (hyperref.sty:6662-6672) disabled
+%          ran); HYPREFSTEP with hyperref's `hyperref/fixcleveref` plug (hyperref.sty:6662-6673) disabled
 %          (`\let\lx@hyperref@fixcleveref\relax`): 2 Errors, algorithmicx's `\ALG@step` read `\cref@currentlabel`'s
 %          placeholder and `\xdef`d `\cref@currentprefix` into itself
 % expect:  0 errors, 0 warnings; two numbered algorithmic lines, both `\cref`s resolved
