@@ -1020,10 +1020,6 @@ impl Drop for Watchdog {
 mod tests {
   use super::*;
 
-  /// A breach ends the process through `_exit`, as its pre-exit work leaves it: no exit handler runs under the threads
-  /// still converting (libxml2's `.fini_array` `xmlCleanupParser` freed the globals a render worker read: its SIGSEGV).
-  /// The child plants two markers only `exit` would act on: a thread-local destructor of the breaching thread (glibc's
-  /// exit handlers) and a line left in stdout's buffer (`std::process::exit`'s flush). Run here, it is the child.
   /// The memory breach names the flag that set the ceiling, or none: `cortex_worker` has no `--max-memory`.
   #[test]
   fn the_oom_fatal_names_the_knob_that_set_it() {
@@ -1041,6 +1037,10 @@ mod tests {
     assert_eq!(oom_rss_message(rss, ceiling, None), format!("{head}."));
   }
 
+  /// A breach ends the process through `_exit`, as its pre-exit work leaves it: no exit handler runs under the threads
+  /// still converting (libxml2's `.fini_array` `xmlCleanupParser` freed the globals a render worker read: its SIGSEGV).
+  /// The child plants two markers only `exit` would act on: a thread-local destructor of the breaching thread (glibc's
+  /// exit handlers) and a line left in stdout's buffer (`std::process::exit`'s flush). Run here, it is the child.
   #[test]
   fn a_breach_ends_the_process_without_exit_handlers() {
     const CHILD: &str = "LATEXML_WATCHDOG_BREACH_CHILD";

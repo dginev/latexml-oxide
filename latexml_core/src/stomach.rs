@@ -5016,24 +5016,33 @@ mod memory_cap_tests {
          no detectable cycle); {CLI_ADVICE}"
       )
     );
-    assert!(
-      box_bytes_runaway_message(3_300_000_000, 250_000, 3_221_225_472).starts_with(&format!(
+    let lower_bound = format!(
+      "NOTE: the estimate is a LOWER BOUND (each box is walked at most {} nodes deep), so true RSS at this point is \
+       typically several times larger",
+      crate::digested::EB_BUDGET
+    );
+    assert_eq!(
+      box_bytes_runaway_message(3_300_000_000, 250_000, 3_221_225_472),
+      format!(
         "Box-list memory runaway: ~3300 MB estimated across 250000 boxes exceeded the 3221 MB budget (unbounded \
-         accumulation); {CLI_ADVICE}. NOTE: the estimate is a LOWER BOUND"
-      ))
+         accumulation); {CLI_ADVICE}. {lower_bound}"
+      )
     );
     set_memory_cap(Some(5376 * 1024 * 1024)); // cortex_worker's --max-rss-mb
     const FUSE_ADVICE: &str = "the cap rides the cooperative memory fuse; raise that ceiling";
-    let count = box_count_runaway_message(2_333_158, 2_333_157);
-    assert!(
-      count.ends_with(&format!("detectable cycle); {FUSE_ADVICE}")),
-      "{count}"
+    assert_eq!(
+      box_count_runaway_message(2_333_158, 2_333_157),
+      format!(
+        "Box-list runaway: 2333158 accumulated boxes exceeded the hard cap of 2333157 (unbounded digestion with \
+         no detectable cycle); {FUSE_ADVICE}"
+      )
     );
-    let bytes = box_bytes_runaway_message(3_800_000_000, 250_000, 3_758_096_384);
-    assert!(
-      bytes.contains(&format!("(unbounded accumulation); {FUSE_ADVICE}. NOTE:"))
-        && !bytes.contains("--max-memory"),
-      "{bytes}"
+    assert_eq!(
+      box_bytes_runaway_message(3_800_000_000, 250_000, 3_758_096_384),
+      format!(
+        "Box-list memory runaway: ~3800 MB estimated across 250000 boxes exceeded the 3758 MB budget (unbounded \
+         accumulation); {FUSE_ADVICE}. {lower_bound}"
+      )
     );
     set_memory_cap(None);
   }

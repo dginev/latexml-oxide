@@ -42,7 +42,7 @@ concurrency:
 # is usually supported a month or more after it ships, and the latest state would fail the suite. Each
 # platform gets a prebuilt tree, never a per-package install (`install-tl` fetches ~4900 packages one
 # at a time: ~1 h, #916's first run):
-#   * Linux: the pinned Ubuntu image's apt TeX Live (ubuntu-26.04 = TL 2025; `test` and `asan`).
+#   * Linux: the pinned Ubuntu image's apt TeX Live (ubuntu-26.04 = TL 2025; `test`, `asan` and `cortex`).
 #   * macOS: Homebrew's `texlive` bottle (20260301 = TL 2026), one prebuilt archive. Homebrew moves it
 #     to a new year on its own schedule, so macos-build stops early, naming the year, once it is newer
 #     than TEXLIVE_NEWEST_SUPPORTED (the newest year of the release dump window, release.yml).
@@ -625,8 +625,9 @@ jobs:
     needs: changes
     if: needs.changes.outputs.not_docs == 'true'
     runs-on: ubuntu-26.04
-    # A cold cache builds the workspace (~20 min) and, on a dump-cache miss, the formats (7-11 min).
-    timeout-minutes: 60
+    # A cold cache builds the workspace (~20 min), checks every dependency for clippy (5-10 min) and, on a dump-cache
+    # miss, builds the formats (7-11 min): `test`'s 75.
+    timeout-minutes: 75
     env:
       CARGO_BUILD_JOBS: "2"
       CARGO_INCREMENTAL: "0"
