@@ -73,7 +73,7 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (396 items on 2026-11-25 on `int/towards_v0_8_1`: 396 open, weight 886, 43 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (397 items on 2026-11-25 on `int/towards_v0_8_1`: 397 open, weight 889, 43 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
 
 
   - ODR6 — OD ruling 12 (recorded in OD #449): `dump_reader.rs`'s "add-only" docstrings (:365, :574) corrected, then a removal trial of the skip lists against CLAUDE.md rule 2; 1
@@ -850,6 +850,15 @@ Rules that keep this file honest and mergeable:
     issued pathnames in `Split` and warn, or suffix, on a repeat, both split paths (beyond Perl). A label of `..`
     segments writes outside the destination (`\label{../esc}`, rc3 and Perl alike, OD #1164): drop leading `..` or
     make it an Error as Perl's site-directory check does (issue 1006 round-5 review); 2
+  - PATHFAMILY — `pathname::absolute` is not one path family: it joins a relative path onto `current_dir()`, which the
+    OS reports resolved (macOS `/var` is `/private/var`), while an absolute argument stays lexical, against DG's rule
+    (2026-11-24: never compare a resolved path with a lexical one). It made #1001's site-directory check refuse a site
+    named through a link (KNOWN_PERL_ERRORS #1334; rc4 PR #1009 accepts "inside as written OR inside resolved") and it
+    still makes post's site-relative URLs mix the families: from `link/book`, `--sitedirectory=…/link` gives
+    `../../link/LaTeXML.css` where `../LaTeXML.css` is meant (rc1 alike). Complete a relative path from the logical
+    working directory (`$PWD` when it names the same directory as `current_dir()`, as `pwd -L`; `current_dir()`
+    otherwise, e.g. a child started with a working directory), then grep every `absolute(` caller for a comparison with
+    a resolved path; drop #1009's resolved fallback only if the rule then holds for programmatic callers too; 3
   - KEPTDEDUP — two `\includegraphics` of different files with identical bytes both point at the first file's path,
     even where each is referenced in place and nothing is copied (`figs/a`, `figs/b` → `data="figs/a.svg"` twice; under
     `--sitedirectory` a chapter links another child's `../children/c1/images/A.svg`), so a page silently depends on
