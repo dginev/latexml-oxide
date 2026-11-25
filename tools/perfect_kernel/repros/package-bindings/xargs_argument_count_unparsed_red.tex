@@ -1,0 +1,16 @@
+% witness: synthetic (INTW5 review; 0 of the 54 xargs papers in the 30k census hit it)
+% oracle:  pdflatex 0 errors: "C[(dx)] D[(yz)]" (xargs reads the count as a number: spaces and macros allowed)
+% engines: rust base and INTW5: Fatal:Document:Generic(ParseIntError) — xargs_sty.rs:49-113 parses the count string
+%          with `parse::<usize>()` instead of going through `latex_arg_count`; `[-1]` gives the same Fatal and
+%          `[10]` silently takes ten arguments
+% expect:  0 errors, 0 warnings; "C[(dx)] D[(yz)]"
+% status:  RED (rc4, INTW5)
+% moves:   post-merge
+\documentclass{article}
+\usepackage{xargs}
+\newcount\cnt \cnt=2
+\newcommandx\fc[ 2 ][1=d]{(#1#2)}
+\newcommandx\fd[\cnt]{(#1#2)}
+\begin{document}
+C[\fc{x}] D[\fd{y}{z}]
+\end{document}

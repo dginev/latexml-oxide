@@ -52,8 +52,8 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     etoolbox's `\newrobustcmd`, twoopt's `\newcommandtwoopt`, mathtools' `\DeclarePairedDelimiterX`, listings'
     `\lstnewenvironment`, array's `\newcolumntype`, tcolorbox's `\newtcbinputlisting`, `\lxDefMath`) now checks it
     in one place: a count outside 0 to 9 is TeX's "You already have nine parameters", reported as an Error, and then
-    read as 0 (a negative count, as Perl) or 9 (`[10]`, the nine parameters TeX keeps; Perl took ten)
-    (KNOWN_PERL_ERRORS #1336).
+    read as 0 (a negative count, as Perl) or as nine plain arguments (`[10]`; Perl took ten; TeX keeps nine and runs
+    away) (KNOWN_PERL_ERRORS #1336). xargs' `\newcommandx` still parses its own count (row R).
   - **A character beyond the Basic Multilingual Plane is kept as itself in text.** The font-map lookup compared only
     the low 16 bits of a code point, so U+20041 (a CJK Extension B ideograph) printed as `A`, U+10000 as `Γ` and
     U+30021 as `!`, in `\texttt` and every other font alike. The whole code point is now compared, as Perl and XeTeX
