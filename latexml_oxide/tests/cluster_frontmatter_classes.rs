@@ -471,6 +471,7 @@ mod omnibus_orcid_running_heads {
   const TEX: &str = "\\documentclass{someunknownjournal}\n\
     \\lefttitle{Left Running Head}\n\
     \\righttitle{Right Running Head}\n\
+    \\jyear{2021}\n\
     \\title{A Study of Things}\n\
     \\author{Ada Lovelace\\orcid{0000-0002-2709-7338}}\n\
     \\begin{document}\n\
@@ -492,8 +493,9 @@ mod omnibus_orcid_running_heads {
       xml.contains("role=\"orcid\"") && xml.contains("orcid.org/0000-0002-2709-7338"),
       "expected a captured ORCID contact:\n{xml}",
     );
-    // The running heads are presentational — dropped, never leaked into the body.
-    for leaked in ["Left Running Head", "Right Running Head"] {
+    // The running heads are presentational — dropped, never leaked into the body. So is sn-jnl's `\jyear{2021}`
+    // (sn-jnl.cls L479 `\def\jyear#1`, a required argument; ar5iv 353 and 301 showed a body paragraph "2021").
+    for leaked in ["Left Running Head", "Right Running Head", "2021"] {
       assert!(
         !xml.contains(leaked),
         "running-head {leaked:?} must be dropped, not emitted:\n{xml}",
