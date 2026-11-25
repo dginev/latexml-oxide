@@ -183,7 +183,7 @@ LoadDefinitions!({
   // defines `\+` in its TeX.pool, likewise reports one undefined macro.
   // Retract the inherited definition here, at the "latex kernel layer
   // complete" seam (covers both the dump and raw-base branches; skipped in
-  // INI_MODE by the early return above, so dump generation is unaffected).
+  // `dump_paths::ini_mode()` by the early return above, so dump generation is unaffected).
   // Guarded on the body still being plain's bare `\tabalign`, so a user's
   // own pre-\documentclass `\def\+` survives the lazy pool load. Not for an
   // AMS-TeX document read on this format (`\input amstex`, amsppt's own
@@ -238,7 +238,7 @@ LoadDefinitions!({
   // USES `\sys_if_shell:TF` in its support-file/shell-escape check →
   // `Error:undefined:\sys_if_shell:TF` (reporter nasser1, TL2026 dump 2026-01-19
   // vs texmf 2026-03-20). Firing here gives LIVE values every conversion; the
-  // `INI_MODE` early return above means it does NOT run during dump-build, so
+  // `dump_paths::ini_mode()` early return above means it does NOT run during dump-build, so
   // the date/time constants are never frozen into the dump. Guarded on the hook
   // existing (the latex dump / raw base defines it; a `\csname` fires it whether
   // or not `:`/`_` are catcode-letters, since the name is built char-by-char).

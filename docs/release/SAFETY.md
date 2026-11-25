@@ -95,8 +95,8 @@ The 38 shipped sites, each with its contract (a `// SAFETY:` comment at the site
 | `latexml_core/src/watchdog.rs` | 1 | `getrusage` (`rusage`, for `children_cpu_time_us` and macOS's peak RSS) | writes only into a zeroed `rusage` it owns, read after success; neither `std` nor `rustix` 1.1 wraps it | stays |
 | | 1 | `sysconf(_SC_PHYS_PAGES)` (`total_memory_bytes`) | a pointer-free query, a negative return mapped to `None`; `rustix::system::sysinfo` is Linux-only, so macOS would keep the call | stays |
 | | 1 | `_exit` (`exit_now`) | takes no pointers, never returns; `std` has no exit that skips the atexit handlers and destructors | 6 |
-| | 6 | macOS `proc_pidinfo`, `host_statistics64` (with their zeroed structs) | fill at most the size passed into a zeroed struct we own | 6 |
-| | 7 | Windows `K32GetProcessMemoryInfo` ×2, `GlobalMemoryStatusEx` ×2 (with their zeroed structs), `GetDiskFreeSpaceExW` | a correctly sized struct with its size field set; a NUL-terminated path that outlives the call | 6 |
+| | 4 | macOS `proc_pidinfo`, `host_statistics64` (with their zeroed structs) | fill at most the size passed into a zeroed struct we own | 6 |
+| | 9 | Windows `K32GetProcessMemoryInfo` ×2, `GlobalMemoryStatusEx` ×2 (with their zeroed structs), `GetDiskFreeSpaceExW` | a correctly sized struct with its size field set; a NUL-terminated path that outlives the call | 6 |
 | `latexml_core/src/util/pathname.rs` | 1 | `set_var("TEXMFROOT")` in `select_kpaths` | category D | stays |
 | `latexml_core/src/common/arena.rs` | 1 | `resolve_unchecked` | category B | perf |
 | `latexml_oxide/bin/cortex_worker/exit_report.rs` | 2 | `sigaction` installation; the handler's chain call, `signal`, `raise` | async-signal-safe; the handler table is written once at start-up | 6 |

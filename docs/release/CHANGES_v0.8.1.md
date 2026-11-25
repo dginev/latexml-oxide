@@ -9,6 +9,18 @@ top of its group.
 
 ### Unreleased
 
+  - **Split pages no longer overwrite each other or leave the destination.** Under `--splitnaming=label`/
+    `labelrelative`, two labels that name the same file (`dup` and `dup/`, `./x` and `x`, or `index` beside
+    `index.html`) wrote both pages to one file, losing one (1502.05726 lost two appendix subsections); the second page
+    now takes its id (`A1.SS2.html`), with a Warning. A label that would put its page outside the destination
+    (`\label{../esc}`) is an Error, and the page is written inside under its id. Under `labelrelative` an unlabelled
+    page is named relative to its parent's id, as in LaTeXML (`sec/SS1.html`, was `sec/S1.SS1.html`). One page namer
+    serves both split paths (OXIDIZED_DESIGN_DIVERGENCES #1164).
+  - **Eleven fewer `unsafe` sites (issue 937, phases 1 and 3):** the cortex log mirror, the crash-cause record, `getpid`
+    and the watchdog's stderr line use safe `rustix` calls; `getrusage` has one call site; `--init` no longer writes
+    `LATEXML_INI_MODE` into the process environment (an in-process switch; the variable is still read). 69 `unsafe`
+    keywords remain (80 before). Output is byte-identical; user instructions −0.4/−0.5 %, task-clock and system-call
+    counts unchanged.
   - **`\graphicspath` and `svgpath` entries that are absolute on Windows (`C:/figs/`) are searched as written.** They
     were recognized by a leading `/`, so a drive-letter entry was joined under the source directory and its figures
     went missing; both now ask `pathname::is_absolute`, Perl's `pathname_is_absolute`. Guard:

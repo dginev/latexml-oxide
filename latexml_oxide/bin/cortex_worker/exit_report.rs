@@ -209,7 +209,8 @@ pub fn remove_child_claim() {
 /// Allocation-free and async-signal-safe (`write(2)` only), for the allocation-failure hook and
 /// the signal handlers; `number` is omitted when `None`.
 pub fn record_cause(kind: &[u8], number: Option<u64>) {
-  // Async-signal-safe: `OnceLock::get` is one atomic load, `getpid` one system call.
+  // Async-signal-safe: `OnceLock::get` is one acquire load in std's implementation (not a documented guarantee:
+  // re-check on a toolchain bump), `getpid` one system call.
   let Some(claim) = CLAIM.get() else {
     return;
   };

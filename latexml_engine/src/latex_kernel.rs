@@ -82,8 +82,6 @@ use rustc_hash::FxHashSet;
 
 use crate::prelude::*;
 
-// Process-once cached env var (see WISDOM #56 — getenv hot-path race).
-
 /// Per-session flag: the kernel autoload has already been attempted.
 ///
 /// Necessary and not redundant with `LaTeX.pool_loaded`, which

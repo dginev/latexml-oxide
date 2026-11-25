@@ -73,7 +73,7 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (398 items on 2026-11-25 on `int/towards_v0_8_1`: 398 open, weight 894, 43 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (397 items on 2026-11-25 on `int/towards_v0_8_1`: 397 open, weight 894, 43 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
 
 
   - ODR6 — OD ruling 12 (recorded in OD #449): `dump_reader.rs`'s "add-only" docstrings (:365, :574) corrected, then a removal trial of the skip lists against CLAUDE.md rule 2; 1
@@ -294,7 +294,7 @@ Rules that keep this file honest and mergeable:
   - TXWD — class text widths (#830): the standard classes' and elsarticle's `twocolumn`, REVTeX's size options (`class-bindings/{standard_class_twocolumn,elsarticle_twocolumn,revtex_size_option}_textwidth_red`); 3
   - ETOCR — etoc (#830, issue 760): relative depth (`package-bindings/etoc_relative_depth_red`), `\etocsettocstyle` headings (`etoc_settocstyle_heading_red`); 1
   - IMPFC — import: a filecontents file under an import directory (`package-bindings/import_filecontents_file_under_an_import_dir_red`; #830, issue 772); 1
-  - EPUBR — EPUB residuals (#840, issue 807; Perl the same): a document without sections has no navigation document, which epubcheck rejects (`epub/no_sections_no_nav_red`); `--splitnaming=label` with a label equal to the stem overwrites the root page (`epub/split_label_collides_with_root_red`); CI does not run epubcheck yet; 1
+  - EPUBR — EPUB residuals (#840, issue 807; Perl the same): a document without sections has no navigation document, which epubcheck rejects (`epub/no_sections_no_nav_red`); CI does not run epubcheck yet; 1
   - GRMLINT — the math grammar builder (`init_grammar`) shares the stack-frame lint `allow` with the converter; splitting them (#832); 1
   - MCSS — carry an author's row spacing (and other layout MathML Core dropped) through CSS instead of the unsupported MathML 3 `rowspacing` attribute; `\arraystretch{0.8}` writes a negative `rowspacing="-2.0pt"` today (DG 2026-11-14, PR #848 follow-up; low priority; after the cutoff); 3
 
@@ -440,7 +440,13 @@ Rules that keep this file honest and mergeable:
     safe libxml/libxslt wrappers upstream in our crates; `unsafe impl Send/Sync`; isolate the rest (signal handlers,
     Windows/macOS queries). Target ≤ 15 shipped, 0 test-only; every PR byte-identical on a fleet A/B and perf-neutral. Done: phase 0 and part of 1 (PR 1000), phase 5
     on int (UNSAFE5: the 3 `unsafe impl Send/Sync` markers dropped, `NO_PROPERTIES` a const empty map; ratchet 80 → 77
-    blocks, 83 → 80 keywords); 5
+    blocks, 83 → 80 keywords), phase 1 rest and phase 3 on int (UNSAFE6: log mirror, cause record, `getpid`, stderr
+    through rustix; one `getrusage` helper; `--init` writes no environment; 80 → 69 keywords, 77 → 66 blocks). Left:
+    phase 2 allocator (7 sites, needs a fleet measurement), phase 4 libxslt (2 shipped; new crate versions, DG),
+    phase 6 (signal handlers, macOS 4 / Windows 9 queries, `_exit`, script bindings 4, tests 29 + test-utils 5); kept
+    with contracts: `getrusage`, `sysconf(_SC_PHYS_PAGES)`, `TEXMFROOT` (libkpathsea reads `environ`; written before a
+    second thread unless a library host resolves before `init_kpathsea()`), `fork`, `pre_exec`. Every batch shows no
+    slowdown: user and kernel instructions, task-clock and `strace -c` counts, base vs candidate (DG 2026-11-25); 5
   - SECR — the Lua sandbox's residuals (#911, #924, #935; OD #1081): carry the Lua protocol over a socket pair
     (`UnixStream::pair()` via `Stdio::from`; `/proc/self/fd/N` cannot reopen a socket, ENXIO), closing the race where a
     chunk reads its own pipe and swallows its refusal record (records are best-effort today); a newline in a refused
@@ -849,15 +855,20 @@ Rules that keep this file honest and mergeable:
     `svgpath=` as the path, so `{figs/}` (or a `{{a/}{b/}}` list) is joined under the source directory as written and
     no SVG resolves, where `\svgpath{{figs/}}` works; parse the option's value with `\svgpath`'s list reading (svg.sty
     `svgpath` key → `\svgpath`). Found by the F4 review, 2026-11-25; reach unmeasured; 1
-  - SPLITIDATTR — `--splitnaming=labelrelative`: a page with no label takes its `xml:id`, and Perl then names its
-    parent by `xml:id` too (`Split.pm` L171 switches `$attr`); ours keeps the parent's label: `\section{A}\label{sec}`
-    + an unlabelled `\subsection{B}` is `out/sec/S1.SS1.html` (Perl `out/sec/SS1.html`), rc3 alike, both split paths
-    (`split.rs` ~415, `stream_split.rs` ~1215; issue 1006 round-5 review); 1
-  - SPLITNAMES — label page names that normalize alike collide silently (`\label{dup}` and `\label{dup/}`, or `./x`
-    and `x`: one page overwrites the other, both TOC links point at it; Perl and rc3 kept `dup/.html`): remember the
-    issued pathnames in `Split` and warn, or suffix, on a repeat, both split paths (beyond Perl). A label of `..`
-    segments writes outside the destination (`\label{../esc}`, rc3 and Perl alike, OD #1164): drop leading `..` or
-    make it an Error as Perl's site-directory check does (issue 1006 round-5 review); 2
+  - SPLITFIXR — SPLITFIX's review residuals (SPLITIDATTR and SPLITNAMES fixed on int, one `PageNamer` for both split
+    paths; witness 1502.05726): (a) pages are named level by level, Perl `prenamePages` (`Split.pm` L87-93) names a
+    child then recurses, so on a collision the later page in document order keeps the name (`order.tex`: `\label{y}`
+    on A1 and `\label{y/}` on B) — name in document order on both paths; (b) the collision guard checks file sets, not
+    which content sits in which file — assert each file's heading on both stream settings; (c) under `labelrelative`
+    a child `\label{../up}` under a foldered parent lands at `out/FOO1/../up.html` and its links are computed from the
+    unresolved path (6 dead `../index.html`) — return the resolved relative name; (d) the Error prints `()` for
+    `--dest=index.html` (Perl prints `.`, Post.pm L697) and messages print absolute or EPUB temporary paths — print
+    paths relative to the destination; (e) a KNOWN_PERL_ERRORS entry: `pathname_is_contained` (Pathname.pm L186)
+    misses a bare `..` (`\label{../esc}` writes outside the site, `../../esc` Fatals); (f) SPLITCASE: on a
+    case-insensitive filesystem `\label{Intro}`/`\label{intro}` still collide (the issued-path key is case-sensitive);
+    (g) SPLITRELDOTS: `\label{sec:../../up}` under `labelrelative` gives `out/sec/up.html`, Perl `out/up.html`; (h) the
+    index/bibliography pages (`collector.rs:161`, `A.html`) never consult the namer (a `\label{A}` page could collide;
+    unprobed); (i) 1801.04036 under `--splitnaming=label`: whole-DOM W=1548 vs streamed W=17 (base alike); 3
   - PATHFAMILY — `pathname::absolute` is not one path family: it joins a relative path onto `current_dir()`, which the
     OS reports resolved (macOS `/var` is `/private/var`), while an absolute argument stays lexical, against DG's rule
     (2026-11-24: never compare a resolved path with a lexical one). It made #1001's site-directory check refuse a site
