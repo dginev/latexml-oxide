@@ -395,22 +395,22 @@ impl BoxOps for Digested {
     match &*self.0 {
       TBox(b) => match b.try_borrow() {
         Ok(b) => caller(b.get_properties()),
-        Err(_) => caller(&NO_PROPERTIES),
+        Err(_) => caller(NO_PROPERTIES),
       },
       List(l) => match l.try_borrow() {
         Ok(l) => caller(l.get_properties()),
-        Err(_) => caller(&NO_PROPERTIES),
+        Err(_) => caller(NO_PROPERTIES),
       },
       Comment(c) => caller(c.get_properties()),
       Whatsit(w) => match w.try_borrow() {
         Ok(w) => caller(w.get_properties()),
-        Err(_) => caller(&NO_PROPERTIES),
+        Err(_) => caller(NO_PROPERTIES),
       },
       Alignment(w) => match w.try_borrow() {
         Ok(w) => caller(w.get_properties()),
-        Err(_) => caller(&NO_PROPERTIES),
+        Err(_) => caller(NO_PROPERTIES),
       },
-      KeyVals(_) | Postponed(_) | RegisterValue(_) => caller(&NO_PROPERTIES),
+      KeyVals(_) | Postponed(_) | RegisterValue(_) => caller(NO_PROPERTIES),
     }
   }
   // Note: get_properties_mut is not implemented, as it would generically require a RefCell

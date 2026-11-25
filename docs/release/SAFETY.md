@@ -80,11 +80,11 @@ see that section below.
 
 ## `unsafe` budget
 
-Reconciled **2026-11-24**: the workspace contains **77 `unsafe {}` blocks +
-3 `unsafe impl Send/Sync` + 0 `unsafe fn` = 80 non-comment sites**, plus 3 the ratchet also counts (it counts every
+Reconciled **2026-11-25**: the workspace contains **77 `unsafe {}` blocks +
+0 `unsafe impl Send/Sync` + 0 `unsafe fn` = 77 non-comment sites**, plus 3 the ratchet also counts (it counts every
 `unsafe` keyword in code): two `unsafe extern "C"` blocks (`latexml_post/src/xslt.rs`,
-`latexml_oxide/src/util/test.rs`) and one `#[unsafe(link_section)]` (`util/test.rs`) — **83 in all** (54 `unsafe {}`
-+ 3 `unsafe impl` outside test suites — including 3 `test-utils`-gated sites in
+`latexml_oxide/src/util/test.rs`) and one `#[unsafe(link_section)]` (`util/test.rs`) — **80 in all** (54 `unsafe {}`
+outside test suites — including 3 `test-utils`-gated sites in
 `latexml_oxide/src/util/test.rs` — plus 23 test-only `unsafe {}` sites in
 `latexml_oxide/tests/`, `latexml_post/src/test_env.rs`, and
 `latexml_contrib/src/script_bindings/tests.rs`).
@@ -96,6 +96,12 @@ removes sites lowers its file's pin (the failure prints the table to paste); one
 raising a pin is an exception its commit argues.
 
 Major changes since the 2026-07-20 reconciliation (55 sites):
+- **2026-11-25 (issue #937 Phase 5), 80 → 77 blocks/impls (83 → 80 counting every `unsafe` keyword), no behaviour
+  change:** the 3 `unsafe impl Send/Sync` markers are gone (`common/store.rs` 2 → 0, `state.rs` 1 → 0); `State` and
+  `Stored` are now `!Send + !Sync`, as their `Rc`s and libxml nodes make them. No `State` ever crossed a thread (each
+  is built inside its `#[thread_local]` static), and no error type carries a `Stored`: the one bound that needed the
+  markers was the `static NO_PROPERTIES: LazyLock<HashMap<Stored>>` (a `static` must be `Sync`), now a `const`
+  reference to an empty map, which needs neither.
 - **2026-11-24 (issue #937 Phases 0 and 1, first part), 106 → 80 blocks/impls (83 counting every `unsafe` keyword),
   no behaviour change:** Unix syscalls with a safe
   equivalent call it. `lsp_server/unix.rs` 16 → 1 (`rustix::pipe::pipe` + `OwnedFd`/`File::from` for `pipe`, `close`
@@ -126,20 +132,14 @@ drift. **When this count changes, update this section** (see Audit posture).
 
 ---
 
-### A. `unsafe impl Send/Sync` — pragmatic single-thread markers (3 sites)
+### A. `unsafe impl Send/Sync` — none (removed 2026-11-25, issue #937 Phase 5)
 
-| Site | Marker | Why |
-|---|---|---|
-| `latexml_core/src/state.rs` | `Send for State` | `State` holds `Rc`/`RefCell`/`libxml::tree::Node`, all `!Send`. We mark it `Send` so the harness can build a State on one thread and *transition* it to another thread before any first use. After that first use, the value is pinned to a single OS thread via `#[thread_local]` switchers (`use_main_state` / `use_std_state` / `use_sty_state`). The crate never reads a `State` from two threads concurrently. |
-| `latexml_core/src/common/store.rs` | `Send/Sync for Stored` | Same shape as `State`: `Stored` variants embed `Rc<RefCell<…>>` and libxml nodes. The marker exists *only* to satisfy `Box<dyn Error + Send + Sync>` trait bounds on error returns — error variants transitively require `Send + Sync` on every embedded type. No code actually shares a `Stored` across threads. |
-
-*(Removed 2026-11-20: `latexml_core/src/common/error.rs` `Send/Sync for Error` is no longer needed now that `ErrorCategory::Generic` requires `+ Send + Sync`.)*
-
-**Could we refactor?** Only by swapping every `Rc<RefCell<…>>` in `State`,
-`Stored`, and `Error` for `Arc<Mutex<…>>`. That contradicts the
-deliberately single-threaded-per-conversion design, adds Mutex acquisition
-to the hot path, and would not improve safety — the existing markers are
-sound because the runtime guarantees the invariant by construction.
+`State` (`latexml_core/src/state.rs`) and `Stored` (`latexml_core/src/common/store.rs`) hold `Rc`/`RefCell` and
+`libxml::tree::Node`, so the compiler makes them `!Send + !Sync`, which matches the design: each conversion's engine
+state lives in `#[thread_local]` statics (`STATE`, `STD_STATE`, `STY_STATE`) and is built on the thread that uses it.
+Errors carry no `Stored` (`Error` is `Send + Sync` by construction since 2026-11-20, through
+`ErrorCategory::Generic`'s `Box<dyn Error + Send + Sync>`). A shared empty value is a `const` reference
+(`NO_PROPERTIES`), never a `static`, which would need `Sync`.
 
 ### B. Arena `resolve_unchecked` — performance carve-out (1 site)
 
@@ -311,10 +311,10 @@ When adding `unsafe`:
 3. **Avoid `unsafe fn`** — we have zero, intentionally. Internal helpers
    can take an `unsafe {}` at the call site without polluting the
    function signature.
-4. **Never add `unsafe impl Send/Sync` for a value the runtime actually
-   shares.** The five existing markers are sound because the
-   single-thread invariant is upheld by construction; new markers must
-   prove the same.
+4. **Never add `unsafe impl Send/Sync`.** There are none (issue #937
+   Phase 5): a bound that asks for `Send`/`Sync` on a thread-confined
+   type is removed at its source (an error carries a `Send` rendering, a
+   shared empty value is a `const`), not asserted.
 5. **Reconcile this inventory and run Miri.** When the `unsafe` count
    changes, refresh the budget section (the `rg` one-liner above). If you
    touch the FFI-free pure-Rust `unsafe` (the arena/interner, cat. B),

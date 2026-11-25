@@ -161,7 +161,7 @@ impl Object for KeyVals {
 impl BoxOps for KeyVals {
   fn with_properties<R, FnR>(&self, caller: FnR) -> R
   where FnR: FnOnce(&SymHashMap<Stored>) -> R {
-    caller(&NO_PROPERTIES)
+    caller(NO_PROPERTIES)
   }
   fn get_string(&self) -> Result<Cow<'_, str>> { Ok(Cow::Owned(self.to_string())) }
   fn set_property<T: Into<Stored>>(&mut self, _key: &str, _value: T) {
