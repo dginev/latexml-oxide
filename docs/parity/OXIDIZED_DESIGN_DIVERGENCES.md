@@ -24287,8 +24287,11 @@ option, in memory from the start) skips nothing: its names restart at `x1` each 
 destination directory; not ported: a math-only run keeps its cache, as every run does. The run closes the cache when post ends (checkpointed, no
 `-wal`/`-shm` left: a close removes them only when its one try for the file's exclusive lock succeeds,
 `sqlite3WalClose`, so runs closing together can all leave them, and a store whose `-wal` is still there after a pause
-reads the file and closes it again, twice at most, `sqlite_store.rs` `WalCheck`; a run still using the file keeps
-them), before anything is packed, and packages skip it and its side files by name (`pack.rs`
+reads the file and closes it again, twice at most, `sqlite_store.rs` `WalCheck`, by its folder resolved and its own
+name as written, since `SQLITE_OPEN_NOFOLLOW` refuses a link anywhere in the path (`unixFullPathname`; macOS temporary
+folders are under `/var` → `/private/var`); a run still using the file keeps them; 8 processes × 200 rounds on Linux
+leave 162-282 side files with no check, 214-248 with an open and close that does not read, 0 with the check, through a
+linked folder too), before anything is packed, and packages skip it and its side files by name (`pack.rs`
 `is_excluded_archive_entry`, the EPUB manifest; a killed process's side files included). The parallel render's
 ObjectDB snapshot is a separate file, `LaTeXML-render.db` in the private spill directory (a read-only per-run
 snapshot; Perl keeps ObjectDB and `LaTeXML.cache` apart too).
@@ -24325,7 +24328,7 @@ concurrent_tables_on_one_file_never_share_a_name}`,
 `sqlite_store::tests::{another_version_is_left_alone, simultaneous_opens_of_a_new_file_all_use_it,
 a_failed_transaction_runs_again_told_it_is_in_memory, a_failure_in_memory_gives_nothing,
 a_file_locked_against_readers_falls_back_without_its_entries, a_link_is_never_followed,
-simultaneous_closes_leave_no_side_files}`,
+simultaneous_closes_leave_no_side_files, a_close_check_removes_a_leftover_and_makes_no_file}`,
 `graphics::tests::process_coalesces_only_matching_conversion_options` (two widths, one file), `pack::tests` (the side files),
 `pathname::tests::is_contained_is_underneath_only`.
 

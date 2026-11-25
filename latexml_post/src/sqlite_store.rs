@@ -50,7 +50,7 @@ impl SqliteStore {
     let fell_back = file.is_some() && conn.is_none();
     let file = conn.as_ref().and(file.map(Path::to_path_buf));
     let conn = conn.unwrap_or_else(|| Self::in_memory(schema));
-    let wal_check = WalCheck(file.clone());
+    let wal_check = WalCheck::new(file.as_deref());
     SqliteStore {
       conn,
       file,
@@ -195,6 +195,7 @@ impl SqliteStore {
     let Some(file) = self.file.take() else {
       return Self::ok(Err(e));
     };
+    self.wal_check.0 = None;
     self.fell_back = true;
     let mut result = None;
     if let Some(copy) = self.copy() {
@@ -253,7 +254,26 @@ impl SqliteStore {
 /// one try for the file's exclusive lock succeeds (`sqlite3WalClose`), so processes closing together can all leave
 /// them: while a `-wal` is there after a pause (another each time, so the processes part), the file is opened, read
 /// (which opens its WAL) and closed again, twice at most. A process still using the file keeps them, as SQLite means.
+/// A store gone to memory checks nothing.
 struct WalCheck(Option<PathBuf>);
+
+impl WalCheck {
+  /// The file's folder resolved, its name kept: `SQLITE_OPEN_NOFOLLOW` refuses a link anywhere in the path
+  /// (`unixFullPathname`, sqlite3.c 3.54.1 L47688, L63807; macOS temporary folders are under `/var` → `/private/var`).
+  /// A form still carrying a Windows verbatim prefix (`//?/` after `canonical`) stays as written: the win32 VFS checks
+  /// no links and hands the name to `GetFullPathNameW` and `CreateFileW` as it is (`winFullPathnameNoMutex`, `winOpen`).
+  fn new(file: Option<&Path>) -> Self {
+    use latexml_core::util::pathname::{resolved_directory_of, strip_windows_verbatim_prefix};
+    WalCheck(
+      file.map(|file| match file.to_str().map(resolved_directory_of) {
+        Some(resolved) if strip_windows_verbatim_prefix(&resolved) == resolved => {
+          PathBuf::from(resolved)
+        },
+        _ => file.to_path_buf(),
+      }),
+    )
+  }
+}
 
 impl Drop for WalCheck {
   fn drop(&mut self) {
@@ -266,8 +286,9 @@ impl Drop for WalCheck {
     }
     let random = std::collections::hash_map::RandomState::new();
     for attempt in 0..2 {
+      // The process id mixed in: forked processes share `RandomState`'s keys (`lsp_server/unix.rs`).
       std::thread::sleep(std::time::Duration::from_micros(
-        2000 + random.hash_one(attempt) % 3000,
+        2000 + random.hash_one((std::process::id(), attempt)) % 3000,
       ));
       // Looked at again after the pause: a read of the file with no `-wal` would make one.
       if !Path::new(&wal).exists() {
@@ -522,10 +543,11 @@ mod tests {
 
   /// [`WalCheck`] makes nothing: a file removed while another process keeps its `-wal` is not made again (no
   /// `SQLITE_OPEN_CREATE`), a file it cannot write is left with no Warning, and a file in another journal mode, which
-  /// has no `-wal` (WAL refused: a network filesystem, WSL's `/mnt`), is not opened.
+  /// has no `-wal` (WAL refused: a network filesystem, WSL's `/mnt`), is not opened. A leftover nothing holds is
+  /// removed, through a linked folder too (Unix only: Windows locks a held `-shm` against the copy's reads).
   #[cfg(unix)]
   #[test]
-  fn a_close_check_makes_no_file() {
+  fn a_close_check_removes_a_leftover_and_makes_no_file() {
     use std::os::unix::fs::PermissionsExt;
 
     use latexml_core::common::error::{LogStatus, get_status};
@@ -540,7 +562,7 @@ mod tests {
     store.immediate(|tx, _| tx.execute("INSERT INTO t(v) VALUES (1)", []));
     std::fs::remove_file(&file).unwrap();
     assert!(side(&file, "-wal").exists());
-    drop(WalCheck(Some(file.clone())));
+    drop(WalCheck::new(Some(&file)));
     assert!(!file.exists());
     drop(store);
     assert!(!file.exists());
@@ -556,7 +578,7 @@ mod tests {
     drop(store);
     std::fs::set_permissions(&file, std::fs::Permissions::from_mode(0o444)).unwrap();
     std::fs::set_permissions(dir.path(), std::fs::Permissions::from_mode(0o555)).unwrap();
-    drop(WalCheck(Some(file.clone())));
+    drop(WalCheck::new(Some(&file)));
     std::fs::set_permissions(dir.path(), std::fs::Permissions::from_mode(0o755)).unwrap();
     assert_eq!(get_status(LogStatus::Warning) - warnings, 0);
     drop(holder);
@@ -565,8 +587,32 @@ mod tests {
     let conn = Connection::open(&file).unwrap();
     conn.execute_batch(SCHEMA).unwrap();
     drop(conn);
-    drop(WalCheck(Some(file.clone())));
+    drop(WalCheck::new(Some(&file)));
     assert!(!side(&file, "-wal").exists() && !side(&file, "-shm").exists());
+
+    // A leftover nothing holds (copied while a store keeps `h.db` open) is removed and its entries kept, also when
+    // named through a linked folder, which `SQLITE_OPEN_NOFOLLOW` refuses (macOS temporary folders: `/var` is a link).
+    let real = dir.path().join("real");
+    std::fs::create_dir(&real).unwrap();
+    let link = dir.path().join("link");
+    std::os::unix::fs::symlink(&real, &link).unwrap();
+    let mut holder = SqliteStore::open(Some(&real.join("h.db")), SCHEMA, 1);
+    holder.immediate(|tx, _| tx.execute("INSERT INTO t(v) VALUES (1)", []));
+    let mut outcomes = Vec::new();
+    for (folder, name) in [(&link, "l.db"), (&real, "p.db")] {
+      for ext in ["", "-wal", "-shm"] {
+        std::fs::copy(side(&real.join("h.db"), ext), side(&real.join(name), ext)).unwrap();
+      }
+      drop(WalCheck::new(Some(&folder.join(name))));
+      let left = ["-wal", "-shm"].map(|ext| side(&real.join(name), ext).exists());
+      let entries: i64 = Connection::open(real.join(name))
+        .unwrap()
+        .query_row("SELECT count(*) FROM t", [], |row| row.get(0))
+        .unwrap();
+      outcomes.push((name, left, entries));
+    }
+    drop(holder);
+    assert_eq!(outcomes, [("l.db", [false; 2], 1), ("p.db", [false; 2], 1)]);
   }
 
   /// A file another process holds locked against readers (a `DELETE` journal under `BEGIN EXCLUSIVE` with a pending
@@ -654,7 +700,7 @@ mod tests {
 
   /// A transaction that fails on the file (here a read-only file) runs again in memory, and is told so: a caller
   /// deciding by the store's state before the call missed the change (issue 995 review: a read-only cache, and a
-  /// second document's image written over the first's `x1.png`).
+  /// second document's image written over the first's `x1.png`). Its close then checks no file ([`WalCheck`]).
   #[cfg(unix)]
   #[test]
   fn a_failed_transaction_runs_again_told_it_is_in_memory() {
@@ -670,7 +716,10 @@ mod tests {
       return;
     }
     let mut store = SqliteStore::open(Some(&file), SCHEMA, 1);
-    assert_eq!(store.file(), Some(file.as_path()));
+    assert_eq!(
+      (store.file(), store.wal_check.0.as_deref()),
+      (Some(file.as_path()), Some(file.as_path()))
+    );
     let mut told = Vec::new();
     store.immediate(|tx, fell_back| {
       told.push(fell_back);
@@ -684,8 +733,14 @@ mod tests {
         .collect::<rusqlite::Result<Vec<_>>>()
     });
     assert_eq!(
-      (told, store.file(), store.fell_back(), kept),
-      (vec![false, true], None, true, Some(vec![1, 7]))
+      (
+        told,
+        store.file(),
+        store.fell_back(),
+        kept,
+        store.wal_check.0.as_deref()
+      ),
+      (vec![false, true], None, true, Some(vec![1, 7]), None)
     );
   }
 }
