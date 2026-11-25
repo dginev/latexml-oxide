@@ -43,6 +43,16 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
 
 ## Changes
 
+### 0.8.0-rc5
+
+  - **A conversion closing its `LaTeXML-oxide.cache` at the same moment as another no longer leaves
+    `LaTeXML-oxide.cache-wal`/`-shm` behind,** also when the destination is reached through a symbolic link, as every
+    macOS temporary folder is. SQLite removes them only when one close gets the file's exclusive lock on its single try;
+    a cache whose `-wal` is still there after a short pause is now read and closed again, at most twice, by its folder
+    resolved and its own name as written (the name is never followed, and nothing is created). Seen on macOS CI run
+    45645721304 (the issue 995 guard). Guards: `sqlite_store::tests::{simultaneous_closes_leave_no_side_files,
+    a_close_check_removes_a_leftover_and_makes_no_file}`.
+
 ### 0.8.0-rc4
 
   - **A `--sitedirectory` named through a symbolic link is accepted again.** rc3 (#1001) took Perl's check that the
