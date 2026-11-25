@@ -9,6 +9,17 @@ top of its group.
 
 ### Unreleased
 
+  - **`\graphicspath` and `svgpath` entries that are absolute on Windows (`C:/figs/`) are searched as written.** They
+    were recognized by a leading `/`, so a drive-letter entry was joined under the source directory and its figures
+    went missing; both now ask `pathname::is_absolute`, Perl's `pathname_is_absolute`. Guard:
+    `perfect_kernel_batch79g::an_absolute_graphics_path_is_searched_as_written` (red on Windows).
+  - **The graphics cache delivers its images by copy, not hard link, and prunes to 90 % of its cap.** An output image
+    edited in place no longer rewrites the cache entry and every other document's copy; an insertion no longer walks
+    the whole cache (only past the cap, by a usage tally). Output byte-identical. Guards:
+    `graphics_cache::tests::{an_output_edited_in_place_leaves_the_cache_and_its_siblings,
+    a_prune_leaves_the_low_water_mark_and_a_later_insertion_walks_nothing}`.
+  - **Three fewer `unsafe` sites (issue 937, phase 5):** the `unsafe impl Send/Sync` markers on `State` and `Stored` are
+    gone; the ratchet `unsafe_sites_ratchet::unsafe_sites_only_fall` falls 80 → 77. Output byte-identical.
   - **cortex_worker: `--max-rss-mb` sets the cooperative memory fuse and the streaming watermarks for standalone and
     pool workers, as it already did for harness children; `LATEXML_RSS_CAP_BYTES` no longer overrides the flag.** A
     worker's memory messages name `--max-rss-mb`, or no flag, where they advised `--max-memory`, which `cortex_worker`

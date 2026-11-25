@@ -73,7 +73,7 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (390 items on 2026-11-24 on `int/towards_v0_8_1`: 390 open, weight 879, 43 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (391 items on 2026-11-25 on `int/towards_v0_8_1`: 391 open, weight 879, 43 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
 
 
   - ODR6 — OD ruling 12 (recorded in OD #449): `dump_reader.rs`'s "add-only" docstrings (:365, :574) corrected, then a removal trial of the skip lists against CLAUDE.md rule 2; 1
@@ -438,7 +438,9 @@ Rules that keep this file honest and mergeable:
     (a direct dependency since #935; `lsp_server/unix.rs`, `watchdog.rs`, getrusage/flock/geteuid/dup, `process_group(0)`
     for `setsid`); glibc `malloc_trim`/`mallinfo` → the allocator's safe API; no process-env mutation after startup;
     safe libxml/libxslt wrappers upstream in our crates; `unsafe impl Send/Sync`; isolate the rest (signal handlers,
-    Windows/macOS queries). Target ≤ 15 shipped, 0 test-only; every PR byte-identical on a fleet A/B and perf-neutral; 5
+    Windows/macOS queries). Target ≤ 15 shipped, 0 test-only; every PR byte-identical on a fleet A/B and perf-neutral. Done: phase 0 and part of 1 (PR 1000), phase 5
+    on int (UNSAFE5: the 3 `unsafe impl Send/Sync` markers dropped, `NO_PROPERTIES` a const empty map; ratchet 80 → 77
+    blocks, 83 → 80 keywords); 5
   - SECR — the Lua sandbox's residuals (#911, #924, #935; OD #1081): carry the Lua protocol over a socket pair
     (`UnixStream::pair()` via `Stdio::from`; `/proc/self/fd/N` cannot reopen a socket, ENXIO), closing the race where a
     chunk reads its own pipe and swallows its refusal record (records are best-effort today); a newline in a refused
@@ -516,8 +518,8 @@ Rules that keep this file honest and mergeable:
   - FLEETR — FLEETTMP's residuals (revFLEETTMPb; pre-existing or test-only): `.dims` sidecars whose entry is gone are never reclaimed — prune skips every `.dims` name (`latexml_post/src/graphics_cache.rs`); let it drop a `.dims` with no entry (the fleet cache already holds some); `leased_archive_dirs` (`latexml_oxide/tests/cortex_worker_exit_reports.rs:~249-257`) counts only dirs still holding `<TASK_ID>.zip` — assert `task_dirs(slot).is_empty()` before the respawn instead; the exit-sweep marker check has ~1 s of margin (pericortex's fixed 1 s respawn backoff) and fails loudly if a nextest thread stalls longer; pericortex: create the `cortex_task` TempDir after the lease and stop SIGKILLing idle children (`worker.rs:216`, `harness.rs:686-708`, a crate release); 3
   - GCACHECHURN — (DG 2026-11-18: not the source of the fleet's speed; an optional perf lever) the graphics cache
     (`latexml_post/src/graphics_cache.rs`, LRU cap `LATEXML_GRAPHICS_CACHE_MAX_MB`, default 2048) turns over in ~1.2 min
-    at fleet rate, 0.2 % of its entries are hit again, and every insertion's `prune_if_over_cap` walks and stats the
-    whole cache: measure off (`LATEXML_GRAPHICS_CACHE_OFF=1`) vs 2 GB vs 50 GB on ~200 papers and set the fleet's by
+    at fleet rate and 0.2 % of its entries are hit again (an insertion no longer walks the cache: GFXHARDLINK's usage
+    tally walks it only past the cap and prunes to 90 %): measure off (`LATEXML_GRAPHICS_CACHE_OFF=1`) vs 2 GB vs 50 GB on ~200 papers and set the fleet's by
     throughput, output byte-identical; 1
   - TILDEFN — a `~` in a file name becomes `\lx@NBSP` (`latexml_engine/src/plain_constructs.rs:472` overrides latex.ltx's `~`, which is a literal `~` inside `\csname`, latex.ltx:9413-9419, and in file names, :19727-19730); `\input{a~1/child/body}` / `\subimport*{…/a~1/…}` → `Error:missing_file:a\lx@NBSP1/…` where pdflatex reads the file (Perl errs too); fix: define `~` per latex.ltx (protected; literal inside `\csname`) and have `\lx@set@path`/`\lx@append@path` use `gullet::expand_as_csname_text` — changes Linux output (`gullet.rs:3794` maps `\lx@NBSP` to U+00A0 in label names, CLUSTER-NBSP) — SHARED, MED (found by the Windows triage: 8.3 short names carry `~`); 3
   - CURCTRA — aliascnt: `\@currentcounter` gets the root counter (`thm`) where latex.ltx gives the alias (`lem`) (`latexml_core/src/binding/counter/dialect.rs:1150-1162`: when `is_counter_alias(ctype)`, define from `ctype`; pdflatex `[a:thm][b:lem]`, ours `[a:thm][b:thm]`); llncs `\@spothm` same path; readers zref-counter and zref-clever's type; NITs: `ExplodeText!` makes `@` catcode other where `\edef` keeps it a letter (`\ifx` on `ALG@line`-like names), the repro headers cite unbtex.cls:485-493 where the `\AddToHook{label}` is at :495 (revCURCTR); 1
@@ -813,7 +815,11 @@ Rules that keep this file honest and mergeable:
     `title_page_check.rs` 1561-1591, `xslt.rs` 461/613/915, `post.rs` 952 `--sitedirectory`), Windows separator and
     drive-letter sites (`graphics_sty.rs` 633, `svg_sty.rs` 214, 12 `rsplit('/')` basenames), then byte-identical
     DRY steps (`radix`, hex, whitespace collapse, `Staged` into `util::fs`, XML escaping, number formatting), A/B-gated
-    where output can move. Each path fix needs a red test first (Windows CI dispatch or a Unix link test); 3
+    where output can move. Each path fix needs a red test first (Windows CI dispatch or a Unix link test). Done on int: F4, the drive-letter sites (`graphics_sty.rs`, `svg_sty.rs` ask
+    `pathname::is_absolute`; guard `perfect_kernel_batch79g::an_absolute_graphics_path_is_searched_as_written`, red only
+    on Windows). Next (Gemini 2026-11-25 06:59): `converter.rs:399` `outside_the_tree` misses `C:/…` and drive-relative
+    `C:foo` on Windows (one `pathname` helper testing `Component::Prefix | RootDir | ParentDir`), `xslt.rs:664`
+    (defensive); 3
   - SPLITDOMNS — the whole-DOM split (`latexml_post/src/split.rs`) loses a page's non-`ltx` namespaces: xy-pic's svg
     inside math raises `malformed:namespace` Warnings (1502.06095: 344, 1609.07593: 1,377 under `--splitat=section`)
     and 2606.28974 loses an `aria-hidden`; the streamed split, the default for split runs since OXIDIZED_DESIGN_DIVERGENCES
@@ -821,6 +827,15 @@ Rules that keep this file honest and mergeable:
     fallbacks (a late navigation, resource, root date or `<?latexml?>` PI; a nested `ltx:resource`); 2
   - PARTUP — a split `\part` book's chapter pages carry no `up` link to their part page, which Perl's carries
     (pre-existing, seen while pruning the head links, OXIDIZED_DESIGN_DIVERGENCES #1134); 2
+  - SPLITIDATTR — `--splitnaming=labelrelative`: a page with no label takes its `xml:id`, and Perl then names its
+    parent by `xml:id` too (`Split.pm` L171 switches `$attr`); ours keeps the parent's label: `\section{A}\label{sec}`
+    + an unlabelled `\subsection{B}` is `out/sec/S1.SS1.html` (Perl `out/sec/SS1.html`), rc3 alike, both split paths
+    (`split.rs` ~415, `stream_split.rs` ~1215; issue 1006 round-5 review); 1
+  - SPLITNAMES — label page names that normalize alike collide silently (`\label{dup}` and `\label{dup/}`, or `./x`
+    and `x`: one page overwrites the other, both TOC links point at it; Perl and rc3 kept `dup/.html`): remember the
+    issued pathnames in `Split` and warn, or suffix, on a repeat, both split paths (beyond Perl). A label of `..`
+    segments writes outside the destination (`\label{../esc}`, rc3 and Perl alike, OD #1164): drop leading `..` or
+    make it an Error as Perl's site-directory check does (issue 1006 round-5 review); 2
   - POSTRESID — after the core, ~190 MB of C heap stays live into post (pass B 12.69 s vs 11.26 s on a clean heap at
     n1600): core nodes unlinked and never freed, ~98 KB a subsection (heaptrack, n100: `insert_math_token` ~52 %, the
     amsmath rearrangement `ams_rearrangeable_bindings`/`equationgroup_join_cols` ~15 %, `tex_math`, `sect07`,
@@ -968,19 +983,11 @@ Rules that keep this file honest and mergeable:
     only between two row neighbours (`presentation.rs` `adjust_pair`); 1
   *Folded 2026-11-24 (CLIAUDIT, CACHEAUDIT): the command-line options audit (every option traced to its algorithm; the easy fixes are the CLI-wiring PR) and the post-processing cache audit (SQLite only for small keyed metadata shared across processes or runs — the resource cache, `LaTeXML-oxide.cache`, in the issue 995 PR; blob caches stay content-addressed files; memos stay maps):*
 
-  - GFXHARDLINK — (DG 2026-11-24: the first v0.8.1 item) the graphics cache delivers its entries into destinations by
-    hard link (`latexml_post/src/graphics_cache.rs`), so editing an output image in place rewrites the cache entry and
-    every other document's copy (probed: an append to `out1/fig.svg` changed `out2` and was served to `out3`; 4,368 of
-    11,534 live entries on the dev host had more than one link; the fleet's tmpfs `/tmp` copies, so it is not exposed).
-    Deliver by copy (reflink where the filesystem has it), and prune to a 90 % low-water mark so an insert stops walking
-    the whole cache every time (20-29 ms per insert on a 2 GB cache; GCACHECHURN); 3
-  - CORTEXRSS — (fleet-facing, check first) `cortex_worker --max-rss-mb` does not move the cooperative memory fuse or the
-    streaming watermark: `resolve_rss_cap` (`stomach.rs:397-404`) keeps the 4.5 GB default unless `LATEXML_RSS_CAP_BYTES`
-    is set, which only the harness sets, on its children (`--child-mem-limit-mb` − 256 MiB, else `--max-rss-mb`); a
-    standalone or pool worker ignores the flag. `--allocation-limit-mb`'s help (`cortex_worker.rs:232`) and comment
-    (:1929) state a 2048 MiB default the code does not use. cortex runs eager first and restarts streaming only on a
-    memory stop, where the CLI streams from the start when the source projects over the fuse
-    (`streaming_restart.rs:76`); 3
+  - CORTEXEAGER — (DG 2026-11-25: keep for now) `cortex_worker` converts eager-first and reruns under streaming only
+    on a memory stop at the restart watermark, where the CLI streams from the start when the source projects over the
+    fuse (`streaming_restart.rs:76`): the eager pass costs 46 s, 37 %, on NLCT (CORTEXRSS round 1). With it: the worker's
+    box-cap and fuse Fatals say "raise that ceiling" where its watchdog line names `--max-rss-mb` (record the flag's
+    name beside `MEMORY_CEILING_MIB` in `arm_memory_fuse`, CORTEXRSS review); 3
   - CONFIGPREP — (CLI audit, advisor; DG 2026-11-24) one `prepare()` porting `Config.pm` `_prepare_options` in
     `latexml_oxide/src/config.rs`, used by the CLI, cortex_worker, the server, `api.rs` and the render children through
     one serialized post plan; output byte-identical; 5
