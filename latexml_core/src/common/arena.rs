@@ -450,6 +450,10 @@ pub fn reset() {
   *SUFFIXED_KEY.borrow_mut() = String::new();
 }
 
+/// The bytes the buffer holds, for a test of what a mechanism costs the arena.
+#[cfg(test)]
+pub(crate) fn buffer_len() -> usize { BUFFER_LEN.get() }
+
 /// Eagerly initialize this thread's `#[thread_local]` `ARENA` LazyLock.
 ///
 /// `ARENA` is the *leaf* of the engine's thread-local dependency graph:
