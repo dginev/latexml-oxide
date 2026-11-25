@@ -623,6 +623,15 @@ settings.
    measurements and in CI tests. If a platform fails, default the fleet to serial
    there before the final tag.
 
+8. **After a final ships, remove its candidates' Release entries; keep their tags.**
+   Once `X.Y.Z` is published, delete each `X.Y.Z-rcN` Release (`gh release delete
+   X.Y.Z-rcN --yes`, without `--cleanup-tag`): the Releases page then lists finals and
+   the current cycle's candidates only, while the tags keep the history the docs and
+   workflow comments name (DG 2026-11-25; done for 0.7.5-rc2/rc3 and 0.7.6-rc1/rc2).
+   Never before the final is out: `release-prepare.yml` builds the final from the
+   last RC's `Cargo.lock` and `BUILD-INPUTS` Release assets
+   (`tools/check_rc_reuse.sh --fetch-release-inputs`), and testers download the RCs.
+
 ## Failure recovery
 
 * **Workflow fails before publishing.** Fix the underlying issue,

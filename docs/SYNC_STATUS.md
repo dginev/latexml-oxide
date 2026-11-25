@@ -50,13 +50,17 @@ Rules that keep this file honest and mergeable:
 
 - **The campaign (DG 2026-11-14), in order:** (1) finish latexml-oxide's open PRs and issues and ALL the Bruce Q&A residuals (the QA lines below); (2) a cutoff commit — output-changing merges freeze; (3) rerun the 2605/2606 cortex sandboxes and review regressions against runs 375/376; (4) reconvert the whole arXiv corpus in cortex (ARXIV); (5) sync to ar5iv.
 - **The goal now (DG 2026-11-23): [`GOAL_v_0_8_1.md`](GOAL_v_0_8_1.md).** Two timelines: v0.8.0 final on `main` by 2026-11-30 (small reviewed fixes only: regressions, crashes, rc2 and rc3 tester reports); everything else in this list lands on `int/towards_v0_8_1` for v0.8.1. Each task ends fixed, ruled or moved (the goal page defines each).
-- **Where it stands (2026-11-24):** the full arXiv run on the cutoff is run 397 (November 2026, 98.1 % of 2,962,950
+- **Where it stands (2026-11-25):** the full arXiv run on the cutoff is run 397 (November 2026, 98.1 % of 2,962,950
   error-free); its regressions were classified and the clusters our changes caused fixed (#954-#964), the residue in
   row R. **0.8.0-rc1** is published as a prerelease (tag `f7f8120f349`, merged to main as #919). **0.8.0-rc2** is
   tag `f219a9e9d68` (#981), published as a prerelease on 2026-11-23 (release run 45107500545, 17 assets). **0.8.0-rc3**
-  is cut from main on 2026-11-24: #987-#1003 (issue 995's resource cache, the CLI options, the CLI hardening, the
-  cortex worker's runtime-binding refusal, the `unsafe` ratchet) and rust-libxml 0.3.27, which removes 0.3.25's
-  2.1x slowdown on deeply nested TikZ pictures. rc2 was re-issued on the large-document perf work (DG 2026-11-21): #970 (STRMWARN,
+  is tag `bb903363a6b`, published as a prerelease on 2026-11-25 UTC (release run 45533293760, 17 assets): #987-#1003
+  (issue 995's resource cache, the CLI options, the CLI hardening, the cortex worker's runtime-binding refusal, the
+  `unsafe` ratchet) and rust-libxml 0.3.27, which removes 0.3.25's 2.1x slowdown on deeply nested TikZ pictures.
+  **0.8.0-rc4** is cut from main on 2026-11-25: #1007 (a journal class's `\jyear{…}` printed as a body paragraph; ar5iv
+  issues 353 and 301), #1008 (issue 1006: split pages' navigation under `--sitedirectory`) and #1009 (a site
+  directory named through a symbolic link, every macOS temporary directory, was refused since rc3; KNOWN_PERL_ERRORS
+  #1334). rc2 was re-issued on the large-document perf work (DG 2026-11-21): #970 (STRMWARN,
   CORELEAK, POSTPERF, CHAPLINKS, ALLOCTRIM, BIGSPLIT, mimalloc 2.3.2) and SERSTREAM (the core result serialized to
   disk; issue 777's whole book converts, 1,549 s on main 4a5aae128b2 against lualatex's 3,523 s for two passes). Main stays the release line until 0.8.0
   final; the reviewed post-release branches (COPYROUTE, ENCURL) merge after it. The ar5iv sync of the run's bundles (every month, then a cache flush) is running.
