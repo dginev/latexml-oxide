@@ -1304,7 +1304,7 @@ pub fn resolved(pathname: &str) -> String {
 
 /// `pathname`'s directory [`resolved`], its last component kept as written: a file that is itself a symbolic link
 /// keeps its own name, as a copy over it replaces the link and never writes through it.
-fn resolved_directory_of(pathname: &str) -> String {
+pub fn resolved_directory_of(pathname: &str) -> String {
   let abs = PathBuf::from(absolute(pathname));
   match (abs.parent(), abs.file_name()) {
     (Some(parent), Some(name)) => {
