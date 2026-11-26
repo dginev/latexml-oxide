@@ -72,7 +72,7 @@ pub use defs::frontmatter_api::{
     affiliation_calls, class_numbered_institutes, holds_requested_marked_entries,
     numbered_marks_requested,
   },
-  email_lines::line_is_email_list,
+  email_lines::{line_is_email_list, reads_as_address_line},
 };
 // (the glyph a math symbol prints, for a binding reading a mark: bmcart's `symbol` key)
 pub use defs::frontmatter_fields::math_symbol_glyph;

@@ -3235,6 +3235,30 @@ fn displaced_in_doubt(entries: &[Tokens]) -> Result<bool> {
   Ok(false)
 }
 
+/// Does an unlabelled line an entry continues with ([`displaced_entries`]), or a paragraph of one, print an `@` that the
+/// frontmatter does not read as a line of addresses (`base_utilities::reads_as_address_line`)? Its text would stay in
+/// that entry's contact, or follow a mark inside it, on authors it names no one of (2211.16869, 2408.10349, 2412.03107,
+/// 2212.12190).
+fn unread_address_continuation(entries: &[Tokens]) -> Result<bool> {
+  use crate::base_utilities::{reads_as_address_line, split_top_level_lines};
+  let prints_at = |t: &Token| {
+    matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER) && t.with_str(|s| s == "@")
+  };
+  for entry in entries {
+    for line in split_top_level_lines(entry.unlist_ref())
+      .into_iter()
+      .skip(1)
+    {
+      for part in line.split(|t| *t == T_CS!("\\par")) {
+        if part.iter().any(prints_at) && !reads_as_address_line(&Tokens::new(part.to_vec()))? {
+          return Ok(true);
+        }
+      }
+    }
+  }
+  Ok(false)
+}
+
 /// The `\and`-family separators a store's line or argument holds at its own level, by meaning — the binding-callable
 /// query (`argument_separators`, OXIDIZED_DESIGN_DIVERGENCES #995, Option C P2-6): a written `\and`, one a macro of the
 /// document's or the class's holds, a `\let` copy, a `\csname and\endcsname`, never one a box, a table or a note of the
@@ -3474,6 +3498,17 @@ fn route_displaced(records: Vec<DisplacedRecord>, printed: &str) -> Result<()> {
     }
     let entries = displaced_entries(&record.arg, Some(&store))?;
     let redefined = readers.separators_redefined(&record.store, &[T_CS!("\\\\"), T_CS!("\\par")]);
+    if unread_address_continuation(&entries)? {
+      Info!(
+        "frontmatter",
+        s!("\\{}", record.setter),
+        s!(
+          "\\{} continues an entry with an address line the frontmatter does not read: its lines stay where the class's title page prints them",
+          record.setter
+        )
+      );
+      continue;
+    }
     if displaced_in_doubt(&entries)?
       || displaced_argument_in_doubt(&record.arg, Some(&store), &redefined)?
     {

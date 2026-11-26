@@ -1,0 +1,32 @@
+% AAAI's `\affiliations` store (aaai25.sty:72) set after `\maketitle`: its title page read `\affiliations_` as the
+%   setter reading `_` (nothing printed), and the later call stores what no title page prints; no bare `_` in text mode.
+% witness: synthetic (review of AAAILABEL, the take-out's edge cases)
+% oracle:  pdflatex 0 errors: "A Title", "Ann Able1, Bob Baker2", "Body."
+% engines: rust INT081RC6 = 0 errors, 0 warnings, the names with their marks; 842364fc86c = the same
+% expect:  0 errors, 0 warnings; Ann Able and Bob Baker hold only their marks; no "Univ", no "_" printed
+% status:  GREEN (INT081RC6, 842364fc86c, AAAILABEL fix 1: perfect_kernel_batchaaailabel::aaai_affiliations_rows)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{aaai25.sty}
+\ProvidesPackage{aaai25}[2025/05/08 AAAI 2025 Submission format]
+\def\showauthors@on{T}
+\DeclareOption{submission}{\gdef\showauthors@on{}}
+\ProcessOptions\relax
+\def\maketitle{\par\begingroup\def\thefootnote{\fnsymbol{footnote}}\twocolumn[\@maketitle]\@thanks\endgroup
+  \setcounter{footnote}{0}\let\maketitle\relax\let\@maketitle\relax
+  \gdef\@thanks{}\gdef\@author{}\gdef\@title{}\let\thanks\relax}
+\long\gdef\affiliations #1{ \def \affiliations_{\if T\showauthors@on#1\fi}}%
+\def\@maketitle{\def\theauthors{\if T\showauthors@on\@author\else Anonymous submission\fi}%
+  \vbox{\hsize\textwidth\linewidth\hsize\centering
+    {\LARGE\bf \@title \par}\vskip 0.1in
+    {\Large{\textbf{\theauthors\ifhmode\\\fi}}}\vskip .2em
+    {\normalsize \affiliations_\ifhmode\\\fi}\vskip .5em}}
+\end{filecontents*}
+\documentclass[letterpaper]{article}
+\usepackage{aaai25}
+\title{A Title}
+\author{Ann Able\textsuperscript{\rm 1}, Bob Baker\textsuperscript{\rm 2}}
+\begin{document}
+\maketitle
+\affiliations{\textsuperscript{\rm 1}Univ A\\ \textsuperscript{\rm 2}Univ B}
+Body.
+\end{document}

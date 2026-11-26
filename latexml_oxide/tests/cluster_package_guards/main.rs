@@ -418,7 +418,8 @@ mod perfect_kernel_batch98c;
 mod perfect_kernel_batch98d;
 mod perfect_kernel_batch98e;
 mod perfect_kernel_batch99b;
-/// AAAILABEL: aaai's `\affiliations` store, a macro delimited by `_`, on the displaced-setter route; OD #955.
+/// AAAILABEL: aaai's `\affiliations` store, a macro delimited by `_`, on the displaced-setter route; OD #767 (formerly
+/// #955).
 mod perfect_kernel_batchaaailabel;
 mod perfect_kernel_batchabsfix;
 mod perfect_kernel_batchacmteaser;

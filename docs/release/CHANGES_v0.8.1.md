@@ -12,9 +12,10 @@ top of its group.
   - **AAAI's `\affiliations` lines are the authors' affiliations.** aaai21-aaai2027's `\affiliations` redefines itself
     as its store, `\affiliations_`, which the raw class's title page prints; its lines stayed a block under the names.
     Each line now goes to the names whose marks request its label, an unlabelled institution to every author, and the
-    e-mails to the names they spell; under `[submission]`, whose title page prints no affiliation, nothing moves.
-    2501.02471, 2109.09904, 2212.00442, 2508.05165, 2511.12066 (OXIDIZED_DESIGN_DIVERGENCES #767, formerly #955). A
-    raw class's affiliation store that no author carries (naverlabseurope.cls's `\affiliations` beside its own
+    e-mails to the names they spell; under `[submission]`, whose title page prints no affiliation, nothing moves; a
+    store whose unlabelled continuation line holds an address the reader cannot read stays the class's text.
+    2501.02471, 2511.12066, 2212.00442, 2508.05165; 2211.16869, 2212.12190 (OXIDIZED_DESIGN_DIVERGENCES #767, formerly
+    #955). A raw class's affiliation store that no author carries (naverlabseurope.cls's `\affiliations` beside its own
     `\authors`, 2408.05088) is counted in `Warning:frontmatter:unclaimed_store` instead of dropped silently. Guards
     `perfect_kernel_batchaaailabel::aaai_affiliations_rows`, `perfect_kernel_batch108b::a_store_of_a_refused_replay_is_counted`.
   - **The MSC edition of an AMS class's or amsppt's `\subjclass` follows its codes.** The call's year, or the

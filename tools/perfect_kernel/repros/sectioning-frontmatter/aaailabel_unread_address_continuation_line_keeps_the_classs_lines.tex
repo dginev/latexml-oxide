@@ -1,14 +1,17 @@
-% An unlabelled e-mail line after AAAI's labelled `\affiliations` lines (aaai25.sty:72) is the entry before it
-%   (frontmatter_stores.rs `displaced_entries`); where the API reads its addresses they go by spelling, but text it cannot
-%   read as addresses (a spaced brace list, `{ann, bob} @a.edu`) stays in that entry's affiliation, on the names of its
-%   label only. A second mechanism (the API's address reading), not AAAILABEL's.
-% witness: 2211.16869, 2412.03107, 2408.10349 (2310.14120: a URL line after a `$^\dag$` line joins it); synthetic stand-in
+% An unlabelled line an AAAI `\affiliations` entry continues with (aaai25.sty:72; frontmatter_stores.rs
+%   `displaced_entries`) that prints an `@` neither the API's address-line test nor the Kind step reads
+%   (`{ann, bob} @a.edu`, spaced; the same for `\{a, b\}\@x`, whose `\@` prints no `@`, and a nested brace list) keeps
+%   the store the class's text (`unread_address_continuation`, `reads_as_address_line`): routed, the text stayed in the
+%   entry's affiliation, on the authors of its label.
+% witness: 2211.16869, 2412.03107, 2408.10349 (2310.14120: a URL line after a `$^\dag$` line joins it, no `@`, still
+%          joined); synthetic stand-in
 % oracle:  pdflatex 0 errors: "Ann Able1, Bob Baker1, Cy Cole2", "1Univ A", "2Univ B", "ann, bob @a.edu, cy@b.edu"
-% engines: rust INT081RC6 = 0 errors, the three lines a logical-block; AAAILABEL = 0 errors, Cy Cole's affiliation
-%          "2Univ B ann, bob @a.edu", his e-mail cy@b.edu, Ann and Bob "1Univ A" and no e-mail
-% expect:  Ann ann@a.edu, Bob bob@a.edu (or the unread text once at the block), Cy "2Univ B" and cy@b.edu
-% status:  RED (AAAILABEL)
-% moves:   post-merge (the API's e-mail list reading)
+% engines: rust INT081RC6 = 0 errors, the three lines a logical-block; 842364fc86c = Cy Cole's affiliation "2Univ B
+%          ann, bob @a.edu", his e-mail cy@b.edu, Ann and Bob "1Univ A" and no e-mail
+% expect:  0 errors, 0 warnings; as INT081RC6: the three lines one block, the names with their marks only
+% status:  RED (842364fc86c) -> GREEN (AAAILABEL fix 1: perfect_kernel_batchaaailabel::aaai_affiliations_rows)
+% residual: post-merge, the API reading the line: Ann ann@a.edu, Bob bob@a.edu (or the unread text once at the
+%          block), Cy "2Univ B" and cy@b.edu
 % preload: ar5iv.sty
 \begin{filecontents*}[overwrite]{aaai25.sty}
 \ProvidesPackage{aaai25}[2025/05/08 AAAI 2025 Submission format]

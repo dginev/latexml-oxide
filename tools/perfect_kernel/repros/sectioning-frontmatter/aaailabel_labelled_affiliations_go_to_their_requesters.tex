@@ -1,8 +1,9 @@
 % AAAI's `\affiliations` (aaai21-aaai2027 copies, aaai25.sty:72 `\long\gdef\affiliations #1{ \def \affiliations_{\if
 %   T\showauthors@on#1\fi}}`) redefines itself as its store, a macro delimited by `_` (catcode 8 in a .sty) that its
 %   `\@maketitle` prints as `\affiliations_`; the labelled lines are the affiliations the names' marks request
-%   (FIDELITY_CHARTER §4). The displaced setter (OD #955) records the store and hands each line to its requesters.
-% witness: 2501.02471, 2109.09904, 2212.00442, 2508.05165, 2511.12066 (aaai copies); the copy a minimal stand-in
+%   (FIDELITY_CHARTER §4). The displaced setter (OD #767, formerly #955) records the store and hands each line to its
+%   requesters.
+% witness: 2501.02471, 2212.00442, 2508.05165, 2511.12066 (aaai copies); the copy a minimal stand-in
 % oracle:  pdflatex 0 errors: "A Title", "Ann Able1, Bob Baker2, Cy Cole1,2", "1Univ A", "2Univ B",
 %          "ann@a.edu, bob@b.edu"
 % engines: rust INT081RC6 = 0 errors, 0 warnings; the three lines a logical-block under the names, which carry only

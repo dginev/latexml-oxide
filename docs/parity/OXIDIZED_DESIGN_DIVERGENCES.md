@@ -14293,8 +14293,19 @@ bypassed under raw loading; the class's `\@maketitle` never runs under the locke
   `\@maketitle` prints as `\affiliations_`; `latex_constructs/sect05.rs no_argument_body`). The record, the take-out and
   the sentinel keep the delimiters, and a displaced store's sentinel stands for the argument inside the store's own code
   (`frontmatter_stores.rs displaced_frame`), so aaai's `[submission]`, whose `\showauthors@on` is empty, prints none.
-  aaai's labelled lines go by the names' marks, one unlabelled institution to every author. Witnesses 2501.02471,
-  2109.09904, 2212.00442, 2508.05165, 2511.12066; guard `perfect_kernel_batchaaailabel::aaai_affiliations_rows`.
+  aaai's labelled lines go by the names' marks (2501.02471, 2511.12066), one unlabelled institution to every author
+  (2212.00442, 2508.05165; 2109.09904's goes to its last name only, the kernel author tail's line of addresses closing
+  the run: repro `aaailabel_author_tail_email_line_caps_the_institution_run_red`). An unlabelled line an entry
+  continues with that prints an `@` the frontmatter reads as no line of addresses keeps the whole store the class's
+  text (`frontmatter_stores.rs unread_address_continuation`; `email_lines.rs reads_as_address_line`: a mark in it,
+  which the API cuts the line at, or neither the API's `line_is_email_list` nor the Kind step's `address_line_cut`
+  reading it — `{a, b} @x`, `\{a,b\}\@x`, whose `\@` prints no `@`, a nested brace list): routed, its text stayed
+  in one label's affiliation or followed the mark inside it (2211.16869, 2408.10349, 2412.03107, 2212.12190). One the
+  Kind step reads stays routed (`[a, b]@x`, `a, b, c@x`, `Emails: \{a, b\}@x`, `\{a@x, b@y\}`: 2211.08824,
+  2212.13819, 2501.16509, 2511.11817, 2403.16883), as does an address inside a labelled line, that label's
+  (2303.13269). Guard `perfect_kernel_batchaaailabel::aaai_affiliations_rows`. Cost: the
+  route's two speculative title-page runs, +1.88 % `instructions:u` on 2508.01473 (best of 3, one core: 4,997,745,205
+  → 5,091,730,716); a plain article and an aaai copy without `\affiliations` +0.01 % each (DG to accept).
 - *A store no creator carries*: a rerouted store that annotates a creator, at a `\maketitle` with none, is not handed
   on; its value joins the title-page check's third source, so its words are counted as a raw setter's are
   (`title_page_check.rs note_uncarried_store_value`; naverlabseurope.cls's `\affiliations` beside its own `\authors`,
