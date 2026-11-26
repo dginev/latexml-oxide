@@ -267,7 +267,7 @@ pub(crate) const FRONTMATTER_INTERNAL_KEYS: &[(&str, &str)] = &[
   ("_net", "Semiverbatim"),
   // a contact whose label its binding prints with the line (authblk's `\affil[x]`, `LABEL_PRINTS`; OD #961)
   ("_labelprints", ""),
-  // a contact its binding reads as a legend of the names' marks (icml's notice, `LEGEND_ENTRY`; OD #1061)
+  // a contact its binding reads as a legend of the names' marks (icml's notice, `LEGEND_ENTRY`; OD #954, #1063)
   ("_legend", ""),
   // the emitter's: the label that prints (`PRINTED_LABEL`, OD #980), the block's own creator (`BLOCK_CREATOR`), the
   // corresponding author (`CORRESPONDING`), an entry its run's stopgap alone gave (`STOPGAP_ENTRY`)

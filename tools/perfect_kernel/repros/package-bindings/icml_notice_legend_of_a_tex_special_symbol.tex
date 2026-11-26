@@ -1,0 +1,29 @@
+% mechanism: an `\icmlsetsymbol` glyph holding a TeX special (`\#`) is the name's mark too, as characters
+%          (`\lx@frontmatter@namemark`), so the notice's `\textsuperscript{\#}` legend is the names' note
+%          (icml_support_sty.rs `\icmlauthor`, `legend_entries`)
+% witness: 2306.03504 (`\icmlsetsymbol{interns}{\#}`, `\printAffiliationsAndNotice{\icmlEqualContribution
+%          \textsuperscript{\#}Interns at ByteDance}`; review revDATEICML B2, probe m_hash)
+% oracle:  pdflatex (-no-shell-escape, TL 2025, 2602.04557's icml2026.sty) 0 errors: "Ann Able * 1 Bob Baker * # 1",
+%          the footnote "*Equal contribution # Interns at Acme 1 Univ A. …"
+% engines: INT081RC6 and DATEICML 4e31feeb990: 0 errors, the notice whole, Ann `*` and Bob `*,#` mark-only notes
+% expect:  0 errors, 0 warnings; Ann and Bob a thanks note `*` "Equal contribution", Bob a thanks note `#` "Interns at
+%          Acme"; no top-level affiliationnotice note
+% status:  RED (DATEICML 4e31feeb990) -> GREEN; guard perfect_kernel_batchdateicml::icml_notice_read_by_meaning
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[preprint]{icml2026}
+
+\begin{document}
+\twocolumn[\icmltitle{Title}
+\icmlsetsymbol{equal}{*}
+\icmlsetsymbol{lead}{\#}
+\begin{icmlauthorlist}
+\icmlauthor{Ann Able}{equal,a}
+\icmlauthor{Bob Baker}{equal,lead,a}
+\end{icmlauthorlist}
+\icmlaffiliation{a}{Univ A}
+\icmlcorrespondingauthor{Ann Able}{ann@a.edu}
+\vskip 0.3in]
+\printAffiliationsAndNotice{\icmlEqualContribution\textsuperscript{\#}Interns at Acme}
+Text.
+\end{document}
