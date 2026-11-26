@@ -2623,7 +2623,7 @@
 <a href=#2623 id=2623 data-nosnippet>2623</a>    <span class="kw">let </span>lines: Vec&lt;<span class="kw-2">&amp;</span>str&gt; = log.lines().collect();
 <a href=#2624 id=2624 data-nosnippet>2624</a>    <span class="macro">assert_eq!</span>(lines[<span class="number">0</span>], <span class="string">"(Processing content paper.tex... )"</span>, <span class="string">"{log}"</span>);
 <a href=#2625 id=2625 data-nosnippet>2625</a>    <span class="macro">assert!</span>(
-<a href=#2626 id=2626 data-nosnippet>2626</a>      lines[<span class="number">1</span>].starts_with(<span class="string">"Fatal:panic:caught post at latexml_oxide/bin/latexml_oxide.rs:"</span>),
+<a href=#2626 id=2626 data-nosnippet>2626</a>      lines[<span class="number">1</span>].starts_with(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"Fatal:panic:caught post at {}:"</span>, <span class="macro">file!</span>())),
 <a href=#2627 id=2627 data-nosnippet>2627</a>      <span class="string">"{log}"
 <a href=#2628 id=2628 data-nosnippet>2628</a>    </span>);
 <a href=#2629 id=2629 data-nosnippet>2629</a>    <span class="macro">assert_eq!</span>(lines[<span class="number">2</span>..], [<span class="string">"Status:conversion:3"</span>], <span class="string">"{log}"</span>);
