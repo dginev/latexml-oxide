@@ -1,7 +1,7 @@
 //! Red/green guards for batch REGTAILB (row R REGTAIL: papers an old build converted cleanly that later erred or
 //! went Fatal): a braced file name, amsgen's `\RIfM@`, breqn's load-time script catcodes, tipa's accented letter in a
 //! formula, a list label that is the author's own `\fnum@<counter>`.
-use latexml::util::test::{assert_element, convert_with};
+use latexml::util::test::{assert_element, convert_with, kpse_has};
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
 
@@ -52,6 +52,13 @@ fn amsgen_defines_rifm() {
 /// Distinct from `perfect_kernel_batch63::breqn_text_underscore` (the body's catcode 12 from `\begin{document}`).
 #[test]
 fn breqn_resets_script_catcodes_at_load() {
+  if let Some(missing) = ["gb4e.sty", "breqn.sty", "tikz.sty"]
+    .into_iter()
+    .find(|f| !kpse_has(f))
+  {
+    eprintln!("SKIP breqn_resets_script_catcodes_at_load: {missing} is not in this TeX Live");
+    return;
+  }
   let (log, xml) = convert_with(
     include_str!(
       "../../../tools/perfect_kernel/repros/loader/breqn_resets_script_catcodes_at_load_2402_13372.tex"
