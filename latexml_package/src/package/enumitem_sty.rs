@@ -105,6 +105,31 @@ fn begin_enum_itemize(
     opts.resume_star = Some(resume_star_toks.to_string());
   }
 
+  // The list's own margins, its `\list` setup after `\@list<depth>` (enumitem.sty:1383-1400 `\enit@preset`); a
+  // description-type list's label, `\newlist{…}{description}` too (:1470). Not with a `font`/`format`, which enumitem
+  // sets inside it (:1474-1480) but ours wraps every label, a bare `\item`'s too, from outside (1809.03101, 2212.04966;
+  // RED enumitem_description_format_inside_the_label_red).
+  let label_format = hash
+    .get("font")
+    .or_else(|| hash.get("format"))
+    .and_then(argwrap_to_tokens);
+  let mut setup = Vec::new();
+  if enit_type == 2 && label_format.is_none() {
+    setup.extend(TokenizeInternal!(r"\let\makelabel\descriptionlabel").unlist());
+  }
+  for (register, value) in [
+    ("\\leftmargin", stated_leftmargin(&hash)),
+    ("\\rightmargin", stated_margin(&hash, "rightmargin")),
+  ] {
+    if let Some(Margin::Stated(value)) = value {
+      setup.extend([T_CS!("\\setlength"), T_CS!(register), T_BEGIN!()]);
+      setup.extend(value.unlist());
+      setup.push(T_END!());
+    }
+  }
+  if !setup.is_empty() {
+    opts.setup = Some(Tokens::new(setup));
+  }
   let mut props = begin_itemize(itype, Some(counter_str), opts)?;
   // label / label* — Perl L94-101. Defined AFTER `begin_itemize`, which aliases an itemize's
   // `\label<usecounter>` to `\labelitem<depth>`: the list's own label wins, as enumitem's
@@ -175,11 +200,7 @@ fn begin_enum_itemize(
   }
 
   // font / format — Perl L110-111
-  if let Some(font_toks) = hash
-    .get("font")
-    .or_else(|| hash.get("format"))
-    .and_then(argwrap_to_tokens)
-  {
+  if let Some(font_toks) = label_format {
     def_macro(T_CS!(s!("\\fnum@font@{usecounter}")), None, font_toks, None)?;
   }
 
@@ -192,17 +213,18 @@ fn begin_enum_itemize(
   // becomes a numeric `--ltx-enum-leftmargin` CSS custom property that the base
   // `.ltx_itemize, .ltx_enumerate { margin-left: var(--ltx-enum-leftmargin, 1em) }`
   // rule consumes (both live in ltx-article/book/report.css).
-  if let Some(lm) = hash.get("leftmargin").and_then(argwrap_to_tokens) {
-    let lm = lm.to_string();
-    let lm = lm.trim();
-    if lm == "*" {
+  match stated_leftmargin(&hash) {
+    Some(Margin::Computed(flush)) if flush == "*" => {
       props.insert("class", s!("ltx_leftmargin_flush").into());
-    } else if let Some(css) = css_length(lm) {
-      props.insert("cssstyle", s!("--ltx-enum-leftmargin:{css}").into());
-    }
-    // A non-`*`, non-CSS-length value (a macro/`\dimexpr` like `\parindent`) is
-    // dropped rather than leaked into CSS — the list falls back to the default
-    // `--ltx-enum-leftmargin` (1em).
+    },
+    Some(Margin::Stated(lm)) => {
+      if let Some(css) = css_length(&lm.to_string()) {
+        props.insert("cssstyle", s!("--ltx-enum-leftmargin:{css}").into());
+      }
+    },
+    // A non-CSS-length value (a macro/`\dimexpr` like `\parindent`) is dropped rather than leaked into CSS — the
+    // list falls back to the default `--ltx-enum-leftmargin` (1em).
+    _ => {},
   }
 
   // Execute list-level `before` and `first` key code at list start
@@ -301,6 +323,33 @@ fn enumerate_short_label(template: &Tokens) -> Result<Tokens> {
     label = replaced;
   }
   Ok(Tokens::new(label))
+}
+
+/// A margin key's reading: a length stated, or one enumitem computes from the label (`*`, `!`; enumitem.sty:313-319).
+enum Margin {
+  Stated(Tokens),
+  Computed(String),
+}
+
+/// The list's `margin` key (`leftmargin`, `rightmargin`) as written.
+fn stated_margin(hash: &rustc_hash::FxHashMap<String, ArgWrap>, key: &str) -> Option<Margin> {
+  let value = hash.get(key).and_then(argwrap_to_tokens)?;
+  let text = value.to_string();
+  match text.trim() {
+    "" => None,
+    flag @ ("*" | "!") => Some(Margin::Computed(flag.to_string())),
+    _ => Some(Margin::Stated(value)),
+  }
+}
+
+/// The list's `\leftmargin`, the one reading for its `\list` setup and its CSS: a `leftmargin` key, else `wide`'s or
+/// `fullwidth`'s `\leftmargin\z@` (enumitem.sty:745-758, any `wide` value); a `leftmargin` before them is gone
+/// (`merge_key`).
+fn stated_leftmargin(hash: &rustc_hash::FxHashMap<String, ArgWrap>) -> Option<Margin> {
+  stated_margin(hash, "leftmargin").or_else(|| {
+    (hash.contains_key("wide") || hash.contains_key("fullwidth"))
+      .then(|| Margin::Stated(TokenizeInternal!("0pt")))
+  })
 }
 
 /// A `leftmargin` value we can safely place verbatim in a CSS length: a number
@@ -434,9 +483,9 @@ fn store_enumitem_defaults(name: &str, kv: &KeyVals, scope: Option<Scope>) {
         assign_value(&val_key, Stored::String(pin(val.to_string())), scope);
       },
     }
-    if !keys.contains(key) {
-      keys.push(key.clone());
-    }
+    // `\setlist*` appends its keys (enumitem.sty:1603-1611): a key stored again applies after the others (`merge_key`).
+    keys.retain(|k| k != key);
+    keys.push(key.clone());
   }
   assign_value(
     &s!("{name}@keys"),
@@ -498,7 +547,7 @@ fn merged_enumitem_keyvals(
             })),
             _ => ArgWrap::None,
           };
-          hash.insert(key.clone(), aw);
+          merge_key(&mut hash, key, aw);
         }
       }
     }
@@ -507,11 +556,20 @@ fn merged_enumitem_keyvals(
   // Merge argument keyvals last (highest priority)
   if let Some(kv) = argkv {
     for (key, val) in kv.get_pairs() {
-      hash.insert(key.clone(), val.clone());
+      merge_key(&mut hash, key, val.clone());
     }
   }
 
   hash
+}
+
+/// A key merged as enumitem applies it, in order: `wide` and `fullwidth` set `\leftmargin\z@` (enumitem.sty:745-758),
+/// over a `leftmargin` before them, a `\setlist`'s too (`stated_leftmargin`).
+fn merge_key(hash: &mut rustc_hash::FxHashMap<String, ArgWrap>, key: &str, value: ArgWrap) {
+  if matches!(key, "wide" | "fullwidth") {
+    hash.remove("leftmargin");
+  }
+  hash.insert(key.to_string(), value);
 }
 
 /// Helper: convert ArgWrap to Option<Tokens>
@@ -773,6 +831,8 @@ LoadDefinitions!({
   DefKeyVal!("enumitem", "listparindent", "Dimension");
   DefKeyVal!("enumitem", "rightmargin", "Dimension");
   DefKeyVal!("enumitem", "wide", "", "true");
+  // (enumitem.sty:754, deprecated for `wide`)
+  DefKeyVal!("enumitem", "fullwidth", "", "true");
   DefKeyVal!("enumitem", "first", "UndigestedKey");
   DefKeyVal!("enumitem", "first*", "UndigestedKey");
 

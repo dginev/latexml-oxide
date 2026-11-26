@@ -244,8 +244,9 @@ LoadDefinitions!({
   DefConstructor!("\\@proof OptionalUndigested",
     "<ltx:proof class='#class'><ltx:title font='#titlefont' _force_font='true' class='#titleclass'>#title</ltx:title>#body",
     before_digest => {
-      // amsthm.sty:434 `\proof` is a `\trivlist`: it runs `\@trivlist`'s additions.
+      // amsthm.sty:434 `\proof` is a `\trivlist`: it runs `\@trivlist`'s additions and clears the list margins.
       run_trivlist_hook()?;
+      trivlist_registers()?;
       digest(Tokens::new(vec![T_CS!("\\lx@amsthm@proof@style")]))?;
     },
     after_digest => sub[whatsit] {

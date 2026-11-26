@@ -4573,8 +4573,10 @@ pub fn define_new_theorem(
   // before_digest
   let before_digest_closure: BeforeDigestClosure = Rc::new(move || {
     use_theorem_style(&thmset_for_before);
-    // A theorem is a `\trivlist` (latex.ltx `\@begintheorem`, amsthm.sty's): it runs `\@trivlist`'s additions.
+    // A theorem is a `\trivlist` (latex.ltx `\@begintheorem`, amsthm.sty's): it runs `\@trivlist`'s additions and
+    // clears the list margins.
     run_trivlist_hook()?;
+    trivlist_registers()?;
     let digested = digest(mouth::tokenize_internal("\\normalfont\\the\\thm@prework"))?;
     Ok(vec![digested])
   });
@@ -5142,6 +5144,19 @@ pub fn set_minipage_width(width: Dimension) -> Result<()> {
   for register in ["\\hsize", "\\textwidth", "\\columnwidth", "\\linewidth"] {
     assign_register(register, rv.clone(), None, Vec::new())?;
   }
+  // (`\@parboxrestore`, latex.ltx:16276-16281: a box in a list starts at its own left edge, its paragraphs unspaced)
+  assign_register(
+    "\\@totalleftmargin",
+    Dimension::new(0).into(),
+    None,
+    Vec::new(),
+  )?;
+  assign_register("\\parskip", Glue::new(0).into(), None, Vec::new())?;
+  // latex.ltx:16325 `\let\@listdepth\@mplistdepth \@mplistdepth\z@`: a list in the box is a first-level one, the
+  // enclosing lists' depth back after the box.
+  if list_depth() != 0 {
+    set_list_depth(0)?;
+  }
   Ok(())
 }
 
@@ -5185,8 +5200,8 @@ pub fn before_float_ex(float_type: &str, preincrement: Option<&str>, double: boo
 /// `double`; :17482, :17556; float.sty's `[H]`, :85), then `reset_float_box`. A sub-float keeps the enclosing `\hsize`;
 /// wrapfig and floatflt set it to their own width (wrapfig.sty:58, floatflt.sty:90), never to `\columnwidth`.
 /// algorithm2e's and listings' floating forms do run `\@float` (algorithm2e.sty:2488-2491, listings.sty:1705-1708) but
-/// start in outer par mode, where `\hsize` is `\columnwidth` already. Not yet `\@parboxrestore`'s `\linewidth\hsize`
-/// (latex.ltx:17483; post-merge).
+/// start in outer par mode, where `\hsize` is `\columnwidth` already. `\@parboxrestore` (:17483) then sets the line:
+/// `\linewidth\hsize`, `\@totalleftmargin\z@`.
 pub fn before_xfloat(float_type: &str, double: bool) -> Result<()> {
   begin_float(float_type, None, double, true, true)?;
   reset_float_box()
@@ -5257,6 +5272,16 @@ fn begin_float(
     };
     let dim_val = lookup_dimension(dim_name).unwrap_or_default();
     assign_register("\\hsize", dim_val.into(), None, Vec::new()).ok();
+    // and `\@parboxrestore`'s line and paragraphs (latex.ltx:16276-16281): a float in a list is as wide as the column.
+    assign_register("\\linewidth", dim_val.into(), None, Vec::new()).ok();
+    assign_register(
+      "\\@totalleftmargin",
+      Dimension::new(0).into(),
+      None,
+      Vec::new(),
+    )
+    .ok();
+    assign_register("\\parskip", Glue::new(0).into(), None, Vec::new()).ok();
   }
   // The real line the float's panels are set in rows against (`install_panel_line`), in a float not inside another.
   if !in_float {
@@ -5337,6 +5362,23 @@ const PANEL_BOX_PAGE: &str = "lx@panel@box@page";
 /// Fig 2, nucl-ex0511052 Fig 13, 2502.05562 Fig 6, astro-ph0205132 (`0.74\columnwidth` pairs in a two-column
 /// `figure*`, one row in the PDF); 1508.01788 Figs 19-22, 1411.5428 Figs 6-7, 2111.05508 (the geometry's width).
 /// OXIDIZED_DESIGN_DIVERGENCES #885.
+/// A list a float's panels are set in (`{adjustwidth}` around them, changepage_sty.rs): their row's line is the list's,
+/// the float's line moved by the list's margins (latex.ltx:15863-15867), put on the float once the list ends
+/// (`\lx@panel@line`). Witnesses 2405.20768 (`{adjustwidth}{-0.3in}{-0.3in}`), 2408.06972 (MDPI's `-\extralength`).
+pub fn list_sets_the_panel_line() -> Result<()> {
+  if let Some(Stored::Dimension(line)) = lookup_value(PANEL_LINE)
+    && lookup_value(PANEL_LINE_FRAME) == lookup_value("lx@float@frame")
+  {
+    let margin = |name: &str| lookup_dimension(name).map_or(0, |d| d.value_of());
+    let moved = line.value_of() - margin("\\leftmargin") - margin("\\rightmargin");
+    let mut tokens = vec![T_CS!("\\lx@panel@line")];
+    tokens.extend(Explode!(&s!("{moved}sp")));
+    tokens.push(T_CS!("\\relax"));
+    push_value("afterGroup", Stored::Tokens(Tokens::new(tokens)))?;
+  }
+  Ok(())
+}
+
 fn install_panel_line(double: bool) {
   let register = |name: &str| lookup_dimension(name).map(|d| d.value_of());
   let (Some(textwidth), Some(columnwidth), Some(hsize)) = (
@@ -5646,6 +5688,23 @@ fn standard_class_one_column(ptsize: u8) -> f64 {
     2 => 390.0,
     _ => 345.0,
   }
+}
+
+/// The standard classes' list margins (article.cls:322-339, report.cls:397-415, book.cls:424-442 alike), what
+/// `\@list<depth>` gives `\leftmargin` and the kernel `\list` narrows `\linewidth` by (sect06.rs): in ems of the size
+/// file's `\normalsize` (10pt, 10.95pt, cmr12's 12pt, `standard_class_ptsize`), which the binding's own `\normalsize`
+/// (always 10pt) is not. The kernel's registers are latex.ltx's zeros (Perl latex_constructs.pool.ltxml:1690-1702).
+pub fn declare_standard_class_lists(class: &str) -> Result<()> {
+  let size = ["10", "10.95", "12"][usize::from(standard_class_ptsize(class).min(2))];
+  raw_tex(&s!(
+    r"\begingroup\fontsize{{{size}}}{{0pt}}\selectfont
+\if@twocolumn\global\leftmargini2em\else\global\leftmargini2.5em\fi
+\global\leftmargin\leftmargini
+\global\leftmarginii2.2em\global\leftmarginiii1.87em\global\leftmarginiv1.7em
+\if@twocolumn\global\leftmarginv.5em\global\leftmarginvi.5em\else\global\leftmarginv1em\global\leftmarginvi1em\fi
+\global\labelsep.5em\global\labelwidth\leftmargini\global\advance\labelwidth-\labelsep
+\endgroup"
+  ))
 }
 
 /// A standard class (article, report, book) given `twocolumn` (the last declared of `onecolumn`/`twocolumn`) that is

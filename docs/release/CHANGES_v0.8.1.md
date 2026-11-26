@@ -37,6 +37,34 @@ top of its group.
     the year an earlier call gave; KNOWN_PERL_ERRORS #1337). `\item[\refstepcounter{\@listctr}…]`, which made its
     tags from itself without end, converts (1704.06431: `Fatal:Stomach:Recursion`, now 0 errors; KNOWN_PERL_ERRORS
     #1338). Guard: `perfect_kernel_batchthmedpsres::thmedpsres_rows`.
+  - **A list's `\linewidth` is its line, as LaTeX sets it.** `\list` and every environment that is a list in LaTeX
+    (itemize, enumerate, description, quote, quotation, verse, changepage's `{adjustwidth}`) now set latex.ltx's list
+    registers: `\leftmargin` from `\@list<depth>`, the line narrowed by both margins, `\@totalleftmargin`; the standard
+    classes set `\leftmargini`..`\leftmarginvi`, `\labelsep` and `\labelwidth` (article.cls:322-339) in ems of their
+    size, and a center, theorem or proof clears the margins. Before, every margin was 0pt (as in Perl), so a
+    `width=\linewidth` graphic in a list was 7-20 % too wide, and MDPI's `{adjustwidth}{-\extralength}{0cm}`
+    full-width figures kept the text's width (`\extralength` is now the class's 4.61cm). A footnote, a float, a
+    minipage or a `p` cell inside a list sets its own line; panels in an `{adjustwidth}` share its line (2405.20768,
+    2408.06972); enumitem's stated `leftmargin`/`rightmargin` and its `wide` are read; a label's leading glue nets
+    against `\labelsep`, as LaTeX's `\@item` cancels it (a syntax.sty grammar's tags open with no space, 2605.07451);
+    a footnote's or a `p` cell's paragraphs in a list are unspaced. An A/B of 212 papers that use lists with `\linewidth` or `{adjustwidth}`
+    moved 22, with equal errors, warnings and words: 19 in widths, heights, `panelwidth`/`panelline` and SVG geometry
+    only; 1703.00699's figure is one row, as in the PDF; 2306.09542 sets one more line mark in a narrower list item;
+    1508.03599's proof heads lose a leading space. With 39 enumitem `wide` users and the witnesses, 252 papers moved 55,
+    errors and words equal: the 22 above as they were, 2605.07451 unchanged, 31 `wide` users' lists
+    `--ltx-enum-leftmargin:0pt` (1810.12214's `\setlist{leftmargin=5em,…,wide}` too; 2503.04577's description heads
+    also without a leading en space), 2404.15303's table heights, 1907.01194's blank `\item[~]` labels dropped as an
+    `\item[]`'s. A description label's opening `\hspace\labelsep` is the skip that nets away, its own `~` or
+    `\quad` kept, and an itemize or enumerate nested in a description labels with its own label, not the
+    description's bold one (a paralist `{compactenum}`, 1406.1992). `\list` resets `\makelabel` after the class's
+    `\@list<depth>`, as LaTeX's does: a class that sets it there (tlp.cls) no longer gives every bullet and number a
+    zero-width box (1210.0368: none of its tags, 34 on the base), a kernel `\list` inside a description is not bold
+    (2206.12224's `\item[-]`), a document's own two-argument `\makelabel` no longer reaches list items, and an
+    enumitem `\newlist{…}{description}` list without a `font`/`format` key is bold. With tlp.cls papers, enumitem
+    `\newlist` users and documents with a `{list}` and a `{description}`, 769 papers moved 87, errors, Fatals and
+    warnings equal or fewer, two words more (0907.4547's "Proof: The"); of them, the 60 of 411 above byte-identical
+    but 1210.0368.
+    Guard `perfect_kernel_batchqa14k2::list_registers_set_the_line_width` (OXIDIZED_DESIGN_DIVERGENCES #29).
   - **Rhai bindings: a register getter's or a `fontTest`'s `Fatal()` stops the conversion, a rewrite's keeps the
     document, and ligature code may assign values.** A getter's Fatal was logged but dropped (the register read unset
     and the whole document was built), and so was a `fontTest`'s Fatal raised while a `\footnote` closed the text before

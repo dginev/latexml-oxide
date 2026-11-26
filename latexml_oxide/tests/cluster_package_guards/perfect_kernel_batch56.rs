@@ -7131,6 +7131,8 @@ fn everypar_reads_the_token_that_started_the_paragraph() {
 /// `\@@par` ("Missing number") and the glue's stray digit fired the re-armed
 /// `\everypar`, whose `\gr@implitem` never found its catcode-12 `<` (11
 /// errors; arXiv 2605.07451 ended in `Fatal:Timeout:PushbackLimit`).
+/// (QA14 K2: syntax.sty:244 boxes the label after `\hskip\labelsep`, article.cls's 5pt, which `\@item`'s
+/// `\hskip-\labelsep` cancels (latex.ltx:16033): the tag opens with no space, `net_label_labelsep`.)
 #[test]
 fn everypar_grammar_survives_vertical_material_between_productions() {
   if !check_requirements(&["syntax.sty"]) {
@@ -12063,7 +12065,8 @@ fn adjustwidth_ends_its_paragraph() {
 }
 
 /// 57l: `{adjustwidth}`'s margins are read, not digested: a digested `-0.005\linewidth` assigned
-/// `\linewidth` = 0pt inside (witness 2605.02723's zero-width figure).
+/// `\linewidth` = 0pt inside (witness 2605.02723's zero-width figure). QA14 K2: they are the list's margins, the
+/// line 346.72668pt as pdflatex's (the pin's 345.0pt was the text's width).
 #[test]
 fn adjustwidth_margins_are_read_not_typeset() {
   let (stderr, xml) = convert_with(
@@ -12078,7 +12081,7 @@ fn adjustwidth_margins_are_read_not_typeset() {
     &xml,
     "para",
     &[r#"xml:id="p1""#],
-    r##"<para xml:id="p1"><p>A</p><rule height="1.0pt" width="345.0pt"/><p>B</p><p>C</p></para>"##,
+    r##"<para xml:id="p1"><p>A</p><rule height="1.0pt" width="346.7pt"/><p>B</p><p>C</p></para>"##,
   );
 }
 

@@ -1,0 +1,16 @@
+% mechanism: revtex4-2.cls sets its list parameters in points: `\leftmargini` 25pt, `\labelsep` 4pt, `\labelwidth`
+%   21pt. The binding loads article's (article.cls:322-339, ems).
+% witness: synthetic (QA14 K2; report_QA14.tsv rows body-revtex4-2, itemize-revtex4-2; Gemini Neon's oracle)
+% oracle:  pdflatex 0 errors; "A 25.0pt 4.0pt 21.0pt", "B 25.0pt 4.0pt 21.0pt"
+% engines: rust INT081AA "0.0pt 0.0pt 0.0pt"; QA14K2 "25.00003pt 5.0pt 20.00003pt"
+% expect:  0 errors; the values pdflatex prints
+% status:  RED (QA14K2)
+% moves:   post-merge (REVTeX's own list parameters)
+\documentclass{revtex4-2}
+\makeatletter
+\newcommand\W[1]{#1 \the\leftmargin\space\the\labelsep\space\the\labelwidth}
+\makeatother
+\begin{document}
+\W{A}
+\begin{itemize}\item \W{B}\end{itemize}
+\end{document}

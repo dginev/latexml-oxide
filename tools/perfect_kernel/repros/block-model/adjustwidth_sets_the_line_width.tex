@@ -1,0 +1,27 @@
+% mechanism: changepage.sty:110-139 `{adjustwidth}{<left>}{<right>}` = `\begin{list}{}{\topsep\z@ \listparindent\parindent
+%   \parsep\parskip \setlength\leftmargin{<left>} \setlength\rightmargin{<right>}}\item[]`: latex.ltx:15863-15867
+%   narrows `\linewidth` by both margins (an empty one 0pt, `\@ifmtarg`), a negative one widens it; a list inside nests
+%   at depth 2; a figure inside sets the column's line (`\@parboxrestore`); `{adjustwidth*}` on the odd page alike.
+% witness: MDPI's `\begin{adjustwidth}{-\extralength}{0cm}` full-width figures (≈550 arXiv papers; 2609.00671,
+%   2312.16815); report_QA14.tsv row adjustwidth1-2cm
+% oracle:  pdflatex 0 errors; `\linewidth \leftmargin \rightmargin \@totalleftmargin`: A "259.64175pt 28.45274pt
+%   56.9055pt 28.45274pt", B "373.45274pt -28.45274pt 0.0pt -28.45274pt", C "351.45274pt 22.0pt 0.0pt -6.45274pt",
+%   F "345.0pt -28.45274pt 0.0pt 0.0pt" (its image as wide), G "373.45274pt 0.0pt -28.45274pt 0.0pt",
+%   H "373.45274pt -28.45274pt 0.0pt -28.45274pt" (its image as wide)
+% engines: rust INT081AA: every line 345.0pt, the margins 0.0pt (a transparent environment, OD #341); Perl's ar5iv
+%   binding stubs the environment (KPE #318)
+% expect:  0 errors, 0 warnings; the values and image widths pdflatex gives
+% status:  RED (INT081AA) -> GREEN (QA14K2)
+\documentclass{article}
+\usepackage{graphicx}
+\usepackage{changepage}
+\makeatletter
+\newcommand\W[1]{#1 \the\linewidth\space\the\leftmargin\space\the\rightmargin\space\the\@totalleftmargin}
+\makeatother
+\begin{document}
+\begin{adjustwidth}{1cm}{2cm}\W{A}\end{adjustwidth}
+\begin{adjustwidth}{-1cm}{0cm}\W{B}\begin{itemize}\item \W{C}\end{itemize}
+\begin{figure}[h]\includegraphics[width=\linewidth]{f.png}\W{F}\end{figure}\end{adjustwidth}
+\begin{adjustwidth*}{}{-1cm}\W{G}\end{adjustwidth*}
+\begin{figure}[h]\begin{adjustwidth}{-1cm}{0cm}\includegraphics[width=\linewidth]{h.png}\W{H}\end{adjustwidth}\end{figure}
+\end{document}

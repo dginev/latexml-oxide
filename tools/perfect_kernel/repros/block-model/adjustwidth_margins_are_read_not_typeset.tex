@@ -2,9 +2,9 @@
 %          came out at width 0): the binding digested the margins, and `\linewidth` in a digested
 %          dimension is an assignment that zeroed it (warning "Missing number"); changepage.sty:110 reads
 %          them as `\list` parameters
-% oracle:  pdflatex 0 errors; the rule at the text width
+% oracle:  pdflatex 0 errors; the rule at the list's line, `\linewidth` 346.72668pt (QA14 K2; the text's 345pt before)
 % engines: rust 57k=0 but a "Missing number" warning and `<rule width="0.0pt"/>`; perl (ar5iv binding): same
-% expect:  0 errors, 0 warnings; `<rule height="1.0pt" width="345.0pt"/>` between the paragraphs A | B | C
+% expect:  0 errors, 0 warnings; `<rule height="1.0pt" width="346.7pt"/>` between the paragraphs A | B | C
 % status:  RED (57k) -> GREEN (57l)
 \documentclass{article}
 \usepackage{changepage}

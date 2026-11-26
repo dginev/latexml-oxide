@@ -33,8 +33,37 @@ LoadDefinitions!({
   // typeset: digested, `{-0.005\linewidth}` assigned `\linewidth` = 0pt (witness 2605.02723, a
   // figure at zero width). The ar5iv binding this replaced stubbed all of it (KPE #318); the
   // transparent body is a divergence from the raw list (OXIDIZED_DESIGN_DIVERGENCES #341).
+  // Inside, `\linewidth` is the list's (`adjustwidth_list`).
   DefEnvironment!("{adjustwidth} Undigested Undigested", "#body",
-    mode => "internal_vertical", before_digest_end => { leave_horizontal()?; });
+    mode => "internal_vertical", after_digest_begin => sub[whatsit] { adjustwidth_list(whatsit, 1)?; },
+    before_digest_end => { leave_horizontal()?; });
   DefEnvironment!("{adjustwidth*} Undigested Undigested", "#body",
-    mode => "internal_vertical", before_digest_end => { leave_horizontal()?; });
+    mode => "internal_vertical", after_digest_begin => sub[whatsit] { adjustwidth_list(whatsit, 1)?; },
+    before_digest_end => { leave_horizontal()?; });
 });
+
+/// The registers of `{adjustwidth}`'s list (changepage.sty:110-120; chngpage.sty:113-129, memoir.cls:11267-11277 alike):
+/// `\topsep\z@ \listparindent\parindent \parsep\parskip`, the margins its arguments `first` and `first + 1` give (an
+/// empty one 0pt, `\@ifmtarg`), by which `\list` narrows `\linewidth` (`begin_list_registers`). `{adjustwidth*}`'s
+/// margins are these on LaTeXML's one, odd, page. MDPI's `{adjustwidth}{-\extralength}{0cm}` figures.
+pub fn adjustwidth_list(whatsit: &Whatsit, first: usize) -> Result<()> {
+  let mut setup = TokenizeInternal!(r"\topsep\z@\listparindent\parindent\parsep\parskip").unlist();
+  for (n, register) in [(first, "\\leftmargin"), (first + 1, "\\rightmargin")] {
+    let margin: Vec<Token> = whatsit
+      .get_arg(n)
+      .and_then(|a| a.raw_tokens())
+      .map(|t| t.clone().unlist())
+      .unwrap_or_default();
+    setup.extend([T_CS!("\\setlength"), T_CS!(register), T_BEGIN!()]);
+    if margin.iter().all(|t| t.get_catcode() == Catcode::SPACE) {
+      setup.push(T_CS!("\\z@"));
+    } else {
+      setup.extend(margin);
+    }
+    setup.push(T_END!());
+  }
+  step_list_depth()?;
+  begin_list_registers(setup)?;
+  end_list_registers()?;
+  latexml_engine::latex_constructs::list_sets_the_panel_line()
+}

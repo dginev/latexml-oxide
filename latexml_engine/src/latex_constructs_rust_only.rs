@@ -531,11 +531,11 @@ LoadDefinitions!({
   // partway but the cascade has many tendrils — defer to a focused
   // IncludeInRelease refactor.
 
-  // List parameters, from size10.clo:216-249: bodies as the real ones, though LaTeXML's lists never run them (CSS
-  // formats them). An empty one breaks a class's non-robust `\normalsize` (`\let\@listi\@listI`, size10.clo:53) expanded
-  // in a `\protected@xdef`: `\let` takes the next letter for its name, "Missing control sequence" and the letter lost
-  // (esapub2005.cls's `\affil{\normalsize Campus…}` through authblk, printed "ampus", 2310.07393). Perl leaves them
-  // undefined, which stay in the expansion.
+  // List parameters, from size10.clo:216-249: bodies as the real ones, which every list runs for its margins
+  // (`\lx@list@params`, sect06.rs; the layout itself is CSS's). An empty one breaks a class's non-robust `\normalsize`
+  // (`\let\@listi\@listI`, size10.clo:53) expanded in a `\protected@xdef`: `\let` takes the next letter for its name,
+  // "Missing control sequence" and the letter lost (esapub2005.cls's `\affil{\normalsize Campus…}` through authblk,
+  // printed "ampus", 2310.07393). Perl leaves them undefined, which stay in the expansion.
   DefMacro!(
     "\\@listi",
     "\\leftmargin\\leftmargini\\parsep 4\\p@ \\@plus2\\p@ \\@minus\\p@\\topsep 8\\p@ \\@plus2\\p@ \\@minus4\\p@\\itemsep4\\p@ \\@plus2\\p@ \\@minus\\p@"

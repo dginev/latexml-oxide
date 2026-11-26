@@ -1,0 +1,12 @@
+% mechanism: emulateapj.cls's itemize keeps `\linewidth` the column's (its `\leftmargin` 25pt), while the binding's
+%   itemize narrows the line by the margin, as article.cls's `\list` does (`begin_list_registers`).
+% witness: synthetic (QA14K2 review, emulateapj rows)
+% oracle:  pdflatex 0 errors; "I 25.0pt 0.0pt" (`\leftmargin`, `\columnwidth` - `\linewidth`)
+% engines: rust INT081AA "I 0.0pt 0.0pt" (no margins); QA14K2 "I 25.00003pt 25.00003pt"
+% expect:  0 errors; "I 25.0pt 0.0pt"
+% status:  RED (QA14K2)
+% moves:   post-merge (a bound class's own list registers)
+\documentclass{emulateapj}
+\begin{document}
+\begin{itemize}\item I \the\leftmargin\space\the\dimexpr\columnwidth-\linewidth\relax\end{itemize}
+\end{document}

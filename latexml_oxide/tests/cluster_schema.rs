@@ -197,6 +197,8 @@ fn listing_language_class_is_an_nmtoken() {
 /// schema-valid. Since 57f each minipage starts the quote's paragraph (latex.ltx
 /// `\@iiiminipage` `\leavevmode`) and is its inline block.
 /// (QAB57: the unit carries the box's width as `--ltx-box-width`, OD #1045 — pdflatex sets it at the box's width.)
+/// (QA14 K2: a quote's `\linewidth` is its list's, 294.99994pt in pdflatex, so the boxes are 236pt and 295pt, not the
+/// text's 276pt and 345pt; OD #29.)
 #[test]
 fn quote_holds_paragraph_and_box_blocks() {
   let (stderr, xml) = convert(
@@ -211,7 +213,7 @@ fn quote_holds_paragraph_and_box_blocks() {
     &xml,
     "para",
     &["xml:id=\"p1\""],
-    r##"<para xml:id="p1"><quote><para class="ltx_noindent" xml:id="p1.p1"><p>Quoted.</p></para></quote><quote><p><inline-logical-block class="ltx_minipage" vattach="middle" width="276.0pt"><TOC lists="toc" scope="global" select="ltx:part | ltx:chapter | ltx:section | ltx:subsection | ltx:subsubsection | ltx:appendix | ltx:index | ltx:bibliography"><title>Contents</title></TOC></inline-logical-block></p></quote><quote><p><inline-sectional-block class="ltx_minipage" cssstyle="--ltx-box-width:345.0pt"><section xml:id="Sx1"><title>Notation</title><para xml:id="Sx1.p1"><p>Body.</p></para></section></inline-sectional-block></p></quote></para>"##,
+    r##"<para xml:id="p1"><quote><para class="ltx_noindent" xml:id="p1.p1"><p>Quoted.</p></para></quote><quote><p><inline-logical-block class="ltx_minipage" vattach="middle" width="236.0pt"><TOC lists="toc" scope="global" select="ltx:part | ltx:chapter | ltx:section | ltx:subsection | ltx:subsubsection | ltx:appendix | ltx:index | ltx:bibliography"><title>Contents</title></TOC></inline-logical-block></p></quote><quote><p><inline-sectional-block class="ltx_minipage" cssstyle="--ltx-box-width:295.0pt"><section xml:id="Sx1"><title>Notation</title><para xml:id="Sx1.p1"><p>Body.</p></para></section></inline-sectional-block></p></quote></para>"##,
   );
 }
 

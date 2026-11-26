@@ -14,5 +14,7 @@ LoadDefinitions!({
   // Its `{adjustwidth}[3][\@empty]` (:113) is a list, as changepage's (changepage_sty.rs): the
   // body in the flow, its paragraph closed before the end, the three arguments read, not typeset.
   DefEnvironment!("{adjustwidth} OptionalUndigested Undigested Undigested", "#body",
-    mode => "internal_vertical", before_digest_end => { leave_horizontal()?; });
+    mode => "internal_vertical",
+    after_digest_begin => sub[whatsit] { crate::changepage_sty::adjustwidth_list(whatsit, 2)?; },
+    before_digest_end => { leave_horizontal()?; });
 });

@@ -343,7 +343,8 @@ LoadDefinitions!({
   DefMacro!("\\format@title@subsubsection{}", "\\lx@tag[][.\\space]{\\thesubsubsection}#1");
 
   DefMacro!("\\format@title@description{}", "\\lx@tag[][:\\space]{#1}");
-  DefMacro!("\\descriptionlabel{}", "\\normalfont\\bfseries #1:\\space");
+  // amsart.cls:933's `\hspace\labelsep` (Perl ams_support:177 drops it), cancelled by the label box.
+  DefMacro!("\\descriptionlabel{}", "\\hspace\\labelsep\\normalfont\\bfseries #1:\\space");
 
   //======================================================================
   // Sec 6. Floating objects: Figures and tables

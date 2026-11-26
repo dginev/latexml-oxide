@@ -1,0 +1,16 @@
+% mechanism: latex.ltx:16278 `\@arrayparboxrestore`'s `\parskip\z@skip`, which `\@footnotetext` (:17661-17663, through
+%   `\@parboxrestore`) and a `p`/`m`/`b` cell (`\@startpbox`) run: inside a list, whose `\parskip` is its `\parsep`
+%   (:15863), a footnote's and a cell's paragraphs are unspaced, and a list in them pads by `\topsep` and `\partopsep`
+%   alone (`begin_itemize`'s padtop reads `\parskip`).
+% witness: synthetic (QA14K2 review S3)
+% oracle:  pdflatex 0 errors; "F 0.0pt.", "C 0.0pt."
+% engines: rust INT081AA "0.0pt plus 1.0pt" (article's `\parskip`); QA14K2 eb92bd5ebc9 "4.0pt plus 2.0pt minus 1.0pt"
+% expect:  0 errors, 0 warnings; "F 0.0pt.", "C 0.0pt."
+% status:  RED (QA14K2 eb92bd5ebc9) -> GREEN (QA14K2 fix round)
+\documentclass{article}
+\begin{document}
+\begin{itemize}
+\item A\footnote{F \the\parskip.\begin{itemize}\item N\end{itemize}}
+\item \begin{tabular}{p{4cm}}C \the\parskip.\begin{itemize}\item M\end{itemize}\end{tabular}
+\end{itemize}
+\end{document}

@@ -1,0 +1,15 @@
+% mechanism: article.cls:563-571 `{thebibliography}` is a `\list` whose setup sets `\labelwidth` to the widest label
+%   and `\leftmargin` = `\labelwidth` + `\labelsep`, by which `\linewidth` narrows (latex.ltx:15863-15867). The
+%   bibliography binding runs no `\list` registers.
+% witness: synthetic (QA14 K2 sibling sweep)
+% oracle:  pdflatex 0 errors; "B 329.44441pt 15.55559pt 10.55559pt"
+% engines: rust INT081AA "B 345.0pt 0.0pt 0.0pt"; QA14K2 "B 345.0pt 25.00003pt 20.00003pt"
+% expect:  0 errors; the values pdflatex prints
+% status:  RED (QA14K2)
+% moves:   post-merge
+\documentclass{article}
+\begin{document}
+\begin{thebibliography}{9}
+\bibitem{a} B \the\linewidth\space\the\leftmargin\space\the\labelwidth
+\end{thebibliography}
+\end{document}

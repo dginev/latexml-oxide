@@ -1,0 +1,25 @@
+% mechanism: latex.ltx:16028-16039 `\@item` sets the label's box after `\hskip-\labelsep`, so glue a label opens with nets
+%   against it even after an item that prints nothing and has no width (a strut, a `\label`, a colour switch, a
+%   `\textcolor`/`\mbox` wrapper). `net_label_labelsep`'s walk stops at the first item that is not glue, an
+%   `\unhbox`ed list or an `\hbox`, so these labels keep the `\labelsep` that L's nets away. A fix decides by what the
+%   digested item is (zero width, prints nothing) and enters one-argument box wrappers by meaning, not by a name list.
+% witness: synthetic (QA14K2 re-review F2, `p3.tex`)
+% oracle:  pdflatex 0 errors; "S", "Q", "C", "T", "M" and "L" at the margin (x 133.77bp), "N" `\labelsep` left of it
+% engines: rust INT081AA every label with no space (its `\labelsep` was 0pt); QA14K2 S, Q, C, T, M open with U+2002
+% expect:  0 errors, 0 warnings; `<tag>S</tag>`, `<tag>Q</tag>`, `<tag><text color="#0000FF">C</text></tag>`,
+%   `<tag><text color="#0000FF">T</text></tag>`, `<tag><text>M</text></tag>`, `<tag>L</tag>`, `<tag>N</tag>`
+% status:  RED (QA14K2)
+% moves:   post-merge (a zero-width item before a label's leading glue)
+\documentclass{article}
+\usepackage{xcolor}
+\begin{document}
+\begin{trivlist}
+\item[\strut\hskip\labelsep S] s
+\item[\label{lab}\hskip\labelsep Q] q
+\item[\color{blue}\hskip\labelsep C] c
+\item[\textcolor{blue}{\hskip\labelsep T}] t
+\item[\mbox{\hskip\labelsep M}] m
+\item[\hskip\labelsep L] l
+\item[N] n
+\end{trivlist}
+\end{document}

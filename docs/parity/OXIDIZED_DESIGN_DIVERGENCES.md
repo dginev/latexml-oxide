@@ -533,7 +533,7 @@ Font-Selection residual 9): it is a macro that expands to nothing, so it makes n
 
 ### 28. → KNOWN_PERL_ERRORS #1250 (Bib-section title = leading balanced group, not all trailing tokens)
 
-### 29. A box's text width is the width it declares, as the kernel's `\@parboxrestore` sets it — `\hsize`, `\columnwidth` and `\linewidth` inside, the declared width on the element (Perl: the trio without `\linewidth`; wrapfig's width discarded) — absorbs #42
+### 29. A box's text width is the width it declares, as the kernel's `\@parboxrestore` sets it — `\hsize`, `\columnwidth` and `\linewidth` inside, the declared width on the element — and a list's line is narrowed by its margins, as `\list` narrows it (Perl: the trio without `\linewidth`; wrapfig's width discarded; no list margins) — absorbs #42
 
 **Rule.** Inside a minipage, a `\parbox`, a `p`/`m`/`b` cell and a wrap float, `\linewidth` is the box's `\hsize`, as
 latex.ltx's `\@iiiminipage`/`\@iiiparbox`/`\@startpbox` reach it through `\@parboxrestore`/`\@arrayparboxrestore`
@@ -562,6 +562,44 @@ trio), its `\@parboxrestore` is `Tokens()`, a `p` cell sets `\hsize` alone (TeX_
   `\hsize`/`\columnwidth`/`\linewidth` in `after_digest_begin` (wrapfig's `\hsize<width>` + `\@parboxrestore`), leaving
   `\textwidth` (the `@width` percentage is of the outer one): 2603.23669 Figure 3 (`0.296\textwidth` around a 512px tikz
   image, 479px → 141px; Perl full width too, SHARED-FAILURE). Guard `cluster_sizing::wrapfig_inner_linewidth`.
+- **Lists** (QA14 K2): a list sets latex.ltx:15848-15869 `\list`'s registers — `\rightmargin`, `\listparindent`,
+  `\itemindent` cleared, `\@list<depth>` (size10.clo:216-249) and the setup body run (`\lx@list@params`), then
+  `\parskip\parsep` and `\linewidth`/`\@totalleftmargin` moved by `\leftmargin` and `\rightmargin` (`\lx@list@margins`) —
+  in the kernel `\list`, in `begin_itemize` for itemize/enumerate/description (article.cls:360's description setup,
+  enumitem's stated `leftmargin`/`rightmargin`), in `{quote}`/`{quotation}`/`{verse}` (article.cls:389-408) and in
+  changepage's `{adjustwidth}` (#341); a `\trivlist` (center, flushleft, flushright, theorem, proof) clears the margins
+  (:15903-15910). The standard classes set `\leftmargini`..`\leftmarginvi`, `\labelsep` and `\labelwidth`
+  (article.cls:322-339, report.cls:397-415, book.cls:424-442) in ems of the size file's `\normalsize`
+  (`declare_standard_class_lists`); the kernel's registers stay latex.ltx's zeros. Inside a list, a footnote
+  (`\@footnotetext`, :17661-17663), an `\@xfloat` float (:17482-17483), a minipage (its lists first-level ones, :16325
+  `\@mplistdepth`) and a `p` cell set their own line and `\@totalleftmargin\z@`, a footnote and a `p` cell also
+  `\parskip\z@skip` (:16278). An item's label box nets its leading glue against `\labelsep` (`net_label_labelsep`,
+  `\lx@item@labelbox`): :16028-16039 `\@item` sets the box after `\hskip-\labelsep`, so of the skips and kerns a label
+  opens with, an `\unhbox`ed box's too (:17206 `\@begintheorem`, syntax.sty:244), `max(0, sum - \labelsep)` stays and a
+  trailing `\labelsep` stays, on every label path (`\item[…]`, a `\list` label, a trivlist item, the typerefnum);
+  1508.03599 (10pt kept), 2605.07451 (none). The binding's `\descriptionlabel` opens with article.cls:364's
+  `\hspace\labelsep` (amsart.cls:933's too; Perl latex_constructs.pool.ltxml:1619 and ams_support.sty.ltxml:177 drop
+  it); a skip of exactly `\labelsep` in the run is the one cancelled, the label's own glue kept as written (`~`,
+  `\quad`). `\makelabel` is reset after `\@list<depth>` (:15859, in `\lx@list@params`; identity, as `\@mklab`'s `\hfil`
+  would lead the tag), then the list's setup sets its own: an itemize's or enumerate's (:16061, :16072), a
+  description's `\descriptionlabel` (article.cls:362; enumitem.sty:1470, a `\newlist{…}{description}` too, but not
+  one with a `font`/`format`, which enumitem sets inside the label, :1474-1480, and ours around it; 1809.03101). So
+  neither a class's `\@list<depth>` label (tlp.cls `\makeRLlabel`, 1210.0368) nor an enclosing description's (a
+  paralist `{compactenum}`, 1406.1992; a kernel `\list`) nor a document's global `\makelabel` labels the items; an
+  inline list, which opens no `\list`, resets it in `begin_itemize`. Perl's `\list` resets none. A label that is only glue narrower than `\labelsep` (`\item[~]`) prints
+  no `<tag>` in a list whose label is not a description's (Perl: `<tag> </tag>`).
+  enumitem's `wide`/`fullwidth` set `\leftmargin\z@` (enumitem.sty:745-758), one reading with a stated `leftmargin`
+  for the setup and the CSS (`stated_leftmargin`), the keys in enumitem's order, `\setlist`'s first (`merge_key`), a
+  key a `\setlist*` stores again after the others (enumitem.sty:1603-1611). Not modelled: :15864
+  `\parindent\listparindent` (it would mark every item's paragraphs `ltx_noindent`), `\parshape`, `\@toodeep`. **Perl**:
+  `\list` sets no register (latex_constructs.pool.ltxml:1649), `beginItemize` none (:1303), and every margin register is
+  0pt (:1690-1702), so a `width=\linewidth` graphic in a list took the text's width. Residuals (RED catalog):
+  amsart's label-measured margins, REVTeX's point margins, enumitem's computed `leftmargin=*`, `{thebibliography}`'s
+  list, the marginpar's line, the body's 10pt em at 11pt/12pt (`{quotation}`'s indent, `{verse}`'s margin), enumitem's
+  `left=`, a bound class's own list registers (mnras's `{quote}`, emulateapj's itemize), a label's glue after a zero-width
+  item (`\strut`, `\label`, a colour, `\mbox`), enumitem's description `font`/`format` outside the label (a bare `\item`'s number printed). Guard
+  `perfect_kernel_batchqa14k2::list_registers_set_the_line_width`; census report_QA14.tsv: the 104 LIST/CLASSLIST/ADJW/
+  CONSEQ cells of its article contexts exact, none of its 348 exact cells changed.
 
 ---
 
@@ -2633,7 +2671,7 @@ public-surface convention (`~/git/ar5iv-css` `docs/rfc_latexml_custom_properties
 
 | entry | the source | emitted | the stylesheet delta | code / guard |
 |---|---|---|---|---|
-| leftmargin | enumitem `leftmargin=*` / `=<dim>` | `class="ltx_leftmargin_flush"` / `cssstyle="--ltx-enum-leftmargin:<dim>"` | `.ltx_itemize, .ltx_enumerate { margin-left: var(--ltx-enum-leftmargin, 1em) }`, `.ltx_leftmargin_flush { --ltx-enum-leftmargin: 0 }` (ltx-article/book/report.css) | `enumitem_sty.rs::begin_enum_itemize`; `50_structure::enumitem_leftmargin_test` |
+| leftmargin | enumitem `leftmargin=*` / `=<dim>` (`wide`, `fullwidth`: `0pt`, `stated_leftmargin`) | `class="ltx_leftmargin_flush"` / `cssstyle="--ltx-enum-leftmargin:<dim>"` | `.ltx_itemize, .ltx_enumerate { margin-left: var(--ltx-enum-leftmargin, 1em) }`, `.ltx_leftmargin_flush { --ltx-enum-leftmargin: 0 }` (ltx-article/book/report.css) | `enumitem_sty.rs::begin_enum_itemize`; `50_structure::enumitem_leftmargin_test` |
 | framed verbatim (ex-#111) | fancyvrb `frame=single`, `framesep`, `framerule`, fvextra `backgroundcolor` | one `ltx_framed_rectangle` box, class `ltx_framed_verbatim`, `cssstyle` padding / border-width / background | `.ltx_framed_verbatim { max-width:100%; overflow-x:auto; box-sizing:border-box; display:block; width:fit-content }` (LaTeXML.css + ar5iv-css) | `fancyvrb_sty.rs`, `fvextra_sty.rs`; fixture `tests/tokenize/fancyvrb_frame.{tex,xml}`, `latexml_post::xslt::witnessed_css_delta::framed_verbatim_responsive_delta_stays_present` |
 | aspect ratio (ex-#139) | the requested `\includegraphics` W/H | `cssstyle="aspect-ratio:W/H"` on the `<img>` | `height:auto` in the flex/minipage image rules | `latexml_post/src/graphics.rs:501 set_graphic_src`; `latexml_post::graphics::tests::set_graphic_src_emits_requested_aspect_ratio_2392` |
 | break space (ex-#142) | `\\[dimen]` (non-zero) | `cssstyle="--ltx-break-space:<pt>"` on `ltx:break` | none: inert until a theme opts in | `\lx@newline`; `06_cluster_regressions::cluster_break_optional_glue_722` |
@@ -22648,7 +22686,7 @@ content and structure, and departs from forest.sty and pdflatex as follows:
 
 changepage.sty's `{adjustwidth}` is a `\list` (changepage.sty:110-139); Perl has no binding, and `--includestyles` builds it from the raw file as a tagless one-item `<itemize>`, in which a bibliography is malformed (`<ltx:bibliography> isn't allowed in <ltx:item>`, the MDPI template's shape). The margins are layout; the body is the document's own text.
 
-**Rust** (batch 57l): the binding loads the package's macros raw and defines `{adjustwidth}`/`{adjustwidth*}` (and chngpage's `{adjustwidth}[3]`) as a transparent body in internal vertical mode whose last paragraph closes before the end, as the list's `\endtrivlist` does (latex.ltx:15915-15926). Under memoir, which provides changepage's commands (memoir.cls:12216) and whose `{adjustwidth}` is the same list (memoir.cls:11267-11297), the binding loads nothing and its environment replaces memoir's; memoir's `\checkoddpage` stays. `\ch@ngetext`, which `\changetext`/`\changepage` end with (changepage.sty:80-88, chngpage.sty:79-88, memoir.cls:11237-11245), halves `\columnwidth` under `\if@twocolumn`; one shared override (`changepage_sty.rs` `ONE_COLUMN_CH_NGETEXT`, installed by the changepage, chngpage and memoir bindings) keeps LaTeXML's one column, so `\linewidth` follows the changed `\textwidth`.
+**Rust** (batch 57l): the binding loads the package's macros raw and defines `{adjustwidth}`/`{adjustwidth*}` (and chngpage's `{adjustwidth}[3]`) as a transparent body in internal vertical mode whose last paragraph closes before the end, as the list's `\endtrivlist` does (latex.ltx:15915-15926). Its arguments are the list's margins, not text: they set the list's registers (`adjustwidth_list`; #29), so `\linewidth` inside is the text's less both margins, MDPI's `{-\extralength}{0cm}` (mdpi.cls:1486-1487, 4.61cm, `mdpi_cls.rs`) widening it, and the panels of a float set in it are a row of that line (`list_sets_the_panel_line`; 2405.20768, 2408.06972). Under memoir, which provides changepage's commands (memoir.cls:12216) and whose `{adjustwidth}` is the same list (memoir.cls:11267-11297), the binding loads nothing and its environment replaces memoir's; memoir's `\checkoddpage` stays. `\ch@ngetext`, which `\changetext`/`\changepage` end with (changepage.sty:80-88, chngpage.sty:79-88, memoir.cls:11237-11245), halves `\columnwidth` under `\if@twocolumn`; one shared override (`changepage_sty.rs` `ONE_COLUMN_CH_NGETEXT`, installed by the changepage, chngpage and memoir bindings) keeps LaTeXML's one column, so `\linewidth` follows the changed `\textwidth`.
 
 **Witnesses**: 2605.02723 (a `width=\linewidth` figure, 0pt before), 2305.09826 (`$$` inside), 2006.09676 (`{adjustwidth*}`).
 

@@ -163,7 +163,7 @@ pub(crate) fn load() -> Result<()> {
     aligning_environment("center", "ltx_centering", document, props)?;
     Ok(())
   }, mode => "internal_vertical",
-  before_digest => { Let!("\\\\", "\\@normalcr"); });
+  before_digest => { Let!("\\\\", "\\@normalcr"); trivlist_registers()?; });
   // HOWEVER, define a plain \center to act like \centering (?)
   DefMacro!("\\center", "\\centering");
   def_macro_noop("\\endcenter")?;
@@ -177,13 +177,13 @@ pub(crate) fn load() -> Result<()> {
     aligning_environment("left", "ltx_align_left", document, props)?;
     Ok(())
   }, mode => "internal_vertical",
-  before_digest => { Let!("\\\\", "\\@normalcr"); });
+  before_digest => { Let!("\\\\", "\\@normalcr"); trivlist_registers()?; });
   DefEnvironment!("{flushright}", sub[document, _args, props] {
     document.maybe_close_element("ltx:p")?; // this starts a new vertical block
     aligning_environment("right", "ltx_align_right", document, props)?;
     Ok(())
   }, mode => "internal_vertical",
-  before_digest => { Let!("\\\\", "\\@normalcr"); });
+  before_digest => { Let!("\\\\", "\\@normalcr"); trivlist_registers()?; });
   // Perl latex_constructs.pool.ltxml L1316-1318: "Redefine these so they work
   // both as environments, and as single commands". The bare `\flushleft` /
   // `\flushright` commands (without matching `\end...`) are used as
@@ -299,16 +299,21 @@ pub(crate) fn load() -> Result<()> {
   Let!("\\@block@cr", "\\lx@newline");
   // Perl `<ltx:quote>#body</ltx:quote>` (and `role='verse'`), its end acting on the quote it opened
   // (`quote_environment`).
-  // Each is a `\list` in latex.ltx, so it runs `\@trivlist`'s additions (`\lx@trivlist@hook`, below).
+  // Each is a `\list` in latex.ltx, so it runs `\@trivlist`'s additions (`\lx@trivlist@hook`, below) and sets the
+  // list's registers with its own setup (article.cls:389-408, `quote_list`).
   DefEnvironment!("{quote}", sub[document, _args, props] {
     quote_environment(document, props, None)
-  }, before_digest => { run_trivlist_hook()?; }, mode => "internal_vertical");
+  }, before_digest => { quote_list(r"\rightmargin\leftmargin")?; }, mode => "internal_vertical");
   DefEnvironment!("{quotation}", sub[document, _args, props] {
     quote_environment(document, props, None)
-  }, before_digest => { run_trivlist_hook()?; }, mode => "internal_vertical");
+  }, before_digest => {
+    quote_list(r"\listparindent1.5em\itemindent\listparindent\rightmargin\leftmargin\parsep\z@\@plus\p@")?;
+  }, mode => "internal_vertical");
   DefEnvironment!("{verse}", sub[document, _args, props] {
     quote_environment(document, props, Some("verse"))
-  }, before_digest => { run_trivlist_hook()?; }, mode => "internal_vertical");
+  }, before_digest => {
+    quote_list(r"\itemsep\z@\itemindent-1.5em\listparindent\itemindent\rightmargin\leftmargin\advance\leftmargin1.5em")?;
+  }, mode => "internal_vertical");
 
   //======================================================================
   // C.6.2 List-Making environments
@@ -589,11 +594,13 @@ pub(crate) fn load() -> Result<()> {
   def_macro_noop("\\the@descvi")?;
   // These hookup latexml"s numbering to normal latex"s
   // Umm.... but they"re not normally used, since \item usually gets an argument!
-  DefMacro!("\\descriptionlabel{}", "\\normalfont\\bfseries #1");
-  DefMacro!("\\fnum@@desci", "{\\descriptionlabel{}}");
-  DefMacro!("\\fnum@@descii", "{\\descriptionlabel{}}");
-  DefMacro!("\\fnum@@desciii", "{\\descriptionlabel{}}");
-  DefMacro!("\\fnum@@desciv", "{\\descriptionlabel{}}");
+  // article.cls:364's `\hspace\labelsep` (Perl :1619 drops it), cancelled in the label box, as `\@item` cancels it
+  // (`net_label_labelsep`); a bare `\item`'s label is boxed too (Perl :1620-1623 `{\descriptionlabel{}}`).
+  DefMacro!("\\descriptionlabel{}", "\\hspace\\labelsep\\normalfont\\bfseries #1");
+  DefMacro!("\\fnum@@desci", r"{\lx@item@labelbox{\descriptionlabel{}}}");
+  DefMacro!("\\fnum@@descii", r"{\lx@item@labelbox{\descriptionlabel{}}}");
+  DefMacro!("\\fnum@@desciii", r"{\lx@item@labelbox{\descriptionlabel{}}}");
+  DefMacro!("\\fnum@@desciv", r"{\lx@item@labelbox{\descriptionlabel{}}}");
 
   DefMacro!("\\desctyperefname", "\\lx@latin@name{item}");
 
@@ -656,9 +663,33 @@ pub(crate) fn load() -> Result<()> {
   // called `\usecounter{}` itself for the unnumbered case and let the numbered
   // case's `\usecounter` start the list from inside `#2`).
   // The label is kept in `\@itemlabel` (latex.ltx:15858), which `\@trivlist` makes the items' label below.
+  // Its registers as latex.ltx sets them (:15854-15857, :15863-15867): `\@list<depth>` and the setup body give the
+  // margins, which narrow `\linewidth` after `\@trivlist` (`\lx@list@margins`; not :15864's `\parindent\listparindent`,
+  // which would mark every item's paragraphs `ltx_noindent`, tex_paragraph.rs). Perl's `\list`
+  // (latex_constructs.pool.ltxml:1649) sets none, so a `width=\linewidth` graphic in a list took the text's width.
+  // OXIDIZED_DESIGN_DIVERGENCES #29.
   DefMacro!(
     r"\list{}{}",
-    r"\global\advance\@listdepth\@ne\def\@itemlabel{#1}\let\@listctr\@empty\@nmbrlistfalse#2\@trivlist"
+    r"\global\advance\@listdepth\@ne\lx@list@params\def\@itemlabel{#1}\let\@listctr\@empty\@nmbrlistfalse#2\relax\@trivlist\lx@list@margins"
+  );
+  // latex.ltx:15854-15859: `\@list<depth>`, then `\let\makelabel\@mklab`, so neither a class's `\@list<depth>` label
+  // (tlp.cls `\makeRLlabel`, 1210.0368) nor an enclosing list's reaches the items; identity, as `\@mklab`'s `\hfil`
+  // would lead the tag.
+  DefMacro!(
+    r"\lx@list@params",
+    r"\rightmargin\z@\listparindent\z@\itemindent\z@\csname @list\romannumeral\the\@listdepth\endcsname\let\makelabel\@firstofone"
+  );
+  DefMacro!(
+    r"\lx@list@margins",
+    r"\parskip\parsep\advance\linewidth-\rightmargin\advance\linewidth-\leftmargin\advance\@totalleftmargin\leftmargin"
+  );
+  // (`list_sets_the_panel_line`)
+  DefPrimitive!("\\lx@panel@line Dimension", sub[(line)] {
+    assign_value(PANEL_LINE, Stored::Dimension(line), Some(Scope::Local));
+  });
+  DefMacro!(
+    r"\lx@trivlist@margins",
+    r"\parsep\parskip\labelwidth\z@\leftmargin\z@\itemindent\z@"
   );
   DefMacro!("\\endlist", r"\global\advance\@listdepth\m@ne\endlx@list");
 
@@ -933,7 +964,18 @@ pub(crate) fn load() -> Result<()> {
       Some(ExpansionBody::Tokens(body)) if label_calls_fnum(&counter, body.unlist_ref()) => body.clone().unlist(),
       _ => vec![T_CS!("\\@itemlabel")],
     };
-    Tokens::new(define_item_fnum(&counter, label))
+    let mut boxed = vec![T_CS!("\\lx@item@labelbox"), T_BEGIN!()];
+    boxed.extend(label);
+    boxed.push(T_END!());
+    Tokens::new(define_item_fnum(&counter, boxed))
+  });
+  // latex.ltx:16028-16039 `\@item`'s label box: `\makelabel{…}` set in a group (`\sbox\@tempboxa`), then after
+  // `\hskip-\labelsep`, against which its leading glue nets (`net_label_labelsep`; 1508.03599, 2605.07451).
+  DefPrimitive!("\\lx@item@labelbox{}", sub[(label)] {
+    let mut grouped = vec![T_BEGIN!()];
+    grouped.extend(label.unlist());
+    grouped.push(T_END!());
+    net_label_labelsep(digest(Tokens::new(grouped))?.unlist())
   });
   DefMacro!("\\trivlist@item", "\\preitem@par\\trivlist@item@");
   DefConstructor!("\\trivlist@item@ OptionalUndigested",
@@ -949,10 +991,10 @@ pub(crate) fn load() -> Result<()> {
         // The label is typeset as written (latex.ltx `\@item` → `\makelabel{#1}`), never expanded first: Perl's
         // full `Expand` (latex_constructs.pool.ltxml:1669-1672) left the raw kernel `\textbf`'s font commands a
         // nameless `\def` ("Missing control sequence inserted"; webquiz.tex:50 `\item[\hskip\labelsep\textbf{#1}]`).
-        // It is set in a group, as latex.ltx sets it in a box (latex.ltx:16028 `\sbox\@tempboxa{\makelabel{#1}}`): a
+        // It is set in a group, as latex.ltx sets it in a box (`\lx@item@labelbox`, latex.ltx:16028): a
         // font or colour switch or a local `\def` in it (`\item[\scshape Proof.]`) ends with the label, never reaching
         // the item's text, while a `\gdef` or a counter step persists (2605.27137, 2605.03300).
-        let mut label = vec![T_BEGIN!()];
+        let mut label = vec![T_CS!("\\lx@item@labelbox"), T_BEGIN!()];
         label.extend(tag_tokens.clone().unlist());
         label.push(T_END!());
         props.insert("tag", digest(Tokens::new(label))?.into());
@@ -1179,6 +1221,15 @@ fn close_trivlists_from(document: &mut Document, level: usize) -> Result<()> {
     document.maybe_close_node(&list)?;
   }
   Ok(())
+}
+
+/// The `\list` a `{quote}`, `{quotation}` or `{verse}` is in latex.ltx (article.cls:389-408): `\@trivlist`'s additions,
+/// `\@listdepth` stepped, and the list's registers with `setup` (`begin_list_registers`), the line narrowed by both margins.
+fn quote_list(setup: &'static str) -> Result<()> {
+  run_trivlist_hook()?;
+  step_list_depth()?;
+  begin_list_registers(TokenizeInternal!(setup).unlist())?;
+  end_list_registers()
 }
 
 /// `{quote}`, `{quotation}`, `{verse}`: Perl's `<ltx:quote>#body</ltx:quote>` (`role='verse'` for a verse,

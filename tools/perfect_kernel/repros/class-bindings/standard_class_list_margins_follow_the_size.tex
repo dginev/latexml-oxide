@@ -1,0 +1,18 @@
+% mechanism: article.cls:322-339 (report.cls, book.cls alike) sets `\leftmargini`..`\leftmarginvi`, `\labelsep` and
+%   `\labelwidth` in ems after the size file's `\normalsize`: at 12pt, cmr12's 1em = 11.74988pt, whatever size the
+%   binding's own `\normalsize` sets.
+% witness: synthetic (QA14 K2; Gemini Neon's oracle GN_QA14K2_2026-11-25.tsv, article/report 11pt and 12pt rows)
+% oracle:  pdflatex 0 errors; A "29.3747pt 5.87494pt 23.49976pt", `\linewidth \leftmargin \@totalleftmargin`:
+%   B1 "360.6253pt 29.3747pt 29.3747pt", B2 "334.77562pt 25.84969pt 55.22438pt"
+% engines: rust INT081AA: A "0.0pt 0.0pt 0.0pt", every line 390.0pt; QA14K2 at the binding's 10pt em: A "25.00003pt 5.0pt
+%   20.00003pt", B1 "364.99997pt"
+% expect:  0 errors, 0 warnings; the values pdflatex prints
+% status:  RED (INT081AA) -> GREEN (QA14K2)
+\documentclass[12pt]{report}
+\makeatletter
+\newcommand\W[1]{#1 \the\linewidth\space\the\leftmargin\space\the\@totalleftmargin}
+\makeatother
+\begin{document}
+A \the\leftmargini\space\the\labelsep\space\the\labelwidth
+\begin{itemize}\item \W{B1}\begin{itemize}\item \W{B2}\end{itemize}\end{itemize}
+\end{document}

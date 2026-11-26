@@ -1,0 +1,15 @@
+% mechanism: enumitem.sty:837-892 `\enit@calcwidth`/`\enit@calcleft`: `leftmargin=*` is `\labelindent` + the widest
+%   label's width (`\settowidth\labelwidth{\@itemlabel}`) + `\labelsep`. The binding applies only a stated length; a
+%   computed one keeps the class's `\leftmargini`.
+% witness: synthetic (QA14 K2 sibling sweep); Gemini Neon's oracle MDPI rows (mdpi.cls:44 `\setitemize{leftmargin=*}`)
+% oracle:  pdflatex 0 errors; "A 335.00122pt 9.99878pt", "B 332.2222pt 12.7778pt"
+% engines: rust INT081AA "345.0pt 0.0pt" both; QA14K2 "319.99997pt 25.00003pt" both
+% expect:  0 errors; the values pdflatex prints
+% status:  RED (QA14K2)
+% moves:   post-merge (enumitem's computed margins)
+\documentclass{article}
+\usepackage{enumitem}
+\begin{document}
+\begin{itemize}[leftmargin=*]\item A \the\linewidth\space\the\leftmargin\end{itemize}
+\begin{enumerate}[leftmargin=*]\item B \the\linewidth\space\the\leftmargin\end{enumerate}
+\end{document}
