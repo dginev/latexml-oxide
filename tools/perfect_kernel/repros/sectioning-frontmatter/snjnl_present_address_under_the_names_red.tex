@@ -1,0 +1,27 @@
+% mechanism: sn-jnl's `\presentaddress{text}` (2603.28334's sn-jnl.cls:576, 2412.01641's :574), which `\@maketitle` prints under the
+%   addresses with the corresponding-author line and the `\equalcont` notes, before `\printabstract` (2603.28334's :765-774), stays
+%   undeclared: its note lands after the abstract, Perl's place (Base_Utility.pool.ltxml:793-795, :836). The class's
+%   notes printed together are declared together (OXIDIZED_DESIGN_DIVERGENCES #1074, REVBLOCKPLACEb): `\presentaddress`
+%   queues its note at the call, ahead of the unmarked `\equalcont`-family notes `print_notes` (sn_jnl_cls.rs) queues at
+%   `\maketitle`, which print above it; declaring it right moves it into `print_notes`, after those notes.
+% witness: synthetic (`\presentaddress` in 2 sn-jnl papers per sn_jnl_cls.rs:452; none in BLOCKDECL's 40 sn-jnl papers)
+% oracle:  pdflatex 0 errors (with 2412.01641's sn-jnl.cls, :574, :756, :759): "A Title / Ann Able1† / 1Univ A / †These authors
+%          contributed equally to this work. / Present Address: / Lab Q, Town / Abstract / The abstract."
+% engines: rust INT081RC6 = BLOCKDECL: title, creator (its note[equal-contributors]), abstract, note[present-address]
+% expect:  0 errors 0 Warnings; root order title, creator, note[role=present-address], abstract
+% status:  RED (BLOCKDECL)
+% moves:   post-merge (sn-jnl's title-page notes declared together)
+% preload: ar5iv.sty
+\documentclass{sn-jnl}
+\usepackage{amsmath}
+\begin{document}
+\title{A Title}
+\author[1]{\fnm{Ann} \sur{Able}}
+\equalcont{These authors contributed equally to this work.}
+\affil[1]{\orgname{Univ A}}
+\presentaddress{Lab Q, Town}
+\abstract{The abstract.}
+\maketitle
+\section{S}
+Body.
+\end{document}

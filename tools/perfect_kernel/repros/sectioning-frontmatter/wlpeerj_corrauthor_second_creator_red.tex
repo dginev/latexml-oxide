@@ -1,0 +1,31 @@
+% mechanism: wlpeerj's `\corrauthor[mark]{name}{email}` only stores the corresponding-author lines (`\thecorrauthor`,
+%   wlpeerj.cls:146-151) that `\@maketitle` prints under the names (:176-177): "Corresponding author: <name><mark> /
+%   Email address: <email>". The binding runs `\author{#2}` for it, so the name already given by `\author` is a second
+%   creator (72 of BLOCKDECL's 103 wlpeerj papers name an `\author`; others name two people or a sentence in it,
+%   1911.09531, 2005.10227). Keeping one creator with the e-mail on it needs the name read against the creators, more
+%   than the binding's own lines.
+% witness: 2007.11779 (wlpeerj; 2 creators for its one author)
+% oracle:  pdflatex 0 errors (with 2007.11779's wlpeerj.cls): "T / Ann Able1 and Bob Baker2 / 1Univ X, Town / 2Inst Y, City /
+%          Corresponding author: / Ann Able1 / Email address: ann@x.edu / ABSTRACT / Abstract text."
+% engines: rust INT081RC6 = BLOCKDECL: three creators (Ann Able, Bob Baker, Ann Able)
+% expect:  0 errors 0 Warnings; two creators (Ann Able, Bob Baker), the corresponding line's e-mail kept
+% status:  RED (BLOCKDECL)
+% moves:   post-merge (a ruling: the corresponding line's name read against the creators)
+% preload: ar5iv.sty
+\documentclass{wlpeerj}
+\title{T}
+\author[1]{Ann Able}
+\author[2]{Bob Baker}
+\affil[1]{Univ X, Town}
+\affil[2]{Inst Y, City}
+\corrauthor[1]{Ann Able}{ann@x.edu}
+\begin{abstract}
+Abstract text.
+\end{abstract}
+\begin{document}
+\flushbottom
+\maketitle
+\thispagestyle{empty}
+\section{S}
+Body.
+\end{document}

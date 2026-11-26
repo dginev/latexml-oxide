@@ -9,6 +9,12 @@ top of its group.
 
 ### Unreleased
 
+  - **bmvc2k's institutions, bytedance_seed's affiliation and contribution lists and wlpeerj's affiliation and
+    corresponding e-mail lines sit under the names, before the abstract, where each class prints them.** They were
+    notes after the abstract, Perl's place for every note; each binding now declares them under the names
+    (`\lx@names@note`), and bytedance_seed's correspondence line, printed after the abstract, stays there (1507.06535,
+    2506.15211, 2007.11779; OXIDIZED_DESIGN_DIVERGENCES #1074). Guard
+    `perfect_kernel_batchblockplace::a_block_contact_note_sits_under_the_names`.
   - **A Fatal during digestion keeps the text digested before it; the run stays Fatal.** A delimited argument that
     runs off the end of the input (`Fatal:Mouth:EoF`), an unbalanced definition (`Stomach:Misdefined`), a parameter or
     group Fatal, or a binding's own `Fatal()` wrote a 39-byte document, because a `document` environment is one

@@ -38,12 +38,69 @@ fn frontmatter_order(xml: &str) -> Vec<String> {
     .collect()
 }
 
+/// The contrib classes' declared notes (BLOCKDECL): the repro, the root's order without its creators, the creators (none:
+/// wlpeerj's second creator is `wlpeerj_corrauthor_second_creator_red`) and the run from the last creator to the abstract.
+const CLASS_ROWS: &[(&str, &[&str], Option<usize>, &str)] = &[
+  // bmvc2k's `\addinstitution` (1507.06535, 1806.03891, 1908.01683)
+  (
+    repro!("bmvc2k_institution_note_under_the_names"),
+    &["title", "toctitle", "note[affiliation]", "abstract"],
+    Some(1),
+    "  </creator>\n  <note role=\"affiliation\" xml:id=\"id2\">Inst X<break/>City Y</note>\n  <abstract ",
+  ),
+  // bytedance_seed's `\affiliation` and `\contribution`, `\correspondence` after the abstract (2506.15211, 2511.06346)
+  (
+    repro!("bytedance_affiliation_and_contribution_under_the_names"),
+    &[
+      "title",
+      "note[affiliation]",
+      "note[contribution]",
+      "abstract",
+      "note[correspondence]",
+    ],
+    Some(1),
+    "  </creator>\n  <note role=\"affiliation\" xml:id=\"id1\">Inst X</note>\n  <note role=\"contribution\" \
+     xml:id=\"id2\">Work done at Q</note>\n  <abstract ",
+  ),
+  // wlpeerj's `\affil` and `\corrauthor`'s e-mail (2007.11779)
+  (
+    repro!("wlpeerj_affil_and_email_under_the_names"),
+    &["title", "note[affiliation]", "note[email]", "abstract"],
+    None,
+    "  </creator>\n  <note role=\"affiliation\" xml:id=\"id1\">Univ X, Town</note>\n  <note role=\"email\" \
+     xml:id=\"id2\">ann@x.edu</note>\n  <abstract ",
+  ),
+];
+
 /// jfm's shared, unmarked `\affiliation` under two names, declared under the names (1711.01065; the declared siblings
 /// mdpi 1910.13722, ieeeaccess 2006.03169, oup-authoring-template 2512.03760, sigma 0803.4168, autart 1402.5644):
 /// placed after the creators, before the abstract, the PDF's order. Red (208b29241bb): after the abstract. Distinct:
-/// the move, and the no-creator path that keeps Perl's order.
+/// the move, and the no-creator path that keeps Perl's order. The rows of [`CLASS_ROWS`], red on INT081RC6 (after the
+/// abstract): the contrib classes' declarations, bytedance's two lists in order with the undeclared note after.
 #[test]
 fn a_block_contact_note_sits_under_the_names() {
+  for &(tex, order, creators, block) in CLASS_ROWS {
+    let (log, xml) = run(tex);
+    assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+    let found = frontmatter_order(&xml);
+    let found_creators = found.iter().filter(|name| *name == "creator").count();
+    let others: Vec<&str> = found
+      .iter()
+      .map(String::as_str)
+      .filter(|name| *name != "creator")
+      .collect();
+    assert_eq!(others, order, "{xml}");
+    if let Some(creators) = creators {
+      assert_eq!(found_creators, creators, "{xml}");
+    }
+    assert!(xml.contains(block), "{xml}");
+    // (the block's `</creator>` is the last creator's)
+    assert!(
+      !xml[xml.find(block).unwrap() + 1..].contains("<creator"),
+      "{xml}"
+    );
+  }
+
   let (log, xml) = run(repro!("block_contact_note_before_abstract"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(

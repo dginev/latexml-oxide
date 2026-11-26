@@ -40,18 +40,18 @@ LoadDefinitions!({
   DefMacro!("\\printbibliography[]", None);
 
   // Frontmatter — preserve author content.
-  // \corrauthor[mark]{name}{email} — emit name as author + email note.
+  // \corrauthor[mark]{name}{email} — emit name as author + email note (a second creator for a name `\author` gave:
+  // `wlpeerj_corrauthor_second_creator_red`). `\@maketitle` prints the `\affil` lines (authblk's `\@author`,
+  // wlpeerj.cls:33, :173), then `\thecorrauthor` (:146-151, :176-177), before the abstract (2007.11779):
+  // `\lx@names@note`, OD #1074.
   DefMacro!(
     "\\corrauthor[]{}{}",
-    "\\author{#2}\\@add@frontmatter{ltx:note}[role=email]{#3}"
+    "\\author{#2}\\lx@names@note{email}{#3}"
   );
   // \authoraffiliation[mark]{name}{affil} — emit name + affil note.
   DefMacro!(
     "\\authoraffiliation[]{}{}",
     "\\author{#2}\\@add@frontmatter{ltx:note}[role=affiliation]{#3}"
   );
-  DefMacro!(
-    "\\affil[]{}",
-    "\\@add@frontmatter{ltx:note}[role=affiliation]{#2}"
-  );
+  DefMacro!("\\affil[]{}", "\\lx@names@note{affiliation}{#2}");
 });
