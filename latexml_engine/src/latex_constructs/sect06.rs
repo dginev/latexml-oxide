@@ -959,7 +959,18 @@ pub(crate) fn load() -> Result<()> {
       Some(ExpansionBody::Tokens(body)) if label_calls_fnum(&counter, body.unlist_ref()) => body.clone().unlist(),
       _ => vec![T_CS!("\\@itemlabel")],
     };
-    Tokens::new(define_item_fnum(&counter, label))
+    let mut boxed = vec![T_CS!("\\lx@item@labelbox"), T_BEGIN!()];
+    boxed.extend(label);
+    boxed.push(T_END!());
+    Tokens::new(define_item_fnum(&counter, boxed))
+  });
+  // latex.ltx:16028-16039 `\@item`'s label box: `\makelabel{…}` set in a group (`\sbox\@tempboxa`), then after
+  // `\hskip-\labelsep`, against which its leading glue nets (`net_label_labelsep`; 1508.03599, 2605.07451).
+  DefPrimitive!("\\lx@item@labelbox{}", sub[(label)] {
+    let mut grouped = vec![T_BEGIN!()];
+    grouped.extend(label.unlist());
+    grouped.push(T_END!());
+    net_label_labelsep(digest(Tokens::new(grouped))?.unlist())
   });
   DefMacro!("\\trivlist@item", "\\preitem@par\\trivlist@item@");
   DefConstructor!("\\trivlist@item@ OptionalUndigested",
@@ -975,11 +986,10 @@ pub(crate) fn load() -> Result<()> {
         // The label is typeset as written (latex.ltx `\@item` → `\makelabel{#1}`), never expanded first: Perl's
         // full `Expand` (latex_constructs.pool.ltxml:1669-1672) left the raw kernel `\textbf`'s font commands a
         // nameless `\def` ("Missing control sequence inserted"; webquiz.tex:50 `\item[\hskip\labelsep\textbf{#1}]`).
-        // It is set in a group, as latex.ltx sets it in a box (latex.ltx:16028 `\sbox\@tempboxa{\makelabel{#1}}`): a
+        // It is set in a group, as latex.ltx sets it in a box (`\lx@item@labelbox`, latex.ltx:16028): a
         // font or colour switch or a local `\def` in it (`\item[\scshape Proof.]`) ends with the label, never reaching
         // the item's text, while a `\gdef` or a counter step persists (2605.27137, 2605.03300).
-        let mut label = vec![T_BEGIN!()];
-        label.extend(label_box_labelsep());
+        let mut label = vec![T_CS!("\\lx@item@labelbox"), T_BEGIN!()];
         label.extend(tag_tokens.clone().unlist());
         label.push(T_END!());
         props.insert("tag", digest(Tokens::new(label))?.into());

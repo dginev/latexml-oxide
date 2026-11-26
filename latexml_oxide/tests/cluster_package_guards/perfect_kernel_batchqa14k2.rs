@@ -34,9 +34,16 @@ type Case = (
 /// 20.00003pt", at the binding's 10pt em.
 /// adjustwidth_panels_share_the_line: panels in an `{adjustwidth}` are a row of its line. Red (QA14K2 round 1):
 /// `panelwidth="0.349"`, `panelrows="2"`. Witnesses 2405.20768, 2408.06972.
+/// label_opening_glue_nets_against_labelsep: a label's leading glue nets against `\labelsep` on every label path, a
+/// trailing one stays, a `\usebox`ed register keeps its own. Red (QA14K2 eb92bd5ebc9): `<tag> x</tag>` (U+2002),
+/// `<tag> •</tag>`, the typerefnum's ` k`. Witnesses 2605.07451, 1508.03599.
+/// enumitem_wide_clears_the_left_margin: `wide`/`fullwidth` set `\leftmargin\z@`. Red (QA14K2 eb92bd5ebc9): A-D, F
+/// "319.99997pt 25.00003pt".
+/// note_and_cell_paragraphs_are_unspaced_in_a_list: a footnote and a `p` cell reset `\parskip`. Red (QA14K2
+/// eb92bd5ebc9): "4.0pt plus 2.0pt minus 1.0pt" (the list's `\parsep`).
 #[test]
 fn list_registers_set_the_line_width() {
-  let cases: [Case; 6] = [
+  let cases: [Case; 9] = [
     (repro!("list-structure/list_narrows_the_line_width.tex"), &[
       (
         "p",
@@ -277,6 +284,106 @@ fn list_registers_set_the_line_width() {
            <tag close=\" \">1</tag>Three.</toccaption><caption><tag close=\": \">Figure 1</tag>Three.</caption>\
            </figure>",
       )],
+    ),
+    (
+      repro!("list-structure/label_opening_glue_nets_against_labelsep.tex"),
+      &[
+        (
+          "item",
+          "S0.I1.ix1",
+          "<item xml:id=\"S0.I1.ix1\"><tags><tag>x</tag><tag role=\"typerefnum\">item </tag></tags><para xml:id=\"S0.I1.ix1.p1\"><p xml:id=\"S0.I1.ix1.p1.1\">a</p></para></item>",
+        ),
+        (
+          "item",
+          "S0.I2.i1",
+          "<item xml:id=\"S0.I2.i1\"><tags><tag>•</tag><tag role=\"typerefnum\">1st item</tag></tags><para xml:id=\"S0.I2.i1.p1\"><p xml:id=\"S0.I2.i1.p1.1\">b</p></para></item>",
+        ),
+        (
+          "item",
+          "S0.I3.i1",
+          "<item xml:id=\"S0.I3.i1\"><tags><tag>•\u{2002}</tag><tag role=\"typerefnum\">1st item</tag></tags><para xml:id=\"S0.I3.i1.p1\"><p xml:id=\"S0.I3.i1.p1.1\">c</p></para></item>",
+        ),
+        (
+          "item",
+          "S0.I4.ix1",
+          "<item xml:id=\"S0.I4.ix1\"><tags><tag><text font=\"bold\" xml:id=\"S0.I4.ix1.1\">D</text></tag><tag role=\"typerefnum\">item D</tag></tags><para xml:id=\"S0.I4.ix1.p1\"><p xml:id=\"S0.I4.ix1.p1.1\">d</p></para></item>",
+        ),
+        (
+          "item",
+          "S0.I5.ix1",
+          "<item xml:id=\"S0.I5.ix1\"><tags><tag>\u{2003}P</tag><tag role=\"typerefnum\">item \u{2003}P</tag></tags><para xml:id=\"S0.I5.ix1.p1\"><p xml:id=\"S0.I5.ix1.p1.1\">e</p></para></item>",
+        ),
+        (
+          "item",
+          "S0.I5.ix2",
+          "<item xml:id=\"S0.I5.ix2\"><tags><tag>(f)\u{2002}</tag><tag role=\"typerefnum\">item (f)\u{2002}</tag></tags><para xml:id=\"S0.I5.ix2.p1\"><p xml:id=\"S0.I5.ix2.p1.1\">f</p></para></item>",
+        ),
+        (
+          "item",
+          "S0.I6.ix1",
+          "<item xml:id=\"S0.I6.ix1\"><tags><tag><text xml:id=\"S0.I6.ix1.1\">k</text></tag><tag role=\"typerefnum\">item <text xml:id=\"S0.I6.ix1.2\">k</text></tag></tags><para xml:id=\"S0.I6.ix1.p1\"><p xml:id=\"S0.I6.ix1.p1.1\">g</p></para></item>",
+        ),
+        (
+          "p",
+          "p1.4",
+          "<p xml:id=\"p1.4\">Kept <text xml:id=\"p1.4.1\">\u{2002}k</text>.</p>",
+        ),
+        (
+          "item",
+          "S0.I7.ix1",
+          "<item xml:id=\"S0.I7.ix1\"><tags><tag><text font=\"bold\" xml:id=\"S0.I7.ix1.1\">Thm.</text></tag></tags><para xml:id=\"S0.I7.ix1.p1\"><p xml:id=\"S0.I7.ix1.p1.1\">h</p></para></item>",
+        ),
+      ],
+    ),
+    (
+      repro!("list-structure/enumitem_wide_clears_the_left_margin.tex"),
+      &[
+        (
+          "itemize",
+          "S0.I1",
+          "<itemize cssstyle=\"--ltx-enum-leftmargin:0pt\" xml:id=\"S0.I1\"><item xml:id=\"S0.I1.i1\"><tags><tag>•</tag><tag role=\"typerefnum\">1st item</tag></tags><para xml:id=\"S0.I1.i1.p1\"><p xml:id=\"S0.I1.i1.p1.1\">A 345.0pt 0.0pt</p></para></item></itemize>",
+        ),
+        (
+          "itemize",
+          "S0.I2",
+          "<itemize cssstyle=\"--ltx-enum-leftmargin:0pt\" xml:id=\"S0.I2\"><item xml:id=\"S0.I2.i1\"><tags><tag>•</tag><tag role=\"typerefnum\">1st item</tag></tags><para xml:id=\"S0.I2.i1.p1\"><p xml:id=\"S0.I2.i1.p1.1\">B 345.0pt 0.0pt</p></para></item></itemize>",
+        ),
+        (
+          "enumerate",
+          "S0.I3",
+          "<enumerate cssstyle=\"--ltx-enum-leftmargin:0pt\" xml:id=\"S0.I3\"><item xml:id=\"S0.I3.i1\"><tags><tag>1.</tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">item\u{a0}1</tag></tags><para xml:id=\"S0.I3.i1.p1\"><p xml:id=\"S0.I3.i1.p1.1\">C 345.0pt 0.0pt</p></para></item></enumerate>",
+        ),
+        (
+          "itemize",
+          "S0.I4",
+          "<itemize cssstyle=\"--ltx-enum-leftmargin:0pt\" xml:id=\"S0.I4\"><item xml:id=\"S0.I4.i1\"><tags><tag>•</tag><tag role=\"typerefnum\">1st item</tag></tags><para xml:id=\"S0.I4.i1.p1\"><p xml:id=\"S0.I4.i1.p1.1\">D 345.0pt 0.0pt</p></para></item></itemize>",
+        ),
+        (
+          "itemize",
+          "S0.I5",
+          "<itemize cssstyle=\"--ltx-enum-leftmargin:1cm\" xml:id=\"S0.I5\"><item xml:id=\"S0.I5.i1\"><tags><tag>•</tag><tag role=\"typerefnum\">1st item</tag></tags><para xml:id=\"S0.I5.i1.p1\"><p xml:id=\"S0.I5.i1.p1.1\">E 316.54726pt 28.45274pt</p></para></item></itemize>",
+        ),
+        (
+          "description",
+          "S0.I6",
+          "<description cssstyle=\"--ltx-enum-leftmargin:0pt\" xml:id=\"S0.I6\"><item xml:id=\"S0.I6.ix1\"><tags><tag><text font=\"bold\" xml:id=\"S0.I6.ix1.1\">x</text></tag><tag role=\"typerefnum\">item x</tag></tags><para xml:id=\"S0.I6.ix1.p1\"><p xml:id=\"S0.I6.ix1.p1.1\">F 345.0pt 0.0pt</p></para></item></description>",
+        ),
+      ],
+    ),
+    (
+      repro!("list-structure/note_and_cell_paragraphs_are_unspaced_in_a_list.tex"),
+      &[
+        (
+          "note",
+          "footnote1",
+          "<note mark=\"1\" role=\"footnote\" xml:id=\"footnote1\"><tags><tag>1</tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">footnote 1</tag></tags>F 0.0pt.<itemize xml:id=\"S0.I1.i1.I1\"><item xml:id=\"S0.I1.i1.I1.i1\"><tags><tag><text font=\"bold\" xml:id=\"S0.I1.i1.I1.i1.1\">–</text></tag><tag role=\"typerefnum\">1st item</tag></tags><para xml:id=\"S0.I1.i1.I1.i1.p1\"><p xml:id=\"S0.I1.i1.I1.i1.p1.1\">N</p></para></item></itemize></note>",
+        ),
+        (
+          "p",
+          "S0.I1.i2.p1.1.1.1.1.1",
+          "<p xml:id=\"S0.I1.i2.p1.1.1.1.1.1\">C 0.0pt.</p>",
+        ),
+      ],
     ),
   ];
   for (tex, expected) in cases {

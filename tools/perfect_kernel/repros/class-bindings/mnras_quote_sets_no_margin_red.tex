@@ -1,0 +1,13 @@
+% mechanism: mnras.cls's `{quote}` is no `\list` (its margins stay 0pt), while the binding's `{quote}` is article.cls's
+%   (`quote_list`, `\leftmargin` 2.5em both sides): a bound class whose real class sets other list registers keeps the
+%   standard classes'.
+% witness: synthetic (QA14K2 review, mnras rows)
+% oracle:  pdflatex 0 errors; "Q 0.0pt 0.0pt" (`\leftmargin`, `\columnwidth` - `\linewidth`)
+% engines: rust INT081AA "Q 0.0pt 0.0pt" (no margins); QA14K2 "Q 25.00003pt 50.00006pt"
+% expect:  0 errors; "Q 0.0pt 0.0pt"
+% status:  RED (QA14K2)
+% moves:   post-merge (a bound class's own list registers)
+\documentclass{mnras}
+\begin{document}
+\begin{quote}Q \the\leftmargin\space\the\dimexpr\columnwidth-\linewidth\relax\end{quote}
+\end{document}

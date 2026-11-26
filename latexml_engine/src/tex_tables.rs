@@ -324,12 +324,13 @@ LoadDefinitions!({
     "\\lx@restore@interline",
     "\\lineskip\\normallineskip\\lineskiplimit\\normallineskiplimit\\baselineskip\\normalbaselineskip"
   );
-  // `\\@arrayparboxrestore`'s `\\linewidth\\hsize` and `\\@totalleftmargin\\z@` (latex.ltx:16280-16281): `width=\\linewidth`
-  // in the cell is the column's (issue 778; Perl sets `\\hsize` alone, TeX_Tables.pool.ltxml:76).
+  // `\\@arrayparboxrestore`'s `\\linewidth\\hsize`, `\\@totalleftmargin\\z@` and `\\parskip\\z@skip` (latex.ltx:16278-16281):
+  // `width=\\linewidth` in the cell is the column's (issue 778; Perl sets `\\hsize` alone, TeX_Tables.pool.ltxml:76), a
+  // list's `\\parsep` not its paragraphs' skip. m and b cells too (array_sty.rs).
   // Repro kernel-alignment/paragraph_cell_linewidth_is_the_column_width.
   DefMacro!(
     "\\lx@tabular@p{}{}",
-    "\\setlength\\hsize{#2}\\linewidth\\hsize\\@totalleftmargin\\z@\\everypar{}\\lx@restore@interline\\lx@tabular@p@{#1}{\\the\\hsize}"
+    "\\setlength\\hsize{#2}\\linewidth\\hsize\\@totalleftmargin\\z@\\parskip\\z@skip\\everypar{}\\lx@restore@interline\\lx@tabular@p@{#1}{\\the\\hsize}"
   );
   DefConstructor!("\\lx@tabular@p@ Position {Dimension} VBoxContents",
   sub[document, args, props] {

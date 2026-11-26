@@ -1,0 +1,15 @@
+% mechanism: enumitem.sty (3.6+) `left=<labelindent>[..<leftmargin>]` computes `\leftmargin` from `\labelindent`, the
+%   label's width and `\labelsep` (as `leftmargin=*`, `enumitem_computed_leftmargin_red.tex`); the binding reads only a
+%   stated `leftmargin`. `leftmargin=!` with the default `\labelindent` gives the class's margin, as ours (B).
+% witness: synthetic (QA14K2 review Q3)
+% oracle:  pdflatex 0 errors; "A 335.00122pt 9.99878pt", "B 319.99997pt 25.00003pt"
+% engines: rust INT081AA "345.0pt 0.0pt" both; QA14K2 "319.99997pt 25.00003pt" both
+% expect:  0 errors; the values pdflatex prints
+% status:  RED (QA14K2)
+% moves:   post-merge (enumitem's computed margins)
+\documentclass{article}
+\usepackage{enumitem}
+\begin{document}
+\begin{itemize}[left=0pt]\item A \the\linewidth\space\the\leftmargin\end{itemize}
+\begin{itemize}[labelindent=0pt,leftmargin=!]\item B \the\linewidth\space\the\leftmargin\end{itemize}
+\end{document}

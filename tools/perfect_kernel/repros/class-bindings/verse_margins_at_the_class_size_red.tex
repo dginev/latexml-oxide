@@ -1,0 +1,13 @@
+% mechanism: article.cls:572-576 `{verse}`'s `\advance\leftmargin1.5em` is read in the document's `\normalsize` (12pt:
+%   cmr12's 1em); the binding's `\normalsize` is 10pt at every class size, so the 1.5em is 15pt, `\leftmargin` and
+%   `\linewidth` off by 2.6pt (1.4pt at 11pt). The cause of `quotation_indent_at_the_class_size_red.tex`.
+% witness: synthetic (QA14K2 review Q2)
+% oracle:  pdflatex 0 errors; "V 46.99951pt 313.6258pt"
+% engines: rust INT081AA "V 0.0pt 390.0pt"; QA14K2 "V 44.37471pt 316.2506pt"
+% expect:  0 errors; "V 46.99951pt 313.6258pt"
+% status:  RED (QA14K2)
+% moves:   post-merge (the class size's `\normalsize`)
+\documentclass[12pt]{article}
+\begin{document}
+\begin{verse}V \the\leftmargin\space\the\linewidth\end{verse}
+\end{document}

@@ -7131,9 +7131,8 @@ fn everypar_reads_the_token_that_started_the_paragraph() {
 /// `\@@par` ("Missing number") and the glue's stray digit fired the re-armed
 /// `\everypar`, whose `\gr@implitem` never found its catcode-12 `<` (11
 /// errors; arXiv 2605.07451 ended in `Fatal:Timeout:PushbackLimit`).
-/// (QA14 K2: the tag opens with an en space, U+2002 for the 5pt skip: syntax.sty:244 boxes the label after
-/// `\hskip\labelsep`, now article.cls's 5pt, which pdflatex's `\@item` cancels with `\hskip-\labelsep`
-/// (latex.ltx:16033) and the tag does not; RED `list-structure/prebuilt_label_box_keeps_its_labelsep_red.tex`.)
+/// (QA14 K2: syntax.sty:244 boxes the label after `\hskip\labelsep`, article.cls's 5pt, which `\@item`'s
+/// `\hskip-\labelsep` cancels (latex.ltx:16033): the tag opens with no space, `net_label_labelsep`.)
 #[test]
 fn everypar_grammar_survives_vertical_material_between_productions() {
   if !check_requirements(&["syntax.sty"]) {
@@ -7149,7 +7148,7 @@ fn everypar_grammar_survives_vertical_material_between_productions() {
     &xml,
     "item",
     &[r#"xml:id="S0.I1.ix2""#],
-    r##"<item xml:id="S0.I1.ix2"><tags><tag> <Math mode="inline" tex="\langle" text="langle" xml:id="S0.I1.ix2.m1"><XMath><XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok></XMath></Math><text font="italic">model<Math mode="inline" tex="\rangle" text="rangle" xml:id="S0.I1.ix2.m2"><XMath><XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok></XMath></Math></text>  ::=</tag><tag role="typerefnum">item </tag></tags><para xml:id="S0.I1.ix2.p1"><p>bar</p></para></item>"##,
+    r##"<item xml:id="S0.I1.ix2"><tags><tag><Math mode="inline" tex="\langle" text="langle" xml:id="S0.I1.ix2.m1"><XMath><XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok></XMath></Math><text font="italic">model<Math mode="inline" tex="\rangle" text="rangle" xml:id="S0.I1.ix2.m2"><XMath><XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok></XMath></Math></text>  ::=</tag><tag role="typerefnum">item </tag></tags><para xml:id="S0.I1.ix2.p1"><p>bar</p></para></item>"##,
   );
 }
 

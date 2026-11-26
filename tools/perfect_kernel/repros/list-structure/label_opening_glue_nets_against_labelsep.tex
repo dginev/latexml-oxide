@@ -1,0 +1,32 @@
+% mechanism: latex.ltx:16028-16039 `\@item` sets the label's box after `\hskip-\labelsep`, so the glue a label opens
+%   with nets against `\labelsep`: of its leading run of skips and kerns, an `\unhbox`ed box's too (syntax.sty:244
+%   `\sbox\z@{\hskip\labelsep…}` then `\item[\unhbox\z@]`), `max(0, sum - \labelsep)` stays (`net_label_labelsep`).
+%   Every label path: `\item[…]`, a `\list` label without one, a `\descriptionlabel`, a `\trivlist` item; a trailing
+%   `\labelsep` stays; a `\usebox`ed register keeps its own glue.
+% witness: 2605.07451 (syntax.sty grammar tags), 1508.03599 (acmlarge.cls:628 `\hskip10pt\hskip\labelsep`)
+% oracle:  pdflatex 0 errors; "x" at the margin, "•" with no gap before it, "•" then a gap, "D", "P" 10pt in, "(f)"
+%   then a gap, "k" at the margin, "Kept k." with the 5pt skip, "Thm."
+% engines: rust INT081AA (`\labelsep` 0pt) `<tag>x</tag>`, `•`, `•`, `(f)`, the later "k" with no skip; QA14K2
+%   eb92bd5ebc9 (labels read at `\labelsep` 0pt) `<tag> x</tag>` (U+2002), `<tag> •</tag>`, `<tag> k</tag>`, `(f)`
+% expect:  0 errors, 0 warnings; `<tag>x</tag>`, `<tag>•</tag>`, `<tag>• </tag>`, `<tag>D</tag>`, `<tag> P</tag>`
+%   (U+2003), `<tag>(f) </tag>`, `<tag>k</tag>`, "Kept  k." (U+2002), `<tag>Thm.</tag>`
+% status:  RED (QA14K2 eb92bd5ebc9) -> GREEN (QA14K2 fix round)
+\documentclass{article}
+\newsavebox\keep
+\begin{document}
+\begin{list}{}{}
+\sbox0{\hskip\labelsep x}\item[\unhbox0] a
+\end{list}
+\begin{list}{\hskip\labelsep\textbullet}{}\item b\end{list}
+\begin{list}{\textbullet\hskip\labelsep}{}\item c\end{list}
+\renewcommand\descriptionlabel[1]{\hspace\labelsep\textbf{#1}}
+\begin{description}\item[D] d\end{description}
+\begin{itemize}
+\item[\hskip10pt\hskip\labelsep P] e
+\item[(f)\hspace{\labelsep}] f
+\end{itemize}
+\sbox\keep{\hskip\labelsep k}
+\begin{itemize}\item[\usebox\keep] g\end{itemize}
+Kept \usebox\keep.
+\begin{trivlist}\item[\hskip\labelsep\bfseries Thm.] h\end{trivlist}
+\end{document}

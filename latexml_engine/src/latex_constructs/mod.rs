@@ -5143,19 +5143,8 @@ pub fn set_minipage_width(width: Dimension) -> Result<()> {
   assign_register("\\parskip", Glue::new(0).into(), None, Vec::new())?;
   // latex.ltx:16325 `\let\@listdepth\@mplistdepth \@mplistdepth\z@`: a list in the box is a first-level one, the
   // enclosing lists' depth back after the box.
-  if let Some(RegisterValue::Number(depth)) = lookup_register_quiet("\\@listdepth")
-    && depth.0 != 0
-  {
-    assign_register(
-      "\\@listdepth",
-      RegisterValue::Number(Number(0)),
-      Some(Scope::Global),
-      vec![],
-    )?;
-    let mut restore = vec![T_CS!("\\lx@listdepth@restore")];
-    restore.extend(Explode!(&depth.0.to_string()));
-    restore.push(T_CS!("\\relax"));
-    push_value("afterGroup", Stored::Tokens(Tokens::new(restore)))?;
+  if list_depth() != 0 {
+    set_list_depth(0)?;
   }
   Ok(())
 }

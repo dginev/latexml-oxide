@@ -572,15 +572,19 @@ trio), its `\@parboxrestore` is `Tokens()`, a `p` cell sets `\hsize` alone (TeX_
   (article.cls:322-339, report.cls:397-415, book.cls:424-442) in ems of the size file's `\normalsize`
   (`declare_standard_class_lists`); the kernel's registers stay latex.ltx's zeros. Inside a list, a footnote
   (`\@footnotetext`, :17661-17663), an `\@xfloat` float (:17482-17483), a minipage (its lists first-level ones, :16325
-  `\@mplistdepth`) and a `p` cell set their own line and `\@totalleftmargin\z@`. An item's label is read at
-  `\labelsep` 0pt (`label_box_labelsep`): :16033 `\@item` sets its box after `\hskip-\labelsep`, cancelling the
-  `\hskip\labelsep` a label opens with (:17206 `\@begintheorem`; 1508.03599). Not modelled: :15864
+  `\@mplistdepth`) and a `p` cell set their own line and `\@totalleftmargin\z@`, a footnote and a `p` cell also
+  `\parskip\z@skip` (:16278). An item's label box nets its leading glue against `\labelsep` (`net_label_labelsep`,
+  `\lx@item@labelbox`): :16028-16039 `\@item` sets the box after `\hskip-\labelsep`, so of the skips and kerns a label
+  opens with, an `\unhbox`ed box's too (:17206 `\@begintheorem`, syntax.sty:244), `max(0, sum - \labelsep)` stays and a
+  trailing `\labelsep` stays, on every label path (`\item[…]`, a `\list` label, a trivlist item, the typerefnum);
+  1508.03599 (10pt kept), 2605.07451 (none). enumitem's `wide`/`fullwidth` set `\leftmargin\z@` (enumitem.sty:745-758),
+  one reading with a stated `leftmargin` for the setup and the CSS (`stated_leftmargin`). Not modelled: :15864
   `\parindent\listparindent` (it would mark every item's paragraphs `ltx_noindent`), `\parshape`, `\@toodeep`. **Perl**:
   `\list` sets no register (latex_constructs.pool.ltxml:1649), `beginItemize` none (:1303), and every margin register is
   0pt (:1690-1702), so a `width=\linewidth` graphic in a list took the text's width. Residuals (RED catalog):
   amsart's label-measured margins, REVTeX's point margins, enumitem's computed `leftmargin=*`, `{thebibliography}`'s
-  list, the marginpar's line, the body's 10pt em at 11pt/12pt (`{quotation}`'s indent), a label boxed before its `\item`
-  (syntax.sty:244). Guard
+  list, the marginpar's line, the body's 10pt em at 11pt/12pt (`{quotation}`'s indent, `{verse}`'s margin), enumitem's
+  `left=`, a bound class's own list registers (mnras's `{quote}`, emulateapj's itemize). Guard
   `perfect_kernel_batchqa14k2::list_registers_set_the_line_width`; census report_QA14.tsv: the 104 LIST/CLASSLIST/ADJW/
   CONSEQ cells of its article contexts exact, none of its 348 exact cells changed.
 
@@ -2654,7 +2658,7 @@ public-surface convention (`~/git/ar5iv-css` `docs/rfc_latexml_custom_properties
 
 | entry | the source | emitted | the stylesheet delta | code / guard |
 |---|---|---|---|---|
-| leftmargin | enumitem `leftmargin=*` / `=<dim>` | `class="ltx_leftmargin_flush"` / `cssstyle="--ltx-enum-leftmargin:<dim>"` | `.ltx_itemize, .ltx_enumerate { margin-left: var(--ltx-enum-leftmargin, 1em) }`, `.ltx_leftmargin_flush { --ltx-enum-leftmargin: 0 }` (ltx-article/book/report.css) | `enumitem_sty.rs::begin_enum_itemize`; `50_structure::enumitem_leftmargin_test` |
+| leftmargin | enumitem `leftmargin=*` / `=<dim>` (`wide`, `fullwidth`: `0pt`, `stated_leftmargin`) | `class="ltx_leftmargin_flush"` / `cssstyle="--ltx-enum-leftmargin:<dim>"` | `.ltx_itemize, .ltx_enumerate { margin-left: var(--ltx-enum-leftmargin, 1em) }`, `.ltx_leftmargin_flush { --ltx-enum-leftmargin: 0 }` (ltx-article/book/report.css) | `enumitem_sty.rs::begin_enum_itemize`; `50_structure::enumitem_leftmargin_test` |
 | framed verbatim (ex-#111) | fancyvrb `frame=single`, `framesep`, `framerule`, fvextra `backgroundcolor` | one `ltx_framed_rectangle` box, class `ltx_framed_verbatim`, `cssstyle` padding / border-width / background | `.ltx_framed_verbatim { max-width:100%; overflow-x:auto; box-sizing:border-box; display:block; width:fit-content }` (LaTeXML.css + ar5iv-css) | `fancyvrb_sty.rs`, `fvextra_sty.rs`; fixture `tests/tokenize/fancyvrb_frame.{tex,xml}`, `latexml_post::xslt::witnessed_css_delta::framed_verbatim_responsive_delta_stays_present` |
 | aspect ratio (ex-#139) | the requested `\includegraphics` W/H | `cssstyle="aspect-ratio:W/H"` on the `<img>` | `height:auto` in the flex/minipage image rules | `latexml_post/src/graphics.rs:501 set_graphic_src`; `latexml_post::graphics::tests::set_graphic_src_emits_requested_aspect_ratio_2392` |
 | break space (ex-#142) | `\\[dimen]` (non-zero) | `cssstyle="--ltx-break-space:<pt>"` on `ltx:break` | none: inert until a theme opts in | `\lx@newline`; `06_cluster_regressions::cluster_break_optional_glue_722` |

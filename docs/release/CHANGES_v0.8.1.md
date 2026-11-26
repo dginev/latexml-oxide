@@ -17,8 +17,9 @@ top of its group.
     `width=\linewidth` graphic in a list was 7-20 % too wide, and MDPI's `{adjustwidth}{-\extralength}{0cm}`
     full-width figures kept the text's width (`\extralength` is now the class's 4.61cm). A footnote, a float, a
     minipage or a `p` cell inside a list sets its own line; panels in an `{adjustwidth}` share its line (2405.20768,
-    2408.06972); enumitem's stated `leftmargin`/`rightmargin` are read; a label's leading `\hskip\labelsep` is read at
-    0pt, as LaTeX's `\@item` cancels it. An A/B of 212 papers that use lists with `\linewidth` or `{adjustwidth}`
+    2408.06972); enumitem's stated `leftmargin`/`rightmargin` and its `wide` are read; a label's leading glue nets
+    against `\labelsep`, as LaTeX's `\@item` cancels it (a syntax.sty grammar's tags open with no space, 2605.07451);
+    a footnote's or a `p` cell's paragraphs in a list are unspaced. An A/B of 212 papers that use lists with `\linewidth` or `{adjustwidth}`
     moved 22, with equal errors, warnings and words: 19 in widths, heights, `panelwidth`/`panelline` and SVG geometry
     only; 1703.00699's figure is one row, as in the PDF; 2306.09542 sets one more line mark in a narrower list item;
     1508.03599's proof heads lose a leading space. Guard `perfect_kernel_batchqa14k2::list_registers_set_the_line_width`

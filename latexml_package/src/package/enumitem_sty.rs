@@ -105,16 +105,13 @@ fn begin_enum_itemize(
     opts.resume_star = Some(resume_star_toks.to_string());
   }
 
-  // The list's own margins, its `\list` setup after `\@list<depth>` (enumitem.sty:1383-1400 `\enit@preset`): a stated `leftmargin` or
-  // `rightmargin` length. A computed one (`*`, `!`: the label's width) keeps the class's.
+  // The list's own margins, its `\list` setup after `\@list<depth>` (enumitem.sty:1383-1400 `\enit@preset`).
   let mut setup = Vec::new();
-  for (key, register) in [
-    ("leftmargin", "\\leftmargin"),
-    ("rightmargin", "\\rightmargin"),
+  for (register, value) in [
+    ("\\leftmargin", stated_leftmargin(&hash)),
+    ("\\rightmargin", stated_margin(&hash, "rightmargin")),
   ] {
-    if let Some(value) = hash.get(key).and_then(argwrap_to_tokens)
-      && !matches!(value.to_string().trim(), "*" | "!" | "")
-    {
+    if let Some(Margin::Stated(value)) = value {
       setup.extend([T_CS!("\\setlength"), T_CS!(register), T_BEGIN!()]);
       setup.extend(value.unlist());
       setup.push(T_END!());
@@ -210,17 +207,18 @@ fn begin_enum_itemize(
   // becomes a numeric `--ltx-enum-leftmargin` CSS custom property that the base
   // `.ltx_itemize, .ltx_enumerate { margin-left: var(--ltx-enum-leftmargin, 1em) }`
   // rule consumes (both live in ltx-article/book/report.css).
-  if let Some(lm) = hash.get("leftmargin").and_then(argwrap_to_tokens) {
-    let lm = lm.to_string();
-    let lm = lm.trim();
-    if lm == "*" {
+  match stated_leftmargin(&hash) {
+    Some(Margin::Computed(flush)) if flush == "*" => {
       props.insert("class", s!("ltx_leftmargin_flush").into());
-    } else if let Some(css) = css_length(lm) {
-      props.insert("cssstyle", s!("--ltx-enum-leftmargin:{css}").into());
-    }
-    // A non-`*`, non-CSS-length value (a macro/`\dimexpr` like `\parindent`) is
-    // dropped rather than leaked into CSS — the list falls back to the default
-    // `--ltx-enum-leftmargin` (1em).
+    },
+    Some(Margin::Stated(lm)) => {
+      if let Some(css) = css_length(&lm.to_string()) {
+        props.insert("cssstyle", s!("--ltx-enum-leftmargin:{css}").into());
+      }
+    },
+    // A non-CSS-length value (a macro/`\dimexpr` like `\parindent`) is dropped rather than leaked into CSS — the
+    // list falls back to the default `--ltx-enum-leftmargin` (1em).
+    _ => {},
   }
 
   // Execute list-level `before` and `first` key code at list start
@@ -325,6 +323,32 @@ fn enumerate_short_label(template: &Tokens) -> Result<Tokens> {
 /// followed by a unit CSS shares with TeX (`pt`/`em`/`ex`/`cm`/`mm`/`in`, plus
 /// CSS `px`/`rem`/`%`), or a bare `0`. Returns `None` for anything else — a raw
 /// TeX macro / `\dimexpr` is not valid CSS, so it must not reach the stylesheet.
+/// A margin key's reading: a length stated, or one enumitem computes from the label (`*`, `!`; enumitem.sty:313-319).
+enum Margin {
+  Stated(Tokens),
+  Computed(String),
+}
+
+/// The list's `margin` key (`leftmargin`, `rightmargin`) as written.
+fn stated_margin(hash: &rustc_hash::FxHashMap<String, ArgWrap>, key: &str) -> Option<Margin> {
+  let value = hash.get(key).and_then(argwrap_to_tokens)?;
+  let text = value.to_string();
+  match text.trim() {
+    "" => None,
+    flag @ ("*" | "!") => Some(Margin::Computed(flag.to_string())),
+    _ => Some(Margin::Stated(value)),
+  }
+}
+
+/// The list's `\leftmargin`, the one reading for its `\list` setup and its CSS: a `leftmargin` key, else `wide`'s or
+/// `fullwidth`'s `\leftmargin\z@` (enumitem.sty:745-758, any `wide` value), as when the key comes first.
+fn stated_leftmargin(hash: &rustc_hash::FxHashMap<String, ArgWrap>) -> Option<Margin> {
+  stated_margin(hash, "leftmargin").or_else(|| {
+    (hash.contains_key("wide") || hash.contains_key("fullwidth"))
+      .then(|| Margin::Stated(TokenizeInternal!("0pt")))
+  })
+}
+
 fn css_length(raw: &str) -> Option<String> {
   let s = raw.trim();
   for unit in ["pt", "px", "em", "ex", "rem", "cm", "mm", "in", "%"] {
@@ -791,6 +815,8 @@ LoadDefinitions!({
   DefKeyVal!("enumitem", "listparindent", "Dimension");
   DefKeyVal!("enumitem", "rightmargin", "Dimension");
   DefKeyVal!("enumitem", "wide", "", "true");
+  // (enumitem.sty:754, deprecated for `wide`)
+  DefKeyVal!("enumitem", "fullwidth", "", "true");
   DefKeyVal!("enumitem", "first", "UndigestedKey");
   DefKeyVal!("enumitem", "first*", "UndigestedKey");
 

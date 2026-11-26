@@ -184,8 +184,8 @@ pub(crate) fn load() -> Result<()> {
   // keep the surrounding size).
   def_macro_noop("\\lx@note@reset")?;
   // The note's line (latex.ltx:17661-17663 `\@footnotetext`, :16394 `\@mpfootnotetext`: `\hsize\columnwidth
-  // \@parboxrestore`): a footnote in a list is as wide as the column.
-  DefMacro!("\\lx@note@line", r"\hsize\columnwidth\linewidth\hsize\@totalleftmargin\z@");
+  // \@parboxrestore`, :16278-16281): a footnote in a list is as wide as the column, its paragraphs unspaced.
+  DefMacro!("\\lx@note@line", r"\hsize\columnwidth\linewidth\hsize\@totalleftmargin\z@\parskip\z@skip");
   def_macro_noop("\\ext@footnote")?;
   DefConstructor!("\\lx@note[]{} OptionalUndigested {}",
   "^<ltx:note role='#role' mark='#mark' _fnvalue='#fnvalue' _fngiven='#fngiven' _fncounted='#fncounted' _fnseries='#fnseries' _markunknown='#markunknown' xml:id='#id' inlist='#list'>#tags#4</ltx:note>",

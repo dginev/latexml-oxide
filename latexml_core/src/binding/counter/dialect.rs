@@ -8,10 +8,10 @@
 //! document elements (eg from \section*); this requires an additional counter
 //! (eg. UNsection) and  mechanisms to track it.
 
-use std::collections::VecDeque;
+use std::{collections::VecDeque, rc::Rc};
 
 use crate::{
-  BoxOps, RegisterValue,
+  BoxOps, Digested, DigestedData, RegisterValue,
   binding::{
     content::{build_invocation, digest_literal, digest_text},
     def::dialect::{RegisterOptions, def_macro, def_register, is_defined},
@@ -20,10 +20,12 @@ use crate::{
     arena::{self, SymHashMap as HashMap, SymStr},
     cleaners::{clean_id, clean_label, roman_aux},
     error::*,
+    glue::Glue,
     number::Number,
     numeric_ops::NumericOps,
   },
   definition::{Definition, ExpansionBody, expandable::ExpandableOptions},
+  list::List,
   mouth,
   state::*,
   stomach,
@@ -607,7 +609,7 @@ thread_local! {
 #[derive(Clone, Debug)]
 pub struct RawRefstep {
   /// The step's `tags` (`label_stepped_counter`), whose `refnum` is what `\ref` prints.
-  pub tags:   crate::Digested,
+  pub tags:   Digested,
   /// Which step it is: two steps that print the same number are still two.
   pub serial: i64,
 }
@@ -647,7 +649,7 @@ pub fn globalize_raw_refstep() {
 }
 
 /// The raw step current now, as recorded ([`note_raw_refstep`]).
-fn recorded_raw_refstep() -> Option<(crate::Digested, String, i64)> {
+fn recorded_raw_refstep() -> Option<(Digested, String, i64)> {
   let Some(Stored::Digested(tags)) = lookup_value(RAW_REFSTEP_TAGS) else {
     return None;
   };
@@ -768,7 +770,7 @@ pub fn leave_display_for_parbox() {
   assign_value(RAW_REFSTEP_DISPLAY, Stored::Bool(false), Some(Scope::Local));
   let display_label = matches!(
     (lookup_meaning(&T_CS!("\\label")), lookup_meaning(&T_CS!("\\lx@ams@display@label"))),
-    (Some(Stored::Expandable(a)), Some(Stored::Expandable(b))) if std::rc::Rc::ptr_eq(&a, &b)
+    (Some(Stored::Expandable(a)), Some(Stored::Expandable(b))) if Rc::ptr_eq(&a, &b)
   );
   if display_label && lookup_meaning(&T_CS!("\\ltx@label")).is_some() {
     let_i(&T_CS!("\\label"), &T_CS!("\\ltx@label"), None);
@@ -1094,7 +1096,7 @@ pub fn label_stepped_counter(ctype: &str, ctr: &str) -> Result<HashMap<Stored>> 
     String::new()
   };
 
-  let digest_label = || -> Result<(crate::Digested, crate::Digested)> {
+  let digest_label = || -> Result<(Digested, Digested)> {
     let refnum = digest_text(Tokens!(T_CS!(&the_ctr)))?;
     let invocation = build_invocation(T_CS!("\\lx@make@tags"), vec![Some(Tokens!(T_OTHER!(
       ctype
@@ -1661,7 +1663,6 @@ pub fn ref_step_item_counter(tag_opt: Option<&Tokens>) -> Result<HashMap<Stored>
     };
 
     let mut tag_tokens = vec![T_BEGIN!()];
-    tag_tokens.extend(label_box_labelsep());
     // An `\item[…]` does not `\refstepcounter` (latex.ltx `\@item`: only `\if@noitemarg`), so a `\label` on it takes
     // `\@currentlabel` as the last numbered item in force left it. Perl types `\p@<counter>` instead
     // (latex_constructs.pool.ltxml:1383 `\let\the<counter>\@empty`), the enclosing item's label only while `\p@enumii`
@@ -1715,9 +1716,14 @@ pub fn ref_step_item_counter(tag_opt: Option<&Tokens>) -> Result<HashMap<Stored>
     ]);
     // TODO: Another iffy clone...
     let reverted_tag = (*tag).clone().revert();
-    let mut label = vec![formatter, T_BEGIN!()];
+    let mut label = vec![
+      T_CS!("\\lx@item@labelbox"),
+      T_BEGIN!(),
+      formatter,
+      T_BEGIN!(),
+    ];
     label.extend(reverted_tag.clone());
-    label.push(T_END!());
+    label.extend([T_END!(), T_END!()]);
     tag_tokens.extend(define_item_fnum(&counter, label));
     tag_tokens.extend(vec![
       T_CS!("\\def"),
@@ -1725,9 +1731,11 @@ pub fn ref_step_item_counter(tag_opt: Option<&Tokens>) -> Result<HashMap<Stored>
       T_BEGIN!(),
       typename,
       T_SPACE!(),
+      T_CS!("\\lx@item@labelbox"),
+      T_BEGIN!(),
     ]);
     tag_tokens.extend(reverted_tag);
-    tag_tokens.push(T_END!());
+    tag_tokens.extend([T_END!(), T_END!()]);
     tag_tokens.extend(
       build_invocation(T_CS!("\\lx@make@tags"), vec![Some(Tokens!(T_OTHER!(
         counter
@@ -2132,32 +2140,160 @@ pub fn begin_itemize(
   Ok(rsc)
 }
 
-/// The tag holds the label's box alone, which latex.ltx:16033 `\@item` sets after `\hskip-\labelsep`: the
-/// `\hskip\labelsep` a label opens with to cancel it (:17206 `\@begintheorem`, article.cls:557 `\descriptionlabel`)
-/// is read at 0pt, as before the class set `\labelsep` (the label no space wider).
-pub fn label_box_labelsep() -> Vec<Token> {
-  if lookup_register_quiet("\\labelsep").is_some() && lookup_register_quiet("\\z@").is_some() {
-    vec![T_CS!("\\labelsep"), T_CS!("\\z@")]
-  } else {
-    Vec::new()
+/// latex.ltx:16028-16039 `\@item` sets the label's box after `\hskip-\labelsep`, so the glue a label opens with
+/// (`\hskip\labelsep`, :17206 `\@begintheorem`, article.cls:557 `\descriptionlabel`) nets against it: of the label's
+/// leading run of skips and kerns, an `\unhbox`ed box's too, `max(0, sum - \labelsep)` stays (`\lx@item@labelbox`).
+/// Witnesses 1508.03599 (acmlarge.cls:628 `\hskip10pt\hskip\labelsep`: 10pt), 2605.07451 (syntax.sty:244: none).
+pub fn net_label_labelsep(items: Vec<Digested>) -> Result<Vec<Digested>> {
+  let mut total = 0;
+  let mut count = 0;
+  let (items, _) = rewrite_leading_glue(items, &mut |item, width| {
+    total += width;
+    count += 1;
+    Ok(item.clone())
+  })?;
+  if count == 0 {
+    return Ok(items);
+  }
+  let labelsep = lookup_dimension("\\labelsep").map_or(0, |d| d.value_of());
+  let mut left = (total - labelsep).max(0);
+  // (each item becomes an `\hskip` in its own font, the net on the first: the label's text runs stay as they were)
+  let (items, _) = rewrite_leading_glue(items, &mut |item, _| {
+    let mut skip = vec![T_CS!("\\hskip")];
+    skip.extend(Explode!(&s!("{left}sp")));
+    skip.push(T_CS!("\\relax"));
+    left = 0;
+    let glue = stomach::digest(Tokens::new(skip))?.unlist();
+    if let Some(font) = item.get_font()? {
+      for item in &glue {
+        item.try_set_property("font", Stored::Font(font.clone()));
+      }
+    }
+    Ok(one_or_list(glue))
+  })?;
+  Ok(items)
+}
+
+/// The items with each of their leading finite skips and kerns replaced by `replace(item, width)`, and whether the run
+/// ended at another item. A leading list or horizontal box is entered and rebuilt (a `\usebox`ed register keeps its
+/// own); a fill ends the run.
+fn rewrite_leading_glue(
+  items: Vec<Digested>,
+  replace: &mut dyn FnMut(&Digested, i64) -> Result<Digested>,
+) -> Result<(Vec<Digested>, bool)> {
+  let mut out = Vec::with_capacity(items.len());
+  let mut items = items.into_iter();
+  let mut ended = false;
+  for item in items.by_ref() {
+    if let Some(width) = finite_glue_width(&item) {
+      out.push(replace(&item, width)?);
+      continue;
+    }
+    let (item, at_content) = match item.data() {
+      // (a group's `{`/`}` marker boxes, `isEmpty`, print nothing)
+      DigestedData::Comment(_) => (item.clone(), false),
+      _ if item.get_property_bool("isEmpty") => (item.clone(), false),
+      DigestedData::List(list) => match list.try_borrow() {
+        Ok(list) => {
+          let mut list = list.clone();
+          let (boxes, at_content) = rewrite_leading_glue(std::mem::take(&mut list.boxes), replace)?;
+          list.boxes = boxes;
+          (Digested::from(list), at_content)
+        },
+        Err(_) => (item.clone(), true),
+      },
+      DigestedData::Whatsit(w) => match w.try_borrow() {
+        Ok(w) if is_hbox(&w) && w.get_arg(2).is_some() => {
+          let contents = w.get_arg(2).cloned().into_iter().collect();
+          let (contents, at_content) = rewrite_leading_glue(contents, replace)?;
+          let mut whatsit = w.clone();
+          let mut args = whatsit.get_args().clone();
+          args[1] = Some(one_or_list(contents));
+          whatsit.set_args(args);
+          (Digested::from(whatsit), at_content)
+        },
+        _ => (item.clone(), true),
+      },
+      _ => (item.clone(), true),
+    };
+    out.push(item);
+    if at_content {
+      ended = true;
+      break;
+    }
+  }
+  out.extend(items);
+  Ok((out, ended))
+}
+
+/// Whether `whatsit` is a `\hbox` (by its definition, the meaning `\hbox` has).
+fn is_hbox(whatsit: &Whatsit) -> bool {
+  lookup_definition(&T_CS!("\\hbox"))
+    .ok()
+    .flatten()
+    .is_some_and(|hbox| Rc::ptr_eq(&hbox, &whatsit.get_definition()))
+}
+
+fn one_or_list(items: Vec<Digested>) -> Digested {
+  match <[Digested; 1]>::try_from(items) {
+    Ok([item]) => item,
+    Err(items) => Digested::from(List::new(items)),
   }
 }
 
-/// latex.ltx:15852 `\list`'s `\global\advance\@listdepth\@ne`, put back where the list's group ends (the `\endlist`
-/// half, :15913) by `\lx@listdepth@restore`.
-pub fn step_list_depth() -> Result<()> {
-  let depth = match lookup_register_quiet("\\@listdepth") {
+/// The natural width of a finite horizontal skip or kern (`\hskip`, `\hspace`, `\quad`, `\kern`), `None` for a fill
+/// (its net stays infinite) and for anything else.
+fn finite_glue_width(item: &Digested) -> Option<i64> {
+  if !(item.get_property_bool("isSkip") || item.get_property_bool("isKern"))
+    || item.get_property_bool("isFill")
+    || item.get_property_bool("isVerticalSpace")
+  {
+    return None;
+  }
+  let fill = |glue: &Glue| glue.pfill.is_some();
+  if let Some(glue) = item.get_property("glue")
+    && let Stored::Glue(glue) = &*glue
+    && fill(glue)
+  {
+    return None;
+  }
+  if let DigestedData::Whatsit(w) = item.data()
+    && let Ok(w) = w.try_borrow()
+    && let Some(arg) = w.get_arg(1)
+    && let DigestedData::RegisterValue(RegisterValue::Glue(glue)) = arg.data()
+    && fill(glue)
+  {
+    return None;
+  }
+  match item.get_property("width").as_deref() {
+    Some(Stored::Dimension(width)) => Some(width.value_of()),
+    _ => None,
+  }
+}
+
+/// latex.ltx:15852 `\list`'s `\global\advance\@listdepth\@ne` (`set_list_depth`).
+pub fn step_list_depth() -> Result<()> { set_list_depth(list_depth() + 1) }
+
+/// The current `\@listdepth`.
+pub fn list_depth() -> i64 {
+  match lookup_register_quiet("\\@listdepth") {
     Some(RegisterValue::Number(n)) => n.0,
     _ => 0,
-  };
+  }
+}
+
+/// `\@listdepth` set globally to `depth`, its value put back where the current group ends by `\lx@listdepth@restore`
+/// (the `\endlist` half, latex.ltx:15913; a minipage's `\@mplistdepth`, :16325).
+pub fn set_list_depth(depth: i64) -> Result<()> {
+  let restore_to = list_depth();
   assign_register(
     "\\@listdepth",
-    RegisterValue::Number(Number(depth + 1)),
+    RegisterValue::Number(Number(depth)),
     Some(Scope::Global),
     vec![],
   )?;
   let mut restore = vec![T_CS!("\\lx@listdepth@restore")];
-  restore.extend(Explode!(&depth.to_string()));
+  restore.extend(Explode!(&restore_to.to_string()));
   restore.push(T_CS!("\\relax"));
   push_value("afterGroup", Stored::Tokens(Tokens::new(restore)))
 }
