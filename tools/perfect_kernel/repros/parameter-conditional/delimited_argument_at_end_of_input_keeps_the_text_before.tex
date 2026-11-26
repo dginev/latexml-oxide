@@ -2,7 +2,8 @@
 %   emergency stop (tex.web §338, §360), our `Fatal:Mouth:EoF` (base_parameter_types.rs, the `Until:` reader); the
 %   digestion salvage (`core_interface::finish_digestion_fatal`) keeps the text digested before it, as Perl's
 %   `hardYankProcessing` keeps it for every Fatal (Common/Error.pm:336-338)
-% witness: synthetic (the Mouth:EoF shape of 126 arXiv Fatals: hep-th0008096, astro-ph0012068, math-ph0012031)
+% witness: synthetic (the Mouth:EoF shape of 126 CorTeX Fatals, 68 of them salvaged in the DIGFATAL A/B: hep-th9308151,
+%   1911.06585, astro-ph0012068, math-ph0012031; hep-th0008096 no longer reaches it on INT081RC6)
 % oracle:  pdflatex (TL 2025, -no-shell-escape) "! File ended while scanning use of \grab.", "! Emergency stop.", no
 %   PDF; under -output-format=dvi 1 page shipped before the stop: "First paragraph."; Perl 0.8.8: 1 error
 %   (an empty argument, no Fatal): <p>First paragraph.</p> <p>Before []after.</p> <p>Second paragraph.</p>

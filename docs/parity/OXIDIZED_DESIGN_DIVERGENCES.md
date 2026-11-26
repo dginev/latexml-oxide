@@ -6179,7 +6179,7 @@ the pipeline Perl-shaped rather than by admitting more post-Fatal messages:
      innermost level, the repeating box window (2508.07407);
    - a salvage of `STOMACH_CYCLE_ACTIVATE` boxes or more is refused.
    `TooManyErrors`, `Timeout:IfLimit` (2006.14937), `Mouth:EoF`
-   (hep-th0008096), `Stomach:Misdefined` (1311.6759), `ParamSpec:Expected`,
+   (hep-th9308151, astro-ph0012068), `Stomach:Misdefined`, `ParamSpec:Expected`,
    `TargetUnexpected:Endgroup` and a binding's own Fatal keep it all. One helper
    serves every digestion loop: the eager steps, a Fatal stashed in the last
    step (`digest_adaptive`, `digest_internal`) and streaming pass 1.

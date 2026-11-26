@@ -177,7 +177,8 @@ fn a_digestion_fatal_keeps_the_text_before_it() {
       KEPT,
     ),
     (
-      // TeX's emergency stop after "File ended while scanning use of \grab" (hep-th0008096, astro-ph0012068)
+      // TeX's emergency stop after "File ended while scanning use of \grab" (hep-th9308151, astro-ph0012068;
+      // CorTeX's hep-th0008096 no longer reaches it)
       "Mouth:EoF",
       include_str!(
         "../../../tools/perfect_kernel/repros/parameter-conditional/delimited_argument_at_end_of_input_keeps_the_text_before.tex"
@@ -188,7 +189,8 @@ fn a_digestion_fatal_keeps_the_text_before_it() {
       KEPT,
     ),
     (
-      // a Stomach-target Fatal that is no runaway guard keeps the innermost level too (1311.6759, 1509.08999)
+      // a Stomach-target Fatal that is no runaway guard keeps the innermost level too (synthetic: 1509.08999's and
+      // 1807.06367's fire in the preamble, where there is no text to keep; 1311.6759 no longer reaches it)
       "Stomach:Misdefined",
       include_str!(
         "../../../tools/perfect_kernel/repros/rhai-bindings/unbalanced_definition_keeps_text_before.tex"
