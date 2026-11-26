@@ -1,0 +1,16 @@
+% mechanism: multicol.sty:145 sets `\col@number` to the environment's column count; the multicol binding leaves it 1,
+%   so code testing it (longtable.sty:95-99 `\ifnum\col@number>\@ne\@twocolumntrue`) sees one column
+% witness: synthetic (found porting longtable's `\longtable` prefix, EOFBIND)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Columns: 3."
+% engines: EOFBIND: 0 errors, "Columns: 1."
+% expect:  0 errors; "Columns: 3." (and a longtable inside multicols then warns as longtable.sty errs)
+% status:  RED
+% moves:   post-merge
+\documentclass{article}
+\usepackage{multicol}
+\makeatletter
+\begin{document}
+\begin{multicols}{3}
+Columns: \the\col@number.
+\end{multicols}
+\end{document}

@@ -1,0 +1,13 @@
+% mechanism: IEEEtran's `onecolumn` option (IEEEtran.cls:328, `\CLASSOPTIONtwocolumnfalse`) leaves `\if@twocolumn`
+%   false in pdflatex, but our IEEEtran binding keeps it true, so a test of the flag reads "two"; it is one reason longtable's
+%   two-column `\LT@err` is only an Info here (row R LTERRSEV; 1503.02372 is IEEEtran twocolumn)
+% witness: synthetic (the reviewer's probe for EOFBIND)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Flag: one."
+% engines: EOFBIND (2c80d4e36e6): 0 errors, 0 warnings, "Flag: two."
+% expect:  0 errors, 0 warnings, "Flag: one."
+% status:  RED
+\documentclass[onecolumn]{IEEEtran}
+\makeatletter
+\begin{document}
+Flag: \if@twocolumn two\else one\fi.
+\end{document}

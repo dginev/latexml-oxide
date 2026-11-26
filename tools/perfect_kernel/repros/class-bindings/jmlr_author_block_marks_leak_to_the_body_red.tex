@@ -1,0 +1,22 @@
+% mechanism: text the jmlr binding's structured author block (`\lx@jmlr@structauthor`) does not read into a creator —
+%   the `\textsuperscript` marks after `\Name{..}` — is digested where `\author` runs and printed as a paragraph at the
+%   body's start, before `{keywords}`'s classification (a schema error: no para may precede it)
+% witness: 2409.18592 (`\Name{Marc Uecker}\textsuperscript{1} \and ..`), 2006.01035, 2101.03606 (their schema errors);
+%   found once EOFBIND let these papers past their `\addr` Fatal
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Lee1 and Bob Ray1,2 Place One Keywords: alpha, beta Body
+%   text."
+% engines: INT081DF and EOFBIND: 0 errors; `<p><sup>1</sup> <sup>1,2</sup></p>` before the classification
+% expect:  0 errors; the marks with their names (or as their marks), no paragraph before the classification
+% status:  RED
+% moves:   post-merge (the jmlr author block's reading)
+\documentclass{jmlr}
+\title{T}
+\author{\Name{Ann Lee}\textsuperscript{1} \and \Name{Bob Ray}\textsuperscript{1,2}\\
+\addr Place One}
+\begin{document}
+\maketitle
+\begin{keywords}
+alpha, beta
+\end{keywords}
+Body text.
+\end{document}

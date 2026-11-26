@@ -15,7 +15,26 @@ LoadDefinitions!({
   // Sciences 2004, shipped with A&A papers; anlongtable.sty the same) is `\def\longtable{\par\onecolumn\clearpage
   // \begingroup\@ifnextchar[\LT@array{\LT@array[x]}}` (81 of run 340's 107 longtable Error→Fatal papers: 0707.2342,
   // 0708.2676, 0804.2184, 1102.5033, 1908.10340). Guard `perfect_kernel_batch65h::package_longtable_calls_lt_array`.
-  DefMacro!("\\longtable", r"\begingroup\LT@array");
+  // The real body's prefix (longtable.sty:91-106): preamble patches split `\longtable` at its `\LT@err` (1409.6572,
+  // 1503.02372, 1702.08827, 1909.09200, 2503.01096). Its `\if@noskipsec\mbox{}\par\fi` is left out: `\document` does
+  // not reset `\if@noskipsec` here (latex.ltx:9509; repro `paragraph-mode/noskipsec_reset_by_document_red.tex`).
+  DefMacro!("\\longtable", r"\par\@nobreakfalse
+    \ifx\multicols\@undefined\else\ifnum\col@number>\@ne\@twocolumntrue\fi\fi
+    \if@twocolumn\LT@err{longtable not in 1-column mode}\@ehc\fi
+    \begingroup\@ifnextchar[\LT@array{\LT@array[x]}");
+  // longtable.sty:47 errs; its only caller here is the column check above, whose table converts whole, and IEEEtran's
+  // binding keeps `\if@twocolumn` true under `onecolumn`: an Info, as no Perl or earlier diagnostic
+  DefMacro!("\\LT@err{}{}", r"\PackageInfo{longtable}{#1}");
+  // longtable.sty:487-517, never run (no output routine); the same patches split it at its `\@outputpage`s
+  RawTeX!(r"\def\LT@output{\ifnum\outputpenalty<-\@Mi
+      \ifnum\outputpenalty>-\LT@end@pen\LT@err{floats and marginpars not allowed in a longtable}\@ehc
+      \else\setbox\z@\vbox{\unvbox\@cclv}\ifdim\ht\LT@lastfoot>\ht\LT@foot
+        \dimen@\pagegoal\advance\dimen@\ht\LT@foot\advance\dimen@-\ht\LT@lastfoot
+        \ifdim\dimen@<\ht\z@\setbox\@cclv\vbox{\unvbox\z@\copy\LT@foot\vss}\@makecol\@outputpage
+          \global\vsize\@colroom\setbox\z@\vbox{\box\LT@head}\fi\fi
+        \unvbox\z@\box\ifvoid\LT@lastfoot\LT@foot\else\LT@lastfoot\fi\fi
+    \else\setbox\@cclv\vbox{\unvbox\@cclv\copy\LT@foot\vss}\@makecol\@outputpage
+      \global\vsize\@colroom\copy\LT@head\nobreak\fi}");
   DefMacro!("\\LT@array[]{}",
     r"\lx@longtable@bindings{#2}\@@longtable[#1]{#2}\lx@begin@alignment");
   DefMacro!("\\endlongtable",

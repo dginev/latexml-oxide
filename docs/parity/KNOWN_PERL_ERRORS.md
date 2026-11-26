@@ -23098,3 +23098,29 @@ Claim 21 lands outside it. Rust (`amsppt_sty.rs`, `DigestUntil:\enddemo` on the 
 `\quad` in Claim 20, line 1372). The same meaning comparison is why Perl ends a `\let` alias such as
 `\let\endpro=\endproclaim` (1403.0435), which Rust does not (LONG_TAIL AMSPR): a fix that compares by meaning must
 first give `\enddemo`/`\endproclaim` definitions of their own. Found by Gemini (AMSPR.1), checked on the trigger.
+
+## 1344. Perl's amsppt `\subheading` reads to `\endsubheading` unless a `{` follows
+
+amsppt.sty.ltxml:125-133 dispatches `\subheading` on the next token: a `{` reads one argument, anything else
+`Until:\endsubheading`, a delimiter amsppt never defines, so the read runs to the end of the file. amsppt.sty:563-569
+peeks (`\FN@`, no space skipped) for an optional `\nofrills` and then takes ONE undelimited argument
+(`\subheading@#1#2{\subhead#1#2\endsubhead}`), as amstex prints it. Minimal trigger:
+
+```latex
+\input amstex
+\documentstyle{amsppt}
+\document
+\subheading\nofrills{Intro}
+Body one.
+\subheading 1 {\bf Second}.
+\subheading {Third}
+Body three.
+\enddocument
+```
+
+amstex (TL 2025): 0 errors, "IntroBody one. 1. Second. Third. Body three." (the title "1"; "Second." is body text).
+Perl (same host): 2 errors (the missing `\endsubheading`), the first two subsections untitled, "Intro" and "1" in
+their bodies, the third titled. Witnesses alg-geom9709005, 1412.5856, dg-ga9711007, math0404023, math9201259,
+math9201265, math9202206, math9204224, math9207209, math9808069. Fixed in Rust (`amsppt_sty.rs` `\subheading`,
+`\subheading@`); repro `tools/perfect_kernel/repros/amstex/amsppt_subheading_reads_one_argument.tex`; guard
+`perfect_kernel_batcheofbind::eofbind_rows`.

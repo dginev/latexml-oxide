@@ -1,0 +1,20 @@
+% mechanism: amstex.tex's figure spaces and box shorthands are missing from the amstex binding: `\midspace{..}\caption
+%   {..}` (amstex.tex:257-275, `\ins@` reads the `\caption`), `\setbox@ne` and `\wd@ne` (:77-78) are undefined
+% witness: math9201259 (`\midspace{12 cm}\caption{Figure 1}`), math9207209 (`\setbox@ne\hbox{..}`, `\wd@ne`); found once
+%   EOFBIND let these papers past their `\subheading` Fatal
+% oracle:  amstex (TL 2025) 0 errors: "Before. Figure 1 Box: wide.After."
+% engines: EOFBIND: 5 errors (\midspace, \caption, \setbox@ne, \wd@ne undefined; the \ifdim)
+% expect:  0 errors; the caption "Figure 1", "Before.", "Box: wide.", "After."
+% status:  RED
+% moves:   post-merge (the amstex binding's figure spaces and shorthands)
+\input amstex
+\documentstyle{amsppt}
+\document
+Before.
+
+\midspace{2cm}\caption{Figure 1}
+\catcode`\@=11
+\setbox@ne\hbox{wide}\ifdim\wd@ne>\z@ Box: \box\@ne.\fi
+\catcode`\@=12
+After.
+\enddocument

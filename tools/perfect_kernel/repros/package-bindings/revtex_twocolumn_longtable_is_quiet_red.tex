@@ -1,0 +1,18 @@
+% mechanism: revtex4-2 replaces longtable's `\longtable` with its own `\longtable@new` (revtex4-2.cls:5258
+%   `\let\longtable\longtable@new`; :4992, no `\if@twocolumn` check, unlike `\longtable@longtable` :4985-4988), so a
+%   two-column revtex document's longtable is silent in pdflatex; our longtable binding's prefix (`longtable_sty.rs` `\longtable`) still runs the check and logs
+%   longtable's `\LT@err` as an Info (row R LTERRSEV). A Warning or Error for `\LT@err` would be false here
+% witness: synthetic (the reviewer's probe for EOFBIND)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors, no longtable message: "Text before. Text after." and the table
+% engines: EOFBIND (2c80d4e36e6): 0 errors, 0 warnings, "Package longtable Info: longtable not in 1-column mode"
+% expect:  0 errors, 0 warnings, no longtable message; "Text before.", the table, "Text after."
+% status:  RED (the Info is logged)
+\documentclass[twocolumn]{revtex4-2}
+\usepackage{longtable}
+\begin{document}
+Text before.
+\begin{longtable}{l}
+A\\
+\end{longtable}
+Text after.
+\end{document}

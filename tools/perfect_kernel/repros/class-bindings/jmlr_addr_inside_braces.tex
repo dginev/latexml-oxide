@@ -1,0 +1,15 @@
+% mechanism: the jmlr binding read an `\addr` text `Until:` the author block's end marker, across the `}` of a braced
+%   `{\addr One}`: the first `\addr` ate the marker and the second read to the end of the file. jmlr.cls:337 makes
+%   `\addr` a font switch, so its text ends at the group's `}` as well
+% witness: 2409.18592, 2006.01035, 2101.03606, 2305.08723
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Lee One Two Body text."
+% engines: INT081DF: 1 error, 1 fatal (Mouth:EoF Until:\lx@jmlr@endaddr), body lost; Perl: 3 errors (no jmlr binding)
+% expect:  0 errors; one creator "Ann Lee" with the affiliations "One", "Two"; "Body text."
+% status:  GREEN (EOFBIND)
+\documentclass{jmlr}
+\title{T}
+\author{\Name{Ann Lee}\\ {\addr One}\\ {\addr Two}}
+\begin{document}
+\maketitle
+Body text.
+\end{document}

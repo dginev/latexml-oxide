@@ -487,6 +487,9 @@ mod perfect_kernel_batchej1;
 /// ENCURL: babel's safe actives in the URL readers, utf8.def's control-character error, inputenc's ranges, xargs's
 /// space-restoring peek.
 mod perfect_kernel_batchencurl;
+/// EOFBIND: four bindings whose delimited reading ran past the end of the file read as their packages do —
+/// algpseudocodex, amsppt's `\subheading`, longtable's `\longtable`/`\LT@output`, jmlr's `\addr`.
+mod perfect_kernel_batcheofbind;
 mod perfect_kernel_batcherr2;
 mod perfect_kernel_batchf1;
 mod perfect_kernel_batchfb2a;

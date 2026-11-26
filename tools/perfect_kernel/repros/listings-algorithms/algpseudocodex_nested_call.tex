@@ -1,0 +1,19 @@
+% mechanism: the algpseudocodex binding loaded algpseudocode, whose `\Call`, `\Procedure` and `\Function` test their
+%   argument with ifthen's `\equal` (algpseudocode.sty:63-72); algpseudocodex.sty:25 loads only algorithmicx and defines
+%   them with `\ifstrempty` (:725-734, :878). A nested `\Call` inside `\equal` ran ifthen's `\@tempc` loop to the end
+% witness: 2512.12052, 2305.18534, 2405.10050, 2412.14872, 2508.16023, 2510.11949, 2511.08498
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "f(g) h(k(x)) procedure p(q) Text after."
+% engines: INT081DF: 1 error, 1 fatal (Mouth:EoF Until:\NOT); Perl: 1 error (no algpseudocodex binding)
+% expect:  0 errors; the three lines' texts in order and "Text after."
+% status:  GREEN (EOFBIND)
+\documentclass{article}
+\usepackage{algpseudocodex}
+\begin{document}
+\begin{algorithmic}
+\State $\Call{f}{\Call{g}{}}$
+\State \Call{h}{\Call{k}{x}}
+\Procedure{p}{\Call{q}{}}
+\EndProcedure
+\end{algorithmic}
+Text after.
+\end{document}
