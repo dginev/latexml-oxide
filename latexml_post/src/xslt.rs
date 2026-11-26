@@ -468,7 +468,7 @@ impl XSLT {
 
     // Determine destination once — same logic regardless of whether
     // the resource ends up on disk or comes from the embedded table.
-    // `root` is the directory it is built on, which its `@import` copies stay in.
+    // `root` is the directory it is built on, which the copy and its `@import` copies stay in.
     let (root, dest) = if let Some(ref rd) = self.resource_directory {
       if let Some(site_dir) = doc.get_site_directory() {
         (site_dir, format!("{}/{}/{}", site_dir, rd, rel_dest))
@@ -503,11 +503,23 @@ impl XSLT {
     if done {
       return relative_to_destination(doc, dest);
     }
+    // A symbolic link in the destination would carry the copy out of it (OXIDIZED_DESIGN_DIVERGENCES #1166).
+    if pathname::is_contained_resolved(&dest, root).is_none() {
+      Warn!(
+        "unexpected",
+        src,
+        "{} would be copied to {} outside {}; not copied",
+        src,
+        dest,
+        root
+      );
+      return src.to_string();
+    }
     // A failed write (of the file or of an `@import`) warns and is retried on the next page, as before.
     let mut placed = true;
 
     match find_resource_file(src, info, &search_paths) {
-      Some(path) => {
+      Some((path, found_under)) => {
         if crate::writer::same_file(&path, &dest) {
           // The search-path match IS the destination: it is used as-is (Perl skips the copy, XSLT.pm:118) unless
           // it is #312's empty leftover, which the embedded bytes repair.
@@ -539,7 +551,15 @@ impl XSLT {
         if let Some(seen) = imports
           && follows
         {
-          placed &= copy_css_imports(Path::new(&path), Path::new(&dest), Path::new(root), seen);
+          placed &= copy_css_imports(
+            Path::new(&path),
+            Path::new(&dest),
+            &Roots {
+              dest:   root,
+              source: &found_under,
+            },
+            seen,
+          );
         }
       },
       None => {
@@ -625,6 +645,13 @@ fn relative_to_destination(doc: &PostDocument, dest: String) -> String {
   }
 }
 
+/// The directories a stylesheet's `@import` copies stay in: `dest`, the one it was copied under, and `source`, the
+/// one [`find_resource_file`] found it under.
+struct Roots<'a> {
+  dest:   &'a str,
+  source: &'a str,
+}
+
 /// Extract the targets of CSS `@import` rules from stylesheet source.
 ///
 /// Block comments are stripped first (so a commented-out `@import` is ignored),
@@ -654,12 +681,12 @@ fn parse_css_imports(css: &str) -> Vec<String> {
 /// the on-disk source and the destination, so the same relative path is
 /// recreated under the destination — copied, and (if itself a `.css`) recursed
 /// into. Remote (`http(s)://`, `//`, `data:`, any `scheme://`) and absolute
-/// (`/…`) targets are left untouched. A target whose copy would land outside
-/// `root` (the destination or site directory) is neither read nor written, with a
-/// Warning (OXIDIZED_DESIGN_DIVERGENCES #1166). `seen` (keyed on the absolute source
-/// path) guards against import cycles and redundant copies. Returns false when an import target was
-/// missing or could not be copied (each warned), so the caller retries it on the next page.
-fn copy_css_imports(src: &Path, dest: &Path, root: &Path, seen: &mut HashSet<PathBuf>) -> bool {
+/// (`/…`) targets are left untouched. Each target is named as its URL resolves (`a/../b` is `b`), and one whose
+/// copy would land outside `roots.dest` or whose source resolves outside `roots.source`, a symbolic link followed on
+/// either side, is neither read nor written, with a Warning (OXIDIZED_DESIGN_DIVERGENCES #1166). `seen` (keyed on
+/// the absolute source path) guards against import cycles and redundant copies. Returns false when an import target
+/// was missing or could not be copied (each warned), so the caller retries it on the next page.
+fn copy_css_imports(src: &Path, dest: &Path, roots: &Roots, seen: &mut HashSet<PathBuf>) -> bool {
   let content = match fs::read_to_string(src) {
     Ok(c) => c,
     Err(_) => return true,
@@ -679,16 +706,28 @@ fn copy_css_imports(src: &Path, dest: &Path, root: &Path, seen: &mut HashSet<Pat
     {
       continue;
     }
-    let import_src = src_dir.join(t);
-    let import_dest = dest_dir.join(t);
-    if !pathname::is_lexically_inside(&import_dest, root) {
+    let lexical = |dir: &Path| PathBuf::from(pathname::absolute(&dir.join(t).to_string_lossy()));
+    let import_src = lexical(src_dir);
+    let import_dest = lexical(dest_dir);
+    if pathname::is_contained_resolved(&import_dest.to_string_lossy(), roots.dest).is_none() {
       Warn!(
         "unexpected",
         t,
         "@import {} in {} would be copied outside {}; not copied",
         t,
         src.display(),
-        root.display()
+        roots.dest
+      );
+      continue;
+    }
+    if !resolves_inside(&import_src, roots.source) {
+      Warn!(
+        "unexpected",
+        t,
+        "@import {} in {} resolves outside {}; not copied",
+        t,
+        src.display(),
+        roots.source
       );
       continue;
     }
@@ -730,7 +769,7 @@ fn copy_css_imports(src: &Path, dest: &Path, root: &Path, seen: &mut HashSet<Pat
       .and_then(|e| e.to_str())
       .is_some_and(|e| e.eq_ignore_ascii_case("css"))
     {
-      placed &= copy_css_imports(&import_src, &import_dest, root, seen);
+      placed &= copy_css_imports(&import_src, &import_dest, roots, seen);
     }
   }
   placed
@@ -1342,29 +1381,311 @@ fn find_stylesheet(stylesheet: &str, searchpaths: &[String]) -> Result<String, P
 /// caller via `embedded_resources::lookup`; this function deliberately
 /// does NOT check the embed, so on-disk overrides always win and the
 /// "couldn't find" branch can fall through to the embed cleanly.
+///
+/// Returns the file and the directory it was found under (the working directory or the search path), which its
+/// `@import`s are read from; a file named outside both is its own directory's. A file found under one that resolves
+/// outside it, through a symbolic link, is skipped with a Warning (OXIDIZED_DESIGN_DIVERGENCES #1166).
 fn find_resource_file(
   src: &str,
   info: Option<&ResourceInfo>,
   search_paths: &[&str],
-) -> Option<String> {
+) -> Option<(String, String)> {
   let name = Path::new(src).file_name()?.to_str()?;
   let mut candidates = vec![src.to_string()];
   if let Some(info) = info {
     candidates.push(format!("{}/{}", info.subdir, name));
     candidates.push(format!("{}/{}", info.subdir, src));
+    candidates.dedup();
   }
-  for candidate in &candidates {
-    if Path::new(candidate).is_file() {
-      return Some(candidate.clone());
+  let found_under = |path: &str, base: &str| {
+    if pathname::is_contained(path, base).is_none() {
+      let own = Path::new(path)
+        .parent()
+        .map(Path::to_path_buf)
+        .unwrap_or_default();
+      return Some((path.to_string(), own.to_string_lossy().into_owned()));
     }
-    for sp in search_paths {
+    if resolves_inside(Path::new(path), base) {
+      return Some((path.to_string(), base.to_string()));
+    }
+    Warn!(
+      "unexpected",
+      src,
+      "{} resolves outside {}; not used",
+      path,
+      base
+    );
+    None
+  };
+  for candidate in &candidates {
+    if Path::new(candidate).is_file()
+      && let Some(found) = found_under(candidate, ".")
+    {
+      return Some(found);
+    }
+    for (i, sp) in search_paths.iter().enumerate() {
       let p = format!("{}/{}", sp, candidate);
-      if Path::new(&p).is_file() {
-        return Some(p);
+      if !search_paths[..i].contains(sp)
+        && Path::new(&p).is_file()
+        && let Some(found) = found_under(&p, sp)
+      {
+        return Some(found);
       }
     }
   }
   None
+}
+
+/// Whether the file a read of `path` opens lies in `root`: an existing one as the system opens it
+/// ([`pathname::opens_inside`]), a missing one through its existing parent.
+fn resolves_inside(path: &Path, root: &str) -> bool {
+  pathname::opens_inside(path, root).unwrap_or_else(|| {
+    pathname::is_contained(
+      &pathname::resolved(&path.to_string_lossy()),
+      &pathname::resolved(root),
+    )
+    .is_some()
+  })
+}
+
+/// OD #1166: a stylesheet's `@import` copies stay in the destination and are read from inside the directory the
+/// stylesheet was found under, a symbolic link followed on either side; rows red on the round-0 binary are marked.
+#[cfg(test)]
+mod css_copy_containment_tests {
+  use std::{collections::HashSet, fs, path::Path};
+
+  use latexml_core::common::error::{LogStatus, get_status};
+
+  use super::{RESOURCE_CSS, Roots, copy_css_imports, find_resource_file};
+
+  /// `src/top.css` holding `css` is copied to `out/top.css`; `victim/` and `secret.txt` lie outside both.
+  struct Row {
+    name:     &'static str,
+    css:      &'static str,
+    files:    &'static [(&'static str, &'static str)],
+    /// (link, target), both under the work directory.
+    links:    &'static [(&'static str, &'static str)],
+    copied:   &'static [(&'static str, &'static str)],
+    warnings: usize,
+  }
+
+  const NESTED: &[(&str, &str)] = &[
+    ("src/parts/a.css", "@import url(\"../b.css\");\n"),
+    ("src/parts/deep/c.css", "@import url( \"../../b2.css\" );\n"),
+    ("src/b.css", "/*b*/\n"),
+    ("src/b2.css", "/*b2*/\n"),
+  ];
+
+  fn rows() -> Vec<Row> {
+    let mut rows = vec![Row {
+      name:     "nested in-root ../ imports",
+      css:      "@import url(\"parts/a.css\"); @import \"parts/deep/c.css\"; body{}\n",
+      files:    NESTED,
+      links:    &[],
+      copied:   &[
+        ("out/parts/a.css", "@import url(\"../b.css\");\n"),
+        ("out/parts/deep/c.css", "@import url( \"../../b2.css\" );\n"),
+        ("out/b.css", "/*b*/\n"),
+        ("out/b2.css", "/*b2*/\n"),
+      ],
+      warnings: 0,
+    }];
+    if cfg!(unix) {
+      rows.extend([
+        // Red on round 0: written to victim/evil.css.
+        Row {
+          name:     "a link in the destination",
+          css:      "@import url(\"L/evil.css\");\n",
+          files:    &[("src/L/evil.css", "FROM-SRC\n")],
+          links:    &[("out/L", "victim")],
+          copied:   &[],
+          warnings: 1,
+        },
+        // Red on round 0: written to victim/evil.css; the URL names out/evil.css.
+        Row {
+          name:     "a link then .. in the destination",
+          css:      "@import url(\"L/../evil.css\");\n",
+          files:    &[("src/evil.css", "FROM-SRC\n"), ("src/L/keep", "")],
+          links:    &[("out/L", "victim/sub")],
+          copied:   &[("out/evil.css", "FROM-SRC\n")],
+          warnings: 0,
+        },
+        // Red on round 0: secret.txt copied to out/s.css.
+        Row {
+          name:     "an import that links to a host file",
+          css:      "@import url(\"s.css\");\n",
+          files:    &[],
+          links:    &[("src/s.css", "secret.txt")],
+          copied:   &[],
+          warnings: 1,
+        },
+        // Red on round 0: secret.txt copied to out/L/secret.txt.
+        Row {
+          name:     "an import through a folder link out of the source",
+          css:      "@import url(\"L/secret.txt\");\n",
+          files:    &[],
+          links:    &[("src/L", "")],
+          copied:   &[],
+          warnings: 1,
+        },
+        // Red on round 0: secret.txt copied (a link inside the source, then `..` past it). The URL names
+        // src/secret.txt, which is missing.
+        Row {
+          name:     "a link inside the source then ..",
+          css:      "@import url(\"a/b/c/L/../../../../secret.txt\");\n",
+          files:    &[("src/a/b/c/keep", ""), ("src/x/y/z/keep", "")],
+          links:    &[("src/a/b/c/L", "src/x/y/z")],
+          copied:   &[],
+          warnings: 1,
+        },
+        Row {
+          name:     "a link that stays in the source",
+          css:      "@import \"alias.css\";\n",
+          files:    &[("src/b.css", "/*b*/\n")],
+          links:    &[("src/alias.css", "src/b.css")],
+          copied:   &[("out/alias.css", "/*b*/\n")],
+          warnings: 0,
+        },
+      ]);
+    }
+    rows
+  }
+
+  fn write(path: &Path, body: &str) {
+    fs::create_dir_all(path.parent().unwrap()).unwrap();
+    fs::write(path, body).unwrap();
+  }
+
+  #[cfg(unix)]
+  fn link(at: &Path, target: &Path) {
+    fs::create_dir_all(at.parent().unwrap()).unwrap();
+    std::os::unix::fs::symlink(target, at).unwrap();
+  }
+  #[cfg(not(unix))]
+  fn link(_: &Path, _: &Path) {}
+
+  #[test]
+  fn css_imports_stay_inside_their_roots() {
+    for row in rows() {
+      let work = tempfile::tempdir().unwrap();
+      let w = work.path();
+      write(&w.join("victim/evil.css"), "ORIGINAL\n");
+      fs::create_dir_all(w.join("victim/sub")).unwrap();
+      write(&w.join("secret.txt"), "SECRET\n");
+      write(&w.join("src/top.css"), row.css);
+      write(&w.join("out/top.css"), row.css);
+      for (path, body) in row.files {
+        write(&w.join(path), body);
+      }
+      for (at, target) in row.links {
+        link(&w.join(at), &w.join(target));
+      }
+      let (src, out) = (w.join("src"), w.join("out"));
+      let roots = Roots {
+        dest:   &out.to_string_lossy(),
+        source: &src.to_string_lossy(),
+      };
+      let before = get_status(LogStatus::Warning);
+      copy_css_imports(
+        &src.join("top.css"),
+        &out.join("top.css"),
+        &roots,
+        &mut HashSet::new(),
+      );
+      let name = row.name;
+      assert_eq!(
+        get_status(LogStatus::Warning) - before,
+        row.warnings,
+        "{name}"
+      );
+      assert_eq!(
+        fs::read_to_string(w.join("victim/evil.css")).unwrap(),
+        "ORIGINAL\n",
+        "{name}"
+      );
+      for (path, body) in row.copied {
+        assert_eq!(
+          fs::read_to_string(w.join(path)).ok().as_deref(),
+          Some(*body),
+          "{name}: {path}"
+        );
+      }
+      let mut written: Vec<String> = Vec::new();
+      let mut stack = vec![out.clone(), w.join("victim")];
+      while let Some(dir) = stack.pop() {
+        for entry in fs::read_dir(&dir).unwrap().flatten() {
+          let path = entry.path();
+          if entry.file_type().unwrap().is_dir() {
+            stack.push(path);
+          } else if entry.file_type().unwrap().is_file() {
+            assert_ne!(
+              fs::read_to_string(&path).unwrap(),
+              "SECRET\n",
+              "{name}: {}",
+              path.display()
+            );
+            written.push(
+              path
+                .strip_prefix(w)
+                .unwrap()
+                .to_string_lossy()
+                .replace('\\', "/"),
+            );
+          }
+        }
+      }
+      written.sort();
+      let mut expected: Vec<String> = row
+        .copied
+        .iter()
+        .map(|(path, _)| path.to_string())
+        .collect();
+      expected.extend(["out/top.css".to_string(), "victim/evil.css".to_string()]);
+      expected.sort();
+      assert_eq!(written, expected, "{name}");
+    }
+  }
+
+  /// The stylesheet itself: found under a search path only when it resolves inside it (red on round 0: the link to
+  /// a host file was found and copied as the paper's stylesheet).
+  #[test]
+  fn a_found_stylesheet_resolves_inside_its_search_path() {
+    let work = tempfile::tempdir().unwrap();
+    let sp = work.path().join("paper");
+    write(
+      &sp.join("resources/CSS/containment-row-plain.css"),
+      "/*plain*/\n",
+    );
+    let sp_str = sp.to_string_lossy().into_owned();
+    let before = get_status(LogStatus::Warning);
+    let found = find_resource_file("containment-row-plain.css", Some(&RESOURCE_CSS), &[&sp_str]);
+    assert_eq!(
+      found,
+      Some((
+        format!("{sp_str}/resources/CSS/containment-row-plain.css"),
+        sp_str.clone()
+      ))
+    );
+    assert_eq!(get_status(LogStatus::Warning), before);
+    if cfg!(unix) {
+      write(&work.path().join("secret.txt"), "SECRET\n");
+      link(
+        &sp.join("resources/CSS/containment-row-link.css"),
+        &work.path().join("secret.txt"),
+      );
+      let found = find_resource_file("containment-row-link.css", Some(&RESOURCE_CSS), &[&sp_str]);
+      assert_eq!(found, None);
+      assert_eq!(get_status(LogStatus::Warning) - before, 1);
+      // A link then `..` (Gemini A.2): `a/b/L/../../..` is `paper` as written, the work directory as opened.
+      fs::create_dir_all(sp.join("a/b")).unwrap();
+      fs::create_dir_all(sp.join("deep/er")).unwrap();
+      link(&sp.join("a/b/L"), &sp.join("deep/er"));
+      write(&work.path().join("containment-row-climb.css"), "SECRET\n");
+      let found = find_resource_file("a/b/L/../../../containment-row-climb.css", None, &[&sp_str]);
+      assert_eq!(found, None);
+      assert_eq!(get_status(LogStatus::Warning) - before, 2);
+    }
+  }
 }
 
 #[cfg(test)]

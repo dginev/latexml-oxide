@@ -34,8 +34,9 @@ use regex::Regex;
 /// all).
 pub fn find_main_tex(dir: &Path) -> Result<PathBuf, String> { main_tex_in(dir, true) }
 
-/// [`find_main_tex`]; `report` warns of a `00README` entry outside `dir` ([`readme_entry`]).
-fn main_tex_in(dir: &Path, report: bool) -> Result<PathBuf, String> {
+/// [`find_main_tex`]; `report` warns of a `00README` entry outside `dir` ([`readme_entry`]) — the language server's
+/// detection passes false, as its warnings would only pile up unreported.
+pub fn main_tex_in(dir: &Path, report: bool) -> Result<PathBuf, String> {
   // Phase I.1: Check 00README.json (2025 arXiv format)
   // Format: { "sources": [{"filename": "main.tex", "usage": "toplevel"}, ...] }
   if let Some(main_path) = parse_readme_json(dir).and_then(|name| entry_in(dir, &name, report)) {
@@ -414,7 +415,7 @@ pub fn find_top_level_texs(dir: &Path) -> Result<Vec<PathBuf>, String> {
 
 fn s(msg: &str) -> String { msg.to_string() }
 
-/// The file `name` a `00README` marks top-level, inside `dir`; `None` when it does not exist, or, with a
+/// The file `name` a `00README` marks top-level, inside `dir`; `None` when it is not a file (`.`, a folder), or, with a
 /// `Warning:archive:path`, when `name` is absolute, has a `..` or resolves outside `dir`. Perl joins it unchecked
 /// (`Util/Pack.pm:78,93`), which would make a host file the document and its folder the source directory
 /// (OXIDIZED_DESIGN_DIVERGENCES #1166).
@@ -423,8 +424,6 @@ pub fn readme_entry(dir: &Path, name: &str) -> Option<PathBuf> { entry_in(dir, n
 /// [`readme_entry`], warning only when `report`.
 fn entry_in(dir: &Path, name: &str, report: bool) -> Option<PathBuf> {
   use std::path::Component;
-
-  use latexml_core::util::pathname::canonicalize;
   let climbs = Path::new(name).components().any(|c| {
     matches!(
       c,
@@ -432,11 +431,10 @@ fn entry_in(dir: &Path, name: &str, report: bool) -> Option<PathBuf> {
     )
   });
   let path = dir.join(name);
-  if !climbs && !path.exists() {
+  if !climbs && !path.is_file() {
     return None;
   }
-  let inside = !climbs
-    && matches!((canonicalize(&path), canonicalize(dir)), (Ok(p), Ok(d)) if p.starts_with(&d));
+  let inside = !climbs && latexml_core::util::pathname::opens_inside(&path, dir) == Some(true);
   if inside {
     return Some(path);
   }
@@ -1151,6 +1149,8 @@ mod tests {
       ("00README.json", json("sub/../sub/paper.tex"), "main.tex", 1),
       ("00README.json", json("sub/paper.tex"), "sub/paper.tex", 0),
       ("00README.json", json("absent.tex"), "main.tex", 0),
+      ("00README.XXX", ". toplevelfile\n".into(), "main.tex", 0),
+      ("00README.json", json("sub"), "main.tex", 0),
     ];
     #[cfg(unix)]
     rows.push((
@@ -1166,6 +1166,19 @@ mod tests {
       "main.tex",
       1,
     ));
+    // A short source directory and an entry whose path passes 260 characters, which Windows canonicalizes to another
+    // form: both sides are compared in one.
+    let deep = [
+      "d".repeat(60),
+      "e".repeat(60),
+      "f".repeat(60),
+      "g".repeat(60),
+    ]
+    .join("/");
+    std::fs::create_dir_all(src.join(&deep)).unwrap();
+    write(&src.join(&deep), "paper.tex", "\\input{x}\n");
+    let deep = format!("{deep}/paper.tex");
+    rows.push(("00README.json", json(&deep), deep.as_str(), 0));
     for (readme, body, pick, warnings) in rows {
       for name in ["00README.json", "00README.XXX"] {
         let _ = std::fs::remove_file(src.join(name));

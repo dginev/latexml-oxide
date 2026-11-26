@@ -24485,28 +24485,46 @@ The cost: a reused output folder keeps an older version's `LaTeXML.css` until th
 css_in_a_separate_destination_is_used_as_is}`, `stale_css_overwrite::empty_css_in_dest_is_overwritten_with_bundled`,
 `tools/release_smoke.sh`.
 
-### 1166. A path a source names stays in its directory: a `00README` main file, a stylesheet's `@import` copy (ARCHFIX)
+### 1166. A path a source names stays in its directory: a `00README` main file, a stylesheet and its `@import` copies (ARCHFIX)
 
 Related: #1081 (untrusted input stays in the job: unpacking, Lua, image copies), #1165 (the stylesheet copy).
-**Rule**: a `00README` top-level entry is used only when it is relative, has no `..` component and, canonicalized,
-lies inside the source directory; an `@import` that `copy_css_imports` follows is copied only when its destination,
-`.`/`..` resolved lexically, lies inside the directory the stylesheet was copied under (the site directory, else the
-destination directory). Otherwise it is skipped, with a Warning naming it.
+**Rule**: a `00README` top-level entry is used only when it is relative, has no `..`, names a file, and the file the
+system opens for it lies inside the source directory. A `--css`/`--javascript`/bundled resource copy, and each
+`@import` a `--css` copy follows, is made only when the file read lies inside the directory it was found under and the
+copy lands inside the directory it is copied under, symbolic links followed on both sides; otherwise it is skipped with
+a Warning naming it.
 **Perl behavior**: `Util/Pack.pm` L78 and L93 take the entry as `full_filename($name)`, `catfile` of the unpacked
 directory and the name (`Pack/Dir.pm` L35-38, `Pack/Zip.pm` L51-54), unchecked: `../x.tex` names a file outside the
-archive, which becomes the document and its directory the source directory. Perl copies no `@import`.
-**Rust behavior**: one helper, `main_tex::readme_entry`, serves the `00README.json` and `00README.XXX` reads of
-`find_main_tex`, `explicit_top_levels` and `cortex_worker`'s own `find_main_tex` (not a copy of the library's: no
-`ignore` directive, its own `invalid:` messages). An entry outside is `Warning:archive:path the 00README names '<name>'
-as a top-level file outside the source directory; ignored` (once per entry), and the main file is then found as if
-there were no entry. `Path::components` decides: a `..`, a root, and on Windows a drive or UNC prefix are refused; an
-entry inside that is a link out is refused by the canonical check. An `@import` copy outside is
-`Warning:unexpected:<target> @import <target> in <stylesheet> would be copied outside <root>; not copied`, the target
-neither read nor written (`pathname::is_lexically_inside`), for any stylesheet: one in the archive, one next to the `.tex`, an operator's
-`--css`. The search order is unchanged (a stylesheet beside the `.tex` still wins, #1165).
-**Why**: the archive is untrusted; its `00README` could otherwise make a host file the document, and its stylesheet
-overwrite a file outside the destination. **Guards** `main_tex::tests::readme_entries_outside_the_source_directory_are_ignored`,
-`whatsinout::archive_readme_main_outside_the_archive_is_ignored`,
-`cli_css_resource_copy::archive_css_imports_stay_inside_the_destination`,
-`cortex_worker_ignores_a_readme_main_outside_the_source`,
-`pathname::tests::is_lexically_inside_resolves_dots_by_component`.
+archive, which becomes the document and its directory the source directory. `Post/XSLT.pm` `copyResource` (L88-125)
+copies the found file unchecked and copies no `@import`.
+**Rust behavior**:
+- `main_tex::readme_entry` serves the `00README.json` and `00README.XXX` reads of `find_main_tex`,
+  `explicit_top_levels` and `cortex_worker`'s own `find_main_tex` (not a copy of the library's: no `ignore` directive,
+  its own `invalid:` messages), so it holds for `--whatsin=archive`, `--whatsin=directory` (a local folder) and the
+  fleet. `Path::components` refuses a `..`, a root, and on Windows a drive or UNC prefix; `.` or a folder is not a
+  file; `pathname::opens_inside` compares std's canonical forms of the entry and the directory (on Windows both keep the
+  verbatim prefix, whatever their length). An entry outside is `Warning:archive:path the 00README names '<name>' as a
+  top-level file outside the source directory; ignored` (once per entry), and the main file is found as without it.
+  The language server's detection calls `main_tex_in(dir, false)`, which does not warn.
+- `xslt.rs` `find_resource_file` returns the file and the directory it was found under: the search path (an archive's
+  unpack root, the `.tex`'s directory, an operator `--path` directory) or the working directory; a name outside both
+  (an absolute `--css`, `../theme/x.css`) is its own directory's. A file found under one that opens outside it is
+  `Warning:unexpected:<name> <path> resolves outside <root>; not used`, and the search goes on (a bundled `LaTeXML.css`
+  can still be written).
+- `copy_resource_following` copies under the site directory, else the destination directory, and refuses a copy whose
+  own path leaves it: `Warning:unexpected:<name> <name> would be copied to <dest> outside <root>; not copied`.
+- `copy_css_imports` names each target as its URL resolves, dot segments removed first (RFC 3986 §5.2.4), on both
+  sides, so the copy is the file a browser requests; then `pathname::is_contained_resolved` for the copy (its directory
+  resolved, a file link replaced, never written through) and `opens_inside` for the read. Refused:
+  `Warning:unexpected:<target> @import <target> in <css> would be copied outside <root>; not copied` or `… resolves
+  outside <root>; not copied`, the target neither read nor written. This holds for an operator's `--css` layout too:
+  an `@import` that climbs above the destination is refused.
+**Why**: the archive and a local source folder are untrusted; a `00README`, a stylesheet or a symbolic link in either
+could otherwise make a host file the document, copy one into the output, or overwrite a file outside the destination.
+**Residual** (v0.8.1, the document read jail): a resource the document itself names (`\lxRequireResource` with an
+absolute or `../` path) is read where it lies, as in Perl.
+**Guards** `main_tex::tests::readme_entries_outside_the_source_directory_are_ignored`,
+`lsp_server::project::tests::detection_holds_no_readme_warnings`,
+`whatsinout::archive_readme_main_outside_the_archive_is_ignored`, `cortex_worker_ignores_a_readme_main_outside_the_source`,
+`xslt::css_copy_containment_tests::{css_imports_stay_inside_their_roots, a_found_stylesheet_resolves_inside_its_search_path}`,
+`cli_css_resource_copy::{archive_css_imports_stay_inside_the_destination, css_copies_follow_no_link_out}`.

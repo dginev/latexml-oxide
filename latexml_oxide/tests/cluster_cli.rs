@@ -601,6 +601,97 @@ mod cli_css_resource_copy {
     );
   }
 
+  /// OD #1166, end to end on Unix: a `--css` copy whose own path in the destination passes a symbolic link out of it
+  /// is not made (red on round 0: `victim/main.css` overwritten), and an archive's `@import` through an in-archive link
+  /// then `..` names the file its URL does, inside the archive (red on round 0: the canary outside it copied into the
+  /// output). One Warning each.
+  #[cfg(unix)]
+  #[test]
+  fn css_copies_follow_no_link_out() {
+    use std::io::Write as _;
+    let work = tempfile::tempdir().expect("create tempdir");
+    let w = work.path();
+    let (tmp, paper) = (w.join("tmp"), w.join("paper"));
+    for dir in [
+      &tmp,
+      &w.join("victim"),
+      &paper.join("sub"),
+      &paper.join("x"),
+    ] {
+      std::fs::create_dir_all(dir).unwrap();
+    }
+    std::fs::write(w.join("victim/main.css"), "ORIGINAL\n").unwrap();
+    std::fs::write(w.join("canary.txt"), "SECRET-CANARY\n").unwrap();
+    std::fs::write(paper.join("main.tex"), HELLO_TEX).unwrap();
+    std::fs::write(paper.join("sub/main.css"), "/* top */\n").unwrap();
+    std::os::unix::fs::symlink(w.join("victim"), paper.join("x/sub")).unwrap();
+    // In the archive, `a/b/c/L` is the unpacked folder `tmp/<dir>/`, so `L/../..` is the work directory.
+    let mut zip = zip::ZipWriter::new(std::fs::File::create(w.join("paper.zip")).unwrap());
+    let options = zip::write::SimpleFileOptions::default();
+    for (name, body) in [
+      ("main.tex", HELLO_TEX),
+      (
+        "resources/CSS/LaTeXML.css",
+        "@import url(\"a/b/c/L/../../canary.txt\");\n",
+      ),
+      ("resources/CSS/a/b/c/keep", ""),
+    ] {
+      zip.start_file(name, options).unwrap();
+      zip.write_all(body.as_bytes()).unwrap();
+    }
+    zip
+      .add_symlink("resources/CSS/a/b/c/L", "../../../../..", options)
+      .unwrap();
+    zip.finish().unwrap();
+    for (cwd, args, warning) in [
+      (
+        paper.as_path(),
+        ["main.tex", "--dest=x/main.html", "--css=sub/main.css"],
+        "Warning:unexpected:sub/main.css sub/main.css would be copied to x/sub/main.css outside x; not copied",
+      ),
+      (
+        w,
+        ["paper.zip", "--dest=out/doc.html", "--css=LaTeXML.css"],
+        "Warning:missing_file:a/b/c/L/../../canary.txt Couldn't find @import target ",
+      ),
+    ] {
+      let output = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+        .args(args)
+        .current_dir(cwd)
+        .env("TMPDIR", &tmp)
+        .output()
+        .expect("spawn latexml_oxide");
+      let stderr = String::from_utf8_lossy(&output.stderr);
+      assert!(output.status.success(), "stderr:\n{stderr}");
+      let warnings: Vec<&str> = stderr
+        .lines()
+        .filter(|l| l.starts_with("Warning:"))
+        .collect();
+      assert_eq!(warnings.len(), 1, "{args:?}: one Warning:\n{stderr}");
+      assert!(warnings[0].starts_with(warning), "{}", warnings[0]);
+    }
+    assert_eq!(
+      std::fs::read_to_string(w.join("victim/main.css")).unwrap(),
+      "ORIGINAL\n"
+    );
+    let mut stack = vec![w.join("out"), paper.clone()];
+    while let Some(dir) = stack.pop() {
+      for entry in std::fs::read_dir(&dir).unwrap().flatten() {
+        let path = entry.path();
+        if entry.file_type().unwrap().is_dir() {
+          stack.push(path);
+        } else if entry.file_type().unwrap().is_file() {
+          let body = std::fs::read(&path).unwrap();
+          assert!(
+            !String::from_utf8_lossy(&body).contains("SECRET-CANARY"),
+            "{}",
+            path.display()
+          );
+        }
+      }
+    }
+  }
+
   /// Issue 807: every page links where `copyResource` put each resource, relative to that page (Perl
   /// XSLT.pm:71-125) — an absolute `--css`/`--javascript` outside the source at the top level, a contained relative
   /// one at its own path, `../` once from a split sub-page; the bundled `<ltx:resource>` CSS likewise.

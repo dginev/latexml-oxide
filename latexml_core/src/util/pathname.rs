@@ -1321,32 +1321,22 @@ pub fn is_contained_resolved(pathname: &str, base: &str) -> Option<String> {
   is_contained(&resolved_directory_of(pathname), &resolved(base))
 }
 
-/// Whether `path` stays inside `root`, both made absolute against the working directory and their `.` and `..`
-/// resolved component by component without touching the file system (a `..` at the top stays there).
-pub fn is_lexically_inside(path: &Path, root: &Path) -> bool {
-  use std::path::Component;
-  fn lexical(path: &Path) -> Option<PathBuf> {
-    let mut out = PathBuf::new();
-    for component in std::path::absolute(path).ok()?.components() {
-      match component {
-        Component::CurDir => {},
-        Component::ParentDir => {
-          out.pop();
-        },
-        other => out.push(other),
-      }
-    }
-    Some(out)
-  }
-  matches!((lexical(path), lexical(root)), (Some(p), Some(r)) if p.starts_with(&r))
-}
-
 /// Whether `a` and `b` name the same existing file (both [`canonicalize`]d, so links and spellings agree); false when
 /// either does not exist.
 pub fn same_file(a: impl AsRef<Path>, b: impl AsRef<Path>) -> bool {
   match (canonicalize(a), canonicalize(b)) {
     (Ok(ca), Ok(cb)) => ca == cb,
     _ => false,
+  }
+}
+
+/// Whether the existing `path`, as the system opens it (every link followed, a link before a `..` first), lies in the
+/// existing directory `dir`; `None` when either is missing. Both are canonicalized by std, so on Windows both keep
+/// the verbatim prefix [`canonicalize`] drops only under 260 characters, and a long path compares like a short one.
+pub fn opens_inside(path: impl AsRef<Path>, dir: impl AsRef<Path>) -> Option<bool> {
+  match (std::fs::canonicalize(path), std::fs::canonicalize(dir)) {
+    (Ok(p), Ok(d)) => Some(p.starts_with(&d)),
+    _ => None,
   }
 }
 
@@ -1533,33 +1523,6 @@ mod tests {
     assert!(is_contained(&abs("/s"), &abs("/s")).is_some());
     assert_eq!(is_contained(&abs("/s/../c/A.svg"), &abs("/s")), None);
     assert_eq!(is_contained(&abs("/p"), &abs("/p/sub")), None);
-  }
-
-  /// `is_lexically_inside`: a `..` that stays in the root, one that leaves it, one past the file system's top, a
-  /// relative root; on Windows a `\` separator, another drive and a UNC path.
-  #[test]
-  fn is_lexically_inside_resolves_dots_by_component() {
-    let inside = |p: &str, r: &str| is_lexically_inside(Path::new(p), Path::new(r));
-    let abs = |p: &str| {
-      if cfg!(windows) {
-        format!("C:{p}")
-      } else {
-        p.to_string()
-      }
-    };
-    assert!(inside(&abs("/d/css/../x.css"), &abs("/d")));
-    assert!(inside(&abs("/d"), &abs("/d")));
-    assert!(!inside(&abs("/d/css/../../x.css"), &abs("/d")));
-    assert!(!inside(&abs("/d/../../../../d2/x"), &abs("/d")));
-    assert!(!inside(&abs("/dd/x"), &abs("/d")));
-    assert!(inside("out/a/../b.css", "out"));
-    assert!(!inside("out/../b.css", "out"));
-    if cfg!(windows) {
-      assert!(!inside(r"C:\d\css\..\..\x.css", r"C:\d"));
-      assert!(inside(r"C:\d\css\..\x.css", "C:/d"));
-      assert!(!inside(r"D:\d\x.css", r"C:\d"));
-      assert!(!inside(r"\\host\share\d\x.css", r"C:\d"));
-    }
   }
 
   /// Two spellings of one directory contain alike: paths reached through a symbolic link (the Unix stand-in for a
