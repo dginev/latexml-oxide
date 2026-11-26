@@ -23075,3 +23075,26 @@ name `\maketitle` prints (0811.1789); the discarded renewal is the edition's evi
 `tools/perfect_kernel/repros/sectioning-frontmatter/` `amsart_subjclassname_renewed_before_subjclass.tex`,
 `amsart_subjclass_year_over_a_renewed_name.tex`, `amsart_subjclass_empty_edition_warns_and_keeps_the_name.tex`,
 `amsart_subjclass_unknown_edition_warns_and_keeps_the_name.tex`; guard `perfect_kernel_batchthmedpsres::thmedpsres_rows`.
+
+## 1342. Perl ends a body at any `\relax` when its end command is `\let` to `\relax`
+
+Stomach.pm:124 (`digestUntil`) stops at `Equals($token, $terminal)`, and Common/Object.pm:99-103 compares two tokens by
+their meanings (`lookupMeaning`), so a terminal that is `\let` to `\relax` matches every `\relax` in the body. amsppt
+does exactly that (amsppt.sty.ltxml:235 `Let('\enddemo', '\relax')`, and `\endproclaim` alike): `\quad`, whose body
+is `\hskip 1em\relax`, ends a `\demo`. Minimal trigger:
+
+```latex
+\input amstex
+\documentstyle{amsppt}
+\document
+\demo{Outer}\demo{Claim 20} $a=1$\quad $(b=2).$\enddemo \demo{Claim 21} Same.\enddemo
+\enddocument
+```
+
+Perl (same host): Claim 20 ends at `\quad`, so `$(b=2).$` falls into Outer and Claim 20's own `\enddemo` closes Outer;
+Claim 21 lands outside it. Rust (`amsppt_sty.rs`, `DigestUntil:\enddemo` on the token itself): Claim 20 keeps
+`$(b=2).$`, and Claim 21 nests in the unclosed Outer, as the source has it. Witness alg-geom9502009 (an unclosed
+`\demo{Proofs of the Claims}` before 48 claim proofs: Perl nests 19 where the source opens 49; the cut falls at a
+`\quad` in Claim 20, line 1372). The same meaning comparison is why Perl ends a `\let` alias such as
+`\let\endpro=\endproclaim` (1403.0435), which Rust does not (LONG_TAIL AMSPR): a fix that compares by meaning must
+first give `\enddemo`/`\endproclaim` definitions of their own. Found by Gemini (AMSPR.1), checked on the trigger.

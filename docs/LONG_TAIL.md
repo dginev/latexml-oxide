@@ -21,7 +21,7 @@ Rules:
    `pk/REGTAILD` at `b0f34364ecb` (on `int/towards_v0_8_1` `35a85b96669`), gates green (8786 tests), A/B 502 papers:
    E 7031 → 5071, 11 changed, 0 worse; OD #1156 and KPE #1328 reserved; guards `perfect_kernel_batchregtaild::*`.
 
-**The long-tail list** (222 items on 2026-11-26: weight 341, 15 without a weight — counted as the `  - ID`
+**The long-tail list** (229 items on 2026-11-26: weight 352, 15 without a weight — counted as the `  - ID`
 bullets below; moved from row R by DG's ruling of 2026-11-23, in row R's order):
 
   - ODR1 — OD #973's pgfmath residuals (moved from OD by the 2026-11-14 rationalization): string operands, units after array primaries, grouping, out-of-bounds indexing (repro `graphics-tikz/pgfmath_string_and_units_in_arithmetic_red`; every case's pgf-vs-ours values: OPEN_ROWS ODR1); 3
@@ -573,3 +573,34 @@ bullets below; moved from row R by DG's ruling of 2026-11-23, in row R's order):
     PERL-ORIGIN inside the OD #265 surpass. P1 (a note made in place at the call, mark-less, plus an Info) is easy;
     P2 (the glyph from the counter state) is hard. Also: sect05.rs ~:4058-4061 says the deposits `\let\thanks\@gobble`;
     only the replay does; 3
+  - DATEICML-TYPED — (moved from DATEICML 2026-11-26: one witness) a notice legend whose mark the name types
+    itself (`\icmlauthor{Kai Wang$^\dag$}{a}`, no `\icmlsetsymbol` label) answers no recorded mark: the notice
+    stays whole (RED `package-bindings/icml_notice_legend_of_a_mark_typed_in_the_name_red`; 2402.05011); 1
+  - DATEICML-JOIN — (synthetic) a name showing two symbols under a whole notice gets one mark-only note
+    `mark="*,†"` (insert.rs `settle_name_marks` joins with a comma; icml prints two superscripts, no comma; RED
+    `package-bindings/icml_notice_whole_two_symbols_one_joined_mark_red`); 1
+  - IOPEAD — (moved from row R 2026-11-26: the trigger, an `\ead` written before the last `\address`, is 30 of 30k
+    papers and 28 of those already right, so 2 of 30k, ≈ 190 corpus-wide; Gemini IOPEAD.1, checked) old #808 kept as
+    a target (DG 2026-11-15, ODDOC-D Q2): iopart's `\ead` goes to the author its `\address`'s mark names (RED
+    `sectioning-frontmatter/iopart_ead_under_its_address_mark_red`; 2311.07087, 2407.14305; #805's chain); 3
+  - SR4 — (moved from row R 2026-11-26: 0 of 30k sample papers write a `\titlenote` inside `\title` under a
+    `\tntoks` class, and 0 of the census's 111 `\tntoks` users; the three witnesses come from OD #953's list) QA60
+    site 8: a sig-alternate-family title note written in `\title` is handed on by the unclaimed-text net
+    (frontmatter_stores.rs `net_note_calls`) as the note of a nameless author-block creator; Perl and OD #110 make it
+    a title pubnote (1601.00073, 1805.02241, cs0405006; RED
+    `sectioning-frontmatter/sr4_title_note_held_in_title_is_a_pubnote_red`). EASY: record each net candidate whose
+    tokens are a run of `\@title`'s and emit `\lx@add@pubnote[role=note,name={}]`; for DG: keep the class's `∗` in
+    the title (recommended) and `name={}` (recommended) or Perl's "Note: "; not blocked on QA22; 1
+  - AMSPR — (moved from row R 2026-11-26: Gemini AMSPR.1 measured each shape over the 62 amsppt papers of the 30k
+    sample, checked; 2 of 30k papers show any of them) amsppt's heads (#868; AMSPPT, revAMSPPT): a bare `\ref`
+    invents a "References" title (0 of 30k; math0206022; RED `amstex/amsppt_bare_ref_invents_references_red`);
+    a `\let` alias of `\proclaim`/`\endproclaim` is not read as its end (1403.0435's `\let\pro=\proclaim
+    \let\endpro=\endproclaim` nests 18 theorems with 20 `expected:\endproclaim` Warnings): end by meaning, which
+    needs `\endproclaim`/`\enddemo` to be their own definitions, not `\let` to `\relax` (KNOWN_PERL_ERRORS #1342);
+    alg-geom9502009's 49 nested theorems are the source's (an unclosed `\demo`; Perl's 19 are #1342);
+    `\proclaim\nofrills{}` titles "\nofrills" (math0210423; `amsppt_sty.rs` `\proclaim` reads no optional
+    `\nofrills`); no `\add@missing` (amsppt.sty:574-576, :863; 0 of 30k): REDs
+    `amstex/amsppt_roster_without_endroster_before_head_red.tex`, `amsppt_head_inside_proclaim_red.tex`; NIT: five
+    theorem `DefConstructor!`s → one loop; 3
+  - SPCONF-ISCLS — (moved from row R 2026-11-26: 0 of the 23 Interspeech papers in 30k show it; interspeech_cls.rs:119-162 already reads `\name[affiliation=…]`; Gemini REACH2, checked) Interspeech.cls does not share spconf's `\maketitle` address decision: key-marked names `\name[affiliation=1]` are unseen by the line reader.; Reach (census 2026-11-24): 23/30k ≈ 2139 papers; 1
+  - GTPART — (moved from row R 2026-11-26: 2 of 30k, the papers that ship no gtpart.cls, 1108.0474 and 1512.00353; ≈ 190; Gemini REACH2) gtpart.cls `\urladdr`, `\subject` undefined (MTREDUCE residual; `\corresponding` bound).; Reach (census 2026-11-24): 9/30k ≈ 837 papers; 1

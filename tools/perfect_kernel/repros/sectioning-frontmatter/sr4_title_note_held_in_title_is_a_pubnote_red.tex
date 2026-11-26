@@ -1,0 +1,19 @@
+% mechanism: a raw class's title note written in `\title` (sig-alternate.cls:1571-1605 `\titlenote` stores it in
+%   `\tntoks`, printed only by its refused `{abstract}`, :918-931) is handed on by the unclaimed-text net
+%   (frontmatter_stores.rs `net_note_calls`) as a note of the author block; it belongs to the title (SR4, QA60 site 8)
+% witness: 1601.00073, 1805.02241, cs0405006 (0 of 30k sample papers write the trigger; LONG_TAIL)
+% oracle:  pdflatex 0 errors: "A Title*", "Ann Able", "Bob Baker", footnote "* Supported by the Council for Research."
+% engines: rust INT081RC6 = 0 errors, 0 warnings, the mark in <title>, the text in a NAMELESS
+%          <creator role="author"><note role="note">; perl = OmniBus `\titlenote` → <pubnote name="Note: " role="note">
+%          (OmniBus.cls.ltxml:245)
+% expect:  0 errors; <pubnote role="note">Supported by the Council for Research.</pubnote>, no nameless creator
+% status:  RED (INT081RC6)
+% moves:   post-merge (LONG_TAIL SR4)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{sr4tn.cls}
+\ProvidesClass{sr4tn}\LoadClass{article}\newtoks\tntoks
+\def\titlenote#1{\raisebox{9pt}{$\ast$}\global\tntoks={#1}}
+\renewenvironment{abstract}{\insert\footins{\footnotesize$^{\ast}$\the\tntoks\par}\section*{Abstract}}{\par}
+\end{filecontents*}
+\documentclass{sr4tn}\begin{document}\title{A Title\titlenote{Supported by the Council for Research.}}
+\author{Ann Able \and Bob Baker}\maketitle\begin{abstract}An abstract.\end{abstract}Text.\end{document}

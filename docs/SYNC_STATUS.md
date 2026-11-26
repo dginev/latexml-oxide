@@ -89,7 +89,7 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (437 items on 2026-11-26 on `int/towards_v0_8_1`: 437 open, weight 956, 40 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (435 items on 2026-11-26 on `int/towards_v0_8_1`: 435 open, weight 957, 35 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
 
 
   - ODR6 — OD ruling 12 (recorded in OD #449): `dump_reader.rs`'s "add-only" docstrings (:365, :574) corrected, then a removal trial of the skip lists against CLAUDE.md rule 2; 1
@@ -105,11 +105,18 @@ Rules that keep this file honest and mergeable:
     body and group levels; close an argument level as its owner's container (a note, the frontmatter store), else a
     separate paragraph, never fused; math as an unparsed math list; a word still unplaced is counted by a Warning. REDs
     `rhai-bindings/digest_fatal_in_{an_unfinished_list,a_footnote,an_author,inline_math,display_math}_red.tex`; 2
-  - DIGFATAL-EOF — the 81 arXiv `Mouth:EoF` Fatals, by Until delimiter: `\endsubheading` 10 (amsppt
-    `\subheading\nofrills`; alg-geom9709005 now an empty `<document>`), `\NOT` 9, ` at ` 7, `\__prop_pair:wn` 6,
-    `\LT@err` 5 (a preamble longtable patch: RED `package-bindings/longtable_patched_at_its_lt_err_red.tex`, 1409.6572,
-    1503.02372), `\lx@jmlr@endaddr` 4; Perl recovers some with an Error where we Fatal (a run-off `\grab` in the
-    preamble); a root-cause batch; 3
+  - DIGFATAL-EOF — (root-caused 2026-11-26) 84 of the 159 CorTeX Fatal papers end in `Fatal:Mouth:EoF`: 81 the Until
+    reader (`base_parameter_types.rs:370`), 3 a `\read` from the terminal. Rust-only binding clusters → EOFBIND
+    (`pk/EOFBIND`, in progress): algpseudocodex's own `\Call` loses to algpseudocode's (7: 2512.12052 …), amsppt
+    `\subheading` reads `Until:\endsubheading` where amsppt.sty:563-569 takes one argument (10: alg-geom9709005 …),
+    longtable's `\longtable` lacks the `\LT@err` prefix (5: RED `longtable_patched_at_its_lt_err_red`), jmlr `\addr`
+    reads across a `}` (4: 2409.18592 …). Left: pgfsys `\pgfsys@begininvisible` delimited (2-3, MED, needs a design for
+    hidden text across cells); SHARED: PiCTeX `\put` ` at ` (7), `\endcaption` (3), nath ` \@nil` (3); FAITHFUL: plain
+    `\\#1pt` stubs (7), old ebproof copies on a removed `\__int_value:w` (6+1); amsppt `\endtopmatter` is `\outer`
+    (amsppt.sty:515, TeX §336; HARD: hep-th9210069, hep-th9310045, math9504204, nlin0306053); Perl recovers where we
+    Fatal: 2501.11844, 2607.19246, astro-ph0012068, math0312174. DG question queued: at the true end of input, stop a
+    non-`\long` run-off at its first `\par` with TeX's Error (`abandon_runaway_call`, OD #442), Perl's put-back, or
+    keep the Fatal; 3
   - DIGFATAL-MUTE — after a Fatal the build's malformed-markup Errors are muted for a `Mouth:EoF` (the Until reader
     latches TooManyErrors) but printed for a binding's Fatal (E=2 in the list RED); one rule for both; 1
   - RHAISTRBODY — a Rhai `DefMacro` whose string body is unbalanced (`"{"`) is a Fatal here; Perl checks the balance
@@ -120,7 +127,6 @@ Rules that keep this file honest and mergeable:
   - DEFER — label forms deferred too (DG 2026-11-15): typeset where printed through `defer_print` (stomach.rs:2778, :2828), one rule for every deferred form (index, glossary, bibitem, label); retires #748's `\ensuremath` retry and the 2026-10-02 option A (#418) — post-cutoff, MED, with an A/B (#778, #845 shapes); 3
   - NATBIB — #123 (DG 2026-11-15): faithful to pdflatex's decision boundary — the citation mode decided ONCE, as early as our stages allow, and recorded as metadata (an XML attribute or a processing instruction) where post-processing needs it; replaces the per-cite post-pass (crossref.rs:2182 `make_bibcite`) — post-cutoff code target; 3
   - PANEL — #885 vs #138's `sole_graphic_width` (latex_constructs/mod.rs:5964) (DG 2026-11-15): wait for #193 — the entries stay separate as today's code; consolidate, retiring #529's and #339's workarounds, when #193 lands; 1
-  - IOPEAD — old #808 kept as a target (DG 2026-11-15, ODDOC-D Q2): iopart's `\ead` goes to the author its `\address`'s mark names (RED `iopart_ead_under_its_address_mark_red`; #805's chain) — post-cutoff frontmatter work, by reach; Reach (census 2026-11-24): 101/30k ≈ 9393 papers; 3
   - CT1b — CT1b; 1
   - CT1d — CT1d; 1
   - HG2 — HG2: 182 DEL1-kept guards + a no-content-assertion fence; 3
@@ -158,7 +164,11 @@ Rules that keep this file honest and mergeable:
   - QA61 — Unknown classes' title-page stores as frontmatter items — DG 2026-11-15: **D1, a labelled pubnote** (`<ltx:pubnote name="Course: ">MATH 410</ltx:pubnote>`, the centred body line removed; title/author stores under other names kept out of pubnotes — SelfArx `\PaperTitle`, smj, Epigenetics, ametsocV6.1 `\authors`; glued labels, fundam's DOI before `\publyear`, 2006.07415; HTML visibility through PNOTEA's titleless head block, #881); the batch in flight (study `agent_reports/report_QA61D.md`, 58 of 2,929 raw-class papers, ≈5.4k arXiv); 3
   - QA69 — an encoding with no fontmap decodes as OT1 (`tex_fonts.rs:228-261`; SHARED with Perl `TeX_Fonts.pool.ltxml:169-176`), told only by `Info:missing_font_encoding`, so a wrong glyph is uncounted: T5 (≈480 papers; a wrong `"`/`<`/`>`/`|` in ≈240: 2406.15888, 2511.17955, 2605.10376), L7x, IL2 (pdflatex agrees) and U (harmless); below the bar, no shipped map — plan (HARD): derive `<ENC>_fontmap` while `<enc>enc.def` is read (`\DeclareFontEncoding`, sect08.rs:1127), seeded with encguide §3.1's ASCII slots, symbols from bound LICRs or the inverse of `<enc>enc.dfu`, composites by NFC, U excluded (per font); RED `unicode-catcodes/qa69_t5_ascii_slots_red.tex` (pdflatex `an "overrider" a<b>c |x| "<| “q” "<`); 5
   - QA76 — the upstream-issues survey's post-merge rows (done 2026-11-14: `agent_reports/report_QA76.tsv`, repros `scratch_QA76/min/`; 314 open, 60 run: 45 fixed in oxide (7 only under raw loading), 12 same as Perl, 1 oxide-worse; #2263 llncs keywords and #711 apacite `\fullcite` are QA76A, PR #871 merged): upstream #2714 `\ExplSyntaxOn` across `\begin{document}` — sect02.rs:356-368 forces `\ExplSyntaxOff` at `\begin{document}` where latex.ltx:18364-18378 restores per file (E=7 vs Perl/pdflatex 0; 0 of 442 census users; RED `m2714a.tex`); #2797 `\cellcolor` in a nested tabular colours the outer cell (≤64k); #2417 listings `morestring=[b]` `\lstinline!B!` prints "BB" (invented, ≤12k); #2674 thmtools `sharenumber=`+`numberlike=` (≈230); #2084 combelow raw (≈1k); #2371 siunitx `\micro` invisible times (cosmetic); #2096 amsart `\thanks` → acknowledgements (markup); #1763 block content in `\marginpar`; 3
-  - SR4 — SR4 (QA60 site 8): a title note held in \title (\titlenote) becomes a pubnote (1601.00073, 1805.02241, cs0405006) — with the page-furniture element (QA22/23); Reach (census 2026-11-24): 54/30k ≈ 5022 papers; 1
+  - NETGUARD — the 98c title-note guard `a_title_note_register_only_the_class_abstract_prints_is_a_note` and its
+    two siblings were deleted in DEL1 (`08d96cc7604`): the repro
+    `net_title_note_register_printed_only_by_the_class_abstract_is_a_note.tex` is unguarded and its header's 1 Warning
+    is 0 on int; OD #953's Guards paragraph still names the deleted tests. Re-guard it (or re-state the header) and fix
+    the OD list (SR4 root-causer 2026-11-26); 1
   - QA20 — Open/close vertical bars (VERTBAR read as MIDBAR): a math RED row (math parked); 1
   - QA26R — QA26's residuals (#854; QAB8): `\addvspace` is a no-op (`paragraph-mode/addvspace_between_paragraphs_takes_the_larger_red`); two `\vspace`s in a paragraph end it at the first (`paragraph-mode/two_vspaces_in_a_paragraph_stay_in_it_red`); a mid-paragraph `\vspace` splits the paragraph where TeX keeps one (Perl too; ~2 % of papers; its own mechanism); 3
   - QA27 — Lengths in em of the parent: the gradual migration after the sizing CSS; 3
@@ -211,7 +221,13 @@ Rules that keep this file honest and mergeable:
   - AUMK — answered marks hidden on both sides: the kernel `\author` whose own lines answer its names' marks (`kernel_author_lines_answered_marks_hidden_red`, as Perl), its authblk sibling (`authblk_author_line_answers_one_mark_red`), authblk's own `\author[1]`/`\affil[1]` generated marks dropped (`authblk_labelled_marks_dropped_red`, as Perl) (P4b2b, revP4b2b); llncs `\inst` names whose marks a macro prints hide the institute's marks too (`llncs_inst_names_macro_marked_institute_marks_hidden_red`; P4b4a: 1803.02579, 2201.04974, and CL166's seven: 0807.2091, hep-th0502229, 2412.12966, 0706.0112, 0803.2400, 0808.1862, 2508.08560's name marks); 3
   - P4CRN — P4cR1's residuals: a name's mark in a box with a space lost uncounted (`ieee_name_mark_in_spaced_box_lost_uncounted_red`), apa6 entries' marks dropped (`apa6_marked_list_entry_marks_dropped_red`), an unmatched e-mail address on a nameless creator when local parts run out of name order (`ieee_email_run_unmatched_address_nameless_red`, 2409.10792, 2410.09414; a ruling first), `unanswered_mark_lost`'s wording for a `ref:` mark (revP4cR1); 3
   - STRM2 — streamed-vs-eager differences under a forced switch (pre-existing; STRM): ids order (1705.02293, 2507.13358), whitespace (1005.3879, 2206.03430), footnote split (2010.06608), `toc` inlist (1907.01464), `\quad` reversion (2509.09797); and unforced: 2308.04512 streams under the production `--max-memory=8192` (PDFCMP 2026-11-15: RSS 2.09 → 0.97 GB, CPU 28.1 → 24.4 s) and its HTML differs from the eager run in 186 lines (proof ids S2.SS7.2 → S2.SS7.1, footnote class `ltx_role_footnotemark`, +26 W/E lines); the eager→streaming switch rate in production to measure; `finalize_context_font` DRY with `finalize_rec` (revSTRM); 5
-  - OMNT — OmniBus/KOMA title notes step no counter and print arabic (2407.13730, 2606.19583 recalls "0" vs pdflatex ∗; `omnibus_title_footnotemark_prints_fnsymbol_red`; reach to measure) (FNR1); Reach (census 2026-11-24): 24/30k ≈ 2232 papers; 3
+  - OMNT — OmniBus/KOMA title notes step no counter and print arabic (FNR1; RED
+    `omnibus_title_footnotemark_prints_fnsymbol_red`): scrartcl (`scrartcl_cls.rs:34-38`) and OmniBus never call
+    `declare_fnsymbol_title_block` (`latex_constructs/mod.rs:555`, article/report/book/ext*/siamltex only), so
+    `\footremember`/`\footrecall` lose their contacts (1701.07696, 2505.04436, 2407.13730, 2606.19583), a `\thanks`
+    mark is `[a]` where pdflatex prints ∗/† (1903.00067, 1909.10182, 2107.02597, 2211.10835, 2406.03281) or arabic
+    (1503.07490 siamltex1213 via OmniBus, `mark="3"` vs ‡). Reach (measured 2026-11-26, Gemini REACH2, checked):
+    KOMA 8/30k + OmniBus ≈ 6/30k ≈ 1.3k; 3
   - FNRR — the rehearsal reads a printing definition's later use (the true signal behind FNR1's gate; `author_note_macro_resets_an_existing_counter_red`; the replay writes a note from a printing call's expansion with its markup: 2604.20516) (FNR1, FNR1c); 3
   - IEMP — a minipage's optional argument leaks into IEEEtran affiliations ("t].44", 1901.06399; invented text; int162a too; reach to measure) (P4fC); 1
   - DTLX — DTL1d's counted pre-existing overflows (varwidth → VARW): a subscript-only math box of height 0 (2503.14426; Perl too; HARD), pgfplots `y expr` (2407.10017), xymatrix/tikz shapes (1409.3605, 0704.0778, 2409.07148, 2408.05806, 2411.12316), 1103.1294's cap (TooManyErrors sooner; nicefrac in xymatrix) (CL164); CX171 (`2026-11-13_CX171_report.md`): 2606.14412 (IEEEtran + circuitikz: 55 E, pdflatex 0 `!`; QA11A, PR #872 merged: 55 → 0; a `bending` start tip on a degenerate bezier — the native `\pgfmathreciprocal@` (pgfmath_code_tex.rs:2623) reads its divisor as 0 where TeX has 22.76184, pgflibrarycurvilinear.code.tex:98; 4-line repro scratch_CX171/r/m1.tex: Rust 64 E, Perl 4 E, pdflatex 0), 2605.31088 (pgfplots log axis `declare function` at small x, 4 E); 5
@@ -345,7 +361,6 @@ Rules that keep this file honest and mergeable:
   - I783C — the author-note pop-up's CSS (revI783G; mirror into ar5iv-css): `LaTeXML.css:125` `contain:inline-size` + `overflow-wrap:anywhere` squeeze a long note into a narrow card (36 px × 696 px, words split; `scratch_revI783G/longname_li.png`) — add `min-width:min(16em,90vw)` to the hovered note (introduced, content kept); `:121-129` the hover sits on the inline `.ltx_author_notes`, so a 1-3 px gap closes the notes for a slow pointer (main loses the pop-up over 19-48 px) — hover on `.ltx_creator`, drop the vertical margin; pre-existing: no `tabindex`/`:focus-within` (keyboard and touch cannot open a note); 2507.06016 in Firefox at 375 px overlaps names before hover (main the same, the old pop-up path); 1
   - I790P — revI790A (issue #790, PR #876 merged): `keep_point_out_of` + the `text_run_font` walk cost +0.13 % on 0710.4421 — a text-node discard could compare with the point instead of walking (the replace-node coalesce and trailing-whitespace sites); 1
   - LOSTFR — LOSTF's residuals (#866): the pazh/astl `*` mark written as an e-mail contact "*" (`sectioning-frontmatter/mark_then_store_email_read_by_a_refused_abstract_red`; the observer reads the rerouted setter as the class's `\email`; reach ~880); astl address notes all go to the block's last name instead of following the marks (1206.0451 Khabibullin's "1" unanswered); `author_and_on_behalf_of_teams_red` (1002.4968), `rmaa_altaffiltext_marks_red`, `ptephy_author_given_twice_keeps_the_last_red`; `class-bindings/vmsta/vmsta_first_name_without_surname_red.tex`'s engines line is stale; 3
-  - AMSPR — amsppt's heads (#868; AMSPPT, revAMSPPT): a bare `\ref` invents a "References" title amsppt never prints (math0206022; `amstex/amsppt_bare_ref_invents_references_red`; Perl and base too); alg-geom9502009 nests 49 theorems where Perl nests 19 (base the same; not minimized); `\proclaim\nofrills{…}` titles "\nofrills" (alg-geom9502009, pre-existing); no `\add@missing` (amsppt.sty:574-576, :863): `amstex/amsppt_roster_without_endroster_before_head_red.tex` (2 E vs TeX's 1, section 2 inside an item), `amsppt_head_inside_proclaim_red.tex` (0 E vs TeX's 2); NIT: five theorem `DefConstructor!`s → one loop; Reach (census 2026-11-24): 46/30k ≈ 4278 papers; 3
   - RHODRRES — (RHODR re-review, post-merge) the end-of-digestion stash check covers `digest_internal` only
     (`core_interface.rs:2153-2157`): its callers then differ — `converter.rs:981-996` salvages, `bib_session.rs:300-302`
     loses the bibliography with `Error:bibliography:convert`, `lsp_server/unix.rs:643` logs and falls back — and the
@@ -583,14 +598,22 @@ Rules that keep this file honest and mergeable:
   - IEEEROUTE-ABBREV — an IEEE affiliation note with "St."/"Univ." + capital, or a "D.S. Name" sentence start, keeps the whole note unrouted; 2011.08553 (probe p2).
   - IEEEROUTE-CUTLIST — the content check does not read a note's routed contacts as one printed text (B3 cleared via B2c only).
   - IEEEROUTE-PARTIAL — (REVIEEEB S2) 2204.03507: Torrisi's "also with INSTM" is routed while his main note "A and B, are with …" stays whole; fix: leave an author's "also with" note whole when an earlier note of his stayed whole, or accept the comma.
-  - SPCONF-BLOCKEMAIL — e-mail lines inside spconf's `\address` keep the note whole; 2407.20176 (2-for-2 unplaced). (the fail-safe of c9b7845ce4d; placing them needs an owner rule stricter than `listed_address_owners`, which misread 1802.09371's "Aline, Roumy"); Reach (census 2026-11-24): 31/30k ≈ 2883 papers
-  - SPCONF-ISCLS — Interspeech.cls does not share spconf's `\maketitle` address decision: key-marked names `\name[affiliation=1]` are unseen by the line reader.; Reach (census 2026-11-24): 23/30k ≈ 2139 papers
+  - SPCONF-BLOCKEMAIL — e-mail lines inside spconf's `\address` keep the whole block one unowned note: any
+    `Line::Addresses` returns the block whole (`date_legend.rs:657-659`, the fail-safe of c9b7845ce4d; placing them
+    needs an owner rule stricter than `listed_address_owners`, which misread 1802.09371's "Aline, Roumy"). Reach
+    (measured 2026-11-26, Gemini REACH2, checked): 20 of 154 spconf papers in 30k, all 20 defective, ≈ 1.9k
+    (1108.4168, 1411.0283, 1710.10574, 1802.09371, 1810.08135, 2102.09114, 2407.20176; 1909.01754 also has 0 creators); 3
   - DATELEG-LEGEND — (DATELEGb) the legend-note rescue was CUT: 1507.08926, 2508.05506, 2404.15649, 2602.04557 keep their legend notes unrescued.
-  - DATEICML — (root-caused 2026-11-26) no words lost: icml's starred names carry a mark-only `footnotemark` note
-    while `\printAffiliationsAndNotice{\icmlEqualContribution}` becomes an unowned block `affiliationnotice`
-    (2602.04557; 6 of 20 sampled icml papers ≈ 6.9k corpus-wide; Perl drops the notice, `icml_support.sty.ltxml:52`).
-    Fix in the icml binding (`\lx@frontmatter@namemark` for the symbol, per-piece labelled contacts from the notice,
-    then the existing kind-legend pass); in progress on `pk/DATEICML`; 1
+  - DATEICML-COPY — a paper's icml copy that edits `\icmlEqualContribution` is not followed: the binding's own
+    text becomes the starred names' note (RED `package-bindings/icml_copy_equal_contribution_text_is_the_copys_red`;
+    2305.19982, 2402.12048; about 10 of 294 icml papers); 1
+  - ICMLAPPTITLE — an `\icmltitle{Appendix}` after `\maketitle` (icml2021.sty prints it as a heading) sets a title
+    no one prints: the "Appendix" heading is silently dropped, no Warning (`icml_support_sty.rs` ~:85 maps
+    `\icmltitle` to `\title`; 2102.07870, ar5iv issue 53, held open for it). Fix: after the title is emitted, an
+    unnumbered heading, or at least a Warning for the dropped text; reach to measure; 1
+  - DEFINERLIST — one shared, public list of LaTeX and TeX definers in `latexml_engine`, read by meaning, for
+    `icml_support_sty.rs` `NOT_COPIED` and `frontmatter_stores.rs`'s private `WRITERS`, `COMMAND_DEFINERS` and its
+    setter reader's lists (the DATEICML writer's option (a)); 1
   - WILEYCORRES — WileyNJD-v2/WileyASNA/MRM `\corres{*Name, address, \email{…}}` stays a free `note role=corresponding`
     beginning with the typed `*` (1903.08928, 2003.04316, 2102.05937, 2201.01977, 2307.09820, 2412.06516, MRM
     2509.13644; ≈ 1.6k corpus-wide); the binding shape of DATEICML with the glyph as label. DG 2026-11-26: the
@@ -613,8 +636,18 @@ Rules that keep this file honest and mergeable:
   - P1-LOGOS — (stretch, DG run 391) 2610.22523's `#p1` is left holding only the logo images once its affiliations are extracted — delete a paragraph emptied by extraction (or one of graphics only that the class's title block owned).
   - QA61-STORES — QA61 D1 post-merge: (a) K11's `store_lines` readers keep the top-level-line hole (RED `table_store_in_a_top_level_line_with_another_value_red`; base leaves "E-mail: , tel. 555"); (b) `\lx@replay@records` for K11's handed stores (`note_store_handed`) takes a label's first match; (c) RED `offtable_store_moved_leaves_the_rest_of_its_line_a_paragraph_red` ("(corresponding author)" left a paragraph); D2/D3 (unlabelled printed stores; keywords/classification as `ltx:keywords`/`ltx:classification`) await rulings.
   - CJKGB — GB2312 mojibake inside "(…" read as a mark (`lexer.rs:317`), ")" lost; CJK GB decoding is silent where Perl errs.
-  - BLOCKPLACE-DECL — `\lx@names@note` declared in jfm, mdpi, ieeeaccess, oup, autart, sigma, spconf, Interspeech only; the other elsart-family clones are unverified and ieeetaes stays undeclared.; Reach (census 2026-11-24): 121/30k ≈ 11253 papers
-  - BLOCKPLACE-AUTART — 19 autart papers: the comma-junk titlepage now follows the moved addresses (pre-existing junk).; Reach (census 2026-11-24): 18/30k ≈ 1674 papers
+  - BLOCKPLACE-DECL — (root-caused 2026-11-26) the elsart family (123/30k) needs nothing: its addresses are creator
+    contacts before the abstract, as the class prints them; ieeetaes (0/30k) stays undeclared. Three contrib
+    bindings make a note their class prints under the names, and it lands after the abstract: bmvc2k
+    `\addinstitution` (11/30k; 1507.06535), bytedance_seed `\affiliation` + `\contribution` (4/30k; 2506.15211),
+    wlpeerj `\corrauthor`'s e-mail (1/30k; 2007.11779); sn-jnl `\presentaddress` optional; ≈ 1.5k corpus-wide;
+    in progress on `pk/BLOCKDECL`; 1
+  - BLOCKPLACE-AUTART — autart's title page leaks separators and a split `\thanks` (measured 2026-11-26, Gemini
+    REACH2, checked: 16 of 17 autart papers in 30k, ≈ 1.5k): OmniBus lets `{frontmatter}` be `\@empty`
+    (`omnibus_cls.rs:212-213`), so the template's literal `, ` and `and` between `\author[…]{…}\ead{…}` calls
+    land in `ltx:titlepage` (5/30k separator-only: 1610.05434, 1907.08912, 2310.07906, 2601.13958, 2602.06569);
+    `autart_cls.rs:171-174` `\thanks{}` takes no optional `[…]`, so `[` opens the thanks note and `footnoteinfo]…`
+    spills into the same titlepage (11/30k: 1307.6041, 1611.04531, 1807.10233, 2404.08842, 2505.13064); 1
   - AAAILABEL — (DG 2026-11-26: the aaai slot of the v0.8.1 frontmatter reopening) aaai's labelled `\affiliations`
     lines stay an unowned title-page block while the names carry their marks (20 of 20 sampled aaai21+ papers; ≈ 95 %
     of modern aaai). Two gates keep aaai off the displaced-setter route (OD #955): `affiliations` is not in
@@ -624,7 +657,6 @@ Rules that keep this file honest and mergeable:
     every inner row of a math alignment, Alignment.pm:768-769), and its `tex=` shows `\hdashline\cr`; text tables
     prune it. RED `alignment-bindings/math_array_rule_keeps_an_empty_row_red.tex` (found by the arydshln port, upstream
     PR 2889's expected output has it too); a math-row pruning batch would move many goldens; 2
-  - GTPART — gtpart.cls `\urladdr`, `\subject` undefined (MTREDUCE residual; `\corresponding` bound).; Reach (census 2026-11-24): 9/30k ≈ 837 papers
   - TITLENOTELAST — stopped, no binding, post-release: sig-alternate/acm_proc_article-sp title note order; 1003.2281 (70 census papers).
   - JASAPACS — stopped, no binding, post-release: JASA PACS notes; 0803.0204 (4 papers).; Reach (census 2026-11-24): 3/30k ≈ 279 papers
   - REVGRIDWARN — REVTeX twocolumn grid Warning wording; post-release.
