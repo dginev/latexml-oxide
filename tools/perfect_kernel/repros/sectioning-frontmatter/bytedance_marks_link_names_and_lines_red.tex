@@ -2,8 +2,8 @@
 %   `\affiliation[label]{text}`, `\contribution[mark]{text}` print each line with its label ("1Inst X", "*Work done at
 %   Q"; 2506.15211's bytedance_seed.cls :248-253). The binding passes the labels as the creator's `annotations` and
 %   drops the lines' marks (bytedance_seed_cls.rs `\affiliation[]{}`, `\contribution[]{}`): the names carry no mark,
-%   the lines (shown under the names since #1063's contribution role) no label, so nothing links them. Found by
-%   BLOCKDECL fix round 1; not this batch's mechanism (placement).
+%   the lines (shown under the names since #1063's contribution role) no label, so nothing links them; not
+%   the placement mechanism.
 % witness: 2506.15211 ("Feng He1,†", "*Work done at ByteDance Seed", "†Corresponding authors"), 2511.06346
 % oracle:  pdflatex 0 errors (with 2506.15211's bytedance_seed.cls): "T / Ann Able1,* / 1Inst X / *Work done at Q /
 %          Abstract / Abstract text. / Correspondence: ann@x.edu"

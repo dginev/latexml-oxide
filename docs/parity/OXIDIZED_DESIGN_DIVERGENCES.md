@@ -21055,8 +21055,12 @@ print them elsewhere: tac's `\address`/`\eaddress` (tac.cls:611-614 `\AtEndDocum
 page's footnote, elsarticle.cls:211-235), ejpecp's `\EMAIL` (in the authors' footnotes; 1406.5876, 1904.07135), wiley's
 `corremail` (beside the abstract, wiley-article.cls:416-433; 1808.01384), ieeetaes's `\authoraddress` (a first-page
 footnote), bytedance_seed's `\correspondence` and `\checkdata` lines (in the abstract's box after it, 2506.15211's copy
-:155, :274), and sn-jnl's unmarked `\equalcont` given before any name, whose line the PDF prints above the present
-address (:754), as `print_notes` queues it at `\maketitle` (`snjnl_unmarked_note_before_any_name_above_present_address_red`).
+:155, :274). sn-jnl's unmarked `\equalcont` given before any name stays undeclared, after the abstract, though the PDF
+prints it under the names above the present address (:754): `print_notes` queues it at `\maketitle`
+(`snjnl_unmarked_note_before_any_name_above_present_address_red`). A shown present-address line lacks the heading the
+class prints (sn-jnl's `\@presentaddresstxt`, "Present Address:"; WileyNJDv5.cls:5066 "Present address", WileyNJD-v2
+"Present Address"): `snjnl_present_address_line_keeps_its_heading_red`. A `\corrauthor` after wlpeerj's `\maketitle`,
+which the PDF does not print, keeps its e-mail under the names.
 spconf's fallback `\address` note (spconf.sty:161-166 sets `\@name \\ \@address` in the title tabular;
 1806.02523, 2001.10603, 2103.15467, whose e-mails sit inside `\address`: spconf.sty has no `\email`) and the e-mail note of
 INTERSPEECH20xx.sty (:164) and Interspeech.cls (:376; 2405.13379, 2603.01467) are declared with the SPCONF rewrite of
