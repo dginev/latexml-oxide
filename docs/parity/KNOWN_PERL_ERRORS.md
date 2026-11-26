@@ -22940,11 +22940,12 @@ Repros
 `tools/perfect_kernel/repros/macro-state/newcommand_{negative_argument_count,argument_count_above_nine,nine_arguments}.tex`
 and `argument_count_out_of_range_every_declarator.tex`; guard rows in `error_boundary::perfect_kernel_error_boundary`.
 
-## 1337. Perl's `\subjclass` names the 1991 edition by default, and each call by the last year given
+## 1337. Perl's `\subjclass` names the 1991 edition by default, or the year an earlier call gave
 
-ams_support.sty.ltxml:131-136 defaults `\@subjclassyear` to `1991`, `\xdef`s it to each call's year and names every
-call `\subjclassname`, read when the frontmatter is built. amsart.cls:555-563 (amsproc.cls:533, amsbook.cls:503
-alike) is `\newcommand*\subjclass[2][2020]`: a call without a year names the 2020 edition (:787-789), at each call.
+ams_support.sty.ltxml:131-136 defaults `\@subjclassyear` to `1991` and `\xdef`s it to each call's year, so a call
+without a year names 1991, or the edition of the call before it. amsart.cls:555-563 (amsproc.cls:533, amsbook.cls:503
+alike) is `\newcommand*\subjclass[2][2020]`: a call without a year names the 2020 edition (:787-789), at each call;
+`\maketitle` prints the `\subjclassname` in force then (:657, :832).
 Minimal trigger:
 
 ```latex
@@ -22958,11 +22959,12 @@ Minimal trigger:
 ```
 
 pdflatex (TL 2025): "2020 Mathematics Subject Classification. Primary 31B05." Perl (same host): both classifications
-named "2000 Mathematics Subject Classification"; with the yearless call alone, "1991 Mathematics Subject
+of scheme and name "2000 Mathematics Subject Classification"; with the yearless call alone, "1991 Mathematics Subject
 Classification". Fixed in Rust under the AMS classes (`ams_support_sty.rs` `amsart_class_internals`: the default
-edition 2020; `\lx@ams@subjclass` reads the scheme and the name at the call); under other classes the binding keeps
-Perl's default. Repros `tools/perfect_kernel/repros/sectioning-frontmatter/amsart_subjclass_without_a_year_names_the_class_edition.tex`,
-`amsart_document_subjclass_copy_default_edition.tex`; guard
+edition 2020, `\lx@ams@subjclass@edition`); under other classes the binding keeps Perl's default. Repros
+`tools/perfect_kernel/repros/sectioning-frontmatter/amsart_subjclass_without_a_year_names_the_class_edition.tex`,
+`amsart_subjclassname_renewed_after_subjclass.tex` (0811.1789), `amsart_document_subjclass_copy_default_edition.tex`;
+guard
 `perfect_kernel_batchthmedpsres::thmedpsres_rows`.
 
 ## 1338. Perl recurses without end on an `\item[…]` label that steps its own list's counter

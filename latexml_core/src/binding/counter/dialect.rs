@@ -1104,7 +1104,7 @@ pub fn label_stepped_counter(ctype: &str, ctr: &str) -> Result<HashMap<Stored>> 
         ctype
       )))])?
     };
-    Ok((refnum, making_tags(ctype, || stomach::digest(invocation))?))
+    Ok((refnum, stomach::digest(invocation)?))
   };
   // TeX keeps the label unexpanded (`\@currentlabel`, latex.ltx:14963-14967) and typesets it only where `\ref`
   // prints it; Perl digests it as text here (Package.pm:770 `DigestText`). A step made in math whose label text
@@ -1638,13 +1638,14 @@ const TAGS_IN_PROGRESS: &str = "lx_tags_in_progress";
 
 /// Whether the tags of counter type `ctype` are being digested ([`making_tags`]).
 fn tags_in_progress(ctype: &str) -> bool {
-  lookup_string(TAGS_IN_PROGRESS)
-    .split(',')
-    .any(|t| t == ctype)
+  match lookup_value(TAGS_IN_PROGRESS) {
+    Some(Stored::String(types)) => arena::to_string(types).split(',').any(|t| t == ctype),
+    _ => false,
+  }
 }
 
-/// Digest the tags of `ctype` with `digest`. A step of the same type inside them, which TeX typesets once and LaTeXML
-/// formats again in each tag it makes, makes no tags of its own: an `\item[\refstepcounter{\@listctr}…]` label read
+/// Digest an `\item[…]`'s tags of `ctype` with `digest`. A step of the same type inside its label, which TeX typesets
+/// once and LaTeXML formats again in each tag, makes no tags of its own: an `\item[\refstepcounter{\@listctr}…]` read
 /// itself in `\fnum@enumi` without end (witness 1704.06431; Perl's deep recursion, KNOWN_PERL_ERRORS #1338).
 fn making_tags<T>(ctype: &str, digest: impl FnOnce() -> Result<T>) -> Result<T> {
   let before = lookup_string(TAGS_IN_PROGRESS);

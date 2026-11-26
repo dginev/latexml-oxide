@@ -1,0 +1,18 @@
+% A `\subjclassname` the document renews after its `\subjclass` is the one amsart's `\maketitle` prints (amsart.cls:657,
+% :832-833): the classification's name, its scheme the call's edition.
+% witness: 0811.1789 (`\subjclass{20M05}` then `\renewcommand{\subjclassname}{\textup{2000} Mathematics Subject
+%          Classification}`)
+% oracle:  pdflatex (TL 2025) 0 errors: "2000 Mathematics Subject Classification. 20M05."
+% engines: rust INT081Z = name "2000 …", scheme "1991 …"; rust THMEDPSRES round 1 (name read at the call) = name "2020 …"
+% expect:  0 errors, 0 warnings; <classification name="2000 Mathematics Subject Classification: "
+%          scheme="2020 Mathematics Subject Classification">20M05</classification>
+% status:  GREEN (THMEDPSRES; red on its first candidate, the A/B's 0811.1789)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\begin{document}
+\title{T}\author{A. Author}
+\subjclass{20M05}
+\renewcommand{\subjclassname}{\textup{2000} Mathematics Subject Classification}
+\maketitle
+Body.
+\end{document}

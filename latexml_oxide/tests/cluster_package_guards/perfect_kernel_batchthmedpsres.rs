@@ -4,7 +4,8 @@
 //!   the set, with a Warning (KNOWN_PERL_ERRORS #1339).
 //! - edpsmath's `\keywords`, which the class sets in a box only its title page prints (`edpsmath_cls.rs`): the
 //!   frontmatter's keywords, with no footnote of them (1901.04804) and under `[proc]`, which prints none (1110.0287).
-//! - amsart's default MSC edition (KNOWN_PERL_ERRORS #1337): the binding's `\subjclass` and a document's own store.
+//! - amsart's default MSC edition (KNOWN_PERL_ERRORS #1337): the binding's `\subjclass`, the name `\maketitle` prints
+//!   (0811.1789), and a document's own store.
 //! - an `\item[…]` label that steps its own list's counter (1704.06431, KNOWN_PERL_ERRORS #1338).
 //!
 //! Each converts its repro once and asserts the exact Error and Warning counts, the creators where the class has a
@@ -100,8 +101,20 @@ const ROWS: &[Row] = &[
     counts:   (0, 0),
     creators: &[&["A. Author"]],
     elements: &[("classification", &[
-      "<classification name=\"2000 Mathematics Subject Classification:\u{a0}\" scheme=\"2000 Mathematics Subject Classification\">Primary 05C10</classification>",
+      "<classification name=\"2020 Mathematics Subject Classification:\u{a0}\" scheme=\"2000 Mathematics Subject Classification\">Primary 05C10</classification>",
       "<classification name=\"2020 Mathematics Subject Classification:\u{a0}\" scheme=\"2020 Mathematics Subject Classification\">Primary 31B05</classification>",
+    ])],
+    absent:   &[],
+  },
+  // (0811.1789: the name `\maketitle` prints, renewed after the call; red on this batch's first candidate)
+  Row {
+    name:     "amsart: \\subjclassname renewed after \\subjclass",
+    tex:      repro!("sectioning-frontmatter/amsart_subjclassname_renewed_after_subjclass.tex"),
+    files:    &[],
+    counts:   (0, 0),
+    creators: &[&["A. Author"]],
+    elements: &[("classification", &[
+      "<classification name=\"2000 Mathematics Subject Classification:\u{a0}\" scheme=\"2020 Mathematics Subject Classification\">20M05</classification>",
     ])],
     absent:   &[],
   },
