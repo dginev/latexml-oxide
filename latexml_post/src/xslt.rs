@@ -1852,15 +1852,27 @@ mod witnessed_css_delta {
 
   #[test]
   fn constrained_equation_overflow_delta_stays_present() {
+    // Issue #533: display math in a p{} cell, \parbox, minipage or table cell is a block within its box (it escaped
+    // and scattered across the page). Issue #972: that block is no scroll box (Chrome drew a phantom vertical
+    // scrollbar on every in-cell display, and a lowered \raisebox was clipped); the box grows to its display, and a
+    // note scrolls a too-wide one. The browser half is `cluster_cli::browser_render_eqn_rows_in_cells`.
     let css = bundled_latexml_css();
+    for rule in [
+      ".ltx_inline-block .ltx_eqn_table,\n.ltx_td .ltx_eqn_table { display:block; max-width:100%; }",
+      ":is(.ltx_inline-block, .ltx_inline-logical-block, .ltx_minipage, .ltx_parbox):has(.ltx_eqn_table) {\n  \
+       min-width:min-content; }",
+      ":is(.ltx_inline-block, .ltx_inline-logical-block, .ltx_td) :is(.ltx_eqn_center_padleft, .ltx_eqn_center_padright) {\n  \
+       min-width:0; }",
+      ".ltx_note_content:has(.ltx_eqn_table) { overflow-x:auto; }",
+    ] {
+      assert!(
+        css.contains("#533") && css.contains("#972") && css.contains(rule),
+        "LaTeXML.css lost the constrained-equation rule `{rule}` (issues #533, #972)"
+      );
+    }
     assert!(
-      css.contains("#533")
-        && css.contains(".ltx_inline-block .ltx_eqn_table")
-        && css.contains(".ltx_td .ltx_eqn_table")
-        && css.contains("display:block; overflow-x:auto; max-width:100%;"),
-      "the constrained-equation containment delta (issue #533) is missing from LaTeXML.css: \
-       display math inside a p{{}} cell / parbox / minipage / table cell would escape its \
-       box and scatter across the page instead of scrolling within the cell",
+      !css.contains("display:block; overflow-x:auto; max-width:100%;"),
+      "a display in a box is a scroll container again (issue #972: phantom vertical scrollbars)"
     );
   }
 
@@ -1902,7 +1914,7 @@ mod witnessed_css_delta {
     let css = bundled_latexml_css();
     for rule in [
       "span.ltx_eqn_table > span:not([class]) { display:table-row-group; }",
-      "span.ltx_eqn_table { display:block; overflow-x:auto; max-width:100%; }",
+      "span.ltx_eqn_table { display:block; max-width:100%; }",
       ".ltx_tabular .ltx_eqn_cell { padding:0; }",
       ".ltx_eqn_align .ltx_equation > .ltx_align_left + .ltx_align_right,",
       ".ltx_eqn_eqnarray .ltx_eqn_lefteqn + .ltx_eqn_row > .ltx_align_right { min-width:2em; }",

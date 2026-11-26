@@ -3860,8 +3860,9 @@ Rust **surpasses** with a bundled-CSS local delta (OXIDIZED_DESIGN #108):
 `.ltx_inline-block .ltx_eqn_table, .ltx_td .ltx_eqn_table { display:block;
 overflow-x:auto; max-width:100% }` — the equation becomes a block scroll
 container that stays within its cell (scrolling horizontally when too wide),
-mirrored in `ar5iv-css`. Normal full-width display math is untouched. Guard:
-`latexml_post::xslt::witnessed_css_delta::constrained_equation_overflow_delta_stays_present`.
+mirrored in `ar5iv-css`. Normal full-width display math is untouched. Since 0.8.0 the block is no scroll
+container (issue #972: phantom vertical scrollbars); its box grows to fit it (OXIDIZED_DESIGN_DIVERGENCES #1135).
+Guard: `latexml_post::xslt::witnessed_css_delta::constrained_equation_overflow_delta_stays_present`.
 
 **The Rust fix, moved from OXIDIZED_DESIGN_DIVERGENCES #108** ("Display math is contained within a width-constrained box, not left to escape", 2026-11-14):
 
@@ -3876,7 +3877,8 @@ a `p{}` cell / `\parbox` / `minipage` (`.ltx_inline-block`) or a table cell
 breakage ⇒ SHARED-FAILURE; the lualatex PDF keeps the math in its cell.
 
 **Divergence** (surpass-Perl, user-approved 2026-08-15): a bundled-CSS local
-delta re-boxes display math as a **block scroll container** *only under a
+delta re-boxes display math as a **block scroll container** (a plain block since 0.8.0,
+the box growing to fit it: OXIDIZED_DESIGN_DIVERGENCES #1135) *only under a
 constrained ancestor*, so it stays inside the cell and scrolls horizontally when
 too wide — the same containment `.ltx_listing` (code) already uses:
 `.ltx_inline-block .ltx_eqn_table, .ltx_td .ltx_eqn_table { display:block;
