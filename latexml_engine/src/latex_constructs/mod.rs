@@ -4212,7 +4212,7 @@ pub fn define_new_theorem(
   let thmset_str = thmset.to_string();
   let classname = clean_class_name(&thmset_str);
   let listname = theorem_list_name(&thmset_str);
-  // thm-patch.sty:71-82: thmtools runs `\thmt@newtheorem@predefinition` before each theorem it declares, with
+  // thm-patch.sty:69-84: thmtools runs `\thmt@newtheorem@predefinition` before each theorem it declares, with
   // `\thmt@envname` its name (thm-listof records the theorem for `\listoftheorems` there; thmtools_sty.rs).
   if is_defined("\\thmt@newtheorem@predefinition") {
     let mut hook = vec![T_CS!("\\def"), T_CS!("\\thmt@envname"), T_BEGIN!()];
