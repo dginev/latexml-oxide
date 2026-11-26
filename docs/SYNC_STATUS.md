@@ -89,23 +89,31 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (434 items on 2026-11-26 on `int/towards_v0_8_1`: 434 open, weight 952, 40 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (437 items on 2026-11-26 on `int/towards_v0_8_1`: 437 open, weight 957, 40 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
 
 
   - ODR6 — OD ruling 12 (recorded in OD #449): `dump_reader.rs`'s "add-only" docstrings (:365, :574) corrected, then a removal trial of the skip lists against CLAUDE.md rule 2; 1
   - ODR7 — OD ruling 6: each "Bindings beyond Perl's tree" body (end of OD) into its binding module's `//!` doc comment, then trim the catalog to its table — the 19 CLSFM bodies ODDOC-E moved there from #460 (#412 … #912) included; 3
   - ODR8 — OD docs: #8 (the OML slot-127 claim unconfirmed in code), #26 (mdframed now inserts through `insert_block`, `mdframed_sty.rs`); 1
   - ODR9 — wire `tools/perfect_kernel/od_anchors.sh` into `tools/lint.sh`; 1
-  - DIGFATAL — (RHODR residual; arXiv reach 159 Fatal papers) a Fatal raised while digesting (Mouth:EoF,
-    ParamSpec:Expected, TargetUnexpected:Endgroup, Stomach:Misdefined, a Rhai body's `Fatal()`) loses all the text
-    before it, where Perl's `hardYankProcessing` (`Error.pm:336-338`) keeps it (Perl: `<p>First paragraph.</p><p>Before
-    </p>`); `core_interface::digest_step_guarded` salvages only for the Stomach guards, TooManyErrors and Timeout:IfLimit.
-    RED `rhai-bindings/digest_fatal_keeps_text_before_red.tex`. DG 2026-11-26: option (a) — keep the text before every
-    digestion Fatal except the loop and resource guards (StreamingRestart, Timeout:MemoryBudget/Convert/TokenLimit/
-    PushbackLimit re-raise; Timeout:Recursion and Mouth:Recursion keep no salvage, 2605.25400; Stomach:Recursion/
-    MemoryBudget unchanged), the status staying Fatal (design `GN_DIGFATAL_2026-11-25.md`). CorTeX's fatal reports:
-    Mouth:EoF 126, ParamSpec:Expected 10, TargetUnexpected:Endgroup 7, Stomach:Misdefined 16 (159, every one in the
-    batch's A/B). In progress on `pk/DIGFATAL`; 2
+  - DIGFATAL-CLOSE — (DIGFATAL residual; post-merge) a digestion Fatal now keeps every pending level (OD #251;
+    68 of the 159 CorTeX Fatal papers keep their text), but the salvage splices an unfinished construct's boxes into the
+    running paragraph: a footnote's words fuse with the sentence (`BeforeNote`), an unfinished `\author{…}` becomes a
+    body paragraph, unfinished math becomes italic text, an unfinished list leaves rootless items (4 of the 68
+    schema-invalid: 1402.0613, cond-mat9706088, 2512.12535, 2302.01695). Cause: `stomach.rs:2351`
+    `salvage_pending_box_lists` flattens the levels without their owners. Plan: tag each level with its kind; keep
+    body and group levels; close an argument level as its owner's container (a note, the frontmatter store), else a
+    separate paragraph, never fused; math as an unparsed math list; a word still unplaced is counted by a Warning. REDs
+    `rhai-bindings/digest_fatal_in_{an_unfinished_list,a_footnote,an_author,inline_math,display_math}_red.tex`; 2
+  - DIGFATAL-EOF — the 81 arXiv `Mouth:EoF` Fatals, by Until delimiter: `\endsubheading` 10 (amsppt
+    `\subheading\nofrills`; alg-geom9709005 now an empty `<document>`), `\NOT` 9, ` at ` 7, `\__prop_pair:wn` 6,
+    `\LT@err` 5 (a preamble longtable patch: RED `package-bindings/longtable_patched_at_its_lt_err_red.tex`, 1409.6572,
+    1503.02372), `\lx@jmlr@endaddr` 4; Perl recovers some with an Error where we Fatal (a run-off `\grab` in the
+    preamble); a root-cause batch; 3
+  - DIGFATAL-MUTE — after a Fatal the build's malformed-markup Errors are muted for a `Mouth:EoF` (the Until reader
+    latches TooManyErrors) but printed for a binding's Fatal (E=2 in the list RED); one rule for both; 1
+  - RHAISTRBODY — a Rhai `DefMacro` whose string body is unbalanced (`"{"`) is a Fatal here; Perl checks the balance
+    only for a Tokens body (Expandable.pm:30-35); 1
   - OD83 — OD #83 (DG 2026-11-15): keep digesting acmart's `\Description`, but report an error inside it as a Warning (acmart.cls:895 discards the argument, so pdflatex never meets it; 2607.21760's `\D1 … \D5`; KNOWN_PERL_ERRORS #66 point 2) — post-cutoff; 1
   - PGF259 — OD #259 (DG 2026-11-15): one rule, pgf's `\divide`, for every native division by zero — `pgfmath_divisor` (pgfmath_code_tex.rs:208) returns the dividend as `pgfmath_divide` (:235) does, not EPSILON — post-cutoff code + guard rows; 1
   - PGF1007 — OD #1007 (DG 2026-11-15): follow pgf — an unparseable expression raises pgf's "Unknown function" Error and computes 0; `calc_compat_expand` (pgfmath_code_tex.rs:2247) retired — post-cutoff, with an A/B sizing the papers that lose a value; 3
@@ -585,8 +593,9 @@ Rules that keep this file honest and mergeable:
     then the existing kind-legend pass); in progress on `pk/DATEICML`; 1
   - WILEYCORRES — WileyNJD-v2/WileyASNA/MRM `\corres{*Name, address, \email{…}}` stays a free `note role=corresponding`
     beginning with the typed `*` (1903.08928, 2003.04316, 2102.05937, 2201.01977, 2307.09820, 2412.06516, MRM
-    2509.13644; ≈ 1.6k corpus-wide); the binding shape of DATEICML with the glyph as label; open: the starred
-    author's corresponding note or their contact; 1
+    2509.13644; ≈ 1.6k corpus-wide); the binding shape of DATEICML with the glyph as label. DG 2026-11-26: the
+    starred author's corresponding note (mark ∗, the typed `*` as its label; the e-mail on that author by spelling),
+    on DATEICML's legend mechanism; 1
   - MRMAUTHLABEL — MRM `\author[1,2]{…}` drops its labels: all three `\address[n]` and an e-mail land on the last
     author, and `\presentaddress` is absent (2506.14995); 3
   - MLSYSNOCREATOR — an mlsys paper emits 0 creators (2601.11589); 3
@@ -611,7 +620,7 @@ Rules that keep this file honest and mergeable:
     of modern aaai). Two gates keep aaai off the displaced-setter route (OD #955): `affiliations` is not in
     `STORE_SETTERS`, and the copies' `_`-delimited self-redefining store is skipped by `assigned_parts_holding`. In
     progress on `pk/AAAILABEL`; the AAAI notes kept as moved (once-per-name `lx_aaai_marked@<kind>`) stay as they are; 3
-  - ARYDSHLN — (DG 2026-11-26) translate upstream LaTeXML PR 2889 (the arydshln binding, by an arydshln author) with
+  - ARYDSHLN — (DG 2026-11-26) translate upstream LaTeXML PR 2889 (the arydshln binding, by Christopher Smolen) with
     dashed borders in the HTML: `ltx_border_{t,b,l,r}_dashed` on a per-side style channel beside `border_color`, a
     `:`/`;{}` column rule that leaves nothing in the cell, `\arrayrulecolor` kept as a colour setter (arydshln.sty
     :1119-1123), no `\xleaders` no-op, the upstream test as a golden pair; its own PR into `int/towards_v0_8_1`; in
