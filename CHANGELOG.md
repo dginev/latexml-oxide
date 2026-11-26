@@ -2,61 +2,68 @@
 
 ## [0.8.0] (98 % of arXiv without an error; packages read from their own sources; 198 new bindings; a frontmatter engine; faster, in less memory)
 
-Hundreds of improvements since 0.7.6 (2026-08-23). In short:
+Highlights since v0.7.6 in August:
 
-- **98 % of arXiv converts without an error**, up from 86.3 % under 0.7.6, and every release is regression-tested
-  against the whole corpus.
-- **Packages and classes without a binding are read from their own sources by default**, and 198 more have bindings.
-- **A new frontmatter engine**, and **a Rhai binding API that is Perl's `Package.pm` API**.
-- **Faster, in less memory:** a typical arXiv paper converts 1.3× faster, a large split book 2.3× faster.
-- **Untrusted input stays inside the job.**
+1. Improved to 98 % error-free conversion of the arXiv collection of nearly 3 million articles (up from 86 % with
+   v0.7.6).
+2. New benchmark: error-free conversion of 1,592 of the 1,602 TeX Live 2025 package manuals that compile cleanly with
+   their original engine.
+3. Raw interpretation of packages and classes is now enabled by default: latexml-oxide loads those without a binding
+   from their own `.sty`/`.cls` sources.
+4. Adds bindings for 198 more packages and classes, including unicode-math, polyglossia, xeCJK, datatool, tagpdf, the
+   KOMA-Script classes, apa7 and the AAAI, ACL, ICLR and USENIX conference styles.
+   - [`docs/SUPPORTED_PACKAGES.md`](docs/SUPPORTED_PACKAGES.md)
+5. Converts a typical arXiv paper 1.3× faster than v0.7.6, at about the cost of a single pdflatex pass.
+6. Converts very large documents. Thanks to Nasser for his book of differential-equation tests (67,000 PDF pages),
+   which now converts in under 30 minutes.
+7. Adds baseline, experimental support for LuaTeX, XeLaTeX and CJK documents. Package Lua code runs in a sandboxed
+   interpreter, and pTeX/upTeX and CJK input are read.
+8. Adds a new frontmatter engine that extracts author information from typeset title pages, and emits macros of the
+   new Frontmatter API of LaTeXML.
+9. Adds EPUB 3 output (`--format=epub`) and UnicodeMath annotations (`--unicodemath`).
+10. Rhai: our runtime binding API now matches Perl LaTeXML's `Package.pm`, with typed values, Perl's hooks and a
+    Perl/Rust/Rhai cheat sheet.
+    - [`docs/parity/RHAI_BINDINGS_GUIDE.md`](docs/parity/RHAI_BINDINGS_GUIDE.md)
+    - [`latexml_contrib/src/script_bindings/CHEATSHEET.md`](latexml_contrib/src/script_bindings/CHEATSHEET.md)
+11. Follows the LaTeX kernel more faithfully: kernel hooks run where `latex.ltx` runs them, and the formats build with
+    zero errors on the November 2026 kernel.
+12. Installation: the first conversion on a new TeX Live tree builds its format once (about 10 s) and caches it; later
+    conversions reuse it. Packages now load from their own sources, so conflicts that TeX itself reports can surface
+    as Errors. Precompiled formats for TeX Live 2022–2026 are still included, but they now only activate on a TeX
+    Live snapshot identical to the one that built them.
+13. Agentic AI native: we have improved the LaTeXML development principles in the AI harness, with Bruce's help. For
+    this release, the main workhorse model was Claude Opus 5.5, with advice from Fable 5.2 and Gemini 4 Neon. As part
+    of this workflow, we have grown the test suite substantially to guard against future regressions.
 
-Every change, with its guard tests and design references, is listed in
+This release has already converted the arXiv collection, and you can examine its results live in the
+[ar5iv Lab](https://ar5iv.labs.arxiv.org). Every change, with its guard tests and design references, is listed in
 [`docs/release/CHANGES_v0.8.0.md`](docs/release/CHANGES_v0.8.0.md).
 
 <details>
-<summary><b>Highlights</b></summary>
+<summary><b>More highlights</b></summary>
 
-- **98 % of arXiv converts without an error.** The production run of November 2026 converts 98.1 % of arXiv's
-  2,962,950 LaTeX articles with no Error or Fatal, up from 86.3 % under 0.7.6. The release is regression-tested
-  against the entire corpus, and latexml-oxide converts the ar5iv Lab and arXiv's HTML Papers.
-- **A faithful LaTeX kernel.** Of the 1,602 TeX Live package manuals that compile under some TeX engine, 1,592 convert
-  with no Error outside a few ruled-out kinds (mean word recall 96.9 % against their PDFs). Kernel hooks run where
-  `latex.ltx` runs them, following the review of the port by LaTeXML's author, Bruce Miller.
-- **Packages and classes without a binding are read from their own sources by default** (error-free arXiv papers
-  without the ar5iv preload: 84.5 % → 95.7 %), and **198 more have bindings** that Perl LaTeXML does not ship, among
-  them unicode-math, polyglossia, xeCJK, datatool, tocloft, the KOMA-Script bases, apa7 and the AAAI, ACL and ICLR
-  conference styles.
-- **LuaTeX, XeLaTeX and CJK documents convert:** the Lua code in packages runs through a `texlua` bridge, and the
-  engine identity is pdfTeX by default, `luatex` or `xetex` on request.
 - **Bibliographies follow their style:** biblatex `.bbl` files and `.bbx`/`.cbx` styles are read.
-- **A new frontmatter engine** reads author blocks from what TeX typeset, through one binding API: a footnote mark
-  finds its note, a note several authors share prints once, and contacts reach their authors.
-- **The Rhai runtime binding API is Perl's `Package.pm` API**, with a Perl/Rust/Rhai
-  [cheat sheet](latexml_contrib/src/script_bindings/CHEATSHEET.md).
 - **Untrusted input stays inside the job:** document Lua runs sandboxed, archives unpack and files copy only inside
   their directories, and child processes end with their conversion
   ([`docs/release/SAFETY.md`](docs/release/SAFETY.md)).
-- **Faster, in less memory** (against the 0.7.6 binary on the same machine): a typical arXiv paper converts 1.3×
-  faster (median of 94 papers) and a 9,700-page split book 2.3× faster in 1.7× less memory; a 115,519-page book
-  converts in 26 minutes, where 0.7.6 stopped at its memory ceiling (#777). A paper's HTML costs about one pdflatex
-  pass (1.14×, the geometric mean over 32 papers).
+- **Speed and memory** (against the 0.7.6 binary on the same machine): a 9,700-page split book converts 2.3× faster
+  in 1.7× less memory; a 115,519-page book converts in 26 minutes, where 0.7.6 stopped at its memory ceiling (#777);
+  a paper's HTML costs 1.14× one pdflatex pass (the geometric mean over 32 papers).
 - **Large split documents stream by default**, rendering their pages on up to 8 worker processes within
   `--max-memory`.
-- **New outputs:** EPUB 3 (`--format=epub`) and UnicodeMath annotations (`--unicodemath`); Perl-compatible
-  options (`--xsltparameter name:value`, the last of a repeated option wins).
 - **Better pages in browsers:** MathML Core fixes, equation numbers beside their formulas, displays in table cells
   that line up their rows (#972), and stylesheets synced with LaTeXML and ar5iv-css 0.9.5.
 - **Platforms:** builds, and converts basic documents, without TeX Live; the full test suite runs on Windows for
   every release (Windows binaries ship unsigned); each release names its exact build inputs (`BUILD-INPUTS`).
+- **Perl-compatible options:** `--xsltparameter name:value`, and the last of a repeated option wins.
 
 </details>
 
 <details>
 <summary><b>Upgrading from 0.7.6</b>: the defaults, options and outputs that changed</summary>
 
-- **Formats:** the first conversion on a new TeX tree builds its format once (about 11 s) into
-  `~/.cache/latexml-oxide/formats/` and says so on stderr; `--timeout` does not cover that build.
+- **Formats:** the one-time format build (item 12) goes to `~/.cache/latexml-oxide/formats/` and says so on stderr;
+  `--timeout` does not cover it.
 - **Raw loading is the default** (`--noincludestyles` restores Perl's behaviour). Real package sources can surface
   conflicts TeX has and 0.7.x hid: `fancybox` loaded after `fancyvrb`, for example, runs every fancyvrb environment
   to the end of the file, as pdflatex does; load `fancybox` first.
