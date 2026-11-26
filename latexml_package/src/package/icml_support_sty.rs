@@ -96,13 +96,13 @@ fn icml_support(follow_paper_copy: bool) -> Result<()> {
 
   // \icmlauthor{author}{labels}   One per author; labels used to connect to affiliation
   // A label `\icmlsetsymbol` named prints its symbol after the name (icml2026.sty:446-458 `\@pa`; icml2017.sty on):
-  // `\icmlauthor{Ann Able}{equal,a}` is "Ann Able∗ 1", the name's mark the notice's `\icmlEqualContribution` explains
-  // (2602.04557), a mark-only note of the creator (as acmart's `\authornotemark`), so the name stays the one
-  // `\icmlcorrespondingauthor` spells (1904.07793); a symbol that prints no one mark (`printed_label_pieces`) prints in
+  // `\icmlauthor{Ann Able}{equal,a}` is "Ann Able∗ 1", the mark the notice's `\icmlEqualContribution` explains
+  // (2602.04557): the name's mark keyed by the label (`\lx@frontmatter@namemark`, OD #1061), which the legend
+  // `\printAffiliationsAndNotice` gives that label answers and the settle step else shows; the name stays the one
+  // `\icmlcorrespondingauthor` spells (1904.07793). A symbol that prints no one mark (`printed_label_pieces`) prints in
   // the name. The other labels request their affiliations.
   DefMacro!("\\icmlauthor{} Semiverbatim", sub[(name, labels)] {
     let mut name = name.unlist();
-    let mut marks = Vec::new();
     for label in labels.to_string().split(',').map(str::trim).filter(|label| !label.is_empty()) {
       let symbol = T_CS!(s!("\\@icmlsymbol{label}"));
       let Some(meaning) = lookup_meaning(&symbol) else {
@@ -121,22 +121,23 @@ fn icml_support(follow_paper_copy: bool) -> Result<()> {
         _ => None,
       };
       match glyph {
-        Some(glyph) => marks.extend(
-          TokenizeInternal!(TeXString::assembled(s!(
-            "\\lx@annotate@frontmatter{{ltx:creator}}{{ltx:note}}[role=footnotemark,mark={{{glyph}}}]{{{glyph}}}"
-          )))
-          .unlist(),
-        ),
+        Some(glyph) => {
+          record_name_mark(label, &glyph);
+          name.extend(
+            Invocation!(T_CS!("\\lx@frontmatter@namemark"), vec![
+              Some(Tokens::new(ExplodeText!(label))),
+              Some(Tokens::new(ExplodeText!(&glyph)))
+            ])
+            .unlist(),
+          )
+        },
         None => name.extend(Invocation!(T_CS!("\\textsuperscript"), vec![Some(Tokens::new(vec![symbol]))]).unlist()),
       }
     }
-    let mut call = Invocation!("\\lx@add@creator[role=author,annotations={#1}]{#2}", vec![
+    Ok(Invocation!("\\lx@add@creator[role=author,annotations={#1}]{#2}", vec![
       Some(labels),
       Some(Tokens::new(name))
-    ])
-    .unlist();
-    call.extend(marks);
-    Ok(Tokens::new(call))
+    ]))
   });
   // icml20XX.sty: \newcommand{\icmlCorrespondingAuthor}{\textsuperscript{$\dagger$}Corresponding author}
   // (0-arg marker). icml2025.sty L530: \newcommand{\icmlCorr}{\textsuperscript{\dag}Corresponding author }
@@ -187,10 +188,8 @@ fn icml_support(follow_paper_copy: bool) -> Result<()> {
   // Witness: 2502.18679 (icml2025.sty L564).
   // The notice's "Correspondence to:" line (icml2026.sty:529-530) is the contacts here, but for what a document added to
   // the line (2605.04712, 2605.21190, 2606.01172 `\g@addto@macro\icmlcorrespondingauthor@text{. Code at …}`): a note.
-  DefMacro!("\\printAffiliationsAndNotice{}",
-    "\\lx@add@frontmatter{ltx:note}[role=affiliationnotice]{#1}\\lx@icml@corr@added");
-  DefMacro!("\\printAffiliationsAndWorkNotice{}",
-    "\\lx@add@frontmatter{ltx:note}[role=affiliationnotice]{#1}\\lx@icml@corr@added");
+  DefMacro!("\\printAffiliationsAndNotice{}", sub[(notice)] { affiliations_and_notice(notice) });
+  DefMacro!("\\printAffiliationsAndWorkNotice{}", sub[(notice)] { affiliations_and_notice(notice) });
   // (the line past what this binding's `\icmlcorrespondingauthor` built, `\lx@icml@corr@built`, without the
   // punctuation it starts with; the whole line, as printed, when the document replaced it — or set it without calling
   // `\icmlcorrespondingauthor`, which leaves `\lx@icml@corr@built` undefined)
@@ -399,4 +398,154 @@ fn icml_support(follow_paper_copy: bool) -> Result<()> {
   RawTeX!(r"\ifdefined\isaccepted \icmlshowauthorstrue \fi
 \ifdefined\ispreprint \icmlshowauthorstrue \fi");
   Ok(())
+}
+
+/// The marks `\icmlauthor` showed on names, each with the label it keys (`glyph\tlabel` lines): the marks the notice's
+/// legends can answer.
+const NAME_MARKS: &str = "lx@icml@name@marks";
+
+fn record_name_mark(label: &str, glyph: &str) {
+  let entry = s!("{glyph}\t{label}");
+  let marks = lookup_string(NAME_MARKS);
+  if !marks.lines().any(|line| line == entry) {
+    assign_value(
+      NAME_MARKS,
+      Stored::String(pin(s!("{marks}{entry}\n"))),
+      Scope::Global,
+    );
+  }
+}
+
+/// `\printAffiliationsAndNotice{#1}` (icml2026.sty:519-536): the notice's legends, each opening with a mark that names
+/// show (`\icmlEqualContribution`'s `\textsuperscript{*}`, :502), are the notes of those names (FIDELITY_CHARTER §4):
+/// an entry under the mark's label as `\icmlaffiliation`'s, declared a legend (`_legend`, icml numbering its
+/// affiliations apart), which the Kind step for a legend makes their note. A notice with any other piece stays whole, a
+/// note of the block (2602.04557, 2402.05011, 2306.03504).
+fn affiliations_and_notice(notice: Tokens) -> Result<Tokens> {
+  let mut out = match legend_entries(&notice)? {
+    Some(entries) => entries,
+    None => Invocation!(
+      "\\lx@add@frontmatter{ltx:note}[role=affiliationnotice]{#1}",
+      vec![Some(notice)]
+    )
+    .unlist(),
+  };
+  out.push(T_CS!("\\lx@icml@corr@added"));
+  Ok(Tokens::new(out))
+}
+
+/// The `\lx@add@contact` calls of a notice read whole as legends ([`affiliations_and_notice`]): its parameterless macros
+/// expanded, cut before each `\textsuperscript{G}` it opens with, each piece's G a mark some name shows; else `None`.
+fn legend_entries(notice: &Tokens) -> Result<Option<Vec<Token>>> {
+  let marks = lookup_string(NAME_MARKS);
+  if marks.is_empty() {
+    return Ok(None);
+  }
+  let tokens = expand_notice(notice);
+  let superscript = T_CS!("\\textsuperscript");
+  let is_space = |t: &Token| t.get_catcode() == Catcode::SPACE;
+  let mut starts = Vec::new();
+  let mut depth = 0usize;
+  for (at, token) in tokens.iter().enumerate() {
+    match token.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => depth = depth.saturating_sub(1),
+      _ if depth == 0 && *token == superscript => starts.push(at),
+      _ => {},
+    }
+  }
+  let lead = tokens.iter().take_while(|t| is_space(t)).count();
+  if starts.first() != Some(&lead) {
+    return Ok(None);
+  }
+  let mut out = Vec::new();
+  for (piece_at, &start) in starts.iter().enumerate() {
+    let end = starts.get(piece_at + 1).copied().unwrap_or(tokens.len());
+    let mut piece = &tokens[start..end];
+    // (the mark's operand, the balanced group after `\textsuperscript`)
+    let open = 1 + piece[1..].iter().take_while(|t| is_space(t)).count();
+    if piece.get(open).map(Token::get_catcode) != Some(Catcode::BEGIN) {
+      return Ok(None);
+    }
+    let mut depth = 0usize;
+    let Some(close) = piece[open..].iter().position(|t| {
+      match t.get_catcode() {
+        Catcode::BEGIN => depth += 1,
+        Catcode::END => depth -= 1,
+        _ => {},
+      }
+      depth == 0
+    }) else {
+      return Ok(None);
+    };
+    let operand = Tokens::new(piece[open + 1..open + close].to_vec());
+    let pieces = printed_label_pieces(&operand)?;
+    let [glyph] = pieces.as_slice() else {
+      return Ok(None);
+    };
+    let labels: Vec<&str> = marks
+      .lines()
+      .filter_map(|line| line.split_once('\t'))
+      .filter(|(mark, _)| mark == glyph)
+      .map(|(_, label)| label)
+      .collect();
+    // (and a legend's words after it: a bare mark explains nothing)
+    if labels.is_empty() || piece[open + close + 1..].iter().all(is_space) {
+      return Ok(None);
+    }
+    // (the separator between two legends, `\icmlEqualContribution, \icmlProjectLead`, belongs to neither)
+    while piece.last().is_some_and(is_space) {
+      piece = &piece[..piece.len() - 1];
+    }
+    if end < tokens.len()
+      && piece
+        .last()
+        .is_some_and(|t| *t == T_OTHER!(",") || *t == T_OTHER!(";"))
+    {
+      piece = &piece[..piece.len() - 1];
+    }
+    for label in labels {
+      out.extend(
+        Invocation!(
+          "\\lx@add@contact[role=affiliation,label={#1},_legend=true]{#2}",
+          vec![
+            Some(Tokens::new(ExplodeText!(label))),
+            Some(Tokens::new(piece.to_vec()))
+          ]
+        )
+        .unlist(),
+      );
+    }
+  }
+  Ok(Some(out))
+}
+
+/// A notice's tokens with the parameterless macros at its top level expanded, as it prints them (`\icmlEqualContribution`,
+/// a paper's own marker macro).
+fn expand_notice(notice: &Tokens) -> Vec<Token> {
+  let mut pending: Vec<Token> = notice.unlist_ref().iter().rev().cloned().collect();
+  let mut tokens = Vec::new();
+  let (mut depth, mut budget) = (0usize, 64usize);
+  while let Some(token) = pending.pop() {
+    match token.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => depth = depth.saturating_sub(1),
+      Catcode::CS if depth == 0 && budget > 0 => {
+        if let Some(Stored::Expandable(d)) = lookup_meaning(&token)
+          && !d.is_protected()
+          && d
+            .get_parameters()
+            .is_none_or(|p| p.get_parameters().is_empty())
+          && let Some(ExpansionBody::Tokens(body)) = d.get_expansion()
+        {
+          budget -= 1;
+          pending.extend(body.unlist_ref().iter().rev().cloned());
+          continue;
+        }
+      },
+      _ => {},
+    }
+    tokens.push(token);
+  }
+  tokens
 }

@@ -1009,9 +1009,6 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
   // `\lx@note` writes too, latex_constructs.pool.ltxml:461 — OD #1053, the mark rule)
   ("[mark] package/acmart_cls.rs", 1),
   ("[mark] package/iopart_support_sty.rs", 1),
-  // (icml's `\icmlsetsymbol` label on a name: the symbol a mark-only note of the creator, as acmart's `\authornotemark`,
-  // not a superscript in the name, whose `fuzzy:` label `\icmlcorrespondingauthor` must spell — 1904.07793; OD #1063)
-  ("[mark] package/icml_support_sty.rs", 1),
   // (SNJNL: the glyph sn-jnl's `\author*` and author notes print on the names, the `ltx:note` schema attribute, on the
   // one labelled note each queues, as acmart's; OD #1066)
   ("[mark] sn_jnl_cls.rs", 1),
@@ -1030,6 +1027,10 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
   ("_labelprints= cas_dc_cls.rs", 1),
   ("_labelprints= package/authblk_sty.rs", 1),
   ("_labelprints= package/jheppub_sty.rs", 1),
+  // (DATEICML: icml's notice legend, an entry under the label of the names' mark declared a legend, which the Kind step
+  // makes their note whatever its words — icml numbers its affiliations apart, icml2026.sty:519-536; Perl drops the
+  // notice. Its `[mark]` call went: the name's mark is `\lx@frontmatter@namemark`, OD #1061, #1063, #954)
+  ("_legend= package/icml_support_sty.rs", 1),
   ("_mark= package/jheppub_sty.rs", 1),
   ("_markpiece= package/llncs_cls.rs", 1),
   ("_marks= base_utilities/defs/frontmatter_fields.rs", 1),
@@ -1115,6 +1116,8 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
     "const _leads_contact base_utilities/frontmatter/queue_digest.rs",
     1,
   ),
+  // (DATEICML: the declared legend's key, `LEGEND_ENTRY`, beside `_labelprints`)
+  ("const _legend base_utilities/defs/frontmatter_api.rs", 1),
   ("const _linefirst base_utilities/frontmatter/insert.rs", 1),
   ("const _linelist base_utilities/frontmatter/insert.rs", 1),
   ("const _linemark base_utilities/frontmatter/insert.rs", 1),
@@ -1218,6 +1221,8 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
     "declared _labelprints base_utilities/defs/frontmatter_api.rs",
     1,
   ),
+  // (DATEICML: `_legend`, declared so a binding's use reports no unknown key)
+  ("declared _legend base_utilities/defs/frontmatter_api.rs", 1),
   // (MARKSAFEc, review revMARKSAFEb N1: keys the engine and bindings already pass, declared as `_corresponding` is, so
   // their use reports no unknown key on every paper that writes one: `_markunknown`, `_markfromcounter` (a creator's
   // note's flags), `_share`, `_rowshared` (a contact several names share))

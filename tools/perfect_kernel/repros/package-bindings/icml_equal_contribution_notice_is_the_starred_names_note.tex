@@ -1,0 +1,32 @@
+% mechanism: icml's `\printAffiliationsAndNotice{\icmlEqualContribution}` (icml2026.sty:502, :519-536) is the legend of the
+%          `*` the `equal` names show (`\@pa`, :446-458): each name's mark keyed by its label (`\lx@frontmatter@namemark`),
+%          the legend an entry under that label (icml_support_sty.rs `legend_entries`), which the Kind step for a legend
+%          makes the names' note (DATEICML; OD #1061)
+% witness: 2602.04557 (also 2304.02335, 2402.12706, 2410.11112, 2503.21579, 2506.08936, 2605.18156); Cy Able shares Ann's
+%          surname, the name `\icmlcorrespondingauthor` spells (1904.07793)
+% oracle:  pdflatex (-no-shell-escape, TL 2025, 2602.04557's icml2026.sty) 0 errors: "Ann Able * 1 Bob Baker * 1 Cy Able 1"
+%          and the footnote "*Equal contribution 1Univ A. Correspondence to: Ann Able <ann@a.edu>. Preprint. <date>."
+% engines: INT081RC6 (42eb2c85eb5): 0 errors; Ann, Bob `<note mark="*" role="footnotemark"/>`, the legend a top-level
+%          `<note role="affiliationnotice"><sup>*</sup>Equal contribution</note>` no creator holds; Perl: the notice
+%          gobbled (icml_support.sty.ltxml:52), no `*`
+% expect:  0 errors, 0 warnings; Ann Able and Bob Baker each hold `<note role="thanks" mark="*">Equal contribution</note>`
+%          (no mark-only note beside it), Cy Able none; no top-level affiliationnotice note; Ann keeps ann@a.edu
+% status:  RED (INT081RC6) -> GREEN (DATEICML); guard perfect_kernel_batchdateicml::icml_notice_legends_are_the_marked_names_notes
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[preprint]{icml2026}
+\icmltitlerunning{T}
+\begin{document}
+\twocolumn[\icmltitle{Title}
+\icmlsetsymbol{equal}{*}
+\begin{icmlauthorlist}
+\icmlauthor{Ann Able}{equal,a}
+\icmlauthor{Bob Baker}{equal,a}
+\icmlauthor{Cy Able}{a}
+\end{icmlauthorlist}
+\icmlaffiliation{a}{Univ A}
+\icmlcorrespondingauthor{Ann Able}{ann@a.edu}
+\vskip 0.3in]
+\printAffiliationsAndNotice{\icmlEqualContribution}
+Text.
+\end{document}

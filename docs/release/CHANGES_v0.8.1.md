@@ -9,6 +9,14 @@ top of its group.
 
 ### Unreleased
 
+  - **icml's notice legends are the notes of the names that show their mark.**
+    `\printAffiliationsAndNotice{\icmlEqualContribution}` gave a note no author held, and each `equal` author an empty
+    mark-only `*`; now each such author holds the legend as a note marked `*` ("Equal contribution"). Each legend of
+    the notice (`\icmlEqualContribution, \icmlProjectLead`) goes to the names whose `\icmlsetsymbol` mark it opens with,
+    one naming an institution too ("†Work done during internship at AWS AI", 2310.02777). A notice holding a mark no
+    `\icmlsetsymbol` label printed stays whole, as before (2306.03504). 2602.04557, 1904.07793 (the corresponding
+    author's e-mail kept), 2106.09776 (OXIDIZED_DESIGN_DIVERGENCES #1063, #954). Guard
+    `perfect_kernel_batchdateicml::icml_notice_legends_are_the_marked_names_notes`.
   - **The MSC edition of an AMS class's or amsppt's `\subjclass` follows its codes.** The call's year, or the
     author's own `\subjclassname` (or amsppt `\subjclassyear`) that the class discards, stands when every code is in
     that edition; codes that fit one edition name it; a printed year the codes refute gives the edition current at the

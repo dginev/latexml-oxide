@@ -56,11 +56,12 @@ fn html_element<'a>(html: &'a str, open: &str) -> &'a str {
   }
 }
 
-/// icml's notice (`\printAffiliationsAndNotice{\icmlEqualContribution}`), a note of the document's own level with no mark
-/// (2602.04557; pdflatex prints it as a footnote with no mark, `\let\thefootnote\relax`, icml2026.sty:521): a block line,
-/// `div.ltx_note_unmarked` with no "role: " label (none printed), its `*` (icml2026.sty:502) kept, no `†`; the equal
-/// authors' names show the `*` their
-/// `\icmlsetsymbol` label prints (icml2026.sty:446-458), a mark of the creator, not of its name, so Ann's e-mail is
+/// icml's notice (`\printAffiliationsAndNotice{\icmlEqualContribution\textsuperscript{\#}Interns at Acme}`), a note of the
+/// document's own level with no mark (2602.04557, 2306.03504; pdflatex prints it as a footnote with no mark,
+/// `\let\thefootnote\relax`, icml2026.sty:521), whole: its `#` legend answers no name's mark (DATEICML: one whose every
+/// legend a name answers is those names' notes, `perfect_kernel_batchdateicml`). A block line, `div.ltx_note_unmarked`
+/// with no "role: " label (none printed), its `*` (icml2026.sty:502) kept, no `†`; the equal authors' names show the `*`
+/// their `\icmlsetsymbol` label prints (icml2026.sty:446-458), a mark of the creator, not of its name, so Ann's e-mail is
 /// still hers where Cy Able shares her surname (1904.07793: a `*` in the name lost Xiaosen Wang's), Cy none. The block
 /// path of the unmarked-note template;
 /// Interspeech's `\address`/`\email` notes (2405.13379, 2603.01467) take it too. Repro
@@ -80,12 +81,12 @@ fn an_unmarked_document_level_note_is_a_block_line() {
   ]);
   assert_eq!(
     html_element(&xml, "<note role=\"affiliationnotice\""),
-    r#"<note role="affiliationnotice" xml:id="id3"><sup xml:id="id3.1">*</sup>Equal contribution</note>"#
+    r#"<note role="affiliationnotice" xml:id="id3"><sup xml:id="id3.1">*</sup>Equal contribution<sup xml:id="id3.2">#</sup>Interns at Acme</note>"#
   );
   let html = post_with(&xml, "resources/XSLT/LaTeXML-html5.xsl");
   assert_eq!(
     html_element(&html, "<div id=\"id3\""),
-    r#"<div id="id3" class="ltx_note ltx_role_affiliationnotice ltx_note_unmarked"><sup id="id3.1" class="ltx_sup">*</sup>Equal contribution</div>"#
+    r#"<div id="id3" class="ltx_note ltx_role_affiliationnotice ltx_note_unmarked"><sup id="id3.1" class="ltx_sup">*</sup>Equal contribution<sup id="id3.2" class="ltx_sup">#</sup>Interns at Acme</div>"#
   );
   // (the page's marks are the two names' `*`, no `†` anywhere and nothing hidden behind a mark)
   assert_eq!(html.matches("ltx_note_mark").count(), 2, "{html}");

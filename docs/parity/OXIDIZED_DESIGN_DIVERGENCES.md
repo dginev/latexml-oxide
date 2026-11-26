@@ -17763,7 +17763,10 @@ footnote-like line, not an institution.
 - *Cut*: `defs/frontmatter_api/cut.rs:34 cut_marked_contact`, `:122 place_uncut_copies`, `:66 mark_shown_attr`;
   `defs/frontmatter_api.rs:84 cut_list`.
 - *Kind*: `insert.rs:547 kind_legend_contacts` (formerly #961), `:941 kind_link_and_grade_contacts` (formerly #969);
-  `resolver/labels.rs:546 is_legend_text`.
+  `resolver/labels.rs:546 is_legend_text`. An entry its binding declares a legend (`_legend`,
+  `frontmatter_api::LEGEND_ENTRY`) is its carriers' note whatever its words: icml's notice, whose affiliations icml
+  numbers apart (icml2026.sty:519-536), so a legend there naming an institution ("†Work done during internship at AWS
+  AI", 2310.02777) is no affiliation.
 - *Reaching the author*: a block entry is cut by its whole span, llncs's one institute cut at its marks stays every
   author's, svproc's `\institute` is sv_support's (formerly #945).
 
@@ -17771,7 +17774,8 @@ footnote-like line, not an institution.
 **Guards** `perfect_kernel_batch106b::a_contact_held_twice_keeps_the_first`,
 `perfect_kernel_batch107e::a_legend_after_a_wrapped_run_is_its_carriers_notes`,
 `perfect_kernel_batch103c::a_legend_whose_label_prints_no_mark_stays_an_affiliation`,
-`perfect_kernel_batch100a::a_deceased_legend_is_a_note_of_its_carriers`. RED:
+`perfect_kernel_batch100a::a_deceased_legend_is_a_note_of_its_carriers`,
+`perfect_kernel_batchdateicml::icml_notice_legends_are_the_marked_names_notes` (the declared legend). RED:
 `cut_acmart_uncut_call_after_a_cut_list_red`, `llncs_institute_macro_marks_tabular_rows_red`.
 **Upstream.** Offerable. Records: [the archive](../archive/OD_FRONTMATTER_RECORDS_2026-11-15.md).
 
@@ -20622,7 +20626,8 @@ the superscripts they printed, in place where only marks follow them in the name
 ∗), else after the name, joined in print order with every mark after it, as the base did (`ends_name`:
 `Bob Baker$^{2}$$^{3}$ \\ Univ.\ of C`, revR2A S1; `Bob Baker$^{a}$ Jr.$^{b}$` "a,b", revR2Ab B-2),
 for the pure-name pass to set after the name (#1055); one of no known glyph is counted lost (`unanswered_mark_lost`). A binding's
-`annotations=` request (authblk's `\author[1,*]`), which leaves no mark, shows after the name as before. Replaces
+`annotations=` request (authblk's `\author[1,*]`), which leaves no mark, shows after the name as before. A binding may
+leave the mark itself, keyed by its own label: icml's `\icmlauthor` for an `\icmlsetsymbol` label (#1063). Replaces
 `show_unanswered_marks`, `unanswered_sup` and the creator side-tables `_textmarks`, `_plainmarks`, `_picturemarks`
 (one `_requested` flag: whether the entry shows marks) and `_refmarkshown`. **Guards**: the FMRG suite
 (`perfect_kernel_batchfmmarks`), `perfect_kernel_batchcl8::a_sublettered_used_mark_is_written_whole`,
@@ -20698,19 +20703,28 @@ behind it (`ltx_note_content`, shown on hovering the mark, after its "role: " la
   U+2020 printed nothing: 2402.05011);
   `\icmlEqualContribution` is `\textsuperscript{*}Equal contribution`, as every
   icml20xx.sty from 2017 prints it (icml2026.sty:502); `\icmlsetsymbol{name}{sym}` defines only the real
-  `\@icmlsymbol<name>` (:465-467; #1076), and `\icmlauthor{name}{labels}` gives each label naming one a mark-only note of the
-  creator (`\lx@annotate@frontmatter{ltx:creator}{ltx:note}[role=footnotemark,mark=…]`, as acmart's
-  `\authornotemark`), the symbol icml2026.sty:446-458 prints after the name. Not a superscript in the name: the
-  creator's `fuzzy:` label is its personname's text, and `\icmlcorrespondingauthor{Xiaosen Wang}` then went to the
-  block where another author shares the surname (1904.07793, 2306.11128). The mark is the symbol's printed text
-  (`printed_label_pieces`: `$^\dagger$` prints †, 2106.04060); a symbol printing no one mark prints in the name.
+  `\@icmlsymbol<name>` (:465-467; #1076), and `\icmlauthor{name}{labels}` gives each label naming one the name's mark
+  keyed by that label (`\lx@frontmatter@namemark`, #1061), the symbol icml2026.sty:446-458 prints after the name: the
+  settle step drops it where the notice's legend answers the label, else shows it, a mark-only note after the name.
+  Not a superscript in the name: the creator's `fuzzy:` label is its personname's text, and
+  `\icmlcorrespondingauthor{Xiaosen Wang}` then went to the block where another author shares the surname (1904.07793,
+  2306.11128). The mark is the symbol's printed text (`printed_label_pieces`: `$^\dagger$` prints †, 2106.04060); a
+  symbol printing no one mark prints in the name.
+- icml's notice (`\printAffiliationsAndNotice{#1}`, icml2026.sty:519-536; DATEICML, FIDELITY_CHARTER §4's mark rule):
+  its parameterless macros expanded, it is cut before each `\textsuperscript{G}` it opens with; where every piece's G
+  is the printed mark of a label the names showed, each piece is an entry under that label, as `\icmlaffiliation`'s,
+  declared a legend (`_legend`, #954), so the Kind step makes it the names' note (`role=thanks`, its `mark` G; the
+  comma between two legends neither's). A notice with any other piece (a mark no label printed: 2306.03504's `#`,
+  2402.05011's `$^\dag$` typed in a name; text before its first mark) stays whole, the block's note above. Perl drops
+  the notice (icml_support.sty.ltxml:52).
 **Witnesses.** 2602.04557 (icml2026's notice "*Equal contribution", `†` before), 2405.13379 and 2603.01467
 (Interspeech's `\address`/`\email` notes), 2506.06941 (a `\footnotetext` in the abstract under `\fnsymbol`, the counter 0:
 pdflatex prints no mark), 2402.05011 (icml's "†Project lead").
 **Guards**: `perfect_kernel_batchinvdag::{an_unmarked_document_level_note_is_a_block_line,
 an_unmarked_note_in_a_field_is_inline, a_date_note_and_an_abstract_thanks_invent_no_glyph,
 a_document_level_note_shows_once_where_the_pdf_prints_it, a_note_in_a_heading_keeps_perls_note,
-icml_notice_daggers_print}`.
+icml_notice_daggers_print}`, `perfect_kernel_batchdateicml::icml_notice_legends_are_the_marked_names_notes`. RED:
+`icml_notice_legend_of_a_mark_typed_in_the_name_red`, `icml_copy_equal_contribution_text_is_the_copys_red`.
 
 ### 1064. A label authblk prints on a name that no `\affil` explains shows on the name as its mark (DG 2026-11-16; INVDAG)
 
