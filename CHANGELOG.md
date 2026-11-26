@@ -20,7 +20,7 @@ Highlights since v0.7.6 in August:
    interpreter, and pTeX/upTeX and CJK input are read.
 8. Adds a new frontmatter engine that extracts author information from typeset title pages, and emits macros of the
    new Frontmatter API of LaTeXML.
-9. Adds EPUB 3 output (`--format=epub`) and UnicodeMath annotations (`--unicodemath`).
+9. Adds EPUB 3 output (`--format=epub`) and, as an experimental option, UnicodeMath annotations (`--unicodemath`).
 10. Rhai: our runtime binding API now matches Perl LaTeXML's `Package.pm`, with typed values, Perl's hooks and a
     Perl/Rust/Rhai cheat sheet.
     - [`docs/parity/RHAI_BINDINGS_GUIDE.md`](docs/parity/RHAI_BINDINGS_GUIDE.md)

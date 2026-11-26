@@ -16,10 +16,10 @@ $ latexml_oxide paper.tex --destination=paper.html
 # The same document as an EPUB 3 book
 $ latexml_oxide paper.tex --destination=paper.epub
 
-# Add a UnicodeMath annotation beside Presentation MathML (or use it alone with --nopmml)
+# Experimental: add a UnicodeMath annotation beside Presentation MathML (or use it alone with --nopmml)
 $ latexml_oxide paper.tex --unicodemath --destination=paper.html
 
-# One formula → Presentation MathML (--cmml for Content MathML, --unicodemath for UnicodeMath)
+# One formula → Presentation MathML (--cmml for Content MathML; experimental: --unicodemath)
 $ latexmlmath_oxide 'a^2+b^2=c^2'
 ```
 

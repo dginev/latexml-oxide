@@ -33,14 +33,13 @@ see the converted document live.
 # A document → HTML5, with MathML for the math (the format follows the extension)
 $ latexml_oxide paper.tex --destination=paper.html
 
-# The same document as an EPUB 3 book, or with UnicodeMath beside the MathML
+# The same document as an EPUB 3 book
 $ latexml_oxide paper.tex --destination=paper.epub
-$ latexml_oxide paper.tex --unicodemath --destination=paper.html
 
 # A book split into one page per chapter (streamed; 64 or more pages render in parallel)
 $ latexml_oxide book.tex --splitat=chapter --destination=book/index.html
 
-# One formula → Presentation MathML (--cmml for Content MathML, --unicodemath for UnicodeMath)
+# One formula → Presentation MathML (--cmml for Content MathML)
 $ latexmlmath_oxide 'a^2+b^2=c^2'
 ```
 
