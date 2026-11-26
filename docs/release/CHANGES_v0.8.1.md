@@ -26,8 +26,17 @@ top of its group.
     errors and words equal: the 22 above as they were, 2605.07451 unchanged, 31 `wide` users' lists
     `--ltx-enum-leftmargin:0pt` (1810.12214's `\setlist{leftmargin=5em,…,wide}` too; 2503.04577's description heads
     also without a leading en space), 2404.15303's table heights, 1907.01194's blank `\item[~]` labels dropped as an
-    `\item[]`'s. Guard `perfect_kernel_batchqa14k2::list_registers_set_the_line_width`
-    (OXIDIZED_DESIGN_DIVERGENCES #29).
+    `\item[]`'s. A description label's opening `\hspace\labelsep` is the skip that nets away, its own `~` or
+    `\quad` kept, and an itemize or enumerate nested in a description labels with its own label, not the
+    description's bold one (a paralist `{compactenum}`, 1406.1992). `\list` resets `\makelabel` after the class's
+    `\@list<depth>`, as LaTeX's does: a class that sets it there (tlp.cls) no longer gives every bullet and number a
+    zero-width box (1210.0368: none of its tags, 34 on the base), a kernel `\list` inside a description is not bold
+    (2206.12224's `\item[-]`), a document's own two-argument `\makelabel` no longer reaches list items, and an
+    enumitem `\newlist{…}{description}` list without a `font`/`format` key is bold. With tlp.cls papers, enumitem
+    `\newlist` users and documents with a `{list}` and a `{description}`, 769 papers moved 87, errors, Fatals and
+    warnings equal or fewer, two words more (0907.4547's "Proof: The"); of them, the 60 of 411 above byte-identical
+    but 1210.0368.
+    Guard `perfect_kernel_batchqa14k2::list_registers_set_the_line_width` (OXIDIZED_DESIGN_DIVERGENCES #29).
   - **Rhai bindings: a register getter's or a `fontTest`'s `Fatal()` stops the conversion, a rewrite's keeps the
     document, and ligature code may assign values.** A getter's Fatal was logged but dropped (the register read unset
     and the whole document was built), and so was a `fontTest`'s Fatal raised while a `\footnote` closed the text before
