@@ -178,7 +178,7 @@ fn dir_has_tex(dir: &Path) -> bool {
 }
 
 impl RootCache {
-  /// `find_main_tex(dir)`, cached on the directory's mtime.
+  /// `find_main_tex(dir)` without its warnings, cached on the directory's mtime.
   fn detect_dir(&mut self, dir: &Path) -> Option<PathBuf> {
     let mtime = dir_mtime(dir);
     if let Some(cached) = self.map.get(dir)
@@ -187,7 +187,7 @@ impl RootCache {
       return cached.root.clone();
     }
     let root = if dir_has_tex(dir) {
-      crate::main_tex::find_main_tex(dir)
+      crate::main_tex::main_tex_in(dir, false)
         .ok()
         .map(|p| normalize_path(&p))
     } else {
@@ -387,6 +387,21 @@ mod tests {
       resolve_root(&mut cache, None, &ghost, Some("fragment")),
       normalize_path(&ghost)
     );
+  }
+
+  /// Detection reads a `00README` without its warnings: held for a conversion's log, they would only pile up here.
+  #[test]
+  fn detection_holds_no_readme_warnings() {
+    use latexml_core::common::error::{LogStatus, get_status, log_session_warnings};
+    let tmp = tempfile::tempdir().unwrap();
+    let dir = fenced_dir(&tmp);
+    let main = write(&dir, "main.tex", "\\documentclass{article}");
+    write(&dir, "00README.XXX", "../outside.tex toplevelfile\n");
+    let mut cache = RootCache::default();
+    assert_eq!(cache.detect_dir(&dir), Some(normalize_path(&main)));
+    let before = get_status(LogStatus::Warning);
+    log_session_warnings();
+    assert_eq!(get_status(LogStatus::Warning), before);
   }
 
   #[test]

@@ -1,7 +1,8 @@
 //! `cortex_worker` converts untrusted arXiv sources, so it never loads a runtime `.rhai` binding, in any build: a
 //! `<pkg>.sty.rhai` shipped inside a paper would otherwise auto-load (`converter.rs` `rhai_dispatch`) and could run any
 //! program through the binding API's `Command(..).output()` (docs/release/SAFETY.md). The same source through the
-//! `latexml_oxide` CLI, the user's own machine, still loads it.
+//! `latexml_oxide` CLI, the user's own machine, still loads it. Nor does it take a `00README` main file from outside
+//! the source.
 //!
 //! Also the standalone worker's one memory knob: its `--max-rss-mb`, not `LATEXML_RSS_CAP_BYTES`, sets the fuse.
 
@@ -140,5 +141,65 @@ fn a_standalone_workers_max_rss_mb_sets_its_fuse() {
   assert!(
     matches!(status.trim(), "Status:conversion:0" | "Status:conversion:1"),
     "{status}:\n{log}"
+  );
+}
+
+/// A `00README.json` naming a main file outside the source (an absolute path) is ignored with one `Warning:archive:path`:
+/// the worker converts the source's own `main.tex` and never reads the named file (OD #1166).
+#[test]
+fn cortex_worker_ignores_a_readme_main_outside_the_source() {
+  let dir = tempfile::tempdir().unwrap();
+  let canary = dir.path().join("canary.tex");
+  fs::write(
+    &canary,
+    "\\documentclass{article}\\begin{document}CANARY-OUTSIDE\\end{document}\n",
+  )
+  .unwrap();
+  let readme = format!(
+    r#"{{"sources":[{{"filename":"{}","usage":"toplevel"}}]}}"#,
+    canary.to_string_lossy().replace('\\', "/")
+  );
+  let input = dir.path().join("paper.zip");
+  let output = dir.path().join("result.zip");
+  write_zip(&input, &[
+    ("00README.json", readme.as_str()),
+    (
+      "main.tex",
+      "\\documentclass{article}\n\\begin{document}\nINSIDE-MAIN\n\\end{document}\n",
+    ),
+  ]);
+  let run = Command::new(env!("CARGO_BIN_EXE_cortex_worker"))
+    .arg("--standalone")
+    .arg("--input")
+    .arg(&input)
+    .arg("--output")
+    .arg(&output)
+    .output()
+    .unwrap();
+  let stderr = String::from_utf8_lossy(&run.stderr);
+  assert!(run.status.success(), "cortex_worker failed:\n{stderr}");
+  let archive = zip::ZipArchive::new(fs::File::open(&output).unwrap()).unwrap();
+  let names: Vec<String> = archive
+    .file_names()
+    .map(|n| n.unwrap().into_owned())
+    .collect();
+  assert!(
+    names.iter().any(|n| n == "main.html"),
+    "the source's main.tex is converted: {names:?}"
+  );
+  let html = zip_member(&output, "main.html");
+  assert!(
+    html.contains("INSIDE-MAIN") && !html.contains("CANARY"),
+    "{html}"
+  );
+  let log = zip_member(&output, "cortex.log");
+  let warnings: Vec<&str> = log.lines().filter(|l| l.starts_with("Warning:")).collect();
+  assert_eq!(warnings.len(), 1, "one Warning:\n{log}");
+  assert!(
+    warnings[0].starts_with("Warning:archive:path the 00README names '")
+      && warnings[0]
+        .ends_with("canary.tex' as a top-level file outside the source directory; ignored"),
+    "{}",
+    warnings[0]
   );
 }

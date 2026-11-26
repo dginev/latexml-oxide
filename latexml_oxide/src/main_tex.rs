@@ -32,14 +32,15 @@ use regex::Regex;
 /// `dir`. Errors carry a human-readable diagnostic on `Fatal:` failure
 /// modes (PDF mis-named as TeX, only `%auto-ignore` files, no TeX at
 /// all).
-pub fn find_main_tex(dir: &Path) -> Result<PathBuf, String> {
+pub fn find_main_tex(dir: &Path) -> Result<PathBuf, String> { main_tex_in(dir, true) }
+
+/// [`find_main_tex`]; `report` warns of a `00README` entry outside `dir` ([`readme_entry`]) — the language server's
+/// detection passes false, as its warnings would only pile up unreported.
+pub fn main_tex_in(dir: &Path, report: bool) -> Result<PathBuf, String> {
   // Phase I.1: Check 00README.json (2025 arXiv format)
   // Format: { "sources": [{"filename": "main.tex", "usage": "toplevel"}, ...] }
-  if let Some(filename) = parse_readme_json(dir) {
-    let main_path = dir.join(&filename);
-    if main_path.exists() {
-      return Ok(main_path);
-    }
+  if let Some(main_path) = parse_readme_json(dir).and_then(|name| entry_in(dir, &name, report)) {
+    return Ok(main_path);
   }
 
   // Phase I.1.2: Check 00README.XXX (legacy arXiv format).
@@ -62,8 +63,7 @@ pub fn find_main_tex(dir: &Path) -> Result<PathBuf, String> {
       }
       match parts[1] {
         "toplevelfile" => {
-          let main_path = dir.join(parts[0]);
-          if main_path.exists() {
+          if let Some(main_path) = entry_in(dir, parts[0], report) {
             return Ok(main_path);
           }
         },
@@ -383,7 +383,8 @@ pub fn find_top_level_texs(dir: &Path) -> Result<Vec<PathBuf>, String> {
   if explicit.len() >= 2 {
     return Ok(order_main_first(explicit, dir));
   }
-  let main = find_main_tex(dir)?;
+  // `explicit_top_levels` has warned of every `00README` entry outside `dir` already.
+  let main = main_tex_in(dir, false)?;
   // The set of `.bbl`-backed top-level documents at the main's depth — arXiv's
   // multi-top-level fingerprint. Include `main` even if it ships no `.bbl`
   // (inline bibliography) so a `.bbl`-backed supplement can still attach to it.
@@ -414,14 +415,49 @@ pub fn find_top_level_texs(dir: &Path) -> Result<Vec<PathBuf>, String> {
 
 fn s(msg: &str) -> String { msg.to_string() }
 
+/// The file `name` a `00README` marks top-level, inside `dir`; `None` when it is not a file (`.`, a folder), or, with a
+/// `Warning:archive:path`, when `name` is absolute, has a `..` or resolves outside `dir` (Perl `Util/Pack.pm`
+/// `detect_source` L78, L93; OXIDIZED_DESIGN_DIVERGENCES #1166).
+pub fn readme_entry(dir: &Path, name: &str) -> Option<PathBuf> { entry_in(dir, name, true) }
+
+/// [`readme_entry`], warning only when `report`.
+fn entry_in(dir: &Path, name: &str, report: bool) -> Option<PathBuf> {
+  use std::path::Component;
+  let climbs = Path::new(name).components().any(|c| {
+    matches!(
+      c,
+      Component::ParentDir | Component::RootDir | Component::Prefix(_)
+    )
+  });
+  let path = dir.join(name);
+  if !climbs && !path.is_file() {
+    return None;
+  }
+  let inside = !climbs && latexml_core::util::pathname::opens_inside(&path, dir) == Some(true);
+  if inside {
+    return Some(path);
+  }
+  if report {
+    latexml_core::common::error::warn_at_session_start(
+      "archive",
+      "path",
+      format!(
+        "the 00README names '{name}' as a top-level file outside the source directory; ignored"
+      ),
+    );
+  }
+  None
+}
+
 /// All files a `00README.json`/`00README.XXX` explicitly marks as top-level, in
 /// listed order, restricted to those that exist (main-first ordering applied by
 /// the caller). Empty when there is no explicit designation.
 fn explicit_top_levels(dir: &Path) -> Vec<PathBuf> {
   let mut out: Vec<PathBuf> = Vec::new();
   for name in parse_readme_json_all(dir) {
-    let p = dir.join(&name);
-    if p.exists() && !out.contains(&p) {
+    if let Some(p) = readme_entry(dir, &name)
+      && !out.contains(&p)
+    {
       out.push(p);
     }
   }
@@ -429,11 +465,12 @@ fn explicit_top_levels(dir: &Path) -> Vec<PathBuf> {
   if let Ok(content) = std::fs::read_to_string(&readme_xxx) {
     for line in content.lines() {
       let parts: Vec<&str> = line.split_whitespace().collect();
-      if parts.len() >= 2 && parts[1] == "toplevelfile" {
-        let p = dir.join(parts[0]);
-        if p.exists() && !out.contains(&p) {
-          out.push(p);
-        }
+      if parts.len() >= 2
+        && parts[1] == "toplevelfile"
+        && let Some(p) = readme_entry(dir, parts[0])
+        && !out.contains(&p)
+      {
+        out.push(p);
       }
     }
   }
@@ -1075,5 +1112,95 @@ mod tests {
       .map(|p| p.file_name().unwrap().to_str().unwrap())
       .collect();
     assert_eq!(names, vec!["main.tex", "si.tex"]);
+  }
+
+  /// A `00README` top-level entry outside the source directory (absolute, `..`, a link out) is ignored with one
+  /// `Warning:archive:path` and the heuristic picks the archive's own main; an entry inside it is kept, unwarned.
+  #[test]
+  fn readme_entries_outside_the_source_directory_are_ignored() {
+    use latexml_core::common::error::{LogStatus, get_status, log_session_warnings};
+    let root = tempdir().unwrap();
+    let (src, out) = (root.path().join("src"), root.path().join("x"));
+    std::fs::create_dir_all(src.join("sub")).unwrap();
+    std::fs::create_dir_all(&out).unwrap();
+    let canary = out.join("canary.tex");
+    write(&out, "canary.tex", "\\documentclass{article}\n");
+    let abs = canary.to_string_lossy().into_owned();
+    #[cfg(unix)]
+    std::os::unix::fs::symlink(&canary, src.join("link.tex")).unwrap();
+    let json =
+      |name: &str| format!(r#"{{"sources":[{{"filename":"{name}","usage":"toplevel"}}]}}"#);
+    let mut rows: Vec<(&str, String, &str, usize)> = vec![
+      ("00README.json", json("../x/canary.tex"), "main.tex", 1),
+      ("00README.json", json(&abs), "main.tex", 1),
+      (
+        "00README.XXX",
+        "../x/canary.tex toplevelfile\n".into(),
+        "main.tex",
+        1,
+      ),
+      (
+        "00README.XXX",
+        format!("{abs} toplevelfile\n"),
+        "main.tex",
+        1,
+      ),
+      ("00README.json", json("sub/../sub/paper.tex"), "main.tex", 1),
+      ("00README.json", json("sub/paper.tex"), "sub/paper.tex", 0),
+      ("00README.json", json("absent.tex"), "main.tex", 0),
+      ("00README.XXX", ". toplevelfile\n".into(), "main.tex", 0),
+      ("00README.json", json("sub"), "main.tex", 0),
+    ];
+    #[cfg(unix)]
+    rows.push((
+      "00README.XXX",
+      "link.tex toplevelfile\n".into(),
+      "main.tex",
+      1,
+    ));
+    #[cfg(windows)]
+    rows.push((
+      "00README.XXX",
+      "..\\x\\canary.tex toplevelfile\n".into(),
+      "main.tex",
+      1,
+    ));
+    // A short source directory and an entry whose path passes 260 characters, which Windows canonicalizes to another
+    // form: both sides are compared in one.
+    let deep = [
+      "d".repeat(60),
+      "e".repeat(60),
+      "f".repeat(60),
+      "g".repeat(60),
+    ]
+    .join("/");
+    std::fs::create_dir_all(src.join(&deep)).unwrap();
+    write(&src.join(&deep), "paper.tex", "\\input{x}\n");
+    let deep = format!("{deep}/paper.tex");
+    rows.push(("00README.json", json(&deep), deep.as_str(), 0));
+    for (readme, body, pick, warnings) in rows {
+      for name in ["00README.json", "00README.XXX"] {
+        let _ = std::fs::remove_file(src.join(name));
+      }
+      write(
+        &src,
+        "main.tex",
+        "\\documentclass{article}\n\\begin{document}x\\end{document}\n",
+      );
+      write(&src.join("sub"), "paper.tex", "\\input{x}\n");
+      write(&src, readme, &body);
+      let before = get_status(LogStatus::Warning);
+      let main = find_main_tex(&src).unwrap();
+      // `find_top_level_texs` reads the entries twice and warns once.
+      let tops = find_top_level_texs(&src).unwrap();
+      log_session_warnings();
+      assert_eq!(main, src.join(pick), "{readme}: {body}");
+      assert_eq!(tops, vec![main], "{readme}: {body}");
+      assert_eq!(
+        get_status(LogStatus::Warning) - before,
+        2 * warnings,
+        "{readme}: {body}"
+      );
+    }
   }
 }

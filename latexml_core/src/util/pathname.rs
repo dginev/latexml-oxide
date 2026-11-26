@@ -1336,6 +1336,16 @@ pub fn same_file(a: impl AsRef<Path>, b: impl AsRef<Path>) -> bool {
   }
 }
 
+/// Whether the existing `path`, as the system opens it (every link followed, a link before a `..` first), lies in the
+/// existing directory `dir`; `None` when either is missing. Both are canonicalized by std, so on Windows both keep
+/// the verbatim prefix [`canonicalize`] drops only under 260 characters, and a long path compares like a short one.
+pub fn opens_inside(path: impl AsRef<Path>, dir: impl AsRef<Path>) -> Option<bool> {
+  match (std::fs::canonicalize(path), std::fs::canonicalize(dir)) {
+    (Ok(p), Ok(d)) => Some(p.starts_with(&d)),
+    _ => None,
+  }
+}
+
 /// Find all matching files (like pathname_findall).
 /// Port of Perl's pathname_findall($pathname, %options).
 pub fn findall(pathname: &str, options: PathnameFindOptions) -> Vec<String> {
