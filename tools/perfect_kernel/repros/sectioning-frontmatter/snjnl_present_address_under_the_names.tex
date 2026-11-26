@@ -1,0 +1,27 @@
+% mechanism: sn-jnl's `\presentaddress{text}` (2412.01641's sn-jnl.cls:574, 2603.28334's :576), which `\@maketitle`
+%   prints under the addresses (:756), after the `\equalcont` line (:754), before `\printabstract` (:759; 2603.28334's
+%   :771, :774), is declared under the names (`\lx@names@note`, `insert::place_block_notes`, OXIDIZED_DESIGN_DIVERGENCES
+%   #1074; Perl's place, after the abstract: Base_Utility.pool.ltxml:793-795, :836). Here `\equalcont` follows
+%   `\author`, so its note is inside the creator, above the declared note. The unmarked `\equalcont` before any name is
+%   `snjnl_unmarked_note_before_any_name_above_present_address_red.tex`.
+% witness: synthetic (`\presentaddress` in 2 sn-jnl papers per sn_jnl_cls.rs:452; none in BLOCKDECL's 40 sn-jnl papers)
+% oracle:  pdflatex 0 errors (with 2412.01641's sn-jnl.cls): "A Title / Ann Able1† / 1Univ A / †These authors
+%          contributed equally to this work. / Present Address: / Lab Q, Town / Abstract / The abstract."
+% engines: rust INT081RC6 = BLOCKDECL eca47cbf6cb: title, creator (its note[equal-contributors]), abstract,
+%          note[present-address]; HTML: the present address a hidden note (a lone †)
+% expect:  0 errors 0 Warnings; root order title, creator, note[role=present-address], abstract; HTML: the line shown
+% status:  RED (BLOCKDECL eca47cbf6cb) -> GREEN (perfect_kernel_batchblockplace::a_block_contact_note_sits_under_the_names)
+% preload: ar5iv.sty
+\documentclass{sn-jnl}
+\usepackage{amsmath}
+\begin{document}
+\title{A Title}
+\author[1]{\fnm{Ann} \sur{Able}}
+\equalcont{These authors contributed equally to this work.}
+\affil[1]{\orgname{Univ A}}
+\presentaddress{Lab Q, Town}
+\abstract{The abstract.}
+\maketitle
+\section{S}
+Body.
+\end{document}

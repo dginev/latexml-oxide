@@ -642,12 +642,13 @@ Rules that keep this file honest and mergeable:
   - P1-LOGOS — (stretch, DG run 391) 2610.22523's `#p1` is left holding only the logo images once its affiliations are extracted — delete a paragraph emptied by extraction (or one of graphics only that the class's title block owned).
   - QA61-STORES — QA61 D1 post-merge: (a) K11's `store_lines` readers keep the top-level-line hole (RED `table_store_in_a_top_level_line_with_another_value_red`; base leaves "E-mail: , tel. 555"); (b) `\lx@replay@records` for K11's handed stores (`note_store_handed`) takes a label's first match; (c) RED `offtable_store_moved_leaves_the_rest_of_its_line_a_paragraph_red` ("(corresponding author)" left a paragraph); D2/D3 (unlabelled printed stores; keywords/classification as `ltx:keywords`/`ltx:classification`) await rulings.
   - CJKGB — GB2312 mojibake inside "(…" read as a mark (`lexer.rs:317`), ")" lost; CJK GB decoding is silent where Perl errs.
-  - BLOCKPLACE-DECL — (root-caused 2026-11-26) the elsart family (123/30k) needs nothing: its addresses are creator
-    contacts before the abstract, as the class prints them; ieeetaes (0/30k) stays undeclared. Three contrib
-    bindings make a note their class prints under the names, and it lands after the abstract: bmvc2k
-    `\addinstitution` (11/30k; 1507.06535), bytedance_seed `\affiliation` + `\contribution` (4/30k; 2506.15211),
-    wlpeerj `\corrauthor`'s e-mail (1/30k; 2007.11779); sn-jnl `\presentaddress` optional; ≈ 1.5k corpus-wide;
-    in progress on `pk/BLOCKDECL`; 1
+  - BLOCKPLACE-DECL — (landed 2026-11-26, pk/BLOCKDECL) bmvc2k `\addinstitution`, bytedance_seed `\affiliation` +
+    `\contribution`, wlpeerj `\affil` + `\corrauthor`'s e-mail (held to `\maketitle`) and sn-jnl `\presentaddress`
+    declare their under-the-names notes (OD #1074); a document-level `contribution`/`present-address` note shows as a
+    line (#1063). Residual REDs: `snjnl_present_address_line_keeps_its_heading_red` (the class's "Present Address:"
+    heading, sn-jnl and WileyNJD per version; 2504.05630), `snjnl_unmarked_note_before_any_name_above_present_address_red`,
+    `wlpeerj_corrauthor_second_creator_red`, `bytedance_marks_link_names_and_lines_red` (labels and marks lost:
+    2506.15211, 2511.06346); 1
   - BLOCKPLACE-AUTART — autart's title page leaks separators and a split `\thanks` (measured 2026-11-26, Gemini
     REACH2, checked: 16 of 17 autart papers in 30k, ≈ 1.5k): OmniBus lets `{frontmatter}` be `\@empty`
     (`omnibus_cls.rs:212-213`), so the template's literal `, ` and `and` between `\author[…]{…}\ead{…}` calls
@@ -969,7 +970,9 @@ Rules that keep this file honest and mergeable:
     segfaults, and 0 papers worse than run 411 (DG lifted the rc3 block on it, 2026-11-24). The same wild-jump
     form hit an experimental mimalloc build on 1502.06095 on 2026-11-21, before both changes. Open leads: a kernel
     core dump under load (a single flipped bit would mean hardware), CPU boost on/off, and whether nextest's
-    256 MiB thread stacks matter; 3
+    256 MiB thread stacks matter. Another gate-run data point (2026-11-26, pk/BLOCKDECL fix round 1): one SIGABRT "malloc(): unaligned tcache chunk detected" in
+    `perfect_kernel_batch65r::elsarticle_layouts_set_geometry_text_width`, the first in 1,203 gate logs; 6 plain reruns, 8 under
+    `glibc.malloc.perturb=165` + `MALLOC_CHECK_=3` and the full rerun pass (log `scratch_BLOCKDECL/fix1/gates_nextest_run1.log`); 3
   - PATHAPI — (DG 2026-11-25, v0.8.1 only; main/v0.8.0 takes no refactor) one pathname API used everywhere, so a path
     bug is fixed in one file: helpers sized to the business needs and to Perl `Util/Pathname.pm`'s 25 operations (ours
     has 47 public functions, while ~24 `canonicalize(`, 3 `std::path::absolute`, 3 `current_dir()`, ~90 `.parent()`

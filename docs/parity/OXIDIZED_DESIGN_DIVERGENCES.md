@@ -20732,7 +20732,9 @@ behind it (`ltx_note_content`, shown on hovering the mark, after its "role: " la
 - `LaTeXML-meta-xhtml.xsl`, the document's level: the key `f:document-note-shown` names the roles shown, those whose
   text the PDF prints in the title block or as a footnote — `footnote`, `footnotetext`, `thanks`, `affiliationnotice`,
   `address`, `affiliation`, `email`, `corresponding`, `correspondence`, `authorinfo`, `equal-contributors`, `funding`,
-  and elsarticle's `highlights` and `graphicalabstract`, printed on the pages before the title (2510.16146,
+  `contribution` and `present-address` (bytedance_seed's `\contribution` under the names, 2506.15211, 2511.06346;
+  elife's `\contrib` in the title page's margin, 2311.00616; sn-jnl's `\presentaddress`, WileyNJD's present address,
+  2504.05630), and elsarticle's `highlights` and `graphicalabstract`, printed on the pages before the title (2510.16146,
   2303.00352), and a `url` the block prints as a contact line (SIGMA's `URL:` line, 1707.09748; hidden it left an
   invented `†` beside the author's real `†`, revINVDAGb S2) — keyed by role and text. Such a note, `ltx:document/ltx:note` with no mark, is a line of its own
   (`f:blockelement($context,'div')` of class `ltx_note_unmarked`, the creators' `unmarked-note`); a later note of the
@@ -21087,17 +21089,34 @@ placed items, stops at the first element that is not frontmatter; a document wit
 jfm's unmarked `\affiliation` (jfm.cls:733; 1711.01065), mdpi's `\address`/`\Address` (mdpi.cls:371, :602; 1910.13722,
 2203.09377), ieeeaccess's `\address` (ieeeaccess.cls:456-457, :568; 2006.03169), oup-authoring-template's `\address`
 (:1137-1142, :1494; 2512.03760), sigma's `\Address`, `\Email…`, `\URLaddress…` (sigma.cls:75-85; 0803.4168) and autart's
-`\address` (autart.cls:1199-1215; 1402.5644). Undeclared notes keep Perl's place, which is right for the classes that
+`\address` (autart.cls:1199-1215; 1402.5644), bmvc2k's `\addinstitution` (bmvc2k.cls:376, :484-489, beside the names;
+1507.06535, 1806.03891, 1908.01683), bytedance_seed's `\affiliation` and `\contribution`, printed together under the
+names (2506.15211's copy :248-253; 2511.06346), wlpeerj's `\affil` lines and `\corrauthor` e-mail, printed in that order
+whatever the calls' (authblk's `\@author`, wlpeerj.cls:33, :173; `\thecorrauthor`, :146-151, :176-177; 2007.11779): the
+e-mail is declared as `\maketitle` begins (`\lx@maketitle@begin`, the fallback flush without one), and sn-jnl's
+`\presentaddress` (2412.01641's sn-jnl.cls:574, under the addresses :756, before `\printabstract` :759). The elsart family needs
+none: its addresses and e-mails are creator contacts, before the abstract as the class prints them
+(elsart_support_core_sty.rs `\address`/`\affiliation`, `\ead`). Undeclared notes keep Perl's place, which is right for the classes that
 print them elsewhere: tac's `\address`/`\eaddress` (tac.cls:611-614 `\AtEndDocument`; 1504.03886), sagej's
 `\affiliation` (a `\footnotetext[0]`, sagej.cls:266-268; 1910.13936), elsarticle's `\emailauthor`/`\urlauthor` (the first
 page's footnote, elsarticle.cls:211-235), ejpecp's `\EMAIL` (in the authors' footnotes; 1406.5876, 1904.07135), wiley's
 `corremail` (beside the abstract, wiley-article.cls:416-433; 1808.01384), ieeetaes's `\authoraddress` (a first-page
-footnote). spconf's fallback `\address` note (spconf.sty:161-166 sets `\@name \\ \@address` in the title tabular;
+footnote), bytedance_seed's `\correspondence` and `\checkdata` lines (in the abstract's box after it, 2506.15211's copy
+:155, :274). sn-jnl's unmarked `\equalcont` given before any name stays undeclared, after the abstract, though the PDF
+prints it under the names above the present address (:754): `print_notes` queues it at `\maketitle`
+(`snjnl_unmarked_note_before_any_name_above_present_address_red`). A shown present-address line lacks the heading the
+class prints (sn-jnl's `\@presentaddresstxt`, "Present Address:"; WileyNJDv5.cls:5066 "Present address", WileyNJD-v2
+"Present Address"): `snjnl_present_address_line_keeps_its_heading_red`. A `\corrauthor` after wlpeerj's `\maketitle`,
+which the PDF does not print, keeps its e-mail under the names.
+spconf's fallback `\address` note (spconf.sty:161-166 sets `\@name \\ \@address` in the title tabular;
 1806.02523, 2001.10603, 2103.15467, whose e-mails sit inside `\address`: spconf.sty has no `\email`) and the e-mail note of
 INTERSPEECH20xx.sty (:164) and Interspeech.cls (:376; 2405.13379, 2603.01467) are declared with the SPCONF rewrite of
 those bindings — the address with the e-mail, as a block's notes printed together are declared together (REVBLOCKPLACEb). The XML's elements and text are unchanged, the generated `xml:id`s follow the new document order.
 Offered to Perl as a patch. **Guards**: `cluster_package_guards::perfect_kernel_batchblockplace::a_block_contact_note_sits_under_the_names`
-(repros `sectioning-frontmatter/block_contact_note_{before_abstract,without_creators}`) and
+(repros `sectioning-frontmatter/block_contact_note_{before_abstract,without_creators}`; its `CLASS_ROWS`
+`bmvc2k_institution_note_under_the_names`, `bytedance_affiliation_and_contribution_under_the_names`,
+`wlpeerj_affil_and_email_under_the_names`, `wlpeerj_corrauthor_before_affil_email_after`,
+`snjnl_present_address_under_the_names`; the pages' contribution and present-address lines, #1063's roles) and
 `::an_undeclared_note_keeps_perls_place` (`tac_block_note_keeps_its_place`); repinned, the PDF's order:
 `perfect_kernel_batch64qa::mdpi_history_is_frontmatter`, `perfect_kernel_batch67z::oup_authoring_template_class_commands`,
 `perfect_kernel_batch92e::mdpi_corres_label_only_note_is_kept` (the address note first); the pass classed `Place` in

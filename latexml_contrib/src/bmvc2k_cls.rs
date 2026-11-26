@@ -59,8 +59,7 @@ LoadDefinitions!({
     "\\addauthor{} Semiverbatim {}",
     "\\author{#1}\\lx@add@email{\\sffamily #2}"
   );
-  DefMacro!(
-    "\\addinstitution{}",
-    "\\@add@frontmatter{ltx:note}[role=affiliation]{#1}"
-  );
+  // bmvc2k.cls:376 `\addinstitution`: `\bmv@maketitle` (:484-489) prints it beside the names, before the abstract
+  // (1507.06535, 1806.03891, 1908.01683): `\lx@names@note`, OD #1074.
+  DefMacro!("\\addinstitution{}", "\\lx@names@note{affiliation}{#1}");
 });

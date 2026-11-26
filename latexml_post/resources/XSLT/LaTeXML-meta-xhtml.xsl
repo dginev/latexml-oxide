@@ -88,17 +88,19 @@
   <!-- SURPASS (latexml-oxide OXIDIZED_DESIGN_DIVERGENCES #1063): #990's rule beyond the creators, for the notes the PDF
        prints with no mark in the title block or as a footnote. The roles of a note of the document's own level that
        do: a note's text (icml's notice, 2602.04557; a markless \footnotetext, 2511.18287), an address, an e-mail, a
-       correspondence or funding line (Interspeech's \address and \email, 2405.13379, 2603.01467), elsarticle's
-       highlights and graphical abstract, printed before the title (2510.16146, 2303.00352). Each shows as a line of its
-       own, once per role and text (sn-jnl's \equalcont under each name, 2412.01641; a note with no text, a picture, is
-       never a repeat). Every other role, a running head or the publication's metadata (jmlr's heading, 1710.08165; a
+       correspondence or funding line (Interspeech's \address and \email, 2405.13379, 2603.01467), a contribution or
+       present-address line (bytedance_seed's \contribution, 2506.15211, 2511.06346; elife's \contrib, 2311.00616;
+       sn-jnl's \presentaddress), elsarticle's highlights and graphical abstract, printed before the title (2510.16146,
+       2303.00352). Each shows as a line of its own, once per role and text (sn-jnl's \equalcont under each name,
+       2412.01641; a note with no text, a picture, is never a repeat). Every other role, a running head or the publication's metadata (jmlr's heading, 1710.08165; a
        volume; a short title), the PDF prints in no title block: Perl's hidden note. Keyed by role and text. -->
   <xsl:key name="f:document-note-shown"
            match="/ltx:document/ltx:note[not(normalize-space(@mark)) and not(ltx:tags/ltx:tag[not(@role)])]
                   [@role='footnote' or @role='footnotetext' or @role='thanks' or @role='affiliationnotice'
                    or @role='address' or @role='affiliation' or @role='email' or @role='corresponding'
                    or @role='correspondence' or @role='authorinfo' or @role='equal-contributors' or @role='funding'
-                   or @role='highlights' or @role='graphicalabstract' or @role='url']"
+                   or @role='highlights' or @role='graphicalabstract' or @role='url' or @role='contribution'
+                   or @role='present-address']"
            use="concat(@role,'&#x9;',normalize-space(.))"/>
   <xsl:template match="ltx:document/ltx:note[key('f:document-note-shown',concat(@role,'&#x9;',normalize-space(.)))]
                        [not(normalize-space(@mark)) and not(ltx:tags/ltx:tag[not(@role)])]" priority="0.5">

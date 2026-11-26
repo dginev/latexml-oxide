@@ -1,0 +1,25 @@
+% mechanism: bmvc2k's `\addinstitution`, which `\bmv@maketitle` prints beside the names before the abstract
+%   (bmvc2k.cls:376, :484-489 `\bmv@RenderAuthorsAndInstitutions`), is declared under the names (`\lx@names@note`):
+%   placed right after the last creator (`insert::place_block_notes`, OXIDIZED_DESIGN_DIVERGENCES #1074; Perl
+%   Base_Utility.pool.ltxml:793-795, :836 puts every note after the abstract). The binding alone carries it (the class is
+%   not in TL 2025).
+% witness: 1507.06535, 1806.03891, 1908.01683 (bmvc2k)
+% oracle:  pdflatex 0 errors (with 1507.06535's bmvc2k.cls and bmvc2k_natbib.sty): "T / Ann Able ann@x.edu |
+%          Inst X City Y / Abstract / Abstract text."
+% engines: rust INT081RC6: title, creator, abstract, note[affiliation]; BLOCKDECL: the note before the abstract
+% expect:  0 errors 0 Warnings; root order title, toctitle, creator, note[role=affiliation], abstract
+% status:  RED (INT081RC6) -> GREEN (perfect_kernel_batchblockplace::a_block_contact_note_sits_under_the_names)
+% preload: ar5iv.sty
+\documentclass{bmvc2k}
+\title{T}
+\runninghead{Able}{T}
+\addauthor{Ann Able}{ann@x.edu}{1}
+\addinstitution{Inst X\\City Y}
+\begin{document}
+\maketitle
+\begin{abstract}
+Abstract text.
+\end{abstract}
+\section{S}
+Body.
+\end{document}

@@ -1,0 +1,24 @@
+% mechanism: sn-jnl's `\presentaddress{text}` is a shown present-address line under the names
+%   (`snjnl_present_address_under_the_names.tex`, #1063's shown roles), but `\@maketitle` prints its heading first:
+%   2412.01641's sn-jnl.cls:574, :756 `\@presentaddresstxt` ("Present Address:", set by `\presentaddresstxt`, our
+%   sn_jnl_cls.rs RawTeX), then the text; ours shows the text alone, where it reads as one more affiliation. WileyNJD
+%   prints it too (WileyNJDv5.cls:5066 `\textbf{Present address}`; WileyNJD-v2 "Present Address", wileynjd_cls.rs).
+%   Fix: the class's heading in the note's text (sn_jnl_cls.rs `\presentaddress`; wileynjd_cls.rs `\presentaddress`,
+%   `\presentadd`, per class version)
+% witness: synthetic (2504.05630, WileyNJDv5, the same shape)
+% oracle:  pdflatex 0 errors (with 2412.01641's sn-jnl.cls): "A Title / Ann Able1 / 1Univ A / Present Address: /
+%          Lab Q, Town / Abstract / The abstract."
+% engines: BLOCKDECL 9d10942372c: the note[present-address] under the names reads "Lab Q, Town"
+% expect:  0 errors 0 Warnings; the note[present-address] reads "Present Address: Lab Q, Town"
+% status:  RED
+\documentclass{sn-jnl}
+\begin{document}
+\title{A Title}
+\author[1]{\fnm{Ann} \sur{Able}}
+\affil[1]{\orgname{Univ A}}
+\presentaddress{Lab Q, Town}
+\abstract{The abstract.}
+\maketitle
+\section{S}
+Body.
+\end{document}

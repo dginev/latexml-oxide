@@ -64,22 +64,17 @@ LoadDefinitions!({
     "\\author[]{}",
     "\\lx@add@creator[role=author,annotations={#1}]{#2}"
   );
-  // \affiliation[mark]{text} — emit affiliation note.
-  DefMacro!(
-    "\\affiliation[]{}",
-    "\\@add@frontmatter{ltx:note}[role=affiliation]{#2}"
-  );
-  // \contribution[mark]{text} — emit contribution note.
-  DefMacro!(
-    "\\contribution[]{}",
-    "\\@add@frontmatter{ltx:note}[role=contribution]{#2}"
-  );
+  // \affiliation[mark]{text}, \contribution[mark]{text}: `\mymaketitle` prints both lists under `\authorlist`
+  // (2506.15211's copy :248-253), before the abstract: `\lx@names@note`, OD #1074 (2511.06346).
+  DefMacro!("\\affiliation[]{}", "\\lx@names@note{affiliation}{#2}");
+  DefMacro!("\\contribution[]{}", "\\lx@names@note{contribution}{#2}");
   // \checkdata[label]{value} — emit as keyed note (label: value).
   DefMacro!(
     "\\checkdata[]{}",
     "\\@add@frontmatter{ltx:note}[role=#1]{#2}"
   );
-  // \correspondence{text} — emit corresponding-author note.
+  // \correspondence{text} — emit corresponding-author note (a `\checkdata` line, :155, the class prints in the
+  // abstract's box after it, :274: Perl's place).
   DefMacro!(
     "\\correspondence{}",
     "\\@add@frontmatter{ltx:note}[role=correspondence]{#1}"

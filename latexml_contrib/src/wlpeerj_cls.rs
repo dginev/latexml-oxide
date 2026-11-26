@@ -40,18 +40,25 @@ LoadDefinitions!({
   DefMacro!("\\printbibliography[]", None);
 
   // Frontmatter — preserve author content.
-  // \corrauthor[mark]{name}{email} — emit name as author + email note.
-  DefMacro!(
-    "\\corrauthor[]{}{}",
-    "\\author{#2}\\@add@frontmatter{ltx:note}[role=email]{#3}"
+  // \corrauthor[mark]{name}{email} — emit name as author + email note (a second creator for a name `\author` gave:
+  // `wlpeerj_corrauthor_second_creator_red`). `\@maketitle` prints the `\affil` lines (authblk's `\@author`,
+  // wlpeerj.cls:33, :173), then `\thecorrauthor` (:146-151, :176-177), before the abstract (2007.11779): the e-mail
+  // is declared under the names (`\lx@names@note`, OD #1074) as the title prints, after the `\affil` lines.
+  DefMacro!("\\corrauthor[]{}{}", "\\author{#2}\\lx@peerj@corr@note{#3}");
+  // (no `\maketitle`: the fallback flush prints them; one after the title, at the call)
+  RawTeX!(
+    r"\def\lx@peerj@corr@notes{}
+\def\lx@peerj@corr@note#1{\ifx\lx@peerj@corr@notes\relax\lx@names@note{email}{#1}\else
+\g@addto@macro\lx@peerj@corr@notes{\lx@names@note{email}{#1}}\fi}
+\def\lx@peerj@corr@flush{\lx@peerj@corr@notes\global\let\lx@peerj@corr@notes\relax}
+\let\lx@peerj@kernel@fallback\lx@frontmatter@fallback
+\def\lx@frontmatter@fallback{\lx@peerj@corr@flush\lx@peerj@kernel@fallback}"
   );
+  AddToMacro!("\\lx@maketitle@begin", "\\lx@peerj@corr@flush");
   // \authoraffiliation[mark]{name}{affil} — emit name + affil note.
   DefMacro!(
     "\\authoraffiliation[]{}{}",
     "\\author{#2}\\@add@frontmatter{ltx:note}[role=affiliation]{#3}"
   );
-  DefMacro!(
-    "\\affil[]{}",
-    "\\@add@frontmatter{ltx:note}[role=affiliation]{#2}"
-  );
+  DefMacro!("\\affil[]{}", "\\lx@names@note{affiliation}{#2}");
 });

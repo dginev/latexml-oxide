@@ -1,0 +1,28 @@
+% mechanism: bytedance_seed's `\author[labels]{name}` prints the name with its labels ("Ann Able1,*"), and
+%   `\affiliation[label]{text}`, `\contribution[mark]{text}` print each line with its label ("1Inst X", "*Work done at
+%   Q"; 2506.15211's bytedance_seed.cls :248-253). The binding passes the labels as the creator's `annotations` and
+%   drops the lines' marks (bytedance_seed_cls.rs `\affiliation[]{}`, `\contribution[]{}`): the names carry no mark,
+%   the lines (shown under the names since #1063's contribution role) no label, so nothing links them; not
+%   the placement mechanism.
+% witness: 2506.15211 ("Feng He1,†", "*Work done at ByteDance Seed", "†Corresponding authors"), 2511.06346
+% oracle:  pdflatex 0 errors (with 2506.15211's bytedance_seed.cls): "T / Ann Able1,* / 1Inst X / *Work done at Q /
+%          Abstract / Abstract text. / Correspondence: ann@x.edu"
+% engines: rust BLOCKDECL (this commit): creator Ann Able, no mark, no contact; note[affiliation] "Inst X" and
+%          note[contribution] "Work done at Q", no mark
+% expect:  0 errors 0 Warnings; Ann Able's creator with the affiliation Inst X (label 1) and the contribution line
+%          marked * (the mark the name prints), every printed label kept
+% status:  RED (BLOCKDECL)
+% moves:   post-merge (bytedance_seed's labels read as the class prints them)
+% preload: ar5iv.sty
+\documentclass{bytedance_seed}
+\title{T}
+\author[1,*]{Ann Able}
+\affiliation[1]{Inst X}
+\contribution[*]{Work done at Q}
+\correspondence{ann@x.edu}
+\abstract{Abstract text.}
+\begin{document}
+\maketitle
+\section{S}
+Body.
+\end{document}

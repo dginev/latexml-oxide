@@ -238,10 +238,9 @@ LoadDefinitions!({
     }
     Ok(Vec::new())
   });
-  DefMacro!(
-    "\\presentaddress{}",
-    "\\@add@frontmatter{ltx:note}[role=present-address]{#1}"
-  );
+  // 2412.01641's sn-jnl.cls:574 `\presentaddress`: `\@maketitle` prints it under the addresses (:756), before
+  // `\printabstract` (:759; 2603.28334's :576, :771, :774): `\lx@names@note`, OD #1074.
+  DefMacro!("\\presentaddress{}", "\\lx@names@note{present-address}{#1}");
   // sn-jnl.cls L1788: \gdef\orcid#1{\href{#1}{\orcidlogo}} (ORCID-logo
   // hyperlink, used INLINE inside \author{...\orcid{id}}). Render as an inline
   // ORCID link showing the id (content-preserving: the id stays in the output,

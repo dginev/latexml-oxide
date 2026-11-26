@@ -1,0 +1,26 @@
+% mechanism: bytedance_seed's `\affiliation` and `\contribution` lists, which `\mymaketitle` prints together under
+%   `\authorlist` before the abstract (2506.15211's bytedance_seed.cls :248-253), are declared under the names
+%   (`\lx@names@note`), in their order; `\correspondence`, a `\checkdata` line (:155) printed in the abstract's box
+%   after it (:274), keeps Perl's place (`insert::place_block_notes`, OXIDIZED_DESIGN_DIVERGENCES #1074; Perl
+%   Base_Utility.pool.ltxml:793-795, :836). The binding alone carries it (the class is not in TL 2025).
+% witness: 2506.15211, 2511.06346 (bytedance_seed)
+% oracle:  pdflatex 0 errors (with 2506.15211's bytedance_seed.cls): "T / Ann Able1,* / 1Inst X / *Work done at Q /
+%          Abstract / Abstract text. / Correspondence: ann@x.edu"
+% engines: rust INT081RC6: title, creator, abstract, note[affiliation], note[contribution], note[correspondence];
+%          BLOCKDECL: the affiliation and contribution notes before the abstract
+% expect:  0 errors 0 Warnings; root order title, creator, note[role=affiliation], note[role=contribution], abstract,
+%          note[role=correspondence]
+% status:  RED (INT081RC6) -> GREEN (perfect_kernel_batchblockplace::a_block_contact_note_sits_under_the_names)
+% preload: ar5iv.sty
+\documentclass{bytedance_seed}
+\title{T}
+\author[1,*]{Ann Able}
+\affiliation[1]{Inst X}
+\contribution[*]{Work done at Q}
+\correspondence{ann@x.edu}
+\abstract{Abstract text.}
+\begin{document}
+\maketitle
+\section{S}
+Body.
+\end{document}
