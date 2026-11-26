@@ -1,140 +1,73 @@
 # Change Log
 
-## [0.8.0] (98 % of arXiv without an error; TeX Live's manuals convert clean; packages read from their own sources by default; 198 new bindings; a frontmatter engine; the Rhai binding API; sandboxed document Lua)
+## [0.8.0] (98 % of arXiv without an error; packages read from their own sources; 198 new bindings; a frontmatter engine; faster, in less memory)
 
 The highlights since 0.7.6 (2026-08-23). Every change, with its guard tests and design references, is listed in
 [`docs/release/CHANGES_v0.8.0.md`](docs/release/CHANGES_v0.8.0.md).
 
-### Coverage
+### Highlights
 
-- **98 % of arXiv converts without an error.** Of arXiv's 2,962,950 LaTeX articles, the production run of November
-  2026 converts 98.1 % with no Error or Fatal, up from 86.3 % under 0.7.6 (September 2026) and 93.4 % in
-  October. The release is regression-tested against the entire arXiv corpus: each paper's result is
-  compared with the previous full run. latexml-oxide converts the ar5iv Lab and arXiv's HTML Papers.
-- **TeX Live's package manuals convert clean.** The perfect-kernel campaign (2026-08-31 to 11-13) took the LaTeX
-  kernel to fidelity under raw interpretation of the packages' own sources: of the 1,602 TeX Live manuals that
-  compile under some TeX engine, 1,592 convert with no Error outside a few ruled-out kinds, valid against the schema
-  and in under 180 s, with a mean word recall of 96.9 % against their PDFs (median 99.5 %).
-- **Packages and classes without a binding are read from their own `.sty`/`.cls` files by default**, with the
-  runaway limits the arXiv fleet has used since October. On 697 arXiv papers converted without the ar5iv preload,
-  error-free papers rose from 84.5 % to 95.7 %; on 40 TeX Live manuals, from 22.5 % to 90 %.
-- **Bindings for 198 more packages and classes — 130 packages and 68 classes, none of which Perl LaTeXML ships.**
-  Among the packages: unicode-math, polyglossia, xeCJK, bidi, datatool, piton, animate, tocloft, tocbasic and the
-  KOMA-Script bases, floatrow, imakeidx, tagpdf, pdfmanagement and axodraw, and the conference styles of AAAI,
-  ACL/EMNLP/NAACL, AISTATS, ICLR, CoRL, TMLR, USENIX and WACV. Among the classes: apa6/apa7, the pasj and COLT
-  classes, iucr, kluwer, lni, extarticle/extbook/extreport and modernposter. Four bindings (alphabeta, atableau,
-  catoptions, textalpha) were retired: those packages now load from their own sources.
-- **LuaTeX, XeLaTeX and CJK documents.** A persistent `texlua` bridge runs the Lua code inside packages (luacode,
-  piton); the engine identity is a persona (pdfTeX by default, `luatex` or `xetex` on request), and XeLaTeX documents
-  convert under the default; pTeX/upTeX control words under pLaTeX classes and kotex/CJK byte input are read.
-- **Bibliographies as their style sets them.** A biblatex `.bbl` is read into the bibliography's entries, biblatex
-  `.bbx`/`.cbx` styles load, given names and second-tier fields follow the style, and numeric citations are marked
-  as such.
-- **LaTeX kernel fidelity.** From the review of the port by LaTeXML's author, Bruce Miller: kernel hooks run where
-  `latex.ltx` runs them, preamble-only commands raise LaTeX's Error in the body, and `\parbox` keeps the page widths.
-  The formats build with zero errors on the November 2026 LaTeX kernel.
-
-### Frontmatter, bindings and safety
-
-- **A new frontmatter engine and binding API.** Author blocks are read from what TeX typeset, through one pipeline
-  (observe, resolve, emit) behind one binding API: a footnote mark finds the note that prints its number, a note
-  several authors share prints once, contacts in a `\thanks` reach their authors, and class bindings become thin
-  translators onto the API (the author-block code shrank from 19,941 to 12,019 lines).
-- **The Rhai runtime binding API is Perl's `Package.pm` API:** typed values both ways, Perl's hook and body arguments
-  and option tables, many more `Package.pm` calls, a Perl/Rust/Rhai cheat sheet
-  ([`CHEATSHEET.md`](latexml_contrib/src/script_bindings/CHEATSHEET.md)), and diagnostics that name the `.rhai` file.
-- **Untrusted input stays inside the job.** Document Lua runs sandboxed under TeX's own defaults for untrusted input
-  (no programs; writes only below the job directory), each conversion with its own interpreter; archives unpack only
-  inside the source directory and image copies only inside the destination; child processes end with their conversion.
-  A program call lualatex also refuses without shell escape gets lualatex's answer (`nil` and its message) and a
-  counted Warning, so the document goes on; a call only the sandbox refuses stays an Error.
-  The limits, and the advice to convert fully untrusted sources in a container or VM:
-  [`docs/release/SAFETY.md`](docs/release/SAFETY.md).
-
-### Speed, output and platforms
-
-- **Faster than 0.7.6, in less memory.** Measured against the 0.7.6 release binary on the same machine:
-  - papers: a typical arXiv paper converts 1.3× faster (median of 94 papers on the production HTML recipe, one core
-    each; about a fifth of the gain is the Linux binary's allocator now initialising, the rest is code), and all 6 of
-    the 100 papers that 0.7.6 failed on now convert; the November performance pass cut a median 10.4 % of the
-    instructions typical papers execute, with byte-identical output, and math post-processing is linear in the
-    number of formulas;
-  - split books: a 9,700-page book split at `subsubsection` converts 2.3× faster in 1.7× less memory (1.8× faster in
-    4.9× less with serial rendering); the whole 115,519-page book converts in 26 minutes, where 0.7.6 stopped at its
-    memory ceiling (#777); splitting a document frees each page once copied, so a 1,600-subsection book's
-    post-processing holds 29 MB of C heap instead of 818 MB (#777);
-  - memory: a large book's peak memory fell from 6.7 to 4.3 GB, and a conversion that outgrows its memory allowance
-    restarts in streaming mode instead of failing.
-
-  Against TeX Live 2025 on the same machine (pdfTeX 1.40.28, LuaHBTeX 1.22.0, LaTeX2e 2025-11-01), a paper's HTML
-  costs about one pdflatex pass (1.14×, the geometric mean over 32 papers; 0.99× without two math-heavy outliers) and
-  0.38× a full pdflatex + bibtex + 2× pdflatex build; the 115,519-page book takes 26 min against 59 for lualatex's two
-  passes.
-- **Large split documents stream by default.** A `--splitat` run streams its core and its split, writes the core
-  result straight to disk, renders 64 or more pages on up to 8 worker processes within `--max-memory`, and keeps
-  only the head links the navigation reads. Overrides: `LATEXML_POST_STREAM_SPLIT=0`, `LATEXML_RENDER_JOBS=1`.
-- **EPUB 3, UnicodeMath output, and Perl-compatible command lines.** `--format=epub` writes an EPUB 3 container;
-  `--unicodemath` adds `<annotation encoding="application/x-unicodemath">` (or standalone output with `--nopmml`, and
-  `latexmlmath_oxide --unicodemath`); a repeated option keeps its last value, `--xsltparameter` takes `name:value`,
-  and a stylesheet on disk is honoured.
-- **Builds and converts without TeX Live.** Building on a host without `libkpathsea` or `kpsewhich` works out of the
-  box, and basic documents using built-in bindings convert cleanly without a TeX installation.
-- **Better pages in browsers.** MathML Core fixes for aligned columns, slashes, prescripts and arrows; equation
-  numbers beside their formulas; box sizes as CSS custom properties; long verbatim lines wrap on phones; displays in
-  table cells, `\parbox`, minipages and notes line up their rows (#972); the stylesheets synced with upstream LaTeXML
-  and ar5iv-css 0.9.5.
-- **Windows.** The full test suite passes on Windows and runs on every release tag, and conversions use the linked
-  libkpathsea instead of falling back to a `kpsewhich` subprocess (about 270 ms a file lookup). Windows binaries ship
-  unsigned in 0.8.0; a Microsoft Store package is planned for 0.8.x.
-- **Releases name their build inputs.** Each release attaches the exact toolchain and `Cargo.lock` its binaries were
-  built with (`BUILD-INPUTS`).
+- **98 % of arXiv converts without an error.** The production run of November 2026 converts 98.1 % of arXiv's
+  2,962,950 LaTeX articles with no Error or Fatal, up from 86.3 % under 0.7.6. The release is regression-tested
+  against the entire corpus, and latexml-oxide converts the ar5iv Lab and arXiv's HTML Papers.
+- **A faithful LaTeX kernel.** Of the 1,602 TeX Live package manuals that compile under some TeX engine, 1,592 convert
+  with no Error outside a few ruled-out kinds (mean word recall 96.9 % against their PDFs). Kernel hooks run where
+  `latex.ltx` runs them, following the review of the port by LaTeXML's author, Bruce Miller.
+- **Packages and classes without a binding are read from their own sources by default** (error-free arXiv papers
+  without the ar5iv preload: 84.5 % → 95.7 %), and **198 more have bindings** that Perl LaTeXML does not ship, among
+  them unicode-math, polyglossia, xeCJK, datatool, tocloft, the KOMA-Script bases, apa7 and the AAAI, ACL and ICLR
+  conference styles.
+- **LuaTeX, XeLaTeX and CJK documents convert:** the Lua code in packages runs through a `texlua` bridge, and the
+  engine identity is pdfTeX by default, `luatex` or `xetex` on request.
+- **Bibliographies follow their style:** biblatex `.bbl` files and `.bbx`/`.cbx` styles are read.
+- **A new frontmatter engine** reads author blocks from what TeX typeset, through one binding API: a footnote mark
+  finds its note, a note several authors share prints once, and contacts reach their authors.
+- **The Rhai runtime binding API is Perl's `Package.pm` API**, with a Perl/Rust/Rhai
+  [cheat sheet](latexml_contrib/src/script_bindings/CHEATSHEET.md).
+- **Untrusted input stays inside the job:** document Lua runs sandboxed, archives unpack and files copy only inside
+  their directories, and child processes end with their conversion
+  ([`docs/release/SAFETY.md`](docs/release/SAFETY.md)).
+- **Faster, in less memory** (against the 0.7.6 binary on the same machine): a typical arXiv paper converts 1.3×
+  faster (median of 94 papers) and a 9,700-page split book 2.3× faster in 1.7× less memory; a 115,519-page book
+  converts in 26 minutes, where 0.7.6 stopped at its memory ceiling (#777). A paper's HTML costs about one pdflatex
+  pass (1.14×, the geometric mean over 32 papers).
+- **Large split documents stream by default**, rendering their pages on up to 8 worker processes within
+  `--max-memory`.
+- **New outputs:** EPUB 3 (`--format=epub`) and UnicodeMath annotations (`--unicodemath`); Perl-compatible
+  options (`--xsltparameter name:value`, the last of a repeated option wins).
+- **Better pages in browsers:** MathML Core fixes, equation numbers beside their formulas, displays in table cells
+  that line up their rows (#972), and stylesheets synced with LaTeXML and ar5iv-css 0.9.5.
+- **Platforms:** builds, and converts basic documents, without TeX Live; the full test suite runs on Windows for
+  every release (Windows binaries ship unsigned); each release names its exact build inputs (`BUILD-INPUTS`).
 
 ### Upgrading from 0.7.6
 
-- The first conversion with a new release, or after a TeX Live update that changes the LaTeX kernel, builds that
-  tree's format once (about 11 s) and caches it in `~/.cache/latexml-oxide/formats/`; a format built from another
-  tree is never used (OXIDIZED_DESIGN_DIVERGENCES #449). It says so on stderr: `[format_dumps] no latex dump matches
-  this TeX tree; building one into <dir> (once for this tree; later conversions reuse it)`.
-- Raw loading is the default; `--noincludestyles` restores Perl LaTeXML's behaviour.
-- Bindings that now read the real package source can surface conflicts TeX itself has and 0.7.x hid: for example
-  `fancybox` loaded after `fancyvrb` redefines `\VerbatimEnvironment`, so every fancyvrb environment runs to the end
-  of the file, as in pdflatex. Load `fancybox` first, or drop it if its boxes are unused.
-- PDF output mode is the default: `\ifpdf` follows `\pdfoutput`, which is 1 unless the source's figures are EPS/PS
-  only (OXIDIZED_DESIGN_DIVERGENCES #285).
-- A failing XSLT stylesheet is a Fatal (exit 1, no output); a repeated single-valued option keeps its last value; a
-  malformed `--xsltparameter` exits 2; a `--stylesheet` on disk wins over the built-in one of the same name.
-- `--format`, `--whatsin` and `--whatsout` reject unknown values (exit 2); `latexmlmath_oxide` gains `--version` and
-  rejects unknown options.
-- HTML: box sizes are written as `--ltx-box-width` (and height, depth) custom properties instead of `width:`, so a
-  custom stylesheet needs LaTeXML.css or ar5iv-css for them; numeric citations carry `ltx_cite_numeric`; a shared
-  author note prints once.
-- Rhai bindings: the older hook and argument forms keep working in 0.8.0 with one `Warning:deprecated` per binding
-  load and are removed in the release after 0.8.0; a binding that fails to load is `Error:script:<file>.rhai`; the
-  boxes a definition's `beforeDigest`/`afterDigest` hook returns are kept, as in Perl (any other value warns).
-- The log opens with the session's own lines (format loading, preloads), as Perl's does, so a failing `--preload` is
-  in the log.
-- Rust library: `AssignRegister!` takes `(cs, value[, scope[, parameters]])`; `PostOptions::nodefaultresources` is
-  now `default_resources` (inverted); the prelude exports `LazyLock` in place of `Lazy`; the `test-utils` feature is
-  no longer a default; `HtmlOptions` is `#[non_exhaustive]`; `PostDocument::new_document` takes the parent page's id
-  as a third argument; `post::run_post_processing_logged` with `split: true` stages the core result in the
-  destination and streams; `Config` and `ConversionResponse` gain a public `handoff_file` field.
-- A `latexml_oxide --splitat` run now streams and renders on up to min(cores, 8) worker processes, staging its core
-  XML in the destination; `LATEXML_POST_STREAM_SPLIT=0` and `LATEXML_RENDER_JOBS=1` restore 0.7.6's whole-document
-  split and serial render. Every environment variable: [`docs/ENVIRONMENT.md`](docs/ENVIRONMENT.md).
-- A conversion into a folder keeps `LaTeXML-oxide.cache` there, so a reconversion gives its images the same names
-  (issue 995); `--nocache` keeps none. The parallel render's private database is now named `LaTeXML-render.db`.
-- `--format=html` is HTML5 and `--format=xhtml` is XHTML, as in latexmlc; `-q` hides Info and Warnings on stderr, but
-  never Errors, Fatals or the final verdict; the log keeps everything.
-- `--dest`, `--sitedirectory` and `--sourcedirectory` expand a leading `~` and resolve `./` and `..` before use, as
-  latexmlc does (issue 1006).
-- `--timeout` no longer covers the one-time format build a TeX tree the bundled formats don't match needs; under a
-  non-zero `--timeout` that build has its own 10-minute bound.
-- A stylesheet or script already in the destination is used as-is; only a missing or empty one is written from the
-  bundled copy. A reused output folder therefore keeps the `LaTeXML.css` an older version wrote: delete it to get the
-  new one, which the box sizes above need.
-- The cortex worker never loads a runtime `.rhai` binding shipped in a source, whatever its build features.
-- Under `ulimit -v`, set `MALLOC_ARENA_MAX=2` and `MIMALLOC_ARENA_RESERVE=128MiB`
-  ([`docs/ENVIRONMENT.md`](docs/ENVIRONMENT.md)).
+- **Formats:** the first conversion on a new TeX tree builds its format once (about 11 s) into
+  `~/.cache/latexml-oxide/formats/` and says so on stderr; `--timeout` does not cover that build.
+- **Raw loading is the default** (`--noincludestyles` restores Perl's behaviour). Real package sources can surface
+  conflicts TeX has and 0.7.x hid: `fancybox` loaded after `fancyvrb`, for example, runs every fancyvrb environment
+  to the end of the file, as pdflatex does; load `fancybox` first.
+- **PDF output mode is the default:** `\ifpdf` follows `\pdfoutput`, which is 1 unless the figures are EPS/PS only.
+- **Stricter command line:** unknown `--format`/`--whatsin`/`--whatsout` values and a malformed `--xsltparameter`
+  exit 2; a repeated option keeps its last value; a failing XSLT stylesheet is a Fatal; a `--stylesheet` on disk wins
+  over the built-in one; `--format=html` is HTML5 and `xhtml` is XHTML; `-q` never hides Errors, Fatals or the
+  verdict; `--dest`, `--sitedirectory` and `--sourcedirectory` expand `~` and resolve `./` and `..`; the log opens
+  with the session's own lines (format loading, preloads).
+- **Split runs stream and render in parallel;** `LATEXML_POST_STREAM_SPLIT=0` and `LATEXML_RENDER_JOBS=1` restore
+  0.7.6's behaviour. Every variable: [`docs/ENVIRONMENT.md`](docs/ENVIRONMENT.md); under `ulimit -v`, set
+  `MALLOC_ARENA_MAX=2` and `MIMALLOC_ARENA_RESERVE=128MiB`.
+- **HTML and CSS:** box sizes are `--ltx-box-width` (and height, depth) custom properties, which need the new
+  `LaTeXML.css` or ar5iv-css. A reused output folder keeps the `LaTeXML.css` an older version wrote, so delete it.
+  Numeric citations carry `ltx_cite_numeric`.
+- **Caches:** a conversion into a folder keeps `LaTeXML-oxide.cache` there (`--nocache` keeps none); the parallel
+  render's database is `LaTeXML-render.db`.
+- **Rhai bindings:** the older hook and argument forms warn once per load and are removed after 0.8.0; a binding that
+  fails to load is `Error:script:<file>.rhai`; the boxes a `beforeDigest`/`afterDigest` hook returns are kept, as in
+  Perl; the cortex worker never loads a `.rhai` shipped in a source.
+- **Rust library:** `AssignRegister!` takes `(cs, value[, scope[, parameters]])`; `PostOptions::nodefaultresources` is
+  `default_resources` (inverted); the prelude exports `LazyLock`, not `Lazy`; `test-utils` is no longer a default
+  feature; `HtmlOptions` is `#[non_exhaustive]`; `PostDocument::new_document` takes the parent page's id;
+  `post::run_post_processing_logged` with `split: true` streams; `Config` and `ConversionResponse` gain `handoff_file`.
 
 ## [0.7.6] (graphics & SVG figure fidelity; minted highlighting + overpic; author/frontmatter class sweep; Rhai runtime binding API; latexmlpost CLI parity; wider package & bibliography coverage)
 

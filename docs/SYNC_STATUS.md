@@ -65,7 +65,11 @@ Rules that keep this file honest and mergeable:
   count exhausted memory; non-BMP characters kept), #1015 (issue 1011: books of thousands of `\input`/`\subimport`
   files abort at the string arena's halved ceiling; a crash now leaves its log), #1014 (Windows: the first
   conversion's format build off the `--timeout` clock; figure paths of 260+ characters) and #1016 (release builds
-  bundle ar5iv.css; a stylesheet already in the destination is used as-is, OD #1165).
+  bundle ar5iv.css; a stylesheet already in the destination is used as-is, OD #1165). It is tag `408aea99958`,
+  published as a prerelease on 2026-11-26 UTC (release run 45764381757, 17 assets; platform check 45774240976), with
+  #1019 added (a `00README` main file and a stylesheet's copies stay inside their directories). **0.8.0** is rc5
+  promoted without code changes: the rc1 → rc5 health A/B of the published binaries (10,536 arXiv papers, 1991–2026)
+  found no content regression and fewer Errors.
   rc2 was re-issued on the large-document perf work (DG 2026-11-21): #970 (STRMWARN,
   CORELEAK, POSTPERF, CHAPLINKS, ALLOCTRIM, BIGSPLIT, mimalloc 2.3.2) and SERSTREAM (the core result serialized to
   disk; issue 777's whole book converts, 1,549 s on main 4a5aae128b2 against lualatex's 3,523 s for two passes). Main stays the release line until 0.8.0

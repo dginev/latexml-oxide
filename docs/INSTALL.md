@@ -23,7 +23,7 @@ from the engine's own definitions, with many spurious errors, and say so on the 
 
 The steps below use a version variable — set it to the release you want:
 ```
-$ VERSION=0.7.6
+$ VERSION=0.8.0
 ```
 
 ## Ubuntu / Debian
@@ -99,7 +99,7 @@ Homebrew's `texlive` or MacTeX/BasicTeX — just make sure the TeX binaries are 
 shipped in a `.zip`. In PowerShell run:
 
 ```
-> $VERSION = "0.7.6"
+> $VERSION = "0.8.0"
 > curl.exe -LO "https://github.com/dginev/latexml-oxide/releases/download/$VERSION/latexml-oxide-$VERSION-x86_64-pc-windows-msvc.zip"
 > Expand-Archive "latexml-oxide-$VERSION-x86_64-pc-windows-msvc.zip" -DestinationPath .
 > .\latexml-oxide-$VERSION-x86_64-pc-windows-msvc\latexml_oxide.exe --version
@@ -162,7 +162,7 @@ later runs reuse them until TeX Live changes.
 
 ```toml
 [dependencies]
-latexml = "0.7"
+latexml = "0.8"
 ```
 
 ```rust
