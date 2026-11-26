@@ -416,9 +416,8 @@ pub fn find_top_level_texs(dir: &Path) -> Result<Vec<PathBuf>, String> {
 fn s(msg: &str) -> String { msg.to_string() }
 
 /// The file `name` a `00README` marks top-level, inside `dir`; `None` when it is not a file (`.`, a folder), or, with a
-/// `Warning:archive:path`, when `name` is absolute, has a `..` or resolves outside `dir`. Perl joins it unchecked
-/// (`Util/Pack.pm:78,93`), which would make a host file the document and its folder the source directory
-/// (OXIDIZED_DESIGN_DIVERGENCES #1166).
+/// `Warning:archive:path`, when `name` is absolute, has a `..` or resolves outside `dir` (Perl `Util/Pack.pm`
+/// `detect_source` L78, L93; OXIDIZED_DESIGN_DIVERGENCES #1166).
 pub fn readme_entry(dir: &Path, name: &str) -> Option<PathBuf> { entry_in(dir, name, true) }
 
 /// [`readme_entry`], warning only when `report`.

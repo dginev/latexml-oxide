@@ -24493,10 +24493,8 @@ system opens for it lies inside the source directory. A `--css`/`--javascript`/b
 `@import` a `--css` copy follows, is made only when the file read lies inside the directory it was found under and the
 copy lands inside the directory it is copied under, symbolic links followed on both sides; otherwise it is skipped with
 a Warning naming it.
-**Perl behavior**: `Util/Pack.pm` L78 and L93 take the entry as `full_filename($name)`, `catfile` of the unpacked
-directory and the name (`Pack/Dir.pm` L35-38, `Pack/Zip.pm` L51-54), unchecked: `../x.tex` names a file outside the
-archive, which becomes the document and its directory the source directory. `Post/XSLT.pm` `copyResource` (L88-125)
-copies the found file unchecked and copies no `@import`.
+**Perl behavior**: the `00README` entry is read in `Util/Pack.pm` `detect_source` (L78, L93); a resource is copied by
+`Post/XSLT.pm` `copyResource` (L88-125), which copies no `@import`.
 **Rust behavior**:
 - `main_tex::readme_entry` serves the `00README.json` and `00README.XXX` reads of `find_main_tex`,
   `explicit_top_levels` and `cortex_worker`'s own `find_main_tex` (not a copy of the library's: no `ignore` directive,
