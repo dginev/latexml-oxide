@@ -1,20 +1,14 @@
 # Releasing
 
-The release process for latexml-oxide is automated end-to-end: bump the
-version, write the changelog, push a tag. GitHub Actions builds the
-artifacts and publishes them to a new GitHub Release. The Linux assets
-build on `ubuntu-22.04` / `ubuntu-22.04-arm` (glibc 2.35, broadest binary
-compatibility); the macOS assets build natively on `macos-15` (Apple Silicon) and
-`macos-15-intel` (Intel); the Windows asset on `windows-latest`.
+A release is automated end to end: bump the version, write the changelog, push a tag. GitHub Actions builds the
+artifacts and publishes them to a new GitHub Release. The Linux assets build on `ubuntu-22.04` / `ubuntu-22.04-arm`
+(glibc 2.35, the broadest binary compatibility), the macOS assets natively on `macos-15` (Apple Silicon) and
+`macos-15-intel` (Intel), the Windows asset on `windows-latest`.
 
-Currently published platforms: **`x86_64-unknown-linux-gnu`**,
-**`aarch64-unknown-linux-gnu`**, **`aarch64-apple-darwin`** (macOS Apple
-Silicon), and **`x86_64-apple-darwin`** (macOS Intel). **`x86_64-pc-windows-msvc`**
-joins at **`0.7.4`** as a single self-contained `.exe`, shipped in a `.zip`. The
-`.exe` itself validated in the `0.7.4-rc2` RC draft; the `.zip` packaging shipped
-in **0.7.4** and was re-exercised at **`0.7.5-rc1`** (both releases carry
-`…-x86_64-pc-windows-msvc.zip` + `.sha256`). See [`WINDOWS_COMPATIBILITY_PLAN.md`](WINDOWS_COMPATIBILITY_PLAN.md). Only musl
-remains out of scope for now — see "Release asset strategy" below.
+Published platforms: `x86_64-unknown-linux-gnu`, `aarch64-unknown-linux-gnu`, `aarch64-apple-darwin` (Apple
+Silicon), `x86_64-apple-darwin` (Intel Mac) and `x86_64-pc-windows-msvc` (one self-contained `.exe` in a `.zip`; see
+[`WINDOWS_COMPATIBILITY_PLAN.md`](WINDOWS_COMPATIBILITY_PLAN.md)). musl is out of scope for now; see "Release asset
+strategy" below.
 
 ## Release targets & order
 
@@ -46,7 +40,7 @@ tag X.Y.Z  →  release.yml ─┬─→ GitHub Release (public)
 
 The release page's body is `RELEASE_BODY.md` (install + the CHANGELOG slice, `tools/make_release.sh`) followed by
 GitHub's generated notes, whose "What's Changed" pull-request list `release.yml` folds into a `<details>` block
-(`tools/release_notes_details.sh`, DG 2026-11-21) so a long list does not swamp the page.
+(`tools/release_notes_details.sh`) so a long list does not swamp the page.
 
 Also automatic, no action needed: `rustdoc.yml` republishes the gh-pages rustdoc on
 every push to `main` — that is what crates.io's `documentation` link points at.
@@ -93,8 +87,7 @@ prerelease: ${{ contains(github.ref_name, '-') }}
   (revision <sha>)`), and `containers` (pinned to the same nightly and
   `Cargo.lock`) still run. **Discipline:** any code or
   dependency change after an RC means cutting a new `-rc(N+1)` rather than
-  shipping untested changes straight to a final tag (for reference,
-  `0.7.6-rc2..0.7.6` touched 49 files). Any non-version diff or reuse error
+  shipping untested changes straight to a final tag. Any non-version diff or reuse error
   falls back automatically to fresh build inputs and the full pipeline.
 * **Dry-run `prepare` before pushing a tag.** The job lives in
   `.github/workflows/release-prepare.yml`, which `release.yml` calls and which also
@@ -112,11 +105,10 @@ Two consequences worth knowing before you plan an RC:
   other trigger, `release: published`, does not fire for a draft. To exercise the
   container path from an RC, publish its draft or use `docker.yml`'s
   `workflow_dispatch`. Both build `:X.Y.Z-rcN` only — **an RC never takes `:latest`**.
-* **Never publish an RC to crates.io.** `cargo install` and `latexml = "0.7"` both
-  ignore pre-releases, so an `-rcN` upload leaves `cargo install latexml` resolving to
-  whatever stable version exists (before 0.7.4 that was the ancient `0.0.2`
-  placeholder; today it would silently pin users to the previous stable) — while the
-  README *inside that crate* tells people to run exactly that.
+* **Never publish an RC to crates.io.** `cargo install` and `latexml = "0.8"` both
+  ignore pre-releases, so an `-rcN` upload leaves `cargo install latexml` silently
+  resolving to the previous stable — while the README *inside that crate* tells people
+  to run exactly that.
 
 ### Publishing an RC for external download (keep it a prerelease)
 
@@ -208,54 +200,40 @@ What this means concretely:
   `macos-15`, #217). An arm64 binary will **not** run on an Intel Mac (Rosetta
   only translates the other direction), so Intel gets its own native leg
   (`build-macos-intel`) rather than a cross-compile or `lipo` universal binary.
-  - **Intel runner:** `macos-15-intel`. GitHub retired the `macos-13` Intel
-    image on 2025-12-04; `macos-15-intel` is the **last free-tier x86_64 macOS
+  - **Intel runner:** `macos-15-intel`, the **last free-tier x86_64 macOS
     image**, available until ~Fall 2027, after which GitHub Actions drops Intel
     macOS entirely. **When that lands, revisit:** switch to a `lipo` universal
     binary built by cross-compiling x86_64 on the arm64 runner (the static C
     deps would need `-arch x86_64` in their `CFLAGS`/`--host`), or a
     self-hosted Intel Mac.
   - **Deployment target:** the Intel leg pins `MACOSX_DEPLOYMENT_TARGET=10.13`
-    so the binary runs on older Intel Macs (e.g. a 2018 MacBook Air, which
-    shipped with 10.14 and tops out at Sonoma 14) even though the runner's SDK
-    is macOS 15.
-- **Distribution linkage (self-contained):** the CLI assets STATICALLY link
-  libxml2 + libxslt + libexslt (source-built PIC,
-  `tools/build_static_libxml.sh`) and libkpathsea on **every** leg (Linux + macOS
-  `tools/build_static_kpathsea.sh`; Windows `kpathsea_sys` `build_from_source` —
-  all in-process lookups). The binary carries NO versioned
-  libxml2/libxslt SONAME dependency, so it is independent of the host's libxml2
-  era (libxml2 2.14 bumped the SONAME `.so.2` → `.so.16`; a dynamically-linked
-  binary loads on only one side of that split). At *runtime* `select_kpaths` may still fall back to the
-  **subprocess-`kpsewhich` backend** where the linked-in kpathsea can't serve the
-  host (e.g. MiKTeX, whose fndb a static libkpathsea can't read) — a runtime
-  choice, which does **not** change the fact that the library is linked in. Only the glibc/libSystem
-  family remains dynamic — and on Windows even the CRT is static (`+crt-static`),
-  so the `.exe` imports only core OS DLLs. (libkpathsea is LGPL-2.1, so **every** published binary carries the §6 relink
-  obligation — discharged per `LICENSE_INVENTORY.md` §D.3 + `THIRD-PARTY-NOTICES` §7.) Our
-  *own* resources (XSLT/CSS/JS/schema/dumps) are always embedded; see the
-  portability note below. A `release.yml` step `ldd`/`otool`/`dumpbin`-asserts the
-  absence of dynamic libxml2/libxslt/kpathsea (and, on Windows, VCRUNTIME) and
-  fails the release otherwise.
+    so the binary runs on older Intel Macs even though the runner's SDK is macOS 15.
+- **Distribution linkage (self-contained):** every leg statically links
+  libxml2, libxslt, libexslt and libkpathsea (Linux and macOS through
+  `tools/build_static_libxml.sh` and `tools/build_static_kpathsea.sh`; Windows
+  through vcpkg and `kpathsea_sys`'s `build_from_source`), and on Windows the CRT
+  too (`+crt-static`), so the `.exe` imports only core OS DLLs. A `release.yml`
+  step asserts with `ldd`/`otool`/`dumpbin` that none of them (and, on Windows,
+  no VCRUNTIME) is dynamic. The per-OS runtime closure, and why it matters, is
+  in "The churn-prone C libraries" below. libkpathsea is LGPL-2.1, so **every**
+  published binary carries the relink obligation, discharged per
+  `LICENSE_INVENTORY.md` §D.3 and `THIRD-PARTY-NOTICES` §7.
 - **Editor-distributed binary:** the stricter "no host libxml2/libxslt" bar
-  (`RELEASE_CRITERIA.md` §11) is now MET by these same CLI assets, so a VSCode
+  (`RELEASE_CRITERIA.md` §11) is met by these same CLI assets, so a VSCode
   extension can ship the binary directly.
 - **Deferred matrix rungs:** a macOS `lipo` universal binary (folding the two
   macOS tarballs into one — see the Intel runner sunset note above), then musl
-  (`RELEASE_CRITERIA.md` §3). (`aarch64-unknown-linux-gnu` landed 2026-07-09 as
-  `build-linux-arm64`; `x86_64-pc-windows-msvc` landed 2026-07-14 as
-  `build-windows` — a single fully-static `.exe`.) Each new triple is one more
+  (`RELEASE_CRITERIA.md` §3). Each new triple is one more
   native build leg in `release.yml` plus a `RELEASE_TARGET=<triple>` invocation
   of `tools/make_release.sh`.
 
 ## What ships in a release
 
-Assets attached to each `X.Y.Z` GitHub Release — five platform builds (two
-Linux, two macOS, one Windows). Linux/macOS ship a tarball (+ `.sha256`);
-Windows ships a `.zip` (+ `.sha256`) — no `.deb` equivalent. Every archive
-carries the binary plus `THIRD-PARTY-NOTICES`, `LICENSE`, `README.md`,
-`CHANGELOG.md` and `docs/INSTALL.md`. Plus a `.deb` (+ `.sha256`) for each Linux arch, plus the
-aggregate `THIRD-PARTY-NOTICES` as a standalone asset:
+The 17 assets attached to each GitHub Release: five platform builds (two Linux, two macOS, one Windows), each a
+tarball or, on Windows, a `.zip`, with a `.sha256`; a `.deb` (+ `.sha256`) for each Linux arch; and three standalone
+files, the aggregate `THIRD-PARTY-NOTICES` and the release's pinned build inputs, `BUILD-INPUTS` and `Cargo.lock`.
+Every archive carries the binary plus `THIRD-PARTY-NOTICES`, `LICENSE`, `README.md`, `CHANGELOG.md` and
+`docs/INSTALL.md`.
 
 | Asset | Purpose |
 |---|---|
@@ -274,6 +252,8 @@ aggregate `THIRD-PARTY-NOTICES` as a standalone asset:
 | `latexml-oxide-X.Y.Z-x86_64-pc-windows-msvc.zip` | Windows (x86_64) archive: a single fully-static `latexml_oxide.exe` (`+crt-static`; static libxml2/libxslt/libkpathsea via `build_from_source`) — imports only core OS DLLs, no VC++ redistributable — plus the same `README.md`/`CHANGELOG.md`/`LICENSE`/`THIRD-PARTY-NOTICES` as the tarballs. Unzip and run; TeX Live or MiKTeX on PATH for host TeX resolution. |
 | `latexml-oxide-X.Y.Z-x86_64-pc-windows-msvc.zip.sha256` | SHA-256 sidecar. |
 | `THIRD-PARTY-NOTICES` | Aggregate license notices: hand-authored §1–4 (embedded TeX dumps; Perl-LaTeXML assets; the linked native libs incl. the vendored libmarpa/mimalloc and static-LGPL kpathsea) + the cargo-about Rust-crate appendix (§5) + the verbatim copyleft texts (§6) + the per-artifact source provenance for LGPL relinking (§7). Assembled once by the `notices` job and bundled byte-identically into every archive **and both `.deb`s** (the `.deb` gets it via `make_release.sh` swapping the path `cargo deb` reads, then reading the notices back out of the built package to prove it). The **container images** carry their own copy, generated by the Dockerfile's `notices` stage per-image — the CLI and cortex-worker link different feature graphs, so their §5 differs. |
+| `BUILD-INPUTS` | The release's pinned build inputs, written by `prepare`: the nightly toolchain, the `Cargo.lock` SHA-256, the bundled `ar5iv.css`'s tag, commit and SHA-256, the tag, the commit, the RC it reuses (if any) and `rustc -vV`. |
+| `Cargo.lock` | The lockfile every leg built with (`--locked`). With `BUILD-INPUTS`, what a final reads back from its RC (`tools/check_rc_reuse.sh --fetch-release-inputs`) to reuse its inputs. |
 
 The shipped `latexml_oxide` binary is fully self-contained — XSLT
 stylesheets, CSS, JavaScript, and the RelaxNG schema tree are
@@ -331,23 +311,23 @@ The churn-prone C libraries are STATICALLY linked, so only the platform's
 core runtime stays dynamic:
 
 - **Linux**: `libc`, `libm`, `libgcc_s`, `ld-linux` (the glibc family) —
-  nothing else. libxml2/libxslt/libexslt and libkpathsea are baked in
-  (verified by `ldd` in `release.yml`), so the binary runs on any
-  glibc-2.35+ host regardless of its libxml2 SONAME (or the absence of one).
-- **macOS**: `libSystem` (plus `libiconv`). libxml2/libxslt/libexslt **and
-  libkpathsea are statically linked, same as Linux** — both macOS legs run
-  `tools/build_static_kpathsea.sh` and `release.yml` asserts it with `otool`
-  (see §"Self-contained…" above and `LICENSE_INVENTORY.md` §D.1/§D.3). What is
-  macOS-specific is a *runtime* choice, not linkage: `select_kpaths` may still
-  pick the subprocess-`kpsewhich` backend (e.g. MacTeX ships no libkpathsea),
-  which works with both Homebrew TeX Live and MacTeX/BasicTeX.
+  nothing else, so the binary runs on any glibc-2.35+ host regardless of its
+  libxml2 SONAME (libxml2 2.14 moved `.so.2` → `.so.16`; a dynamically linked
+  binary loads on only one side of that split).
+- **macOS**: `libSystem` (plus `libiconv`).
+- **Windows**: core OS DLLs only.
+
+At *runtime* `select_kpaths` may still choose the subprocess-`kpsewhich` backend
+where the linked-in kpathsea cannot serve the host (MiKTeX, whose file database a
+static libkpathsea cannot read; MacTeX, which ships no libkpathsea); that works with
+Homebrew TeX Live and MacTeX/BasicTeX alike and does not change the linkage.
 
 TeX Live (`kpsewhich`, `pdflatex`) is required at runtime and not
 bundled on any platform.
 
 ## macOS Gatekeeper & code signing
 
-**Decision (2026-07-13): ripgrep-style — ad-hoc signature only, NOT
+**Decision: ripgrep-style — ad-hoc signature only, NOT
 notarized.** We deliberately do *not* enroll in the Apple Developer Program
 or notarize the macOS tarballs. This matches ripgrep and the vast majority
 of open-source Rust CLIs, and it is correct because of how Gatekeeper
@@ -379,8 +359,8 @@ strips quarantine, so a tap install is warning-free by construction — no
 Apple Developer account, no notarization, aligned with the CC0 / public-domain
 posture (a paid Apple identity would contradict the no-strings ethos, and
 Homebrew removes the warning on the channel Mac users actually reach for). The
-tap is live (`dginev/homebrew-tap`, formula at 0.7.6); its `./update-formula.sh
-X.Y.Z` reads the per-release `.sha256` sidecars.
+tap is `dginev/homebrew-tap`; its `./update-formula.sh X.Y.Z` reads the per-release
+`.sha256` sidecars.
 
 The bigger win: for a LaTeX converter the real setup friction is **TeX + the
 graphics toolchain**, not the executable. The formula encodes the small
@@ -394,7 +374,7 @@ redundant copy. A tap lives in its own `dginev/homebrew-tap` repo as
 class LatexmlOxide < Formula
   desc "Rust port of LaTeXML — LaTeX to HTML/XML/MathML"
   homepage "https://github.com/dginev/latexml-oxide"
-  version "0.7.6"                       # bump per release
+  version "X.Y.Z"                       # bump per release
   license "CC0-1.0"
   # 1:1 with the .deb's graphics Depends (imagemagick, mupdf-tools,
   # poppler-utils, ghostscript, dvisvgm) — all are real homebrew-core formulae.
@@ -492,17 +472,15 @@ listens for `release: published` (the RC-draft path).
 > publishes using **GITHUB_TOKEN**, and GitHub will not start a workflow from a
 > GITHUB_TOKEN-authored event (recursion guard — only `workflow_dispatch` and
 > `repository_dispatch` are exempt). The `published` path works for an RC precisely
-> because a *human* clicks Publish. **0.7.4 shipped with no container images** on this
-> exact mistake, and nothing failed loudly — the release went green and the images
-> were simply absent. If images ever go missing again, check this first.
+> because a *human* clicks Publish. A release built that way goes green with no images
+> at all. If images ever go missing, check this first.
 
 **The `:latest` contract.** `docker.yml` only moves `:latest` when passed
 `latest: true`, which **only** `release.yml`'s `containers` job does, and only for a
 final tag whose release published. Every other path (dispatch, RC publish) pushes
-`:X.Y.Z` and logs `:latest NOT moved`. This is deliberate: `:latest` was previously
-tagged unconditionally, so **rebuilding an older tag would drag `:latest` backwards**
-(a `ref=0.7.3` dispatch on 2026-07-15 would have done exactly that had it not failed
-first) and an RC publish would have handed `:latest` to a prerelease. If you rebuild
+`:X.Y.Z` and logs `:latest NOT moved`. This is deliberate: tagging `:latest`
+unconditionally would let **rebuilding an older tag drag `:latest` backwards** and
+an RC publish hand `:latest` to a prerelease. If you rebuild
 the current newest release and *do* want `:latest` moved, tick the dispatch's
 `latest` checkbox.
 
@@ -555,12 +533,12 @@ settings.
     </details>
     ```
 
-   The release page shows the short list; the highlights and the upgrade notes fold into `<details>` blocks (DG
-   2026-11-26, from 0.8.0). Keep a blank line after each `<summary>` and before each `</details>`, or GitHub renders
-   the Markdown inside as plain text.
+   The release page shows the short list; the highlights and the upgrade notes fold into `<details>` blocks. Keep a
+   blank line after each `<summary>` and before each `</details>`, or GitHub renders the Markdown inside as plain
+   text.
 
-   No date in the heading (the 0.7.x form). From 0.8.0 on, the section is a curated
-   summary of at most ~100 lines (user 2026-11-18): the headlines of the whole release
+   No date in the heading. The section is a curated
+   summary of at most ~100 lines: the headlines of the whole release
    cycle, read across the commit history and not only the latest `## Unreleased`
    entries (a long campaign may have merged as one entry), then the upgrade notes.
    The detailed `## Unreleased` entries the pull requests wrote move, unchanged, into
@@ -637,8 +615,8 @@ settings.
    static-linkage checks (`ldd`/`otool`/`dumpbin`), the size budget, a code-signature
    + `--version` launch smoke on both macOS legs, and on all five legs a real
    conversion of `hello.tex` by the shipped binary with `resources/` moved aside
-   (`tools/release_smoke.sh`; macOS and Windows since 0.8.0-rc2, with no TeX Live on
-   those runners) — plus CI.yml's macOS test job covers arm64 conversion paths
+   (`tools/release_smoke.sh`; with no TeX Live on the macOS and Windows runners) —
+   plus CI.yml's macOS test job covers arm64 conversion paths
    on the same arch. If a published asset is later found broken, use *Failure
    recovery* below. (To re-add a human review gate, set `draft: true` and
    publish manually.)
@@ -665,7 +643,7 @@ settings.
    Once `X.Y.Z` is published, delete each `X.Y.Z-rcN` Release (`gh release delete
    X.Y.Z-rcN --yes`, without `--cleanup-tag`): the Releases page then lists finals and
    the current cycle's candidates only, while the tags keep the history the docs and
-   workflow comments name (DG 2026-11-25; done for 0.7.5-rc2/rc3 and 0.7.6-rc1/rc2).
+   workflow comments name.
    Never before the final is out: `release-prepare.yml` builds the final from the
    last RC's `Cargo.lock` and `BUILD-INPUTS` Release assets
    (`tools/check_rc_reuse.sh --fetch-release-inputs`), and testers download the RCs.

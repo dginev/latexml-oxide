@@ -1,370 +1,161 @@
 # Publishing `latexml` to crates.io
 
-Living checklist for the first crates.io release of the workspace and the
-docs.rs / library-consumer story. Complements
-[`RELEASING.md`](RELEASING.md) (the GitHub-Release binary flow); this file is
-specifically about **`cargo publish` + docs.rs + library use**.
+The crates.io side of a release: `cargo publish`, docs.rs, and use as a library. The GitHub Release binaries are
+[`RELEASING.md`](RELEASING.md)'s.
 
-Status (as of the 0.7.6 publication, 2026-08-23): ✅ **PUBLISHED, every release.**
-All 8 crates are live on crates.io at the 0.7.6 line — `latexml` **0.7.6**
-(`max_stable_version`), `latexml_core` 0.6.0, `latexml_codegen` 0.4.2,
-`latexml_math_parser` 0.4.1, `latexml_engine` 0.7.0, `latexml_package` 0.7.0,
-`latexml_post` 0.5.0, `latexml_contrib` 0.5.0 (all uploaded 2026-08-23T22:44Z);
-docs.rs built `latexml` 0.7.6. First publication was 0.7.4 on 2026-07-17. Every
-blocker in §2 is resolved: B1, B2, B3a, B3b, B6, B7 done; B4 moot (all 8 names
-are ours); B8 applies only to new names. B5 (no dumps in the crate) is superseded
-from 0.8.0: a dumpless install builds the dumps on its first conversion into a
-per-user cache (`LATEXML_FORMAT_CACHE`, `latexml_oxide/src/format_dumps.rs`;
-`docs/INSTALL.md` "From crates.io"); 0.7.6 installs follow §B5.
+**Status.** All 8 workspace crates are on crates.io and are published at every stable release, first at 0.7.4; the last
+published line is 0.7.6 (2026-08-23). From 0.8.0, an install from crates.io carries no format dumps and builds them on
+its first conversion into a per-user cache (`LATEXML_FORMAT_CACHE`, `latexml_oxide/src/format_dumps.rs`;
+`docs/INSTALL.md` "From crates.io").
 
-**Each release is a version bump of every changed crate + `cargo publish
---workspace`** (`RELEASING.md` step 1, `.claude/skills/next-release/SKILL.md` step
-1: crates.io is immutable, so a changed sibling left at its old version publishes
-the top crate against stale siblings). §5 is the per-release checklist; the durable
-traps are B7 (10 MiB cap, real upload only) and rule 0: **never publish an `-rc`**
-(it does not become `max_stable_version`, so `cargo install latexml` would keep
-resolving to the previous stable).
+**Each release bumps every changed crate and runs `cargo publish --workspace`** (`RELEASING.md` step 1). crates.io is
+immutable, so a changed sibling left at its old version publishes the top crate against stale siblings. The per-release
+checklist is §5. **Rule 0: never publish an `-rc`.** `cargo install` and `latexml = "0.8"` ignore pre-releases, so
+`cargo install latexml` would keep resolving to the previous stable while the README inside the crate tells people to
+run exactly that.
 
 ---
 
 ## 1. Publish order (dependency-first)
 
-`cargo publish` requires every dependency to already be on crates.io, so the
-8 crates publish **bottom-up**. Publishing `latexml` drags all 7 siblings onto
-crates.io permanently — **their names must be available too** (reserve them).
+`cargo publish` needs every dependency on crates.io already, so the crates publish bottom-up. `cargo publish
+--workspace` sorts them itself, in this order:
 
-| # | crate (dir) | version (0.7.6 line) | crates.io deps it needs first |
-|---|-------------|----------------------|-------------------------------|
-| 1 | `latexml_core` | 0.6.0 | — |
-| 2 | `latexml_codegen` | 0.4.2 | core |
-| 3 | `latexml_math_parser` | 0.4.1 | core |
-| 4 | `latexml_engine` | 0.7.0 | codegen, core |
-| 5 | `latexml_package` | 0.7.0 | codegen, core, engine |
-| 6 | `latexml_post` | 0.5.0 | core, engine |
-| 7 | `latexml_contrib` | 0.5.0 | core, codegen, engine, package |
-| 8 | `latexml` (`latexml_oxide`) | 0.7.6 | all 7 + `pericortex` |
+| # | crate (dir) | version (0.8.0 line) | workspace crates it needs first |
+|---|-------------|----------------------|---------------------------------|
+| 1 | `latexml_core` | 0.7.0 | — |
+| 2 | `latexml_codegen` | 0.5.0 | core |
+| 3 | `latexml_math_parser` | 0.5.0 | core |
+| 4 | `latexml_engine` | 0.8.0 | codegen, core |
+| 5 | `latexml_package` | 0.8.0 | codegen, core, engine |
+| 6 | `latexml_post` | 0.6.0 | core |
+| 7 | `latexml_contrib` | 0.6.0 | core, codegen, engine, package |
+| 8 | `latexml` (`latexml_oxide`) | 0.8.0 | all 7 (+ `pericortex`, optional) |
 
-**Published prerequisites (all on crates.io, deps repointed off git — ✅ DONE):**
-`libmarpa-asf-sys` 0.3.x → `marpa-asf` 0.4.0 (the dginev/marpa fork; consumed by
-`latexml_math_parser` via `marpa = { package = "marpa-asf" }`),
-and `pericortex` 0.2.8+ (behind the optional `cortex` feature). crates.io rejects
-git deps, so these were hard blockers — see B2.
+External prerequisites, both on crates.io: `marpa-asf` 0.4.0 (over `libmarpa-asf-sys` 0.3.x; the `dginev/marpa` fork),
+consumed by `latexml_math_parser` as `marpa = { package = "marpa-asf", version = "0.4.0" }`; and `pericortex` 0.2.8+,
+behind the optional `cortex` feature.
 
 ---
 
-## 2. Blockers & resolutions
+## 2. Packaging rules
 
-### B1 — path deps had no `version` — ✅ DONE
-crates.io rejects a `{ path = "…" }` dep with no `version`. All 21 intra-workspace
-dep lines now carry `version = "x.y.z"` alongside `path` (local builds still use
-the path; the version is only consulted when published). Verified: `cargo
-metadata` + `cargo check` clean.
+These keep the crates publishable; each was a blocker once, and code comments cite their labels (B1–B8).
 
-### B2 — forked **git** deps (`marpa`, `pericortex`) — ✅ DONE
-crates.io **rejects git deps even when optional**, and the workspace had two:
-* `marpa = { git = "https://github.com/dginev/marpa" }` in `latexml_core` +
-  `latexml_math_parser` (a core dep — surfaced by the `latexml_core` publish
-  dry-run: *"dependency `marpa` does not specify a version"*).
-* `pericortex = { git = "…cortex-peripherals…", optional = true }` in
-  `latexml_oxide`, behind the off-by-default `cortex` feature.
+- **B1 — every intra-workspace dependency carries `version` beside `path`.** crates.io rejects a bare `{ path = "…" }`;
+  local builds still use the path.
+- **B2 — no git dependencies, even optional ones.** crates.io rejects them. The marpa fork publishes as
+  `libmarpa-asf-sys`/`marpa-asf` (the upstream names are taken), and the `package` alias keeps the `marpa::` /
+  `libmarpa_sys::` code unchanged. `marpa-asf` 0.4.0 compiles a byte class (`byte_set`, `byte_range`,
+  `inverse_byte_set`) to one terminal, so a token glade's symbol is the class and its byte is `token_value() - 1`: a
+  breaking change for an ASF consumer, and `latexml_math_parser` requires it.
+- **Check the `cortex` feature by hand.** CI does not build it (only the worker image does), so before a publish run
+  `cargo check -p latexml --features cortex` as well as `cargo check -p latexml`.
+- **B3 — each crate carries the resources it embeds.** `cargo package` cannot include `../` paths. B3a: XSLT, CSS and
+  JavaScript live in `latexml_post/resources/` (`include_str!` resolves relative to the source file, so the build is
+  independent of the working directory). B3b: the RelaxNG tree lives in `latexml_core/resources/RelaxNG/` (108 files):
+  `latexml_core/build.rs` embeds it, and the `load_model!` derive (exported from `latexml_engine`, invoked in
+  `latexml_oxide`) reads `LaTeXML.model` from that embedded table, not from the working directory. **Gate: `cargo build
+  -p latexml`**, the crate where the derive expands; a `-p latexml_core` or `-p latexml_engine` build is a false green.
+- **B5 — release-only inputs stay at the workspace root, outside every crate.** The per-TL-year dumps
+  (`resources/dumps/`, gitignored, built by `release-dumps.yml` / `make_formats.sh`, embedded by
+  `latexml_engine/build.rs`) and the bundled `ar5iv.css` (`resources/ar5iv-css/`; RELEASING.md "The bundled ar5iv.css")
+  never reach a crate, so a crates.io install or a docs.rs build has neither: `latexml_post/build.rs` embeds no
+  `ar5iv.css`, and `--css=ar5iv.css` warns and asks for a path to a local copy. Moving the dumps into a crate would buy
+  nothing and entangle the release and CI cache paths, the Dockerfile, `.gitignore`/`.gitattributes` and `ini_tex.rs`'s
+  `--init` write path. Rejected: a prepublish copy-and-rewrite script (the `include_str!` paths are compile-time
+  literals) and per-crate symlinks into `../resources` (Windows-hostile).
+- **B6 — `latexml_oxide/README.md` is a symlink to `../README.md`,** not a copy (a copy would drift from the README
+  GitHub serves). Cargo packages the real content. A Windows checkout without symlink support turns it into a 12-byte
+  text file, so publish from Linux.
+- **B7 — `latexml_oxide/tests/` is excluded** (`exclude = ["tests/"]`). crates.io caps an upload at 10 MiB, and the
+  regression corpus was ~19.5 of the crate's ~20 MiB. Nothing in `src/` or `bin/` reads `tests/` at build time, and
+  `build.rs` only wires git hooks (a no-op without `.git`). Do **not** exclude the fixture subdirectories while keeping
+  `tests/*.rs`: the `testable` proc-macro scans the corpus at compile time, so the packaged crate's `cargo test` would
+  fail. The two explicit `[[test]]` targets (`cortex_worker_exit_reports`, `cortex_worker_untrusted_bindings`, both
+  `cortex`-gated) are new since the last publish; `cargo publish --workspace --dry-run` shows how cargo treats them with
+  their files excluded.
 
-**Resolution (done 2026-07-16):** both forks published under crates.io-free
-names, then the deps repointed:
-* dginev/marpa fork → **`libmarpa-asf-sys` 0.3.0** + **`marpa-asf` 0.3.0** at the rename
-  (upstream `marpa`/`libmarpa-sys` names are taken). Consumers use the cargo
-  `package` alias so `marpa::` / `libmarpa_sys::` code is unchanged:
-  `marpa = { package = "marpa-asf", version = "0.4.0" }`. `marpa-asf` 0.4.0 (2026-10-07)
-  compiles a byte class (`byte_set`, `byte_range`, `inverse_byte_set`) to one terminal, so a
-  token glade's symbol is the class and its byte is `token_value() - 1`: a breaking change
-  for an ASF consumer, and `latexml_math_parser` requires 0.4.0.
-* cortex-peripherals → **`pericortex` 0.2.8**;
-  `pericortex = { version = "0.2.8", optional = true }`.
+**Why the dumps are not built in `build.rs`.** A dump comes from running the fully linked binary (`make_formats.sh`
+builds `latexml_oxide`, then runs `--init`), but a build script runs before its own crate compiles: an ordering cycle.
+Breaking it would compile the engine twice, require TeX Live at build time (docs.rs has none, so `cargo install` would
+fail outright), and bake a dump that goes stale on the next TeX Live upgrade. The first-run build into the per-user
+cache avoids all three. (A 0.7.6 install has no first-run build; `cd ~/.cargo && latexml_oxide --init=plain.tex &&
+latexml_oxide --init=latex.ltx` writes `~/.cargo/resources/dumps/`, the loader's `<exe_dir>/../resources/dumps`;
+`LATEXML_DUMP_DIR` overrides the location.)
 
-Verified: `cargo check -p latexml` and `cargo check -p latexml --features cortex`
-both resolve from crates.io. **Lesson (feature-gated drift):** the `cortex`
-feature isn't built by CI/tests by default, so a `Config` literal in
-`cortex_worker.rs` that the `--inputencoding` work left missing a field went
-unnoticed until this switch built it — worth adding a `--features cortex`
-check to CI.
+### Two traps `--dry-run` cannot catch
 
-### B3 — workspace `resources/` are not in the package tarballs — ✅ DONE
-`resources/` lived at the **workspace root**, outside every crate dir. `cargo
-package` cannot include `../` paths, so the resources never reached the tarball.
-Split into two independently-shippable halves — **B3a DONE (2026-07-16), B3b DONE
-(2026-07-17)**. The same `../` rule bit the README too, separately: see B6.
+`cargo publish --workspace --dry-run` packages and verifies, then stops *before* uploading. A green dry-run says the
+*contents* are sound, not that the publish will go through:
 
-#### B3a — `latexml_post` XSLT/CSS/javascript — ✅ DONE (2026-07-16)
-`src/xslt.rs` embedded **36 files** via `include_str!("../../resources/…")`; a
-missing `include_str!` target is a **compile error**, so this was the one hard
-blocker that was cleanly fixable. Relocated `resources/{XSLT,CSS,javascript}` →
-`latexml_post/resources/…` and rewrote the 36 embed paths `../../resources/…` →
-`../resources/…`. **`include_str!` resolves relative to the source file, not the
-process cwd**, so this is robust regardless of where the compiler runs. Verified:
-`cargo build -p latexml_post` green; the workspace-root self-containment smoke
-(`mv resources aside`) is unaffected because the runtime CSS/JS disk-search is
-still cwd-relative with the embedded table as the real source.
-
-#### B3b — RelaxNG schema/model — ✅ DONE (2026-07-17)
-RelaxNG is a compile-time input at two depths: `latexml_core/build.rs` walks it to
-emit the `include_str!` embed table (`common::relaxng::embedded`), and
-`load_model!`'s `#[derive(LoadModel)]` (exported from `latexml_engine`, *invoked* in
-`latexml_oxide`) compiles `LaTeXML.model` into code. The derive used
-`pathname::find`, which resolves **cwd-relative** — fine in our checkout, fatal from
-a crates.io install. Hence a bare move breaks the build: `Model "LaTeXML" not found`.
-
-Fixed by removing the conflict, not splitting the tree: `latexml_codegen` already
-links `latexml_core`, whose build.rs already embeds it, so the derive now reads the
-embedded bytes (`modelable.rs` → `embedded::lookup`) and is cwd-independent. Then
-build.rs resolves under `CARGO_MANIFEST_DIR` (plus an assert the tree is non-empty)
-and `git mv resources/RelaxNG latexml_core/` (108 files). The runtime already
-preferred the embed table (`model.rs` L437, `scan.rs` L97); default packaging picks
-the tree up.
-
-**Gate: `cargo build -p latexml`** — the crate where the derive expands. A
-`-p latexml_core` / `-p latexml_engine` build is a **false green**.
-**Verified:** clean build green; conversion emits a model-driven `<para xml:id>`;
-`cargo package --list -p latexml_core` ships 108 files incl. `LaTeXML.model`, and
-`-p latexml` needs 0; self-containment smoke green with `resources/` moved aside.
-
-#### `resources/dumps` — intentionally NOT relocated (see B5)
-The per-TL-year dumps are git-ignored, generated by the release pipeline
-(`release-dumps.yml`, `make_formats.sh`), embedded by `latexml_engine/build.rs`,
-and **already excluded from the crates.io tarball by design (B5)** — a
-from-source install starts dumpless and reconstructs kernel state. Relocating
-them buys nothing for the publish and entangles `release.yml`/`CI.yml` cache
-paths, the Dockerfile, `.gitignore`/`.gitattributes`, and `ini_tex.rs`'s
-`--init` write path. Left at the workspace root.
-
-#### `resources/ar5iv-css` — release-only, likewise outside the crates
-The bundled `ar5iv.css` (RELEASING.md "The bundled ar5iv.css") is fetched only by
-the release pipeline into the git-ignored `resources/ar5iv-css/`, so a crates.io
-install or a docs.rs build has none: `latexml_post/build.rs` tracks nothing outside
-the workspace and embeds `None`, and `--css=ar5iv.css` warns and asks for a path to
-a local copy.
-
-Rejected alternatives: a prepublish copy-and-path-rewrite script (fragile — the
-`include_str!` paths are compile-time literal), and per-crate symlinks into
-`../resources` (Windows-hostile, brittle).
-
-### B4 — sub-crate names must be free on crates.io — ✅ MOOT (all 8 published by dginev since 0.7.4)
-`latexml` is registered to **dginev** (currently 0.0.2 — the placeholder the real
-release overwrites). All 7 siblings checked against the crates.io API and **free**:
-`latexml_core`, `latexml_codegen`, `latexml_math_parser`, `latexml_engine`,
-`latexml_package`, `latexml_post`, `latexml_contrib`. (crates.io normalizes
-`_`/`-`, but the exact `_` names the manifests use are what get reserved.)
-The 0.7.4 publish claimed all 7; there is nothing left to re-check.
-
-### B6 — `readme` pointed outside the crate dir — ✅ DONE (2026-07-17)
-Found by the first `cargo publish --workspace --dry-run`: `latexml_oxide` declared
-`readme = "README.md"` while README.md lives at the **workspace root**, so
-`cargo publish -p latexml` died with *"readme `README.md` does not appear to
-exist"*. Same root cause as B3 — `cargo package` cannot follow `../`. The other 7
-crates packaged fine; only the top crate declares a readme.
-
-**Fix:** `latexml_oxide/README.md` is a **symlink** to `../README.md` — not a copy,
-which would be guaranteed drift from the root README GitHub serves. Cargo
-dereferences it and packages the real content (verified: 12,601 bytes, byte-identical,
-stored as a regular file). The manifest says so, since the obvious "fix" is to replace
-a symlink with a copy.
-
-*Caveat:* a Windows checkout without symlink support materialises it as a 12-byte text
-file containing `../README.md`. We publish from Linux/CI — noted, not guarded.
-
-### B7 — `latexml` exceeded the 10 MiB upload cap — ✅ DONE (2026-07-17)
-The first real publish of the top crate was rejected:
-
-```
-413 Payload Too Large: max upload size is: 10485760
-```
-
-The tarball was **13.6 MiB** against a hard **10 MiB** cap. `latexml_oxide/tests` —
-the regression corpus — was **1342 of the crate's 1372** packageable files and ~19.5
-of its ~20 MiB. The other 7 crates are far smaller and were unaffected.
-
-**Fix:** `exclude = ["tests/"]` in `latexml_oxide/Cargo.toml` → **30 files, 173 KiB
-compressed**. Safe because nothing in `src/`/`bin/` reads `tests/` at build time,
-there are no explicit `[[test]]` targets (the 50 harnesses are auto-discovered, so
-the packaged crate simply has none — cargo prints a benign `ignoring test …` per
-harness), and `build.rs` only wires git hooks and no-ops without a `.git`. Do **not**
-exclude the fixture subdirs while keeping `tests/*.rs`: the `testable` proc-macro
-scans the corpus at compile time, so a half-excluded tree fails `cargo test` on the
-packaged crate.
-
-> **Two traps, and `--dry-run` catches neither.**
->
-> 1. **The size cap is only enforced on upload.** `cargo publish --workspace
->    --dry-run` packages and verifies, then aborts *before* uploading — so it went
->    fully green on a 13.6 MiB tarball that could never have been accepted. A green
->    dry-run says nothing about size.
-> 2. **The CDN masks the error.** Fastly/Varnish in front of crates.io reports the
->    oversized write as a bare `503 backend write error` with an empty body, not a
->    413. If a publish 503s, suspect size first and check
->    `cargo package --list | wc -l` before assuming an outage.
-
-### B8 — new-crate rate limit aborts `--workspace` mid-run — ⚠️ KNOWN (2026-07-17)
-crates.io allows a **burst of 5 new crates**, then refills roughly one per 10
-minutes. This workspace publishes **7 new crates at once**, so a first-time
-`cargo publish --workspace` *cannot* finish in one pass. Observed: five landed in 7
-seconds (14:20:29–14:20:36), the sixth got
-
-```
-429: You have published too many new crates in a short period of time.
-     Please try again after Fri, 17 Jul 2026 14:32:10 GMT
-```
-
-and **cargo aborted rather than waiting**, so the remaining crates were never
-attempted. Recovery is just `cargo publish -p <crate>` per remaining crate as tokens
-refill; the 429 body states the exact retry time. Note the ordering constraint —
-`latexml` depends on `latexml_contrib`, so it cannot go first.
-
-Only bites when publishing **new** names (a version bump of an existing crate uses a
-far looser limit), so this is a one-time cost now that all 8 names exist. Recorded
-because a green dry-run makes it look like one `--workspace` invocation suffices.
-
-### B5 — dumps absent from the crates.io crate (superseded from 0.8.0 by the first-run dump build; 0.7.6 installs: user-fixable in one step)
-The per-TL-year kernel dumps are generated at release time and are large; they
-are **not** shipped in the crates.io tarball. A from-source `cargo install
-latexml` therefore starts **dumpless** → the engine reconstructs kernel state
-from the base pool at startup (slower; the `LATEXML_NODUMP` parity path). The
-prebuilt GitHub-Release binaries remain the fast, dump-embedded distribution.
-
-**The user can generate them once — this already works, no code needed** (verified
-2026-07-17 against the maxperf binary in a simulated install layout, dev tree
-hidden). `--init` writes to `./resources/dumps/` (`ini_tex.rs` L240) and the loader's
-step 3 is `<exe_dir>/../resources/dumps` = `~/.cargo/resources/dumps` for a
-`cargo install`. So:
-
-```bash
-cd ~/.cargo && latexml_oxide --init=plain.tex && latexml_oxide --init=latex.ltx
-```
-
-writes `~/.cargo/resources/dumps/{plain,latex}.YYYY.dump.txt` and every later run
-finds them. (`LATEXML_DUMP_DIR` overrides the location; the engine's own
-no-dump error already says *"run `latexml_oxide --init=latex.ltx` to generate"*.)
-Documented in `docs/INSTALL.md`'s crates.io section.
-
-**Why not generate dumps from `build.rs` at `cargo install` time?** (Asked
-2026-07-17.) A dump is produced by *running the fully linked binary* (`make_formats.sh`
-builds `latexml_oxide`, *then* runs `--init`), but a build script runs before its own
-crate compiles and the binary is the graph's last node — an ordering cycle. The escape
-(`latexml_oxide/build.rs` + `[build-dependencies] latexml_engine`) compiles the engine
-a second time for the host, doubling exactly the crate split out to cut compile RAM,
-and inverts the embed wiring. It would also demand TeX Live at build time, turning
-today's *slower startup* into a hard `cargo install` **failure** (docs.rs has no TeX);
-and a dump baked at install goes stale on the next TL upgrade, whereas `--init` is
-simply re-run.
-
-**Follow-up:** auto-generate on first run into a persistent per-user dir, slotted
-into the existing fallback chain. Changes first-run behaviour (a surprise
-multi-second conversion + a disk write), so it wants its own design + test cycle.
+1. **B7 — the 10 MiB size cap is enforced only on upload.** The CDN in front of crates.io reports an oversized upload as
+   a bare `503 backend write error` with an empty body, not a `413 Payload Too Large`. If a publish 503s, suspect the
+   size first: `cargo package --list | wc -l`.
+2. **B8 — new crate names are rate-limited:** a burst of 5, then about one per 10 minutes, and `cargo publish
+   --workspace` aborts on the `429` instead of waiting. Finish with `cargo publish -p <crate>` per remaining crate as
+   the limit refills (the `429` names the retry time; `latexml` depends on `latexml_contrib`, so it goes last). This
+   applies only to new names; a version bump of an existing crate has a far looser limit.
 
 ---
 
-## 3. docs.rs & the `documentation` link — ✅ DONE (a)
+## 3. docs.rs and the `documentation` link
 
-docs.rs **auto-builds** docs on publish (nothing to upload) with a **nightly**
-compiler (so `#![feature(…)]` is fine) in a **no-network** sandbox that sets
-`DOCS_RS=1`. Our `build.rs` scripts are docs.rs-safe (git calls no-op without
-`.git`; committed `latex_dump.rs`/`plain_dump.rs`; missing resource dirs → empty
-compiling embeds). System `libxml2`/`libxslt` come from the docs.rs image;
-`kpathsea` 0.3 falls back to its subprocess backend without `libkpathsea`.
+docs.rs builds the docs on publish (nothing to upload), with a nightly compiler (so `#![feature(…)]` is fine), in a
+no-network sandbox that sets `DOCS_RS=1`. Our `build.rs` scripts are docs.rs-safe: git calls are no-ops without `.git`,
+`latex_dump.rs`/`plain_dump.rs` are committed, and a missing resource directory compiles to an empty embed.
+libxml2/libxslt come from the docs.rs image, and `kpathsea` 0.3 falls back to its subprocess backend without
+`libkpathsea`.
 
-`latexml/Cargo.toml` now has:
+`latexml_oxide/Cargo.toml` has:
 ```toml
 documentation = "https://dginev.github.io/latexml-oxide/latexml/"   # self-hosted rustdoc, always works
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
 ```
-The `documentation` link points at the **gh-pages rustdoc** (deployed by
-`.github/workflows/rustdoc.yml`) so the crate page links to working docs even if
-a docs.rs build ever regresses. (gh-pages, like the README badges, only serves
-publicly once the repo is public.)
+The `documentation` link points at the gh-pages rustdoc (deployed by `.github/workflows/rustdoc.yml` on every push to
+`main`), so the crate page links to working docs even if a docs.rs build regresses.
 
 ---
 
-## 4. Using `latexml` as a library — ✅ DONE (d)
+## 4. Using `latexml` as a library
 
-`latexml::api` is the batteries-included entrypoint — no binary, no manual
-`Config`/dispatch wiring:
+`latexml::api` is the batteries-included entry point, with no binary and no `Config` wiring:
 ```rust
 let xml  = latexml::api::convert_to_xml(tex)?;   // TeX → LaTeXML XML
 let html = latexml::api::convert_to_html(tex)?;  // TeX → HTML5 + Presentation MathML
+let opts = latexml::api::HtmlOptions::default().with_default_resources(false);
+let html = latexml::api::convert_to_html_with(tex, &opts)?; // no CSS/JS links, nothing written
 ```
-Each call runs on its own 256 MiB-stack worker thread and frees the
-thread-local engine (`reset_thread_engine`) before the thread exits. For finer
-control (preloads, search paths, `--whatsin`, split, encoding, …) drive
-`latexml::converter::Converter` + `latexml::post` directly. Runtime needs a TeX
-distribution on `PATH` just like the binary. (B3 landed before the first
-publication, so the published `latexml_post` builds.)
+`convert_to_html` links the bundled CSS/JS and, with no destination, writes them into the working directory;
+`with_default_resources(false)` is the `--nodefaultresources` equivalent. Each call runs on its own 256 MiB-stack worker
+thread and frees the thread-local engine (`reset_thread_engine`) before the thread exits. For finer control (preloads,
+search paths, `--whatsin`, split, encoding, …) drive `latexml::converter::Converter` and `latexml::post` directly. A TeX
+distribution must be on `PATH` at runtime, as for the binary.
 
-**Drift / unification.** `api` and the binary share the actual engine
-(`Converter` + `post::run_post_processing`) and the per-format stylesheet choice
-(`post::default_stylesheet`, the single source of truth). `PostOptions` has no
-`Default`, so a new field is a compile error in `api.rs` — it can't silently
-drift. The only high-level logic still living in the binary (not the library) is
-`bin/latexml_oxide.rs::real_main`'s CLI orchestration (archive/dir detection,
-split, zip packing, telemetry, watchdog, xml-input, whatsout).
-**TODO (tracked follow-up):** hoist that CLI-agnostic core into
-`latexml::api::run(config)` so the binary becomes a thin CLI shell and there is
-exactly one high-level conversion path. Deferred from the 2026-07-16 release
-prep as too broad to land safely against the release binary at that time.
+**One engine, two front ends.** `api` and the binary share the engine (`Converter` + `post::run_post_processing`) and
+the per-format stylesheet choice (`post::default_stylesheet`). `PostOptions` implements `Default`, so a new field does
+not force `api.rs` to set it: check `api.rs` when adding one. The CLI orchestration still lives only in the binary
+(`bin/latexml_oxide.rs::real_main`: archive and directory detection, split, zip packing, telemetry, the watchdog, XML
+input, `--whatsout`). **TODO:** hoist that CLI-agnostic core into `latexml::api::run(config)`, so the binary becomes a
+thin CLI shell and there is one high-level conversion path.
 
 ---
 
 ## 5. Publish checklist
 
-Code blockers: **all cleared** (B1, B2, B3a, B3b, B6, B7 done; B4 moot; B5
-superseded from 0.8.0 by the first-run dump build). Verified 2026-07-17: `cargo test --tests` **1581/0/0**,
-`cargo clippy --workspace --all-targets -- -D warnings` clean, self-containment
-smoke green for both XML and HTML with the whole `resources/` tree moved aside.
+Once per project (done): the repository is public, since `repository`/`homepage` on all 8 crates and every README badge
+point at `github.com/dginev/latexml-oxide` and a crates.io release is irreversible (yankable, never deletable); all 8
+names are registered to dginev.
 
-**One command *starts* it** — `cargo publish --workspace` (cargo 1.99) topo-sorts and
-publishes bottom-up, and handles the not-yet-published intra-workspace deps that make
-a per-crate `cargo publish -p <sibling>` fail ("no matching package named
-`latexml_codegen` found"). The order it picks matches §1 exactly: core → codegen →
-math_parser → engine → package → post → contrib → latexml.
+Per release, on the **stable** `X.Y.Z` tag, never an `-rc`:
 
-```bash
-cargo publish --workspace --dry-run     # all 8 package + verify; RC=0
-cargo publish --workspace               # the real thing
-```
-
-> **A green `--dry-run` does not mean the publish will succeed.** It aborts before
-> uploading, so it exercises neither the **10 MiB size cap** (B7) nor the **new-crate
-> rate limit** (B8). On 2026-07-17 the dry-run passed all 8 while the real publish
-> stopped at 5/8 on a 429, and the top crate could not have been accepted at any
-> point — it was 13.6 MiB against a 10 MiB cap. Both are now fixed/known, but treat
-> a green dry-run as "the *contents* are sound", not "this will go through".
-
-The first-ever publish (0.7.4) finished with per-crate `cargo publish -p <crate>`
-calls as rate-limit tokens refilled (B8). That was a one-time cost: all 8 names
-exist, so a release is version bumps under a much looser limit.
-
-0. [x] **Publish a STABLE version, not an `-rc`.** *(Honoured at 0.7.4; the rule
-       stands for every future release.)* When this was written crates.io held only
-       the placeholders `latexml` **0.0.1 / 0.0.2** (`max_stable_version: 0.0.2`);
-       it has tracked every stable release since (0.7.6 at the time of writing).
-       `cargo install` and `latexml = "0.7"` both **ignore pre-releases**, so
-       publishing `0.7.4-rc4` would leave `cargo install latexml` resolving to the
-       **0.0.2 placeholder** — while the README shipped inside that very crate tells
-       people to run exactly that command. Publishing an rc is worse than not
-       publishing. Tag `0.7.4-rc4` for the GitHub **draft prerelease** (what
-       `release.yml` does for `-*` tags: cross-OS testing, not a public release) and
-       do the crates.io publish on the **stable `0.7.4`** tag.
-1. [x] **Repo is public.** Done 2026-07-17.
-       `repository` / `homepage` on all 8 crates and every README badge point at
-       `github.com/dginev/latexml-oxide` — all 404 while it is private, and a
-       crates.io release is **irreversible** (yankable, never deletable; the version
-       number is burned). Flip visibility *before* publishing. The gh-pages
-       `documentation` link already serves (200).
-Per release (all done for 0.7.6 on 2026-08-23; repeat them every time):
-
-2. Bump every crate changed since the last release and every intra-workspace
-   `path`+`version` pin (`RELEASING.md` step 1).
+1. Bump every crate changed since the last release and every intra-workspace `path`+`version` pin (`RELEASING.md` step
+   1).
+2. `cargo check -p latexml --features cortex` (§2).
 3. `cargo publish --workspace --dry-run` clean.
-4. `cargo publish --workspace` (background it: the index waits are long), then
-   confirm each crate's `max_version` against the crates.io API — exit 0 alone is
-   not proof.
+4. `cargo publish --workspace` (background it: the index waits are long), then confirm each crate's `max_version`
+   against the crates.io API — exit 0 alone is not proof.
 5. Confirm docs.rs built `latexml` (the `documentation` link is the fallback).
-6. The `cargo install latexml` note (`docs/INSTALL.md` "From crates.io") still
-   carries the nightly, build-dependency and first-run dump caveats.
+6. Check that the `cargo install latexml` note (`docs/INSTALL.md` "From crates.io") still carries the nightly,
+   build-dependency and first-run dump caveats.
