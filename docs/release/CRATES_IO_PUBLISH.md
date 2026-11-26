@@ -40,7 +40,7 @@ behind the optional `cortex` feature.
 
 ## 2. Packaging rules
 
-These keep the crates publishable; each was a blocker once, and code comments cite their labels (B1–B8).
+These keep the crates publishable; each was a blocker once, and code comments cite their labels (B1–B3, B5–B8; B4, the name check, is done).
 
 - **B1 — every intra-workspace dependency carries `version` beside `path`.** crates.io rejects a bare `{ path = "…" }`;
   local builds still use the path.

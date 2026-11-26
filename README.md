@@ -47,7 +47,7 @@ option; [docs/USAGE.md](https://github.com/dginev/latexml-oxide/blob/main/docs/U
 Self-contained binaries for Linux, macOS and Windows are on the
 [Releases page](https://github.com/dginev/latexml-oxide/releases); Homebrew, a `.deb`, Docker and
 `cargo install latexml` work too. Raw packages, `expl3` and fonts need a TeX installation (TeX Live or MiKTeX).
-Steps per platform: [docs/INSTALL.md](https://github.com/dginev/latexml-oxide/blob/main/docs/INSTALL.md).
+Steps per platform, including how to run the unsigned Windows binary: [docs/INSTALL.md](https://github.com/dginev/latexml-oxide/blob/main/docs/INSTALL.md).
 
 ## Extending with Rhai
 
@@ -70,9 +70,12 @@ maps each Perl LaTeXML call to its Rhai form.
 
 ## License
 
-The source code and original resources are dedicated to the public domain under
-[CC0 1.0 Universal](https://github.com/dginev/latexml-oxide/blob/main/LICENSE). The release binaries also embed or link third-party material under its own license:
-TeX Live's format dumps (LaTeX kernel LPPL 1.3c; plain TeX, Knuth), libxml2/libxslt (MIT), libmarpa (MIT, with LGPL
-parts), libkpathsea (LGPL-2.1), `ar5iv.css` (MIT) and, on Windows, GNU libiconv (LGPL-2.1+). That material is attributed in
+latexml-oxide's source code and original resources are dedicated to the public domain under
+[CC0 1.0 Universal](https://github.com/dginev/latexml-oxide/blob/main/LICENSE).
+
+The release binaries also embed or link third-party material under its own license: TeX Live's format dumps (LaTeX
+kernel LPPL 1.3c; plain TeX, Knuth), libxml2/libxslt (MIT), libmarpa (MIT, with LGPL parts), libkpathsea
+(LGPL-2.1), `ar5iv.css` (MIT) and, on Windows, GNU libiconv (LGPL-2.1+). The CC0 dedication covers only the
+latexml-oxide source and original resources, **not** that third-party material. It is attributed in
 [`THIRD-PARTY-NOTICES`](https://github.com/dginev/latexml-oxide/blob/main/THIRD-PARTY-NOTICES), which ships with every download, and itemised in
 [`LICENSE_INVENTORY.md`](https://github.com/dginev/latexml-oxide/blob/main/docs/release/LICENSE_INVENTORY.md).

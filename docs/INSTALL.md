@@ -175,7 +175,7 @@ latexml = "0.8"
 ```rust
 use latexml::api::{HtmlOptions, convert_to_html, convert_to_html_with, convert_to_xml};
 let xml  = convert_to_xml(tex)?;   // TeX → LaTeXML XML
-let html = convert_to_html(tex)?;  // TeX → HTML5 + Presentation MathML; copies LaTeXML.css into the working directory
+let html = convert_to_html(tex)?;  // TeX → HTML5 + Presentation MathML; writes the bundled stylesheets (LaTeXML.css, ltx-<class>.css) into the working directory
 // The same HTML, writing no stylesheet and linking none:
 let html = convert_to_html_with(tex, &HtmlOptions::default().with_default_resources(false))?;
 ```

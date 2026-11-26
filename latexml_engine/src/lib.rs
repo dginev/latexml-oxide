@@ -5,7 +5,8 @@
 //! pdfTeX) and then the plain format; [`latex`] (`LaTeX.pool`) loads `TeX.pool` and then the LaTeX format. Each format
 //! loads in one of two ways, never both (Perl `Package.pm` `LoadFormat`):
 //!
-//! - `bootstrap → dump → constructs` when a format dump built from this TeX tree is found (e.g. [`plain_bootstrap`],
+//! - `bootstrap → dump → constructs` when a format dump built from this TeX tree is found and `LATEXML_NODUMP` is
+//!   unset (e.g. [`plain_bootstrap`],
 //!   [`plain_dump`], then `plain_constructs`, which also loads `math_common`), or
 //! - `bootstrap → base → constructs` otherwise (`plain_base`, [`latex_base`] in place of the dump).
 //!
