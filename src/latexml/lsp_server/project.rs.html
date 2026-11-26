@@ -178,7 +178,7 @@
 <a href=#178 id=178 data-nosnippet>178</a>}
 <a href=#179 id=179 data-nosnippet>179</a>
 <a href=#180 id=180 data-nosnippet>180</a><span class="kw">impl </span>RootCache {
-<a href=#181 id=181 data-nosnippet>181</a>  <span class="doccomment">/// `find_main_tex(dir)`, cached on the directory's mtime.
+<a href=#181 id=181 data-nosnippet>181</a>  <span class="doccomment">/// `find_main_tex(dir)` without its warnings, cached on the directory's mtime.
 <a href=#182 id=182 data-nosnippet>182</a>  </span><span class="kw">fn </span>detect_dir(<span class="kw-2">&amp;mut </span><span class="self">self</span>, dir: <span class="kw-2">&amp;</span>Path) -&gt; <span class="prelude-ty">Option</span>&lt;PathBuf&gt; {
 <a href=#183 id=183 data-nosnippet>183</a>    <span class="kw">let </span>mtime = dir_mtime(dir);
 <a href=#184 id=184 data-nosnippet>184</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(cached) = <span class="self">self</span>.map.get(dir)
@@ -187,7 +187,7 @@
 <a href=#187 id=187 data-nosnippet>187</a>      <span class="kw">return </span>cached.root.clone();
 <a href=#188 id=188 data-nosnippet>188</a>    }
 <a href=#189 id=189 data-nosnippet>189</a>    <span class="kw">let </span>root = <span class="kw">if </span>dir_has_tex(dir) {
-<a href=#190 id=190 data-nosnippet>190</a>      <span class="kw">crate</span>::main_tex::find_main_tex(dir)
+<a href=#190 id=190 data-nosnippet>190</a>      <span class="kw">crate</span>::main_tex::main_tex_in(dir, <span class="bool-val">false</span>)
 <a href=#191 id=191 data-nosnippet>191</a>        .ok()
 <a href=#192 id=192 data-nosnippet>192</a>        .map(|p| normalize_path(<span class="kw-2">&amp;</span>p))
 <a href=#193 id=193 data-nosnippet>193</a>    } <span class="kw">else </span>{
@@ -389,28 +389,43 @@
 <a href=#389 id=389 data-nosnippet>389</a>    );
 <a href=#390 id=390 data-nosnippet>390</a>  }
 <a href=#391 id=391 data-nosnippet>391</a>
-<a href=#392 id=392 data-nosnippet>392</a>  <span class="attr">#[test]
-<a href=#393 id=393 data-nosnippet>393</a>  </span><span class="kw">fn </span>same_project_membership() {
-<a href=#394 id=394 data-nosnippet>394</a>    <span class="kw">let </span>root = Path::new(<span class="string">"/proj/main.tex"</span>);
-<a href=#395 id=395 data-nosnippet>395</a>    <span class="macro">assert!</span>(same_project(root, Path::new(<span class="string">"/proj/sections/ch2.tex"</span>)));
-<a href=#396 id=396 data-nosnippet>396</a>    <span class="macro">assert!</span>(same_project(root, Path::new(<span class="string">"/proj/macros.sty"</span>)));
-<a href=#397 id=397 data-nosnippet>397</a>    <span class="macro">assert!</span>(!same_project(root, Path::new(<span class="string">"/elsewhere/doc.tex"</span>)));
-<a href=#398 id=398 data-nosnippet>398</a>  }
-<a href=#399 id=399 data-nosnippet>399</a>
-<a href=#400 id=400 data-nosnippet>400</a>  <span class="attr">#[test]
-<a href=#401 id=401 data-nosnippet>401</a>  </span><span class="kw">fn </span>references_buffer_token_boundaries() {
-<a href=#402 id=402 data-nosnippet>402</a>    <span class="kw">let </span>buf = Path::new(<span class="string">"/p/sections/ch2.tex"</span>);
-<a href=#403 id=403 data-nosnippet>403</a>    <span class="macro">assert!</span>(references_buffer(<span class="string">"\\input{sections/ch2}"</span>, buf));
-<a href=#404 id=404 data-nosnippet>404</a>    <span class="macro">assert!</span>(references_buffer(<span class="string">"\\include{ch2}"</span>, buf));
-<a href=#405 id=405 data-nosnippet>405</a>    <span class="macro">assert!</span>(
-<a href=#406 id=406 data-nosnippet>406</a>      !references_buffer(<span class="string">"\\input{ch20}"</span>, buf),
-<a href=#407 id=407 data-nosnippet>407</a>      <span class="string">"ch2 must not match ch20"
-<a href=#408 id=408 data-nosnippet>408</a>    </span>);
-<a href=#409 id=409 data-nosnippet>409</a>    <span class="macro">assert!</span>(
-<a href=#410 id=410 data-nosnippet>410</a>      !references_buffer(<span class="string">"% \\input{ch2}"</span>, buf),
-<a href=#411 id=411 data-nosnippet>411</a>      <span class="string">"commented include ignored"
-<a href=#412 id=412 data-nosnippet>412</a>    </span>);
-<a href=#413 id=413 data-nosnippet>413</a>    <span class="macro">assert!</span>(!references_buffer(<span class="string">"plain ch2 mention without input"</span>, buf));
-<a href=#414 id=414 data-nosnippet>414</a>  }
-<a href=#415 id=415 data-nosnippet>415</a>}
+<a href=#392 id=392 data-nosnippet>392</a>  <span class="doccomment">/// Detection reads a `00README` without its warnings: held for a conversion's log, they would only pile up here.
+<a href=#393 id=393 data-nosnippet>393</a>  </span><span class="attr">#[test]
+<a href=#394 id=394 data-nosnippet>394</a>  </span><span class="kw">fn </span>detection_holds_no_readme_warnings() {
+<a href=#395 id=395 data-nosnippet>395</a>    <span class="kw">use </span>latexml_core::common::error::{LogStatus, get_status, log_session_warnings};
+<a href=#396 id=396 data-nosnippet>396</a>    <span class="kw">let </span>tmp = tempfile::tempdir().unwrap();
+<a href=#397 id=397 data-nosnippet>397</a>    <span class="kw">let </span>dir = fenced_dir(<span class="kw-2">&amp;</span>tmp);
+<a href=#398 id=398 data-nosnippet>398</a>    <span class="kw">let </span>main = write(<span class="kw-2">&amp;</span>dir, <span class="string">"main.tex"</span>, <span class="string">"\\documentclass{article}"</span>);
+<a href=#399 id=399 data-nosnippet>399</a>    write(<span class="kw-2">&amp;</span>dir, <span class="string">"00README.XXX"</span>, <span class="string">"../outside.tex toplevelfile\n"</span>);
+<a href=#400 id=400 data-nosnippet>400</a>    <span class="kw">let </span><span class="kw-2">mut </span>cache = RootCache::default();
+<a href=#401 id=401 data-nosnippet>401</a>    <span class="macro">assert_eq!</span>(cache.detect_dir(<span class="kw-2">&amp;</span>dir), <span class="prelude-val">Some</span>(normalize_path(<span class="kw-2">&amp;</span>main)));
+<a href=#402 id=402 data-nosnippet>402</a>    <span class="kw">let </span>before = get_status(LogStatus::Warning);
+<a href=#403 id=403 data-nosnippet>403</a>    log_session_warnings();
+<a href=#404 id=404 data-nosnippet>404</a>    <span class="macro">assert_eq!</span>(get_status(LogStatus::Warning), before);
+<a href=#405 id=405 data-nosnippet>405</a>  }
+<a href=#406 id=406 data-nosnippet>406</a>
+<a href=#407 id=407 data-nosnippet>407</a>  <span class="attr">#[test]
+<a href=#408 id=408 data-nosnippet>408</a>  </span><span class="kw">fn </span>same_project_membership() {
+<a href=#409 id=409 data-nosnippet>409</a>    <span class="kw">let </span>root = Path::new(<span class="string">"/proj/main.tex"</span>);
+<a href=#410 id=410 data-nosnippet>410</a>    <span class="macro">assert!</span>(same_project(root, Path::new(<span class="string">"/proj/sections/ch2.tex"</span>)));
+<a href=#411 id=411 data-nosnippet>411</a>    <span class="macro">assert!</span>(same_project(root, Path::new(<span class="string">"/proj/macros.sty"</span>)));
+<a href=#412 id=412 data-nosnippet>412</a>    <span class="macro">assert!</span>(!same_project(root, Path::new(<span class="string">"/elsewhere/doc.tex"</span>)));
+<a href=#413 id=413 data-nosnippet>413</a>  }
+<a href=#414 id=414 data-nosnippet>414</a>
+<a href=#415 id=415 data-nosnippet>415</a>  <span class="attr">#[test]
+<a href=#416 id=416 data-nosnippet>416</a>  </span><span class="kw">fn </span>references_buffer_token_boundaries() {
+<a href=#417 id=417 data-nosnippet>417</a>    <span class="kw">let </span>buf = Path::new(<span class="string">"/p/sections/ch2.tex"</span>);
+<a href=#418 id=418 data-nosnippet>418</a>    <span class="macro">assert!</span>(references_buffer(<span class="string">"\\input{sections/ch2}"</span>, buf));
+<a href=#419 id=419 data-nosnippet>419</a>    <span class="macro">assert!</span>(references_buffer(<span class="string">"\\include{ch2}"</span>, buf));
+<a href=#420 id=420 data-nosnippet>420</a>    <span class="macro">assert!</span>(
+<a href=#421 id=421 data-nosnippet>421</a>      !references_buffer(<span class="string">"\\input{ch20}"</span>, buf),
+<a href=#422 id=422 data-nosnippet>422</a>      <span class="string">"ch2 must not match ch20"
+<a href=#423 id=423 data-nosnippet>423</a>    </span>);
+<a href=#424 id=424 data-nosnippet>424</a>    <span class="macro">assert!</span>(
+<a href=#425 id=425 data-nosnippet>425</a>      !references_buffer(<span class="string">"% \\input{ch2}"</span>, buf),
+<a href=#426 id=426 data-nosnippet>426</a>      <span class="string">"commented include ignored"
+<a href=#427 id=427 data-nosnippet>427</a>    </span>);
+<a href=#428 id=428 data-nosnippet>428</a>    <span class="macro">assert!</span>(!references_buffer(<span class="string">"plain ch2 mention without input"</span>, buf));
+<a href=#429 id=429 data-nosnippet>429</a>  }
+<a href=#430 id=430 data-nosnippet>430</a>}
 </code></pre></div></section></main></body></html>

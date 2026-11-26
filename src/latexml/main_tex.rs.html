@@ -32,38 +32,38 @@
 <a href=#32 id=32 data-nosnippet>32</a>/// `dir`. Errors carry a human-readable diagnostic on `Fatal:` failure
 <a href=#33 id=33 data-nosnippet>33</a>/// modes (PDF mis-named as TeX, only `%auto-ignore` files, no TeX at
 <a href=#34 id=34 data-nosnippet>34</a>/// all).
-<a href=#35 id=35 data-nosnippet>35</a></span><span class="kw">pub fn </span>find_main_tex(dir: <span class="kw-2">&amp;</span>Path) -&gt; <span class="prelude-ty">Result</span>&lt;PathBuf, String&gt; {
-<a href=#36 id=36 data-nosnippet>36</a>  <span class="comment">// Phase I.1: Check 00README.json (2025 arXiv format)
-<a href=#37 id=37 data-nosnippet>37</a>  // Format: { "sources": [{"filename": "main.tex", "usage": "toplevel"}, ...] }
-<a href=#38 id=38 data-nosnippet>38</a>  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(filename) = parse_readme_json(dir) {
-<a href=#39 id=39 data-nosnippet>39</a>    <span class="kw">let </span>main_path = dir.join(<span class="kw-2">&amp;</span>filename);
-<a href=#40 id=40 data-nosnippet>40</a>    <span class="kw">if </span>main_path.exists() {
-<a href=#41 id=41 data-nosnippet>41</a>      <span class="kw">return </span><span class="prelude-val">Ok</span>(main_path);
-<a href=#42 id=42 data-nosnippet>42</a>    }
-<a href=#43 id=43 data-nosnippet>43</a>  }
-<a href=#44 id=44 data-nosnippet>44</a>
-<a href=#45 id=45 data-nosnippet>45</a>  <span class="comment">// Phase I.1.2: Check 00README.XXX (legacy arXiv format).
-<a href=#46 id=46 data-nosnippet>46</a>  // Two directive kinds supported (Perl Pack.pm L82-97):
-<a href=#47 id=47 data-nosnippet>47</a>  //   `&lt;name&gt; toplevelfile` → shortcut, return directly.
-<a href=#48 id=48 data-nosnippet>48</a>  //   `&lt;name&gt; ignore`       → exclude `&lt;name&gt;` from heuristic
-<a href=#49 id=49 data-nosnippet>49</a>  //                            candidate scanning below.
-<a href=#50 id=50 data-nosnippet>50</a>  // Perl additionally `unlink`s the ignored path; we instead carry
-<a href=#51 id=51 data-nosnippet>51</a>  // the names through as a Phase-I.2 filter set — safer (no
-<a href=#52 id=52 data-nosnippet>52</a>  // filesystem mutation in case the directory isn't a sandbox).
-<a href=#53 id=53 data-nosnippet>53</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>ignored_names: rustc_hash::FxHashSet&lt;PathBuf&gt; = rustc_hash::FxHashSet::default();
-<a href=#54 id=54 data-nosnippet>54</a>  <span class="kw">let </span>readme_xxx = dir.join(<span class="string">"00README.XXX"</span>);
-<a href=#55 id=55 data-nosnippet>55</a>  <span class="kw">if </span>readme_xxx.exists()
-<a href=#56 id=56 data-nosnippet>56</a>    &amp;&amp; <span class="kw">let </span><span class="prelude-val">Ok</span>(content) = std::fs::read_to_string(<span class="kw-2">&amp;</span>readme_xxx)
-<a href=#57 id=57 data-nosnippet>57</a>  {
-<a href=#58 id=58 data-nosnippet>58</a>    <span class="kw">for </span>line <span class="kw">in </span>content.lines() {
-<a href=#59 id=59 data-nosnippet>59</a>      <span class="kw">let </span>parts: Vec&lt;<span class="kw-2">&amp;</span>str&gt; = line.split_whitespace().collect();
-<a href=#60 id=60 data-nosnippet>60</a>      <span class="kw">if </span>parts.len() &lt; <span class="number">2 </span>{
-<a href=#61 id=61 data-nosnippet>61</a>        <span class="kw">continue</span>;
-<a href=#62 id=62 data-nosnippet>62</a>      }
-<a href=#63 id=63 data-nosnippet>63</a>      <span class="kw">match </span>parts[<span class="number">1</span>] {
-<a href=#64 id=64 data-nosnippet>64</a>        <span class="string">"toplevelfile" </span>=&gt; {
-<a href=#65 id=65 data-nosnippet>65</a>          <span class="kw">let </span>main_path = dir.join(parts[<span class="number">0</span>]);
-<a href=#66 id=66 data-nosnippet>66</a>          <span class="kw">if </span>main_path.exists() {
+<a href=#35 id=35 data-nosnippet>35</a></span><span class="kw">pub fn </span>find_main_tex(dir: <span class="kw-2">&amp;</span>Path) -&gt; <span class="prelude-ty">Result</span>&lt;PathBuf, String&gt; { main_tex_in(dir, <span class="bool-val">true</span>) }
+<a href=#36 id=36 data-nosnippet>36</a>
+<a href=#37 id=37 data-nosnippet>37</a><span class="doccomment">/// [`find_main_tex`]; `report` warns of a `00README` entry outside `dir` ([`readme_entry`]) — the language server's
+<a href=#38 id=38 data-nosnippet>38</a>/// detection passes false, as its warnings would only pile up unreported.
+<a href=#39 id=39 data-nosnippet>39</a></span><span class="kw">pub fn </span>main_tex_in(dir: <span class="kw-2">&amp;</span>Path, report: bool) -&gt; <span class="prelude-ty">Result</span>&lt;PathBuf, String&gt; {
+<a href=#40 id=40 data-nosnippet>40</a>  <span class="comment">// Phase I.1: Check 00README.json (2025 arXiv format)
+<a href=#41 id=41 data-nosnippet>41</a>  // Format: { "sources": [{"filename": "main.tex", "usage": "toplevel"}, ...] }
+<a href=#42 id=42 data-nosnippet>42</a>  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(main_path) = parse_readme_json(dir).and_then(|name| entry_in(dir, <span class="kw-2">&amp;</span>name, report)) {
+<a href=#43 id=43 data-nosnippet>43</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(main_path);
+<a href=#44 id=44 data-nosnippet>44</a>  }
+<a href=#45 id=45 data-nosnippet>45</a>
+<a href=#46 id=46 data-nosnippet>46</a>  <span class="comment">// Phase I.1.2: Check 00README.XXX (legacy arXiv format).
+<a href=#47 id=47 data-nosnippet>47</a>  // Two directive kinds supported (Perl Pack.pm L82-97):
+<a href=#48 id=48 data-nosnippet>48</a>  //   `&lt;name&gt; toplevelfile` → shortcut, return directly.
+<a href=#49 id=49 data-nosnippet>49</a>  //   `&lt;name&gt; ignore`       → exclude `&lt;name&gt;` from heuristic
+<a href=#50 id=50 data-nosnippet>50</a>  //                            candidate scanning below.
+<a href=#51 id=51 data-nosnippet>51</a>  // Perl additionally `unlink`s the ignored path; we instead carry
+<a href=#52 id=52 data-nosnippet>52</a>  // the names through as a Phase-I.2 filter set — safer (no
+<a href=#53 id=53 data-nosnippet>53</a>  // filesystem mutation in case the directory isn't a sandbox).
+<a href=#54 id=54 data-nosnippet>54</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>ignored_names: rustc_hash::FxHashSet&lt;PathBuf&gt; = rustc_hash::FxHashSet::default();
+<a href=#55 id=55 data-nosnippet>55</a>  <span class="kw">let </span>readme_xxx = dir.join(<span class="string">"00README.XXX"</span>);
+<a href=#56 id=56 data-nosnippet>56</a>  <span class="kw">if </span>readme_xxx.exists()
+<a href=#57 id=57 data-nosnippet>57</a>    &amp;&amp; <span class="kw">let </span><span class="prelude-val">Ok</span>(content) = std::fs::read_to_string(<span class="kw-2">&amp;</span>readme_xxx)
+<a href=#58 id=58 data-nosnippet>58</a>  {
+<a href=#59 id=59 data-nosnippet>59</a>    <span class="kw">for </span>line <span class="kw">in </span>content.lines() {
+<a href=#60 id=60 data-nosnippet>60</a>      <span class="kw">let </span>parts: Vec&lt;<span class="kw-2">&amp;</span>str&gt; = line.split_whitespace().collect();
+<a href=#61 id=61 data-nosnippet>61</a>      <span class="kw">if </span>parts.len() &lt; <span class="number">2 </span>{
+<a href=#62 id=62 data-nosnippet>62</a>        <span class="kw">continue</span>;
+<a href=#63 id=63 data-nosnippet>63</a>      }
+<a href=#64 id=64 data-nosnippet>64</a>      <span class="kw">match </span>parts[<span class="number">1</span>] {
+<a href=#65 id=65 data-nosnippet>65</a>        <span class="string">"toplevelfile" </span>=&gt; {
+<a href=#66 id=66 data-nosnippet>66</a>          <span class="kw">if let </span><span class="prelude-val">Some</span>(main_path) = entry_in(dir, parts[<span class="number">0</span>], report) {
 <a href=#67 id=67 data-nosnippet>67</a>            <span class="kw">return </span><span class="prelude-val">Ok</span>(main_path);
 <a href=#68 id=68 data-nosnippet>68</a>          }
 <a href=#69 id=69 data-nosnippet>69</a>        },
@@ -383,698 +383,825 @@
 <a href=#383 id=383 data-nosnippet>383</a>  <span class="kw">if </span>explicit.len() &gt;= <span class="number">2 </span>{
 <a href=#384 id=384 data-nosnippet>384</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(order_main_first(explicit, dir));
 <a href=#385 id=385 data-nosnippet>385</a>  }
-<a href=#386 id=386 data-nosnippet>386</a>  <span class="kw">let </span>main = find_main_tex(dir)<span class="question-mark">?</span>;
-<a href=#387 id=387 data-nosnippet>387</a>  <span class="comment">// The set of `.bbl`-backed top-level documents at the main's depth — arXiv's
-<a href=#388 id=388 data-nosnippet>388</a>  // multi-top-level fingerprint. Include `main` even if it ships no `.bbl`
-<a href=#389 id=389 data-nosnippet>389</a>  // (inline bibliography) so a `.bbl`-backed supplement can still attach to it.
-<a href=#390 id=390 data-nosnippet>390</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>set = top_level_bbl_docs(dir, <span class="kw-2">&amp;</span>main);
-<a href=#391 id=391 data-nosnippet>391</a>  <span class="kw">if </span>!set.contains(<span class="kw-2">&amp;</span>main) {
-<a href=#392 id=392 data-nosnippet>392</a>    set.push(main.clone());
-<a href=#393 id=393 data-nosnippet>393</a>  }
-<a href=#394 id=394 data-nosnippet>394</a>  <span class="comment">// Split into the single true main (the lone non-supplement) and supplements.
-<a href=#395 id=395 data-nosnippet>395</a>  // This is done over the whole set rather than trusting `find_main_tex`'s
-<a href=#396 id=396 data-nosnippet>396</a>  // alphabetical tie-break, which can pick a supplement (e.g. `Appendix.tex`
-<a href=#397 id=397 data-nosnippet>397</a>  // sorts before `Note.tex`) when two `.bbl` documents are otherwise level.
-<a href=#398 id=398 data-nosnippet>398</a>  </span><span class="kw">let </span>(<span class="kw-2">mut </span>supps, mains): (Vec&lt;PathBuf&gt;, Vec&lt;PathBuf&gt;) =
-<a href=#399 id=399 data-nosnippet>399</a>    set.into_iter().partition(|f| is_supplement(f));
-<a href=#400 id=400 data-nosnippet>400</a>  <span class="kw">if </span>mains.len() == <span class="number">1 </span>&amp;&amp; !supps.is_empty() {
-<a href=#401 id=401 data-nosnippet>401</a>    supps.sort();
-<a href=#402 id=402 data-nosnippet>402</a>    supps.dedup();
-<a href=#403 id=403 data-nosnippet>403</a>    <span class="kw">let </span><span class="kw-2">mut </span>tops = mains;
-<a href=#404 id=404 data-nosnippet>404</a>    tops.extend(supps);
-<a href=#405 id=405 data-nosnippet>405</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(tops);
-<a href=#406 id=406 data-nosnippet>406</a>  }
-<a href=#407 id=407 data-nosnippet>407</a>  <span class="comment">// No clean 1-main + supplements split → single-file (unchanged behavior).
-<a href=#408 id=408 data-nosnippet>408</a>  </span><span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[main])
-<a href=#409 id=409 data-nosnippet>409</a>}
-<a href=#410 id=410 data-nosnippet>410</a>
-<a href=#411 id=411 data-nosnippet>411</a><span class="comment">// ---------------------------------------------------------------------------
-<a href=#412 id=412 data-nosnippet>412</a>// Internal helpers.
-<a href=#413 id=413 data-nosnippet>413</a>// ---------------------------------------------------------------------------
-<a href=#414 id=414 data-nosnippet>414</a>
-<a href=#415 id=415 data-nosnippet>415</a></span><span class="kw">fn </span>s(msg: <span class="kw-2">&amp;</span>str) -&gt; String { msg.to_string() }
-<a href=#416 id=416 data-nosnippet>416</a>
-<a href=#417 id=417 data-nosnippet>417</a><span class="doccomment">/// All files a `00README.json`/`00README.XXX` explicitly marks as top-level, in
-<a href=#418 id=418 data-nosnippet>418</a>/// listed order, restricted to those that exist (main-first ordering applied by
-<a href=#419 id=419 data-nosnippet>419</a>/// the caller). Empty when there is no explicit designation.
-<a href=#420 id=420 data-nosnippet>420</a></span><span class="kw">fn </span>explicit_top_levels(dir: <span class="kw-2">&amp;</span>Path) -&gt; Vec&lt;PathBuf&gt; {
-<a href=#421 id=421 data-nosnippet>421</a>  <span class="kw">let </span><span class="kw-2">mut </span>out: Vec&lt;PathBuf&gt; = Vec::new();
-<a href=#422 id=422 data-nosnippet>422</a>  <span class="kw">for </span>name <span class="kw">in </span>parse_readme_json_all(dir) {
-<a href=#423 id=423 data-nosnippet>423</a>    <span class="kw">let </span>p = dir.join(<span class="kw-2">&amp;</span>name);
-<a href=#424 id=424 data-nosnippet>424</a>    <span class="kw">if </span>p.exists() &amp;&amp; !out.contains(<span class="kw-2">&amp;</span>p) {
-<a href=#425 id=425 data-nosnippet>425</a>      out.push(p);
-<a href=#426 id=426 data-nosnippet>426</a>    }
-<a href=#427 id=427 data-nosnippet>427</a>  }
-<a href=#428 id=428 data-nosnippet>428</a>  <span class="kw">let </span>readme_xxx = dir.join(<span class="string">"00README.XXX"</span>);
-<a href=#429 id=429 data-nosnippet>429</a>  <span class="kw">if let </span><span class="prelude-val">Ok</span>(content) = std::fs::read_to_string(<span class="kw-2">&amp;</span>readme_xxx) {
-<a href=#430 id=430 data-nosnippet>430</a>    <span class="kw">for </span>line <span class="kw">in </span>content.lines() {
-<a href=#431 id=431 data-nosnippet>431</a>      <span class="kw">let </span>parts: Vec&lt;<span class="kw-2">&amp;</span>str&gt; = line.split_whitespace().collect();
-<a href=#432 id=432 data-nosnippet>432</a>      <span class="kw">if </span>parts.len() &gt;= <span class="number">2 </span>&amp;&amp; parts[<span class="number">1</span>] == <span class="string">"toplevelfile" </span>{
-<a href=#433 id=433 data-nosnippet>433</a>        <span class="kw">let </span>p = dir.join(parts[<span class="number">0</span>]);
-<a href=#434 id=434 data-nosnippet>434</a>        <span class="kw">if </span>p.exists() &amp;&amp; !out.contains(<span class="kw-2">&amp;</span>p) {
-<a href=#435 id=435 data-nosnippet>435</a>          out.push(p);
-<a href=#436 id=436 data-nosnippet>436</a>        }
-<a href=#437 id=437 data-nosnippet>437</a>      }
-<a href=#438 id=438 data-nosnippet>438</a>    }
+<a href=#386 id=386 data-nosnippet>386</a>  <span class="comment">// `explicit_top_levels` has warned of every `00README` entry outside `dir` already.
+<a href=#387 id=387 data-nosnippet>387</a>  </span><span class="kw">let </span>main = main_tex_in(dir, <span class="bool-val">false</span>)<span class="question-mark">?</span>;
+<a href=#388 id=388 data-nosnippet>388</a>  <span class="comment">// The set of `.bbl`-backed top-level documents at the main's depth — arXiv's
+<a href=#389 id=389 data-nosnippet>389</a>  // multi-top-level fingerprint. Include `main` even if it ships no `.bbl`
+<a href=#390 id=390 data-nosnippet>390</a>  // (inline bibliography) so a `.bbl`-backed supplement can still attach to it.
+<a href=#391 id=391 data-nosnippet>391</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>set = top_level_bbl_docs(dir, <span class="kw-2">&amp;</span>main);
+<a href=#392 id=392 data-nosnippet>392</a>  <span class="kw">if </span>!set.contains(<span class="kw-2">&amp;</span>main) {
+<a href=#393 id=393 data-nosnippet>393</a>    set.push(main.clone());
+<a href=#394 id=394 data-nosnippet>394</a>  }
+<a href=#395 id=395 data-nosnippet>395</a>  <span class="comment">// Split into the single true main (the lone non-supplement) and supplements.
+<a href=#396 id=396 data-nosnippet>396</a>  // This is done over the whole set rather than trusting `find_main_tex`'s
+<a href=#397 id=397 data-nosnippet>397</a>  // alphabetical tie-break, which can pick a supplement (e.g. `Appendix.tex`
+<a href=#398 id=398 data-nosnippet>398</a>  // sorts before `Note.tex`) when two `.bbl` documents are otherwise level.
+<a href=#399 id=399 data-nosnippet>399</a>  </span><span class="kw">let </span>(<span class="kw-2">mut </span>supps, mains): (Vec&lt;PathBuf&gt;, Vec&lt;PathBuf&gt;) =
+<a href=#400 id=400 data-nosnippet>400</a>    set.into_iter().partition(|f| is_supplement(f));
+<a href=#401 id=401 data-nosnippet>401</a>  <span class="kw">if </span>mains.len() == <span class="number">1 </span>&amp;&amp; !supps.is_empty() {
+<a href=#402 id=402 data-nosnippet>402</a>    supps.sort();
+<a href=#403 id=403 data-nosnippet>403</a>    supps.dedup();
+<a href=#404 id=404 data-nosnippet>404</a>    <span class="kw">let </span><span class="kw-2">mut </span>tops = mains;
+<a href=#405 id=405 data-nosnippet>405</a>    tops.extend(supps);
+<a href=#406 id=406 data-nosnippet>406</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(tops);
+<a href=#407 id=407 data-nosnippet>407</a>  }
+<a href=#408 id=408 data-nosnippet>408</a>  <span class="comment">// No clean 1-main + supplements split → single-file (unchanged behavior).
+<a href=#409 id=409 data-nosnippet>409</a>  </span><span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[main])
+<a href=#410 id=410 data-nosnippet>410</a>}
+<a href=#411 id=411 data-nosnippet>411</a>
+<a href=#412 id=412 data-nosnippet>412</a><span class="comment">// ---------------------------------------------------------------------------
+<a href=#413 id=413 data-nosnippet>413</a>// Internal helpers.
+<a href=#414 id=414 data-nosnippet>414</a>// ---------------------------------------------------------------------------
+<a href=#415 id=415 data-nosnippet>415</a>
+<a href=#416 id=416 data-nosnippet>416</a></span><span class="kw">fn </span>s(msg: <span class="kw-2">&amp;</span>str) -&gt; String { msg.to_string() }
+<a href=#417 id=417 data-nosnippet>417</a>
+<a href=#418 id=418 data-nosnippet>418</a><span class="doccomment">/// The file `name` a `00README` marks top-level, inside `dir`; `None` when it is not a file (`.`, a folder), or, with a
+<a href=#419 id=419 data-nosnippet>419</a>/// `Warning:archive:path`, when `name` is absolute, has a `..` or resolves outside `dir` (Perl `Util/Pack.pm`
+<a href=#420 id=420 data-nosnippet>420</a>/// `detect_source` L78, L93; OXIDIZED_DESIGN_DIVERGENCES #1166).
+<a href=#421 id=421 data-nosnippet>421</a></span><span class="kw">pub fn </span>readme_entry(dir: <span class="kw-2">&amp;</span>Path, name: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;PathBuf&gt; { entry_in(dir, name, <span class="bool-val">true</span>) }
+<a href=#422 id=422 data-nosnippet>422</a>
+<a href=#423 id=423 data-nosnippet>423</a><span class="doccomment">/// [`readme_entry`], warning only when `report`.
+<a href=#424 id=424 data-nosnippet>424</a></span><span class="kw">fn </span>entry_in(dir: <span class="kw-2">&amp;</span>Path, name: <span class="kw-2">&amp;</span>str, report: bool) -&gt; <span class="prelude-ty">Option</span>&lt;PathBuf&gt; {
+<a href=#425 id=425 data-nosnippet>425</a>  <span class="kw">use </span>std::path::Component;
+<a href=#426 id=426 data-nosnippet>426</a>  <span class="kw">let </span>climbs = Path::new(name).components().any(|c| {
+<a href=#427 id=427 data-nosnippet>427</a>    <span class="macro">matches!</span>(
+<a href=#428 id=428 data-nosnippet>428</a>      c,
+<a href=#429 id=429 data-nosnippet>429</a>      Component::ParentDir | Component::RootDir | Component::Prefix(<span class="kw">_</span>)
+<a href=#430 id=430 data-nosnippet>430</a>    )
+<a href=#431 id=431 data-nosnippet>431</a>  });
+<a href=#432 id=432 data-nosnippet>432</a>  <span class="kw">let </span>path = dir.join(name);
+<a href=#433 id=433 data-nosnippet>433</a>  <span class="kw">if </span>!climbs &amp;&amp; !path.is_file() {
+<a href=#434 id=434 data-nosnippet>434</a>    <span class="kw">return </span><span class="prelude-val">None</span>;
+<a href=#435 id=435 data-nosnippet>435</a>  }
+<a href=#436 id=436 data-nosnippet>436</a>  <span class="kw">let </span>inside = !climbs &amp;&amp; latexml_core::util::pathname::opens_inside(<span class="kw-2">&amp;</span>path, dir) == <span class="prelude-val">Some</span>(<span class="bool-val">true</span>);
+<a href=#437 id=437 data-nosnippet>437</a>  <span class="kw">if </span>inside {
+<a href=#438 id=438 data-nosnippet>438</a>    <span class="kw">return </span><span class="prelude-val">Some</span>(path);
 <a href=#439 id=439 data-nosnippet>439</a>  }
-<a href=#440 id=440 data-nosnippet>440</a>  out
-<a href=#441 id=441 data-nosnippet>441</a>}
-<a href=#442 id=442 data-nosnippet>442</a>
-<a href=#443 id=443 data-nosnippet>443</a><span class="doccomment">/// The set of `.bbl`-backed top-level documents at `main`'s depth: `\document`-
-<a href=#444 id=444 data-nosnippet>444</a>/// class files that carry their own sibling `.bbl` (arXiv's own top-level
-<a href=#445 id=445 data-nosnippet>445</a>/// fingerprint, which bundled templates lack), excluding `%auto-ignore` and
-<a href=#446 id=446 data-nosnippet>446</a>/// `00README` `ignore` files. `main` itself is included when it qualifies.
-<a href=#447 id=447 data-nosnippet>447</a></span><span class="kw">fn </span>top_level_bbl_docs(dir: <span class="kw-2">&amp;</span>Path, main: <span class="kw-2">&amp;</span>Path) -&gt; Vec&lt;PathBuf&gt; {
-<a href=#448 id=448 data-nosnippet>448</a>  <span class="kw">let </span>main_depth = main.strip_prefix(dir).unwrap_or(main).components().count();
-<a href=#449 id=449 data-nosnippet>449</a>  <span class="kw">let </span>ignored = readme_ignored(dir);
-<a href=#450 id=450 data-nosnippet>450</a>  <span class="kw">let </span><span class="kw-2">mut </span>tex_files: Vec&lt;PathBuf&gt; = Vec::new();
-<a href=#451 id=451 data-nosnippet>451</a>  collect_tex_files(dir, <span class="kw-2">&amp;mut </span>tex_files, <span class="bool-val">false</span>);
-<a href=#452 id=452 data-nosnippet>452</a>  tex_files
-<a href=#453 id=453 data-nosnippet>453</a>    .into_iter()
-<a href=#454 id=454 data-nosnippet>454</a>    .filter(|f| f.strip_prefix(dir).unwrap_or(f).components().count() == main_depth)
-<a href=#455 id=455 data-nosnippet>455</a>    .filter(|f| !ignored.contains(f))
-<a href=#456 id=456 data-nosnippet>456</a>    .filter(|f| !has_auto_ignore(f))
-<a href=#457 id=457 data-nosnippet>457</a>    .filter(|f| f.with_extension(<span class="string">"bbl"</span>).exists())
-<a href=#458 id=458 data-nosnippet>458</a>    .filter(|f| file_has_documentclass(f))
-<a href=#459 id=459 data-nosnippet>459</a>    .collect()
-<a href=#460 id=460 data-nosnippet>460</a>}
-<a href=#461 id=461 data-nosnippet>461</a>
-<a href=#462 id=462 data-nosnippet>462</a><span class="doccomment">/// Files a `00README.XXX` marks `ignore` (Perl `Pack.pm` `unlink`s them; we
-<a href=#463 id=463 data-nosnippet>463</a>/// exclude by set — see `find_main_tex`).
-<a href=#464 id=464 data-nosnippet>464</a></span><span class="kw">fn </span>readme_ignored(dir: <span class="kw-2">&amp;</span>Path) -&gt; rustc_hash::FxHashSet&lt;PathBuf&gt; {
-<a href=#465 id=465 data-nosnippet>465</a>  <span class="kw">let </span><span class="kw-2">mut </span>ignored = rustc_hash::FxHashSet::default();
-<a href=#466 id=466 data-nosnippet>466</a>  <span class="kw">if let </span><span class="prelude-val">Ok</span>(content) = std::fs::read_to_string(dir.join(<span class="string">"00README.XXX"</span>)) {
-<a href=#467 id=467 data-nosnippet>467</a>    <span class="kw">for </span>line <span class="kw">in </span>content.lines() {
-<a href=#468 id=468 data-nosnippet>468</a>      <span class="kw">let </span>parts: Vec&lt;<span class="kw-2">&amp;</span>str&gt; = line.split_whitespace().collect();
-<a href=#469 id=469 data-nosnippet>469</a>      <span class="kw">if </span>parts.len() &gt;= <span class="number">2 </span>&amp;&amp; parts[<span class="number">1</span>] == <span class="string">"ignore" </span>{
-<a href=#470 id=470 data-nosnippet>470</a>        ignored.insert(dir.join(parts[<span class="number">0</span>]));
-<a href=#471 id=471 data-nosnippet>471</a>      }
-<a href=#472 id=472 data-nosnippet>472</a>    }
-<a href=#473 id=473 data-nosnippet>473</a>  }
-<a href=#474 id=474 data-nosnippet>474</a>  ignored
-<a href=#475 id=475 data-nosnippet>475</a>}
-<a href=#476 id=476 data-nosnippet>476</a>
-<a href=#477 id=477 data-nosnippet>477</a><span class="doccomment">/// Whether one of the file's first 10 lines carries the `%auto-ignore` marker
-<a href=#478 id=478 data-nosnippet>478</a>/// (arXiv: keep in the bundle, do not process — `submit_legacy_differences`).
-<a href=#479 id=479 data-nosnippet>479</a></span><span class="kw">fn </span>has_auto_ignore(path: <span class="kw-2">&amp;</span>Path) -&gt; bool {
-<a href=#480 id=480 data-nosnippet>480</a>  <span class="kw">let </span><span class="prelude-val">Ok</span>(raw) = std::fs::read(path) <span class="kw">else </span>{
-<a href=#481 id=481 data-nosnippet>481</a>    <span class="kw">return </span><span class="bool-val">false</span>;
-<a href=#482 id=482 data-nosnippet>482</a>  };
-<a href=#483 id=483 data-nosnippet>483</a>  String::from_utf8_lossy(<span class="kw-2">&amp;</span>raw)
-<a href=#484 id=484 data-nosnippet>484</a>    .lines()
-<a href=#485 id=485 data-nosnippet>485</a>    .take(<span class="number">10</span>)
-<a href=#486 id=486 data-nosnippet>486</a>    .any(|l| RE_AUTOIGNORE.is_match(l))
-<a href=#487 id=487 data-nosnippet>487</a>}
-<a href=#488 id=488 data-nosnippet>488</a>
-<a href=#489 id=489 data-nosnippet>489</a><span class="doccomment">/// Order a set of top-level files main-first: any file that looks like a
-<a href=#490 id=490 data-nosnippet>490</a>/// supplement goes last (arXiv-alphanumeric within each group); among the
-<a href=#491 id=491 data-nosnippet>491</a>/// non-supplements a `main`/`ms`/`paper` common name is promoted to the front.
-<a href=#492 id=492 data-nosnippet>492</a></span><span class="kw">fn </span>order_main_first(<span class="kw-2">mut </span>files: Vec&lt;PathBuf&gt;, _dir: <span class="kw-2">&amp;</span>Path) -&gt; Vec&lt;PathBuf&gt; {
-<a href=#493 id=493 data-nosnippet>493</a>  files.sort();
-<a href=#494 id=494 data-nosnippet>494</a>  files.dedup();
-<a href=#495 id=495 data-nosnippet>495</a>  <span class="kw">let </span>(supps, <span class="kw-2">mut </span>mains): (Vec&lt;PathBuf&gt;, Vec&lt;PathBuf&gt;) =
-<a href=#496 id=496 data-nosnippet>496</a>    files.into_iter().partition(|f| is_supplement(f));
-<a href=#497 id=497 data-nosnippet>497</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(pos) = mains.iter().position(|f| is_common_main_name(f)) {
-<a href=#498 id=498 data-nosnippet>498</a>    <span class="kw">let </span>m = mains.remove(pos);
-<a href=#499 id=499 data-nosnippet>499</a>    mains.insert(<span class="number">0</span>, m);
-<a href=#500 id=500 data-nosnippet>500</a>  }
-<a href=#501 id=501 data-nosnippet>501</a>  mains.extend(supps);
-<a href=#502 id=502 data-nosnippet>502</a>  mains
-<a href=#503 id=503 data-nosnippet>503</a>}
-<a href=#504 id=504 data-nosnippet>504</a>
-<a href=#505 id=505 data-nosnippet>505</a><span class="doccomment">/// Whether the file names itself `main.tex` / `ms.tex` / `paper.tex` (the same
-<a href=#506 id=506 data-nosnippet>506</a>/// common-name set the single-file heuristic prefers).
-<a href=#507 id=507 data-nosnippet>507</a></span><span class="kw">fn </span>is_common_main_name(path: <span class="kw-2">&amp;</span>Path) -&gt; bool {
-<a href=#508 id=508 data-nosnippet>508</a>  path
-<a href=#509 id=509 data-nosnippet>509</a>    .file_name()
-<a href=#510 id=510 data-nosnippet>510</a>    .and_then(|n| n.to_str())
-<a href=#511 id=511 data-nosnippet>511</a>    .is_some_and(|n| n == <span class="string">"main.tex" </span>|| n == <span class="string">"ms.tex" </span>|| n == <span class="string">"paper.tex"</span>)
+<a href=#440 id=440 data-nosnippet>440</a>  <span class="kw">if </span>report {
+<a href=#441 id=441 data-nosnippet>441</a>    latexml_core::common::error::warn_at_session_start(
+<a href=#442 id=442 data-nosnippet>442</a>      <span class="string">"archive"</span>,
+<a href=#443 id=443 data-nosnippet>443</a>      <span class="string">"path"</span>,
+<a href=#444 id=444 data-nosnippet>444</a>      <span class="macro">format!</span>(
+<a href=#445 id=445 data-nosnippet>445</a>        <span class="string">"the 00README names '{name}' as a top-level file outside the source directory; ignored"
+<a href=#446 id=446 data-nosnippet>446</a>      </span>),
+<a href=#447 id=447 data-nosnippet>447</a>    );
+<a href=#448 id=448 data-nosnippet>448</a>  }
+<a href=#449 id=449 data-nosnippet>449</a>  <span class="prelude-val">None
+<a href=#450 id=450 data-nosnippet>450</a></span>}
+<a href=#451 id=451 data-nosnippet>451</a>
+<a href=#452 id=452 data-nosnippet>452</a><span class="doccomment">/// All files a `00README.json`/`00README.XXX` explicitly marks as top-level, in
+<a href=#453 id=453 data-nosnippet>453</a>/// listed order, restricted to those that exist (main-first ordering applied by
+<a href=#454 id=454 data-nosnippet>454</a>/// the caller). Empty when there is no explicit designation.
+<a href=#455 id=455 data-nosnippet>455</a></span><span class="kw">fn </span>explicit_top_levels(dir: <span class="kw-2">&amp;</span>Path) -&gt; Vec&lt;PathBuf&gt; {
+<a href=#456 id=456 data-nosnippet>456</a>  <span class="kw">let </span><span class="kw-2">mut </span>out: Vec&lt;PathBuf&gt; = Vec::new();
+<a href=#457 id=457 data-nosnippet>457</a>  <span class="kw">for </span>name <span class="kw">in </span>parse_readme_json_all(dir) {
+<a href=#458 id=458 data-nosnippet>458</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(p) = readme_entry(dir, <span class="kw-2">&amp;</span>name)
+<a href=#459 id=459 data-nosnippet>459</a>      &amp;&amp; !out.contains(<span class="kw-2">&amp;</span>p)
+<a href=#460 id=460 data-nosnippet>460</a>    {
+<a href=#461 id=461 data-nosnippet>461</a>      out.push(p);
+<a href=#462 id=462 data-nosnippet>462</a>    }
+<a href=#463 id=463 data-nosnippet>463</a>  }
+<a href=#464 id=464 data-nosnippet>464</a>  <span class="kw">let </span>readme_xxx = dir.join(<span class="string">"00README.XXX"</span>);
+<a href=#465 id=465 data-nosnippet>465</a>  <span class="kw">if let </span><span class="prelude-val">Ok</span>(content) = std::fs::read_to_string(<span class="kw-2">&amp;</span>readme_xxx) {
+<a href=#466 id=466 data-nosnippet>466</a>    <span class="kw">for </span>line <span class="kw">in </span>content.lines() {
+<a href=#467 id=467 data-nosnippet>467</a>      <span class="kw">let </span>parts: Vec&lt;<span class="kw-2">&amp;</span>str&gt; = line.split_whitespace().collect();
+<a href=#468 id=468 data-nosnippet>468</a>      <span class="kw">if </span>parts.len() &gt;= <span class="number">2
+<a href=#469 id=469 data-nosnippet>469</a>        </span>&amp;&amp; parts[<span class="number">1</span>] == <span class="string">"toplevelfile"
+<a href=#470 id=470 data-nosnippet>470</a>        </span>&amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(p) = readme_entry(dir, parts[<span class="number">0</span>])
+<a href=#471 id=471 data-nosnippet>471</a>        &amp;&amp; !out.contains(<span class="kw-2">&amp;</span>p)
+<a href=#472 id=472 data-nosnippet>472</a>      {
+<a href=#473 id=473 data-nosnippet>473</a>        out.push(p);
+<a href=#474 id=474 data-nosnippet>474</a>      }
+<a href=#475 id=475 data-nosnippet>475</a>    }
+<a href=#476 id=476 data-nosnippet>476</a>  }
+<a href=#477 id=477 data-nosnippet>477</a>  out
+<a href=#478 id=478 data-nosnippet>478</a>}
+<a href=#479 id=479 data-nosnippet>479</a>
+<a href=#480 id=480 data-nosnippet>480</a><span class="doccomment">/// The set of `.bbl`-backed top-level documents at `main`'s depth: `\document`-
+<a href=#481 id=481 data-nosnippet>481</a>/// class files that carry their own sibling `.bbl` (arXiv's own top-level
+<a href=#482 id=482 data-nosnippet>482</a>/// fingerprint, which bundled templates lack), excluding `%auto-ignore` and
+<a href=#483 id=483 data-nosnippet>483</a>/// `00README` `ignore` files. `main` itself is included when it qualifies.
+<a href=#484 id=484 data-nosnippet>484</a></span><span class="kw">fn </span>top_level_bbl_docs(dir: <span class="kw-2">&amp;</span>Path, main: <span class="kw-2">&amp;</span>Path) -&gt; Vec&lt;PathBuf&gt; {
+<a href=#485 id=485 data-nosnippet>485</a>  <span class="kw">let </span>main_depth = main.strip_prefix(dir).unwrap_or(main).components().count();
+<a href=#486 id=486 data-nosnippet>486</a>  <span class="kw">let </span>ignored = readme_ignored(dir);
+<a href=#487 id=487 data-nosnippet>487</a>  <span class="kw">let </span><span class="kw-2">mut </span>tex_files: Vec&lt;PathBuf&gt; = Vec::new();
+<a href=#488 id=488 data-nosnippet>488</a>  collect_tex_files(dir, <span class="kw-2">&amp;mut </span>tex_files, <span class="bool-val">false</span>);
+<a href=#489 id=489 data-nosnippet>489</a>  tex_files
+<a href=#490 id=490 data-nosnippet>490</a>    .into_iter()
+<a href=#491 id=491 data-nosnippet>491</a>    .filter(|f| f.strip_prefix(dir).unwrap_or(f).components().count() == main_depth)
+<a href=#492 id=492 data-nosnippet>492</a>    .filter(|f| !ignored.contains(f))
+<a href=#493 id=493 data-nosnippet>493</a>    .filter(|f| !has_auto_ignore(f))
+<a href=#494 id=494 data-nosnippet>494</a>    .filter(|f| f.with_extension(<span class="string">"bbl"</span>).exists())
+<a href=#495 id=495 data-nosnippet>495</a>    .filter(|f| file_has_documentclass(f))
+<a href=#496 id=496 data-nosnippet>496</a>    .collect()
+<a href=#497 id=497 data-nosnippet>497</a>}
+<a href=#498 id=498 data-nosnippet>498</a>
+<a href=#499 id=499 data-nosnippet>499</a><span class="doccomment">/// Files a `00README.XXX` marks `ignore` (Perl `Pack.pm` `unlink`s them; we
+<a href=#500 id=500 data-nosnippet>500</a>/// exclude by set — see `find_main_tex`).
+<a href=#501 id=501 data-nosnippet>501</a></span><span class="kw">fn </span>readme_ignored(dir: <span class="kw-2">&amp;</span>Path) -&gt; rustc_hash::FxHashSet&lt;PathBuf&gt; {
+<a href=#502 id=502 data-nosnippet>502</a>  <span class="kw">let </span><span class="kw-2">mut </span>ignored = rustc_hash::FxHashSet::default();
+<a href=#503 id=503 data-nosnippet>503</a>  <span class="kw">if let </span><span class="prelude-val">Ok</span>(content) = std::fs::read_to_string(dir.join(<span class="string">"00README.XXX"</span>)) {
+<a href=#504 id=504 data-nosnippet>504</a>    <span class="kw">for </span>line <span class="kw">in </span>content.lines() {
+<a href=#505 id=505 data-nosnippet>505</a>      <span class="kw">let </span>parts: Vec&lt;<span class="kw-2">&amp;</span>str&gt; = line.split_whitespace().collect();
+<a href=#506 id=506 data-nosnippet>506</a>      <span class="kw">if </span>parts.len() &gt;= <span class="number">2 </span>&amp;&amp; parts[<span class="number">1</span>] == <span class="string">"ignore" </span>{
+<a href=#507 id=507 data-nosnippet>507</a>        ignored.insert(dir.join(parts[<span class="number">0</span>]));
+<a href=#508 id=508 data-nosnippet>508</a>      }
+<a href=#509 id=509 data-nosnippet>509</a>    }
+<a href=#510 id=510 data-nosnippet>510</a>  }
+<a href=#511 id=511 data-nosnippet>511</a>  ignored
 <a href=#512 id=512 data-nosnippet>512</a>}
 <a href=#513 id=513 data-nosnippet>513</a>
-<a href=#514 id=514 data-nosnippet>514</a><span class="doccomment">/// A top-level `.tex` reads as Supplementary Material when its filename or its
-<a href=#515 id=515 data-nosnippet>515</a>/// `\title` announces it (`supplement`/`supporting`/`supplemental`/`appendix`/
-<a href=#516 id=516 data-nosnippet>516</a>/// delimited `SI`/`SM`). Used only among *already* `.bbl`-backed sibling
-<a href=#517 id=517 data-nosnippet>517</a>/// documents, so this classifies main-vs-supplement; it never promotes a
-<a href=#518 id=518 data-nosnippet>518</a>/// template into a document.
-<a href=#519 id=519 data-nosnippet>519</a></span><span class="kw">fn </span>is_supplement(path: <span class="kw-2">&amp;</span>Path) -&gt; bool {
-<a href=#520 id=520 data-nosnippet>520</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(stem) = path.file_stem().and_then(|s| s.to_str())
-<a href=#521 id=521 data-nosnippet>521</a>    &amp;&amp; RE_SUPP_NAME.is_match(stem)
-<a href=#522 id=522 data-nosnippet>522</a>  {
-<a href=#523 id=523 data-nosnippet>523</a>    <span class="kw">return </span><span class="bool-val">true</span>;
-<a href=#524 id=524 data-nosnippet>524</a>  }
-<a href=#525 id=525 data-nosnippet>525</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(title) = first_title(path)
-<a href=#526 id=526 data-nosnippet>526</a>    &amp;&amp; RE_SUPP_TITLE.is_match(<span class="kw-2">&amp;</span>title)
-<a href=#527 id=527 data-nosnippet>527</a>  {
-<a href=#528 id=528 data-nosnippet>528</a>    <span class="kw">return </span><span class="bool-val">true</span>;
-<a href=#529 id=529 data-nosnippet>529</a>  }
-<a href=#530 id=530 data-nosnippet>530</a>  <span class="bool-val">false
-<a href=#531 id=531 data-nosnippet>531</a></span>}
-<a href=#532 id=532 data-nosnippet>532</a>
-<a href=#533 id=533 data-nosnippet>533</a><span class="doccomment">/// True when the file defines a `\documentclass`/`\documentstyle` (i.e. is a
-<a href=#534 id=534 data-nosnippet>534</a>/// top-level document, not an `\input`-ed fragment).
-<a href=#535 id=535 data-nosnippet>535</a></span><span class="kw">fn </span>file_has_documentclass(path: <span class="kw-2">&amp;</span>Path) -&gt; bool {
-<a href=#536 id=536 data-nosnippet>536</a>  <span class="kw">let </span><span class="prelude-val">Ok</span>(raw) = std::fs::read(path) <span class="kw">else </span>{
-<a href=#537 id=537 data-nosnippet>537</a>    <span class="kw">return </span><span class="bool-val">false</span>;
-<a href=#538 id=538 data-nosnippet>538</a>  };
-<a href=#539 id=539 data-nosnippet>539</a>  <span class="kw">let </span>content = String::from_utf8_lossy(<span class="kw-2">&amp;</span>raw);
-<a href=#540 id=540 data-nosnippet>540</a>  content.lines().any(|l| {
-<a href=#541 id=541 data-nosnippet>541</a>    <span class="kw">let </span>stripped = RE_STRIP_COMMENT.replacen(l, <span class="number">1</span>, <span class="string">""</span>);
-<a href=#542 id=542 data-nosnippet>542</a>    RE_DOCCLASS.is_match(<span class="kw-2">&amp;</span>stripped)
-<a href=#543 id=543 data-nosnippet>543</a>  })
-<a href=#544 id=544 data-nosnippet>544</a>}
-<a href=#545 id=545 data-nosnippet>545</a>
-<a href=#546 id=546 data-nosnippet>546</a><span class="doccomment">/// The text of the first non-commented `\title{…}` / `\icmltitle{…}` in the
-<a href=#547 id=547 data-nosnippet>547</a>/// file (up to ~120 chars), for supplement classification.
-<a href=#548 id=548 data-nosnippet>548</a></span><span class="kw">fn </span>first_title(path: <span class="kw-2">&amp;</span>Path) -&gt; <span class="prelude-ty">Option</span>&lt;String&gt; {
-<a href=#549 id=549 data-nosnippet>549</a>  <span class="kw">let </span>raw = std::fs::read(path).ok()<span class="question-mark">?</span>;
-<a href=#550 id=550 data-nosnippet>550</a>  <span class="kw">let </span>content = String::from_utf8_lossy(<span class="kw-2">&amp;</span>raw);
-<a href=#551 id=551 data-nosnippet>551</a>  <span class="comment">// Strip `%`-comments line-by-line so a commented template placeholder title
-<a href=#552 id=552 data-nosnippet>552</a>  // (`%% \title{Title}`) does not count. Witness 2402.13498 (elsarticle).
-<a href=#553 id=553 data-nosnippet>553</a>  </span><span class="kw">let </span>stripped: String = content
-<a href=#554 id=554 data-nosnippet>554</a>    .lines()
-<a href=#555 id=555 data-nosnippet>555</a>    .map(|l| RE_STRIP_COMMENT.replacen(l, <span class="number">1</span>, <span class="string">""</span>).into_owned())
-<a href=#556 id=556 data-nosnippet>556</a>    .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
-<a href=#557 id=557 data-nosnippet>557</a>    .join(<span class="string">"\n"</span>);
-<a href=#558 id=558 data-nosnippet>558</a>  RE_TITLE_ARG
-<a href=#559 id=559 data-nosnippet>559</a>    .captures(<span class="kw-2">&amp;</span>stripped)
-<a href=#560 id=560 data-nosnippet>560</a>    .map(|c| c[<span class="number">1</span>].chars().take(<span class="number">120</span>).collect())
-<a href=#561 id=561 data-nosnippet>561</a>}
-<a href=#562 id=562 data-nosnippet>562</a>
-<a href=#563 id=563 data-nosnippet>563</a><span class="doccomment">/// Parse `00README.json` and return the filenames of **every** `usage ==
-<a href=#564 id=564 data-nosnippet>564</a>/// "toplevel"` source, in document order. `parse_readme_json` returns only the
-<a href=#565 id=565 data-nosnippet>565</a>/// first; this drives multi-top-level detection.
-<a href=#566 id=566 data-nosnippet>566</a></span><span class="kw">fn </span>parse_readme_json_all(dir: <span class="kw-2">&amp;</span>Path) -&gt; Vec&lt;String&gt; {
-<a href=#567 id=567 data-nosnippet>567</a>  <span class="kw">let </span><span class="kw-2">mut </span>out = Vec::new();
-<a href=#568 id=568 data-nosnippet>568</a>  <span class="kw">let </span><span class="prelude-val">Ok</span>(content) = std::fs::read_to_string(dir.join(<span class="string">"00README.json"</span>)) <span class="kw">else </span>{
-<a href=#569 id=569 data-nosnippet>569</a>    <span class="kw">return </span>out;
-<a href=#570 id=570 data-nosnippet>570</a>  };
-<a href=#571 id=571 data-nosnippet>571</a>  <span class="kw">let </span><span class="prelude-val">Some</span>(sources_start) = content.find(<span class="string">"\"sources\""</span>) <span class="kw">else </span>{
-<a href=#572 id=572 data-nosnippet>572</a>    <span class="kw">return </span>out;
-<a href=#573 id=573 data-nosnippet>573</a>  };
-<a href=#574 id=574 data-nosnippet>574</a>  <span class="kw">let </span>rest = <span class="kw-2">&amp;</span>content[sources_start..];
-<a href=#575 id=575 data-nosnippet>575</a>  <span class="kw">let </span>(<span class="prelude-val">Some</span>(arr_start), <span class="prelude-val">Some</span>(arr_end)) = (rest.find(<span class="string">'['</span>), rest.find(<span class="string">']'</span>)) <span class="kw">else </span>{
-<a href=#576 id=576 data-nosnippet>576</a>    <span class="kw">return </span>out;
-<a href=#577 id=577 data-nosnippet>577</a>  };
-<a href=#578 id=578 data-nosnippet>578</a>  <span class="kw">let </span>arr = <span class="kw-2">&amp;</span>rest[arr_start + <span class="number">1</span>..arr_end];
-<a href=#579 id=579 data-nosnippet>579</a>  <span class="kw">for </span>obj_str <span class="kw">in </span>arr.split(<span class="string">'}'</span>) {
-<a href=#580 id=580 data-nosnippet>580</a>    <span class="kw">if </span>!obj_str.contains(<span class="string">"\"toplevel\""</span>) {
-<a href=#581 id=581 data-nosnippet>581</a>      <span class="kw">continue</span>;
-<a href=#582 id=582 data-nosnippet>582</a>    }
-<a href=#583 id=583 data-nosnippet>583</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(fn_pos) = obj_str.find(<span class="string">"\"filename\""</span>) {
-<a href=#584 id=584 data-nosnippet>584</a>      <span class="kw">let </span>after = obj_str[fn_pos + <span class="number">10</span>..].trim_start();
-<a href=#585 id=585 data-nosnippet>585</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(after) = after.strip_prefix(<span class="string">':'</span>) {
-<a href=#586 id=586 data-nosnippet>586</a>        <span class="kw">let </span>after = after.trim_start();
-<a href=#587 id=587 data-nosnippet>587</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(after) = after.strip_prefix(<span class="string">'"'</span>) {
-<a href=#588 id=588 data-nosnippet>588</a>          <span class="kw">let </span>name: String = after
-<a href=#589 id=589 data-nosnippet>589</a>            .chars()
-<a href=#590 id=590 data-nosnippet>590</a>            .take_while(|<span class="kw-2">&amp;</span>c| c != <span class="string">'"'</span>)
-<a href=#591 id=591 data-nosnippet>591</a>            .filter(|<span class="kw-2">&amp;</span>c| c != <span class="string">'\\'</span>)
-<a href=#592 id=592 data-nosnippet>592</a>            .collect();
-<a href=#593 id=593 data-nosnippet>593</a>          <span class="kw">if </span>!name.is_empty() {
-<a href=#594 id=594 data-nosnippet>594</a>            out.push(name);
-<a href=#595 id=595 data-nosnippet>595</a>          }
-<a href=#596 id=596 data-nosnippet>596</a>        }
-<a href=#597 id=597 data-nosnippet>597</a>      }
-<a href=#598 id=598 data-nosnippet>598</a>    }
-<a href=#599 id=599 data-nosnippet>599</a>  }
-<a href=#600 id=600 data-nosnippet>600</a>  out
-<a href=#601 id=601 data-nosnippet>601</a>}
-<a href=#602 id=602 data-nosnippet>602</a>
-<a href=#603 id=603 data-nosnippet>603</a><span class="comment">// Perl Pack.pm L25 TEX_EXT = qr/\.(?:[tT](:?[eE][xX]|[xX][tT])|ltx|LTX)$/
-<a href=#604 id=604 data-nosnippet>604</a>// → .tex, .txt, .ltx (case-insensitive). The `fallback` arm matches Perl
-<a href=#605 id=605 data-nosnippet>605</a>// Pack/Dir.pm L47: `!/\./ || /\.[^.]{4,}$/` — extension-less or extension
-<a href=#606 id=606 data-nosnippet>606</a>// ≥4 chars, used when nothing TeX-shaped surfaces in the strict pass.
-<a href=#607 id=607 data-nosnippet>607</a></span><span class="kw">fn </span>collect_tex_files(dir: <span class="kw-2">&amp;</span>Path, files: <span class="kw-2">&amp;mut </span>Vec&lt;PathBuf&gt;, fallback: bool) {
-<a href=#608 id=608 data-nosnippet>608</a>  <span class="kw">if let </span><span class="prelude-val">Ok</span>(entries) = std::fs::read_dir(dir) {
-<a href=#609 id=609 data-nosnippet>609</a>    <span class="kw">for </span>entry <span class="kw">in </span>entries.flatten() {
-<a href=#610 id=610 data-nosnippet>610</a>      <span class="kw">let </span>path = entry.path();
-<a href=#611 id=611 data-nosnippet>611</a>      <span class="comment">// Recurse into real directories only, as Perl's walk does (Util/Pack/Dir.pm:45, File::Find without `follow`):
-<a href=#612 id=612 data-nosnippet>612</a>      // a link to a directory (an archive's `a -&gt; .`) would cycle without end.
-<a href=#613 id=613 data-nosnippet>613</a>      </span><span class="kw">if </span>entry.file_type().is_ok_and(|kind| kind.is_dir()) {
-<a href=#614 id=614 data-nosnippet>614</a>        collect_tex_files(<span class="kw-2">&amp;</span>path, files, fallback);
-<a href=#615 id=615 data-nosnippet>615</a>      } <span class="kw">else if </span>path.is_dir() {
-<a href=#616 id=616 data-nosnippet>616</a>        <span class="kw">continue</span>;
-<a href=#617 id=617 data-nosnippet>617</a>      } <span class="kw">else if </span>!fallback {
-<a href=#618 id=618 data-nosnippet>618</a>        <span class="kw">if </span>path.extension().is_some_and(|e| {
-<a href=#619 id=619 data-nosnippet>619</a>          <span class="kw">let </span>e = e.to_ascii_lowercase();
-<a href=#620 id=620 data-nosnippet>620</a>          e == <span class="string">"tex" </span>|| e == <span class="string">"txt" </span>|| e == <span class="string">"ltx"
-<a href=#621 id=621 data-nosnippet>621</a>        </span>}) {
-<a href=#622 id=622 data-nosnippet>622</a>          files.push(path);
-<a href=#623 id=623 data-nosnippet>623</a>        }
-<a href=#624 id=624 data-nosnippet>624</a>      } <span class="kw">else </span>{
-<a href=#625 id=625 data-nosnippet>625</a>        <span class="kw">let </span>ext_opt = path.extension().and_then(|e| e.to_str());
-<a href=#626 id=626 data-nosnippet>626</a>        <span class="kw">let </span>keep = <span class="kw">match </span>ext_opt {
-<a href=#627 id=627 data-nosnippet>627</a>          <span class="prelude-val">None </span>=&gt; <span class="bool-val">true</span>,
-<a href=#628 id=628 data-nosnippet>628</a>          <span class="prelude-val">Some</span>(ext) =&gt; ext.len() &gt;= <span class="number">4</span>,
-<a href=#629 id=629 data-nosnippet>629</a>        };
-<a href=#630 id=630 data-nosnippet>630</a>        <span class="kw">if </span>keep {
-<a href=#631 id=631 data-nosnippet>631</a>          files.push(path);
-<a href=#632 id=632 data-nosnippet>632</a>        }
-<a href=#633 id=633 data-nosnippet>633</a>      }
-<a href=#634 id=634 data-nosnippet>634</a>    }
-<a href=#635 id=635 data-nosnippet>635</a>  }
-<a href=#636 id=636 data-nosnippet>636</a>}
-<a href=#637 id=637 data-nosnippet>637</a>
-<a href=#638 id=638 data-nosnippet>638</a><span class="comment">// Faithful port of Perl `Pack.pm::heuristic_check_for_pdftex` (L222-241):
-<a href=#639 id=639 data-nosnippet>639</a>// a file counts as a pdf-include candidate only when some line carries
-<a href=#640 id=640 data-nosnippet>640</a>// `\includegraphics{...ext}` with the raster/pdf extension INSIDE the
-<a href=#641 id=641 data-nosnippet>641</a>// argument (`\includegraphics[^%]*\.(?:pdf|png|gif|jpg)\s?\}`, case-insensitive,
-<a href=#642 id=642 data-nosnippet>642</a>// not preceded by a `%`), or a `\pdfoutput=1` marker. Perl's `$pdfoutput_checks`
-<a href=#643 id=643 data-nosnippet>643</a>// counter clamps at 0, so its `&gt;= 0` guard is always true and the `\pdfoutput`
-<a href=#644 id=644 data-nosnippet>644</a>// probe effectively scans every line — we mirror that (no first-N-lines cap).
-<a href=#645 id=645 data-nosnippet>645</a>//
-<a href=#646 id=646 data-nosnippet>646</a>// The earlier Rust port used a loose whole-file
-<a href=#647 id=647 data-nosnippet>647</a>// `contains("\\includegraphics") &amp;&amp; contains(".png"|".pdf"|".jpg")`, which
-<a href=#648 id=648 data-nosnippet>648</a>// FALSE-POSITIVES on class templates whose `\includegraphics` examples are
-<a href=#649 id=649 data-nosnippet>649</a>// extensionless (`{icml_numpapers}`) or `.eps` (`{egfigure.eps}`) yet mention
-<a href=#650 id=650 data-nosnippet>650</a>// a raster extension elsewhere (prose/comments). Because the pdf heuristic runs
-<a href=#651 id=651 data-nosnippet>651</a>// before the `.bbl` tie-break, that false positive eliminated the true
-<a href=#652 id=652 data-nosnippet>652</a>// figure-delegating `main.tex`: 2401.17263 (#442, example_paper.tex) and
-<a href=#653 id=653 data-nosnippet>653</a>// 2403.17719 (#859, rebuttal.tex) were mis-picked by Rust though Perl picks
-<a href=#654 id=654 data-nosnippet>654</a>// their `main.tex`. Argument-anchoring restores parity.
-<a href=#655 id=655 data-nosnippet>655</a></span><span class="kw">fn </span>has_pdftex_marker(path: <span class="kw-2">&amp;</span>Path) -&gt; bool {
-<a href=#656 id=656 data-nosnippet>656</a>  <span class="kw">let </span><span class="prelude-val">Ok</span>(raw) = std::fs::read(path) <span class="kw">else </span>{
-<a href=#657 id=657 data-nosnippet>657</a>    <span class="kw">return </span><span class="bool-val">false</span>;
-<a href=#658 id=658 data-nosnippet>658</a>  };
-<a href=#659 id=659 data-nosnippet>659</a>  <span class="kw">let </span>content = String::from_utf8_lossy(<span class="kw-2">&amp;</span>raw);
-<a href=#660 id=660 data-nosnippet>660</a>  content
-<a href=#661 id=661 data-nosnippet>661</a>    .lines()
-<a href=#662 id=662 data-nosnippet>662</a>    .any(|line| RE_PDF_INCLUDE.is_match(line) || RE_PDFOUTPUT.is_match(line))
-<a href=#663 id=663 data-nosnippet>663</a>}
-<a href=#664 id=664 data-nosnippet>664</a>
-<a href=#665 id=665 data-nosnippet>665</a><span class="comment">// Skip files whose magic bytes identify them as PDF (e.g. arXiv source
-<a href=#666 id=666 data-nosnippet>666</a>// archives that contain a PDF mis-named with a `.tex` extension).
-<a href=#667 id=667 data-nosnippet>667</a></span><span class="kw">pub fn </span>is_pdf_magic(path: <span class="kw-2">&amp;</span>Path) -&gt; bool {
-<a href=#668 id=668 data-nosnippet>668</a>  <span class="kw">let </span><span class="kw-2">mut </span>buf = [<span class="number">0u8</span>; <span class="number">5</span>];
-<a href=#669 id=669 data-nosnippet>669</a>  <span class="kw">if let </span><span class="prelude-val">Ok</span>(<span class="kw-2">mut </span>f) = std::fs::File::open(path) {
-<a href=#670 id=670 data-nosnippet>670</a>    <span class="kw">use </span>std::io::Read;
-<a href=#671 id=671 data-nosnippet>671</a>    <span class="kw">if </span>f.read(<span class="kw-2">&amp;mut </span>buf).is_ok_and(|n| n == <span class="number">5</span>) {
-<a href=#672 id=672 data-nosnippet>672</a>      <span class="kw">return </span><span class="kw-2">&amp;</span>buf == <span class="string">b"%PDF-"</span>;
-<a href=#673 id=673 data-nosnippet>673</a>    }
-<a href=#674 id=674 data-nosnippet>674</a>  }
-<a href=#675 id=675 data-nosnippet>675</a>  <span class="bool-val">false
-<a href=#676 id=676 data-nosnippet>676</a></span>}
-<a href=#677 id=677 data-nosnippet>677</a>
-<a href=#678 id=678 data-nosnippet>678</a><span class="doccomment">/// Parse `00README.json` in `dir` and return the "filename" of the
-<a href=#679 id=679 data-nosnippet>679</a>/// toplevel source. Perl Pack.pm L68-80: scans `sources[]` for the
-<a href=#680 id=680 data-nosnippet>680</a>/// entry tagged `usage == "toplevel"`. Minimal hand-rolled JSON
-<a href=#681 id=681 data-nosnippet>681</a>/// scanner — we don't pull a full JSON dep just for this.
-<a href=#682 id=682 data-nosnippet>682</a></span><span class="kw">fn </span>parse_readme_json(dir: <span class="kw-2">&amp;</span>Path) -&gt; <span class="prelude-ty">Option</span>&lt;String&gt; { parse_readme_json_all(dir).into_iter().next() }
-<a href=#683 id=683 data-nosnippet>683</a>
-<a href=#684 id=684 data-nosnippet>684</a><span class="comment">// ---------------------------------------------------------------------------
-<a href=#685 id=685 data-nosnippet>685</a>// Pre-compiled regexes used by `find_main_tex`. Parking these as module-
-<a href=#686 id=686 data-nosnippet>686</a>// level `LazyLock&lt;Regex&gt;` keeps a single instance per process and avoids the
-<a href=#687 id=687 data-nosnippet>687</a>// per-call recompile that nesting them inside the function caused.
-<a href=#688 id=688 data-nosnippet>688</a>// ---------------------------------------------------------------------------
-<a href=#689 id=689 data-nosnippet>689</a>
-<a href=#690 id=690 data-nosnippet>690</a></span><span class="kw">static </span>RE_AUTOIGNORE: LazyLock&lt;Regex&gt; = LazyLock::new(|| Regex::new(<span class="string">r"%auto-ignore"</span>).unwrap());
-<a href=#691 id=691 data-nosnippet>691</a><span class="kw">static </span>RE_TEXINFO: LazyLock&lt;Regex&gt; = LazyLock::new(|| Regex::new(<span class="string">r"\\input texinfo"</span>).unwrap());
-<a href=#692 id=692 data-nosnippet>692</a><span class="kw">static </span>RE_AUTOINCLUDE: LazyLock&lt;Regex&gt; = LazyLock::new(|| Regex::new(<span class="string">r"%auto-include"</span>).unwrap());
-<a href=#693 id=693 data-nosnippet>693</a><span class="kw">static </span>RE_FORMAT_HINT: LazyLock&lt;Regex&gt; = LazyLock::new(|| Regex::new(<span class="string">r"^\r?%&amp;(\S+)"</span>).unwrap());
-<a href=#694 id=694 data-nosnippet>694</a><span class="kw">static </span>RE_DOCCLASS: LazyLock&lt;Regex&gt; =
-<a href=#695 id=695 data-nosnippet>695</a>  LazyLock::new(|| Regex::new(<span class="string">r"(?:^|\r)\s*\\document(?:style|class)"</span>).unwrap());
-<a href=#696 id=696 data-nosnippet>696</a><span class="kw">static </span>RE_MAYBE_TEX: LazyLock&lt;Regex&gt; = LazyLock::new(|| {
-<a href=#697 id=697 data-nosnippet>697</a>  Regex::new(<span class="string">r"(?:^|\r)\s*\\(?:font|magnification|input|def|special|baselineskip|begin)"</span>).unwrap()
-<a href=#698 id=698 data-nosnippet>698</a>});
-<a href=#699 id=699 data-nosnippet>699</a><span class="kw">static </span>RE_INPUT_INCLUDE: LazyLock&lt;Regex&gt; =
-<a href=#700 id=700 data-nosnippet>700</a>  LazyLock::new(|| Regex::new(<span class="string">r"\\(?:input|include)(?:\s+|\{)([^ \}]+)"</span>).unwrap());
-<a href=#701 id=701 data-nosnippet>701</a><span class="kw">static </span>RE_END_BYE: LazyLock&lt;Regex&gt; =
-<a href=#702 id=702 data-nosnippet>702</a>  LazyLock::new(|| Regex::new(<span class="string">r"(?:^|\r)\s*\\(?:end|bye)(?:\s|$)"</span>).unwrap());
-<a href=#703 id=703 data-nosnippet>703</a><span class="kw">static </span>RE_END_BYE2: LazyLock&lt;Regex&gt; =
-<a href=#704 id=704 data-nosnippet>704</a>  LazyLock::new(|| Regex::new(<span class="string">r"\\(?:end|bye)(?:\s|$)"</span>).unwrap());
-<a href=#705 id=705 data-nosnippet>705</a><span class="kw">static </span>RE_BEGIN_DOCUMENT: LazyLock&lt;Regex&gt; =
-<a href=#706 id=706 data-nosnippet>706</a>  LazyLock::new(|| Regex::new(<span class="string">r"\\begin\s*\{document\}"</span>).unwrap());
-<a href=#707 id=707 data-nosnippet>707</a><span class="kw">static </span>RE_MAC_TEX: LazyLock&lt;Regex&gt; =
-<a href=#708 id=708 data-nosnippet>708</a>  LazyLock::new(|| Regex::new(<span class="string">r"\\input *(?:harv|lanl)mac|\\input\s+phyzzx"</span>).unwrap());
-<a href=#709 id=709 data-nosnippet>709</a><span class="kw">static </span>RE_METAFONT: LazyLock&lt;Regex&gt; = LazyLock::new(|| Regex::new(<span class="string">r"beginchar\("</span>).unwrap());
-<a href=#710 id=710 data-nosnippet>710</a><span class="kw">static </span>RE_BIBTEX: LazyLock&lt;Regex&gt; =
-<a href=#711 id=711 data-nosnippet>711</a>  LazyLock::new(|| Regex::new(<span class="string">r"(?i)(?:^|\r)@(?:book|article|inbook|unpublished)\{"</span>).unwrap());
-<a href=#712 id=712 data-nosnippet>712</a><span class="kw">static </span>RE_UUENCODE: LazyLock&lt;Regex&gt; =
-<a href=#713 id=713 data-nosnippet>713</a>  LazyLock::new(|| Regex::new(<span class="string">r"^begin \d{1,4}\s+\S+\r?$"</span>).unwrap());
-<a href=#714 id=714 data-nosnippet>714</a><span class="kw">static </span>RE_WITHDRAWN: LazyLock&lt;Regex&gt; =
-<a href=#715 id=715 data-nosnippet>715</a>  LazyLock::new(|| Regex::new(<span class="string">r"paper deliberately replaced by what little"</span>).unwrap());
-<a href=#716 id=716 data-nosnippet>716</a><span class="kw">static </span>RE_AMSTEX: LazyLock&lt;Regex&gt; = LazyLock::new(|| Regex::new(<span class="string">r"^amstex$"</span>).unwrap());
-<a href=#717 id=717 data-nosnippet>717</a><span class="comment">// Perl `heuristic_check_for_pdftex` pdf-include probe: an `\includegraphics`
-<a href=#718 id=718 data-nosnippet>718</a>// whose argument names a raster/pdf image (case-insensitive), not behind a `%`.
-<a href=#719 id=719 data-nosnippet>719</a></span><span class="kw">static </span>RE_PDF_INCLUDE: LazyLock&lt;Regex&gt; = LazyLock::new(|| {
-<a href=#720 id=720 data-nosnippet>720</a>  Regex::new(<span class="string">r"(?i)^[^%]*\\includegraphics[^%]*\.(?:pdf|png|gif|jpg)\s?\}"</span>).unwrap()
-<a href=#721 id=721 data-nosnippet>721</a>});
-<a href=#722 id=722 data-nosnippet>722</a><span class="comment">// Perl `\pdfoutput(?:\s+)?=(?:\s+)?1` marker, not behind a `%`.
-<a href=#723 id=723 data-nosnippet>723</a></span><span class="kw">static </span>RE_PDFOUTPUT: LazyLock&lt;Regex&gt; =
-<a href=#724 id=724 data-nosnippet>724</a>  LazyLock::new(|| Regex::new(<span class="string">r"^[^%]*\\pdfoutput\s*=\s*1"</span>).unwrap());
-<a href=#725 id=725 data-nosnippet>725</a><span class="comment">// Supplementary-Material detection (find_top_level_texs). Filename tokens
-<a href=#726 id=726 data-nosnippet>726</a>// (`paper_SI`, `supplement`, `z_SI_renamed`, `Supplemental_Materials`) — the
-<a href=#727 id=727 data-nosnippet>727</a>// short `si`/`sm` forms only as delimited tokens so they can't match a substring.
-<a href=#728 id=728 data-nosnippet>728</a></span><span class="kw">static </span>RE_SUPP_NAME: LazyLock&lt;Regex&gt; = LazyLock::new(|| {
-<a href=#729 id=729 data-nosnippet>729</a>  Regex::new(<span class="string">r"(?i)(^|[_-])(supp(lement(ary|al)?)?|supporting|supplemental|appendix|si|sm)([_-]|$)"</span>)
-<a href=#730 id=730 data-nosnippet>730</a>    .unwrap()
-<a href=#731 id=731 data-nosnippet>731</a>});
-<a href=#732 id=732 data-nosnippet>732</a><span class="comment">// Supplement `\title` text ("Supplementary Information for …", "SUPPLEMENTAL
-<a href=#733 id=733 data-nosnippet>733</a>// MATERIALS", "Supporting Information", "Supplemental Materials for:").
-<a href=#734 id=734 data-nosnippet>734</a></span><span class="kw">static </span>RE_SUPP_TITLE: LazyLock&lt;Regex&gt; = LazyLock::new(|| {
-<a href=#735 id=735 data-nosnippet>735</a>  Regex::new(<span class="string">r"(?i)(supplement|supporting\s+information|supplemental|appendix)"</span>).unwrap()
-<a href=#736 id=736 data-nosnippet>736</a>});
-<a href=#737 id=737 data-nosnippet>737</a><span class="comment">// First braced argument of a `\title`/`\icmltitle` (comments already stripped).
-<a href=#738 id=738 data-nosnippet>738</a></span><span class="kw">static </span>RE_TITLE_ARG: LazyLock&lt;Regex&gt; =
-<a href=#739 id=739 data-nosnippet>739</a>  LazyLock::new(|| Regex::new(<span class="string">r"\\(?:icml)?title\s*(?:\[[^\]]*\])?\s*\{([^}]*)"</span>).unwrap());
-<a href=#740 id=740 data-nosnippet>740</a><span class="comment">// Strip a single `%`-comment, stopping at the next `\r` so bare-`\r`
-<a href=#741 id=741 data-nosnippet>741</a>// line-ended files (Mac classic) preserve post-comment `\documentclass`.
-<a href=#742 id=742 data-nosnippet>742</a></span><span class="kw">static </span>RE_STRIP_COMMENT: LazyLock&lt;Regex&gt; = LazyLock::new(|| Regex::new(<span class="string">r"%[^\r]*"</span>).unwrap());
-<a href=#743 id=743 data-nosnippet>743</a>
-<a href=#744 id=744 data-nosnippet>744</a><span class="attr">#[cfg(test)]
-<a href=#745 id=745 data-nosnippet>745</a></span><span class="kw">mod </span>tests {
-<a href=#746 id=746 data-nosnippet>746</a>  <span class="kw">use </span>tempfile::tempdir;
-<a href=#747 id=747 data-nosnippet>747</a>
-<a href=#748 id=748 data-nosnippet>748</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
-<a href=#749 id=749 data-nosnippet>749</a>
-<a href=#750 id=750 data-nosnippet>750</a>  <span class="kw">fn </span>write(dir: <span class="kw-2">&amp;</span>Path, name: <span class="kw-2">&amp;</span>str, body: <span class="kw-2">&amp;</span>str) { std::fs::write(dir.join(name), body).unwrap(); }
-<a href=#751 id=751 data-nosnippet>751</a>
-<a href=#752 id=752 data-nosnippet>752</a>  <span class="attr">#[test]
-<a href=#753 id=753 data-nosnippet>753</a>  </span><span class="kw">fn </span>picks_documentclass_over_input_only_file() {
-<a href=#754 id=754 data-nosnippet>754</a>    <span class="kw">let </span>d = tempdir().unwrap();
-<a href=#755 id=755 data-nosnippet>755</a>    write(
-<a href=#756 id=756 data-nosnippet>756</a>      d.path(),
-<a href=#757 id=757 data-nosnippet>757</a>      <span class="string">"main.tex"</span>,
-<a href=#758 id=758 data-nosnippet>758</a>      <span class="string">"\\documentclass{article}\n\\begin{document}x\\end{document}"</span>,
-<a href=#759 id=759 data-nosnippet>759</a>    );
-<a href=#760 id=760 data-nosnippet>760</a>    write(d.path(), <span class="string">"intro.tex"</span>, <span class="string">"\\input{intro_body}\n"</span>);
-<a href=#761 id=761 data-nosnippet>761</a>    <span class="kw">let </span>pick = find_main_tex(d.path()).unwrap();
-<a href=#762 id=762 data-nosnippet>762</a>    <span class="macro">assert_eq!</span>(pick.file_name().unwrap(), <span class="string">"main.tex"</span>);
-<a href=#763 id=763 data-nosnippet>763</a>  }
-<a href=#764 id=764 data-nosnippet>764</a>
-<a href=#765 id=765 data-nosnippet>765</a>  <span class="comment">// Pack.pm:180-182 vetoes every `\input` argument; a driver with `\begin{document}` vetoes the `\documentclass` preamble
-<a href=#766 id=766 data-nosnippet>766</a>  // it inputs although the preamble scores higher (1402.3465, 2503.12837, 1505.07539, hep-th0609123), while a wrapper
-<a href=#767 id=767 data-nosnippet>767</a>  // without one keeps the score gate (2307.13586).
-<a href=#768 id=768 data-nosnippet>768</a>  </span><span class="attr">#[test]
-<a href=#769 id=769 data-nosnippet>769</a>  </span><span class="kw">fn </span>driver_vetoes_the_preamble_it_inputs() {
-<a href=#770 id=770 data-nosnippet>770</a>    <span class="kw">let </span>d = tempdir().unwrap();
-<a href=#771 id=771 data-nosnippet>771</a>    write(
-<a href=#772 id=772 data-nosnippet>772</a>      d.path(),
-<a href=#773 id=773 data-nosnippet>773</a>      <span class="string">"paper.tex"</span>,
-<a href=#774 id=774 data-nosnippet>774</a>      <span class="string">"\\input{preamble}\n\\begin{document}\nMain body text.\n\\end{document}\n"</span>,
-<a href=#775 id=775 data-nosnippet>775</a>    );
-<a href=#776 id=776 data-nosnippet>776</a>    write(
-<a href=#777 id=777 data-nosnippet>777</a>      d.path(),
-<a href=#778 id=778 data-nosnippet>778</a>      <span class="string">"preamble.tex"</span>,
-<a href=#779 id=779 data-nosnippet>779</a>      <span class="string">"\\documentclass{article}\n\\usepackage{amsmath}\n"</span>,
-<a href=#780 id=780 data-nosnippet>780</a>    );
-<a href=#781 id=781 data-nosnippet>781</a>    <span class="kw">let </span>pick = find_main_tex(d.path()).unwrap();
-<a href=#782 id=782 data-nosnippet>782</a>    <span class="macro">assert_eq!</span>(pick.file_name().unwrap(), <span class="string">"paper.tex"</span>);
-<a href=#783 id=783 data-nosnippet>783</a>  }
+<a href=#514 id=514 data-nosnippet>514</a><span class="doccomment">/// Whether one of the file's first 10 lines carries the `%auto-ignore` marker
+<a href=#515 id=515 data-nosnippet>515</a>/// (arXiv: keep in the bundle, do not process — `submit_legacy_differences`).
+<a href=#516 id=516 data-nosnippet>516</a></span><span class="kw">fn </span>has_auto_ignore(path: <span class="kw-2">&amp;</span>Path) -&gt; bool {
+<a href=#517 id=517 data-nosnippet>517</a>  <span class="kw">let </span><span class="prelude-val">Ok</span>(raw) = std::fs::read(path) <span class="kw">else </span>{
+<a href=#518 id=518 data-nosnippet>518</a>    <span class="kw">return </span><span class="bool-val">false</span>;
+<a href=#519 id=519 data-nosnippet>519</a>  };
+<a href=#520 id=520 data-nosnippet>520</a>  String::from_utf8_lossy(<span class="kw-2">&amp;</span>raw)
+<a href=#521 id=521 data-nosnippet>521</a>    .lines()
+<a href=#522 id=522 data-nosnippet>522</a>    .take(<span class="number">10</span>)
+<a href=#523 id=523 data-nosnippet>523</a>    .any(|l| RE_AUTOIGNORE.is_match(l))
+<a href=#524 id=524 data-nosnippet>524</a>}
+<a href=#525 id=525 data-nosnippet>525</a>
+<a href=#526 id=526 data-nosnippet>526</a><span class="doccomment">/// Order a set of top-level files main-first: any file that looks like a
+<a href=#527 id=527 data-nosnippet>527</a>/// supplement goes last (arXiv-alphanumeric within each group); among the
+<a href=#528 id=528 data-nosnippet>528</a>/// non-supplements a `main`/`ms`/`paper` common name is promoted to the front.
+<a href=#529 id=529 data-nosnippet>529</a></span><span class="kw">fn </span>order_main_first(<span class="kw-2">mut </span>files: Vec&lt;PathBuf&gt;, _dir: <span class="kw-2">&amp;</span>Path) -&gt; Vec&lt;PathBuf&gt; {
+<a href=#530 id=530 data-nosnippet>530</a>  files.sort();
+<a href=#531 id=531 data-nosnippet>531</a>  files.dedup();
+<a href=#532 id=532 data-nosnippet>532</a>  <span class="kw">let </span>(supps, <span class="kw-2">mut </span>mains): (Vec&lt;PathBuf&gt;, Vec&lt;PathBuf&gt;) =
+<a href=#533 id=533 data-nosnippet>533</a>    files.into_iter().partition(|f| is_supplement(f));
+<a href=#534 id=534 data-nosnippet>534</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(pos) = mains.iter().position(|f| is_common_main_name(f)) {
+<a href=#535 id=535 data-nosnippet>535</a>    <span class="kw">let </span>m = mains.remove(pos);
+<a href=#536 id=536 data-nosnippet>536</a>    mains.insert(<span class="number">0</span>, m);
+<a href=#537 id=537 data-nosnippet>537</a>  }
+<a href=#538 id=538 data-nosnippet>538</a>  mains.extend(supps);
+<a href=#539 id=539 data-nosnippet>539</a>  mains
+<a href=#540 id=540 data-nosnippet>540</a>}
+<a href=#541 id=541 data-nosnippet>541</a>
+<a href=#542 id=542 data-nosnippet>542</a><span class="doccomment">/// Whether the file names itself `main.tex` / `ms.tex` / `paper.tex` (the same
+<a href=#543 id=543 data-nosnippet>543</a>/// common-name set the single-file heuristic prefers).
+<a href=#544 id=544 data-nosnippet>544</a></span><span class="kw">fn </span>is_common_main_name(path: <span class="kw-2">&amp;</span>Path) -&gt; bool {
+<a href=#545 id=545 data-nosnippet>545</a>  path
+<a href=#546 id=546 data-nosnippet>546</a>    .file_name()
+<a href=#547 id=547 data-nosnippet>547</a>    .and_then(|n| n.to_str())
+<a href=#548 id=548 data-nosnippet>548</a>    .is_some_and(|n| n == <span class="string">"main.tex" </span>|| n == <span class="string">"ms.tex" </span>|| n == <span class="string">"paper.tex"</span>)
+<a href=#549 id=549 data-nosnippet>549</a>}
+<a href=#550 id=550 data-nosnippet>550</a>
+<a href=#551 id=551 data-nosnippet>551</a><span class="doccomment">/// A top-level `.tex` reads as Supplementary Material when its filename or its
+<a href=#552 id=552 data-nosnippet>552</a>/// `\title` announces it (`supplement`/`supporting`/`supplemental`/`appendix`/
+<a href=#553 id=553 data-nosnippet>553</a>/// delimited `SI`/`SM`). Used only among *already* `.bbl`-backed sibling
+<a href=#554 id=554 data-nosnippet>554</a>/// documents, so this classifies main-vs-supplement; it never promotes a
+<a href=#555 id=555 data-nosnippet>555</a>/// template into a document.
+<a href=#556 id=556 data-nosnippet>556</a></span><span class="kw">fn </span>is_supplement(path: <span class="kw-2">&amp;</span>Path) -&gt; bool {
+<a href=#557 id=557 data-nosnippet>557</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(stem) = path.file_stem().and_then(|s| s.to_str())
+<a href=#558 id=558 data-nosnippet>558</a>    &amp;&amp; RE_SUPP_NAME.is_match(stem)
+<a href=#559 id=559 data-nosnippet>559</a>  {
+<a href=#560 id=560 data-nosnippet>560</a>    <span class="kw">return </span><span class="bool-val">true</span>;
+<a href=#561 id=561 data-nosnippet>561</a>  }
+<a href=#562 id=562 data-nosnippet>562</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(title) = first_title(path)
+<a href=#563 id=563 data-nosnippet>563</a>    &amp;&amp; RE_SUPP_TITLE.is_match(<span class="kw-2">&amp;</span>title)
+<a href=#564 id=564 data-nosnippet>564</a>  {
+<a href=#565 id=565 data-nosnippet>565</a>    <span class="kw">return </span><span class="bool-val">true</span>;
+<a href=#566 id=566 data-nosnippet>566</a>  }
+<a href=#567 id=567 data-nosnippet>567</a>  <span class="bool-val">false
+<a href=#568 id=568 data-nosnippet>568</a></span>}
+<a href=#569 id=569 data-nosnippet>569</a>
+<a href=#570 id=570 data-nosnippet>570</a><span class="doccomment">/// True when the file defines a `\documentclass`/`\documentstyle` (i.e. is a
+<a href=#571 id=571 data-nosnippet>571</a>/// top-level document, not an `\input`-ed fragment).
+<a href=#572 id=572 data-nosnippet>572</a></span><span class="kw">fn </span>file_has_documentclass(path: <span class="kw-2">&amp;</span>Path) -&gt; bool {
+<a href=#573 id=573 data-nosnippet>573</a>  <span class="kw">let </span><span class="prelude-val">Ok</span>(raw) = std::fs::read(path) <span class="kw">else </span>{
+<a href=#574 id=574 data-nosnippet>574</a>    <span class="kw">return </span><span class="bool-val">false</span>;
+<a href=#575 id=575 data-nosnippet>575</a>  };
+<a href=#576 id=576 data-nosnippet>576</a>  <span class="kw">let </span>content = String::from_utf8_lossy(<span class="kw-2">&amp;</span>raw);
+<a href=#577 id=577 data-nosnippet>577</a>  content.lines().any(|l| {
+<a href=#578 id=578 data-nosnippet>578</a>    <span class="kw">let </span>stripped = RE_STRIP_COMMENT.replacen(l, <span class="number">1</span>, <span class="string">""</span>);
+<a href=#579 id=579 data-nosnippet>579</a>    RE_DOCCLASS.is_match(<span class="kw-2">&amp;</span>stripped)
+<a href=#580 id=580 data-nosnippet>580</a>  })
+<a href=#581 id=581 data-nosnippet>581</a>}
+<a href=#582 id=582 data-nosnippet>582</a>
+<a href=#583 id=583 data-nosnippet>583</a><span class="doccomment">/// The text of the first non-commented `\title{…}` / `\icmltitle{…}` in the
+<a href=#584 id=584 data-nosnippet>584</a>/// file (up to ~120 chars), for supplement classification.
+<a href=#585 id=585 data-nosnippet>585</a></span><span class="kw">fn </span>first_title(path: <span class="kw-2">&amp;</span>Path) -&gt; <span class="prelude-ty">Option</span>&lt;String&gt; {
+<a href=#586 id=586 data-nosnippet>586</a>  <span class="kw">let </span>raw = std::fs::read(path).ok()<span class="question-mark">?</span>;
+<a href=#587 id=587 data-nosnippet>587</a>  <span class="kw">let </span>content = String::from_utf8_lossy(<span class="kw-2">&amp;</span>raw);
+<a href=#588 id=588 data-nosnippet>588</a>  <span class="comment">// Strip `%`-comments line-by-line so a commented template placeholder title
+<a href=#589 id=589 data-nosnippet>589</a>  // (`%% \title{Title}`) does not count. Witness 2402.13498 (elsarticle).
+<a href=#590 id=590 data-nosnippet>590</a>  </span><span class="kw">let </span>stripped: String = content
+<a href=#591 id=591 data-nosnippet>591</a>    .lines()
+<a href=#592 id=592 data-nosnippet>592</a>    .map(|l| RE_STRIP_COMMENT.replacen(l, <span class="number">1</span>, <span class="string">""</span>).into_owned())
+<a href=#593 id=593 data-nosnippet>593</a>    .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
+<a href=#594 id=594 data-nosnippet>594</a>    .join(<span class="string">"\n"</span>);
+<a href=#595 id=595 data-nosnippet>595</a>  RE_TITLE_ARG
+<a href=#596 id=596 data-nosnippet>596</a>    .captures(<span class="kw-2">&amp;</span>stripped)
+<a href=#597 id=597 data-nosnippet>597</a>    .map(|c| c[<span class="number">1</span>].chars().take(<span class="number">120</span>).collect())
+<a href=#598 id=598 data-nosnippet>598</a>}
+<a href=#599 id=599 data-nosnippet>599</a>
+<a href=#600 id=600 data-nosnippet>600</a><span class="doccomment">/// Parse `00README.json` and return the filenames of **every** `usage ==
+<a href=#601 id=601 data-nosnippet>601</a>/// "toplevel"` source, in document order. `parse_readme_json` returns only the
+<a href=#602 id=602 data-nosnippet>602</a>/// first; this drives multi-top-level detection.
+<a href=#603 id=603 data-nosnippet>603</a></span><span class="kw">fn </span>parse_readme_json_all(dir: <span class="kw-2">&amp;</span>Path) -&gt; Vec&lt;String&gt; {
+<a href=#604 id=604 data-nosnippet>604</a>  <span class="kw">let </span><span class="kw-2">mut </span>out = Vec::new();
+<a href=#605 id=605 data-nosnippet>605</a>  <span class="kw">let </span><span class="prelude-val">Ok</span>(content) = std::fs::read_to_string(dir.join(<span class="string">"00README.json"</span>)) <span class="kw">else </span>{
+<a href=#606 id=606 data-nosnippet>606</a>    <span class="kw">return </span>out;
+<a href=#607 id=607 data-nosnippet>607</a>  };
+<a href=#608 id=608 data-nosnippet>608</a>  <span class="kw">let </span><span class="prelude-val">Some</span>(sources_start) = content.find(<span class="string">"\"sources\""</span>) <span class="kw">else </span>{
+<a href=#609 id=609 data-nosnippet>609</a>    <span class="kw">return </span>out;
+<a href=#610 id=610 data-nosnippet>610</a>  };
+<a href=#611 id=611 data-nosnippet>611</a>  <span class="kw">let </span>rest = <span class="kw-2">&amp;</span>content[sources_start..];
+<a href=#612 id=612 data-nosnippet>612</a>  <span class="kw">let </span>(<span class="prelude-val">Some</span>(arr_start), <span class="prelude-val">Some</span>(arr_end)) = (rest.find(<span class="string">'['</span>), rest.find(<span class="string">']'</span>)) <span class="kw">else </span>{
+<a href=#613 id=613 data-nosnippet>613</a>    <span class="kw">return </span>out;
+<a href=#614 id=614 data-nosnippet>614</a>  };
+<a href=#615 id=615 data-nosnippet>615</a>  <span class="kw">let </span>arr = <span class="kw-2">&amp;</span>rest[arr_start + <span class="number">1</span>..arr_end];
+<a href=#616 id=616 data-nosnippet>616</a>  <span class="kw">for </span>obj_str <span class="kw">in </span>arr.split(<span class="string">'}'</span>) {
+<a href=#617 id=617 data-nosnippet>617</a>    <span class="kw">if </span>!obj_str.contains(<span class="string">"\"toplevel\""</span>) {
+<a href=#618 id=618 data-nosnippet>618</a>      <span class="kw">continue</span>;
+<a href=#619 id=619 data-nosnippet>619</a>    }
+<a href=#620 id=620 data-nosnippet>620</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(fn_pos) = obj_str.find(<span class="string">"\"filename\""</span>) {
+<a href=#621 id=621 data-nosnippet>621</a>      <span class="kw">let </span>after = obj_str[fn_pos + <span class="number">10</span>..].trim_start();
+<a href=#622 id=622 data-nosnippet>622</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(after) = after.strip_prefix(<span class="string">':'</span>) {
+<a href=#623 id=623 data-nosnippet>623</a>        <span class="kw">let </span>after = after.trim_start();
+<a href=#624 id=624 data-nosnippet>624</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(after) = after.strip_prefix(<span class="string">'"'</span>) {
+<a href=#625 id=625 data-nosnippet>625</a>          <span class="kw">let </span>name: String = after
+<a href=#626 id=626 data-nosnippet>626</a>            .chars()
+<a href=#627 id=627 data-nosnippet>627</a>            .take_while(|<span class="kw-2">&amp;</span>c| c != <span class="string">'"'</span>)
+<a href=#628 id=628 data-nosnippet>628</a>            .filter(|<span class="kw-2">&amp;</span>c| c != <span class="string">'\\'</span>)
+<a href=#629 id=629 data-nosnippet>629</a>            .collect();
+<a href=#630 id=630 data-nosnippet>630</a>          <span class="kw">if </span>!name.is_empty() {
+<a href=#631 id=631 data-nosnippet>631</a>            out.push(name);
+<a href=#632 id=632 data-nosnippet>632</a>          }
+<a href=#633 id=633 data-nosnippet>633</a>        }
+<a href=#634 id=634 data-nosnippet>634</a>      }
+<a href=#635 id=635 data-nosnippet>635</a>    }
+<a href=#636 id=636 data-nosnippet>636</a>  }
+<a href=#637 id=637 data-nosnippet>637</a>  out
+<a href=#638 id=638 data-nosnippet>638</a>}
+<a href=#639 id=639 data-nosnippet>639</a>
+<a href=#640 id=640 data-nosnippet>640</a><span class="comment">// Perl Pack.pm L25 TEX_EXT = qr/\.(?:[tT](:?[eE][xX]|[xX][tT])|ltx|LTX)$/
+<a href=#641 id=641 data-nosnippet>641</a>// → .tex, .txt, .ltx (case-insensitive). The `fallback` arm matches Perl
+<a href=#642 id=642 data-nosnippet>642</a>// Pack/Dir.pm L47: `!/\./ || /\.[^.]{4,}$/` — extension-less or extension
+<a href=#643 id=643 data-nosnippet>643</a>// ≥4 chars, used when nothing TeX-shaped surfaces in the strict pass.
+<a href=#644 id=644 data-nosnippet>644</a></span><span class="kw">fn </span>collect_tex_files(dir: <span class="kw-2">&amp;</span>Path, files: <span class="kw-2">&amp;mut </span>Vec&lt;PathBuf&gt;, fallback: bool) {
+<a href=#645 id=645 data-nosnippet>645</a>  <span class="kw">if let </span><span class="prelude-val">Ok</span>(entries) = std::fs::read_dir(dir) {
+<a href=#646 id=646 data-nosnippet>646</a>    <span class="kw">for </span>entry <span class="kw">in </span>entries.flatten() {
+<a href=#647 id=647 data-nosnippet>647</a>      <span class="kw">let </span>path = entry.path();
+<a href=#648 id=648 data-nosnippet>648</a>      <span class="comment">// Recurse into real directories only, as Perl's walk does (Util/Pack/Dir.pm:45, File::Find without `follow`):
+<a href=#649 id=649 data-nosnippet>649</a>      // a link to a directory (an archive's `a -&gt; .`) would cycle without end.
+<a href=#650 id=650 data-nosnippet>650</a>      </span><span class="kw">if </span>entry.file_type().is_ok_and(|kind| kind.is_dir()) {
+<a href=#651 id=651 data-nosnippet>651</a>        collect_tex_files(<span class="kw-2">&amp;</span>path, files, fallback);
+<a href=#652 id=652 data-nosnippet>652</a>      } <span class="kw">else if </span>path.is_dir() {
+<a href=#653 id=653 data-nosnippet>653</a>        <span class="kw">continue</span>;
+<a href=#654 id=654 data-nosnippet>654</a>      } <span class="kw">else if </span>!fallback {
+<a href=#655 id=655 data-nosnippet>655</a>        <span class="kw">if </span>path.extension().is_some_and(|e| {
+<a href=#656 id=656 data-nosnippet>656</a>          <span class="kw">let </span>e = e.to_ascii_lowercase();
+<a href=#657 id=657 data-nosnippet>657</a>          e == <span class="string">"tex" </span>|| e == <span class="string">"txt" </span>|| e == <span class="string">"ltx"
+<a href=#658 id=658 data-nosnippet>658</a>        </span>}) {
+<a href=#659 id=659 data-nosnippet>659</a>          files.push(path);
+<a href=#660 id=660 data-nosnippet>660</a>        }
+<a href=#661 id=661 data-nosnippet>661</a>      } <span class="kw">else </span>{
+<a href=#662 id=662 data-nosnippet>662</a>        <span class="kw">let </span>ext_opt = path.extension().and_then(|e| e.to_str());
+<a href=#663 id=663 data-nosnippet>663</a>        <span class="kw">let </span>keep = <span class="kw">match </span>ext_opt {
+<a href=#664 id=664 data-nosnippet>664</a>          <span class="prelude-val">None </span>=&gt; <span class="bool-val">true</span>,
+<a href=#665 id=665 data-nosnippet>665</a>          <span class="prelude-val">Some</span>(ext) =&gt; ext.len() &gt;= <span class="number">4</span>,
+<a href=#666 id=666 data-nosnippet>666</a>        };
+<a href=#667 id=667 data-nosnippet>667</a>        <span class="kw">if </span>keep {
+<a href=#668 id=668 data-nosnippet>668</a>          files.push(path);
+<a href=#669 id=669 data-nosnippet>669</a>        }
+<a href=#670 id=670 data-nosnippet>670</a>      }
+<a href=#671 id=671 data-nosnippet>671</a>    }
+<a href=#672 id=672 data-nosnippet>672</a>  }
+<a href=#673 id=673 data-nosnippet>673</a>}
+<a href=#674 id=674 data-nosnippet>674</a>
+<a href=#675 id=675 data-nosnippet>675</a><span class="comment">// Faithful port of Perl `Pack.pm::heuristic_check_for_pdftex` (L222-241):
+<a href=#676 id=676 data-nosnippet>676</a>// a file counts as a pdf-include candidate only when some line carries
+<a href=#677 id=677 data-nosnippet>677</a>// `\includegraphics{...ext}` with the raster/pdf extension INSIDE the
+<a href=#678 id=678 data-nosnippet>678</a>// argument (`\includegraphics[^%]*\.(?:pdf|png|gif|jpg)\s?\}`, case-insensitive,
+<a href=#679 id=679 data-nosnippet>679</a>// not preceded by a `%`), or a `\pdfoutput=1` marker. Perl's `$pdfoutput_checks`
+<a href=#680 id=680 data-nosnippet>680</a>// counter clamps at 0, so its `&gt;= 0` guard is always true and the `\pdfoutput`
+<a href=#681 id=681 data-nosnippet>681</a>// probe effectively scans every line — we mirror that (no first-N-lines cap).
+<a href=#682 id=682 data-nosnippet>682</a>//
+<a href=#683 id=683 data-nosnippet>683</a>// The earlier Rust port used a loose whole-file
+<a href=#684 id=684 data-nosnippet>684</a>// `contains("\\includegraphics") &amp;&amp; contains(".png"|".pdf"|".jpg")`, which
+<a href=#685 id=685 data-nosnippet>685</a>// FALSE-POSITIVES on class templates whose `\includegraphics` examples are
+<a href=#686 id=686 data-nosnippet>686</a>// extensionless (`{icml_numpapers}`) or `.eps` (`{egfigure.eps}`) yet mention
+<a href=#687 id=687 data-nosnippet>687</a>// a raster extension elsewhere (prose/comments). Because the pdf heuristic runs
+<a href=#688 id=688 data-nosnippet>688</a>// before the `.bbl` tie-break, that false positive eliminated the true
+<a href=#689 id=689 data-nosnippet>689</a>// figure-delegating `main.tex`: 2401.17263 (#442, example_paper.tex) and
+<a href=#690 id=690 data-nosnippet>690</a>// 2403.17719 (#859, rebuttal.tex) were mis-picked by Rust though Perl picks
+<a href=#691 id=691 data-nosnippet>691</a>// their `main.tex`. Argument-anchoring restores parity.
+<a href=#692 id=692 data-nosnippet>692</a></span><span class="kw">fn </span>has_pdftex_marker(path: <span class="kw-2">&amp;</span>Path) -&gt; bool {
+<a href=#693 id=693 data-nosnippet>693</a>  <span class="kw">let </span><span class="prelude-val">Ok</span>(raw) = std::fs::read(path) <span class="kw">else </span>{
+<a href=#694 id=694 data-nosnippet>694</a>    <span class="kw">return </span><span class="bool-val">false</span>;
+<a href=#695 id=695 data-nosnippet>695</a>  };
+<a href=#696 id=696 data-nosnippet>696</a>  <span class="kw">let </span>content = String::from_utf8_lossy(<span class="kw-2">&amp;</span>raw);
+<a href=#697 id=697 data-nosnippet>697</a>  content
+<a href=#698 id=698 data-nosnippet>698</a>    .lines()
+<a href=#699 id=699 data-nosnippet>699</a>    .any(|line| RE_PDF_INCLUDE.is_match(line) || RE_PDFOUTPUT.is_match(line))
+<a href=#700 id=700 data-nosnippet>700</a>}
+<a href=#701 id=701 data-nosnippet>701</a>
+<a href=#702 id=702 data-nosnippet>702</a><span class="comment">// Skip files whose magic bytes identify them as PDF (e.g. arXiv source
+<a href=#703 id=703 data-nosnippet>703</a>// archives that contain a PDF mis-named with a `.tex` extension).
+<a href=#704 id=704 data-nosnippet>704</a></span><span class="kw">pub fn </span>is_pdf_magic(path: <span class="kw-2">&amp;</span>Path) -&gt; bool {
+<a href=#705 id=705 data-nosnippet>705</a>  <span class="kw">let </span><span class="kw-2">mut </span>buf = [<span class="number">0u8</span>; <span class="number">5</span>];
+<a href=#706 id=706 data-nosnippet>706</a>  <span class="kw">if let </span><span class="prelude-val">Ok</span>(<span class="kw-2">mut </span>f) = std::fs::File::open(path) {
+<a href=#707 id=707 data-nosnippet>707</a>    <span class="kw">use </span>std::io::Read;
+<a href=#708 id=708 data-nosnippet>708</a>    <span class="kw">if </span>f.read(<span class="kw-2">&amp;mut </span>buf).is_ok_and(|n| n == <span class="number">5</span>) {
+<a href=#709 id=709 data-nosnippet>709</a>      <span class="kw">return </span><span class="kw-2">&amp;</span>buf == <span class="string">b"%PDF-"</span>;
+<a href=#710 id=710 data-nosnippet>710</a>    }
+<a href=#711 id=711 data-nosnippet>711</a>  }
+<a href=#712 id=712 data-nosnippet>712</a>  <span class="bool-val">false
+<a href=#713 id=713 data-nosnippet>713</a></span>}
+<a href=#714 id=714 data-nosnippet>714</a>
+<a href=#715 id=715 data-nosnippet>715</a><span class="doccomment">/// Parse `00README.json` in `dir` and return the "filename" of the
+<a href=#716 id=716 data-nosnippet>716</a>/// toplevel source. Perl Pack.pm L68-80: scans `sources[]` for the
+<a href=#717 id=717 data-nosnippet>717</a>/// entry tagged `usage == "toplevel"`. Minimal hand-rolled JSON
+<a href=#718 id=718 data-nosnippet>718</a>/// scanner — we don't pull a full JSON dep just for this.
+<a href=#719 id=719 data-nosnippet>719</a></span><span class="kw">fn </span>parse_readme_json(dir: <span class="kw-2">&amp;</span>Path) -&gt; <span class="prelude-ty">Option</span>&lt;String&gt; { parse_readme_json_all(dir).into_iter().next() }
+<a href=#720 id=720 data-nosnippet>720</a>
+<a href=#721 id=721 data-nosnippet>721</a><span class="comment">// ---------------------------------------------------------------------------
+<a href=#722 id=722 data-nosnippet>722</a>// Pre-compiled regexes used by `find_main_tex`. Parking these as module-
+<a href=#723 id=723 data-nosnippet>723</a>// level `LazyLock&lt;Regex&gt;` keeps a single instance per process and avoids the
+<a href=#724 id=724 data-nosnippet>724</a>// per-call recompile that nesting them inside the function caused.
+<a href=#725 id=725 data-nosnippet>725</a>// ---------------------------------------------------------------------------
+<a href=#726 id=726 data-nosnippet>726</a>
+<a href=#727 id=727 data-nosnippet>727</a></span><span class="kw">static </span>RE_AUTOIGNORE: LazyLock&lt;Regex&gt; = LazyLock::new(|| Regex::new(<span class="string">r"%auto-ignore"</span>).unwrap());
+<a href=#728 id=728 data-nosnippet>728</a><span class="kw">static </span>RE_TEXINFO: LazyLock&lt;Regex&gt; = LazyLock::new(|| Regex::new(<span class="string">r"\\input texinfo"</span>).unwrap());
+<a href=#729 id=729 data-nosnippet>729</a><span class="kw">static </span>RE_AUTOINCLUDE: LazyLock&lt;Regex&gt; = LazyLock::new(|| Regex::new(<span class="string">r"%auto-include"</span>).unwrap());
+<a href=#730 id=730 data-nosnippet>730</a><span class="kw">static </span>RE_FORMAT_HINT: LazyLock&lt;Regex&gt; = LazyLock::new(|| Regex::new(<span class="string">r"^\r?%&amp;(\S+)"</span>).unwrap());
+<a href=#731 id=731 data-nosnippet>731</a><span class="kw">static </span>RE_DOCCLASS: LazyLock&lt;Regex&gt; =
+<a href=#732 id=732 data-nosnippet>732</a>  LazyLock::new(|| Regex::new(<span class="string">r"(?:^|\r)\s*\\document(?:style|class)"</span>).unwrap());
+<a href=#733 id=733 data-nosnippet>733</a><span class="kw">static </span>RE_MAYBE_TEX: LazyLock&lt;Regex&gt; = LazyLock::new(|| {
+<a href=#734 id=734 data-nosnippet>734</a>  Regex::new(<span class="string">r"(?:^|\r)\s*\\(?:font|magnification|input|def|special|baselineskip|begin)"</span>).unwrap()
+<a href=#735 id=735 data-nosnippet>735</a>});
+<a href=#736 id=736 data-nosnippet>736</a><span class="kw">static </span>RE_INPUT_INCLUDE: LazyLock&lt;Regex&gt; =
+<a href=#737 id=737 data-nosnippet>737</a>  LazyLock::new(|| Regex::new(<span class="string">r"\\(?:input|include)(?:\s+|\{)([^ \}]+)"</span>).unwrap());
+<a href=#738 id=738 data-nosnippet>738</a><span class="kw">static </span>RE_END_BYE: LazyLock&lt;Regex&gt; =
+<a href=#739 id=739 data-nosnippet>739</a>  LazyLock::new(|| Regex::new(<span class="string">r"(?:^|\r)\s*\\(?:end|bye)(?:\s|$)"</span>).unwrap());
+<a href=#740 id=740 data-nosnippet>740</a><span class="kw">static </span>RE_END_BYE2: LazyLock&lt;Regex&gt; =
+<a href=#741 id=741 data-nosnippet>741</a>  LazyLock::new(|| Regex::new(<span class="string">r"\\(?:end|bye)(?:\s|$)"</span>).unwrap());
+<a href=#742 id=742 data-nosnippet>742</a><span class="kw">static </span>RE_BEGIN_DOCUMENT: LazyLock&lt;Regex&gt; =
+<a href=#743 id=743 data-nosnippet>743</a>  LazyLock::new(|| Regex::new(<span class="string">r"\\begin\s*\{document\}"</span>).unwrap());
+<a href=#744 id=744 data-nosnippet>744</a><span class="kw">static </span>RE_MAC_TEX: LazyLock&lt;Regex&gt; =
+<a href=#745 id=745 data-nosnippet>745</a>  LazyLock::new(|| Regex::new(<span class="string">r"\\input *(?:harv|lanl)mac|\\input\s+phyzzx"</span>).unwrap());
+<a href=#746 id=746 data-nosnippet>746</a><span class="kw">static </span>RE_METAFONT: LazyLock&lt;Regex&gt; = LazyLock::new(|| Regex::new(<span class="string">r"beginchar\("</span>).unwrap());
+<a href=#747 id=747 data-nosnippet>747</a><span class="kw">static </span>RE_BIBTEX: LazyLock&lt;Regex&gt; =
+<a href=#748 id=748 data-nosnippet>748</a>  LazyLock::new(|| Regex::new(<span class="string">r"(?i)(?:^|\r)@(?:book|article|inbook|unpublished)\{"</span>).unwrap());
+<a href=#749 id=749 data-nosnippet>749</a><span class="kw">static </span>RE_UUENCODE: LazyLock&lt;Regex&gt; =
+<a href=#750 id=750 data-nosnippet>750</a>  LazyLock::new(|| Regex::new(<span class="string">r"^begin \d{1,4}\s+\S+\r?$"</span>).unwrap());
+<a href=#751 id=751 data-nosnippet>751</a><span class="kw">static </span>RE_WITHDRAWN: LazyLock&lt;Regex&gt; =
+<a href=#752 id=752 data-nosnippet>752</a>  LazyLock::new(|| Regex::new(<span class="string">r"paper deliberately replaced by what little"</span>).unwrap());
+<a href=#753 id=753 data-nosnippet>753</a><span class="kw">static </span>RE_AMSTEX: LazyLock&lt;Regex&gt; = LazyLock::new(|| Regex::new(<span class="string">r"^amstex$"</span>).unwrap());
+<a href=#754 id=754 data-nosnippet>754</a><span class="comment">// Perl `heuristic_check_for_pdftex` pdf-include probe: an `\includegraphics`
+<a href=#755 id=755 data-nosnippet>755</a>// whose argument names a raster/pdf image (case-insensitive), not behind a `%`.
+<a href=#756 id=756 data-nosnippet>756</a></span><span class="kw">static </span>RE_PDF_INCLUDE: LazyLock&lt;Regex&gt; = LazyLock::new(|| {
+<a href=#757 id=757 data-nosnippet>757</a>  Regex::new(<span class="string">r"(?i)^[^%]*\\includegraphics[^%]*\.(?:pdf|png|gif|jpg)\s?\}"</span>).unwrap()
+<a href=#758 id=758 data-nosnippet>758</a>});
+<a href=#759 id=759 data-nosnippet>759</a><span class="comment">// Perl `\pdfoutput(?:\s+)?=(?:\s+)?1` marker, not behind a `%`.
+<a href=#760 id=760 data-nosnippet>760</a></span><span class="kw">static </span>RE_PDFOUTPUT: LazyLock&lt;Regex&gt; =
+<a href=#761 id=761 data-nosnippet>761</a>  LazyLock::new(|| Regex::new(<span class="string">r"^[^%]*\\pdfoutput\s*=\s*1"</span>).unwrap());
+<a href=#762 id=762 data-nosnippet>762</a><span class="comment">// Supplementary-Material detection (find_top_level_texs). Filename tokens
+<a href=#763 id=763 data-nosnippet>763</a>// (`paper_SI`, `supplement`, `z_SI_renamed`, `Supplemental_Materials`) — the
+<a href=#764 id=764 data-nosnippet>764</a>// short `si`/`sm` forms only as delimited tokens so they can't match a substring.
+<a href=#765 id=765 data-nosnippet>765</a></span><span class="kw">static </span>RE_SUPP_NAME: LazyLock&lt;Regex&gt; = LazyLock::new(|| {
+<a href=#766 id=766 data-nosnippet>766</a>  Regex::new(<span class="string">r"(?i)(^|[_-])(supp(lement(ary|al)?)?|supporting|supplemental|appendix|si|sm)([_-]|$)"</span>)
+<a href=#767 id=767 data-nosnippet>767</a>    .unwrap()
+<a href=#768 id=768 data-nosnippet>768</a>});
+<a href=#769 id=769 data-nosnippet>769</a><span class="comment">// Supplement `\title` text ("Supplementary Information for …", "SUPPLEMENTAL
+<a href=#770 id=770 data-nosnippet>770</a>// MATERIALS", "Supporting Information", "Supplemental Materials for:").
+<a href=#771 id=771 data-nosnippet>771</a></span><span class="kw">static </span>RE_SUPP_TITLE: LazyLock&lt;Regex&gt; = LazyLock::new(|| {
+<a href=#772 id=772 data-nosnippet>772</a>  Regex::new(<span class="string">r"(?i)(supplement|supporting\s+information|supplemental|appendix)"</span>).unwrap()
+<a href=#773 id=773 data-nosnippet>773</a>});
+<a href=#774 id=774 data-nosnippet>774</a><span class="comment">// First braced argument of a `\title`/`\icmltitle` (comments already stripped).
+<a href=#775 id=775 data-nosnippet>775</a></span><span class="kw">static </span>RE_TITLE_ARG: LazyLock&lt;Regex&gt; =
+<a href=#776 id=776 data-nosnippet>776</a>  LazyLock::new(|| Regex::new(<span class="string">r"\\(?:icml)?title\s*(?:\[[^\]]*\])?\s*\{([^}]*)"</span>).unwrap());
+<a href=#777 id=777 data-nosnippet>777</a><span class="comment">// Strip a single `%`-comment, stopping at the next `\r` so bare-`\r`
+<a href=#778 id=778 data-nosnippet>778</a>// line-ended files (Mac classic) preserve post-comment `\documentclass`.
+<a href=#779 id=779 data-nosnippet>779</a></span><span class="kw">static </span>RE_STRIP_COMMENT: LazyLock&lt;Regex&gt; = LazyLock::new(|| Regex::new(<span class="string">r"%[^\r]*"</span>).unwrap());
+<a href=#780 id=780 data-nosnippet>780</a>
+<a href=#781 id=781 data-nosnippet>781</a><span class="attr">#[cfg(test)]
+<a href=#782 id=782 data-nosnippet>782</a></span><span class="kw">mod </span>tests {
+<a href=#783 id=783 data-nosnippet>783</a>  <span class="kw">use </span>tempfile::tempdir;
 <a href=#784 id=784 data-nosnippet>784</a>
-<a href=#785 id=785 data-nosnippet>785</a>  <span class="attr">#[test]
-<a href=#786 id=786 data-nosnippet>786</a>  </span><span class="kw">fn </span>wrapper_without_begin_document_keeps_its_main() {
-<a href=#787 id=787 data-nosnippet>787</a>    <span class="kw">let </span>d = tempdir().unwrap();
-<a href=#788 id=788 data-nosnippet>788</a>    write(d.path(), <span class="string">"wrapper.tex"</span>, <span class="string">"%\n\\input{main}\n"</span>);
-<a href=#789 id=789 data-nosnippet>789</a>    write(
-<a href=#790 id=790 data-nosnippet>790</a>      d.path(),
-<a href=#791 id=791 data-nosnippet>791</a>      <span class="string">"main.tex"</span>,
-<a href=#792 id=792 data-nosnippet>792</a>      <span class="string">"\\documentclass{article}\n\\begin{document}x\\end{document}\n"</span>,
-<a href=#793 id=793 data-nosnippet>793</a>    );
-<a href=#794 id=794 data-nosnippet>794</a>    <span class="kw">let </span>pick = find_main_tex(d.path()).unwrap();
-<a href=#795 id=795 data-nosnippet>795</a>    <span class="macro">assert_eq!</span>(pick.file_name().unwrap(), <span class="string">"main.tex"</span>);
-<a href=#796 id=796 data-nosnippet>796</a>  }
-<a href=#797 id=797 data-nosnippet>797</a>
-<a href=#798 id=798 data-nosnippet>798</a>  <span class="attr">#[test]
-<a href=#799 id=799 data-nosnippet>799</a>  </span><span class="kw">fn </span>errors_when_directory_has_no_tex() {
-<a href=#800 id=800 data-nosnippet>800</a>    <span class="kw">let </span>d = tempdir().unwrap();
-<a href=#801 id=801 data-nosnippet>801</a>    <span class="kw">let </span>err = find_main_tex(d.path()).unwrap_err();
-<a href=#802 id=802 data-nosnippet>802</a>    <span class="macro">assert!</span>(err.contains(<span class="string">"No .tex files"</span>));
-<a href=#803 id=803 data-nosnippet>803</a>  }
-<a href=#804 id=804 data-nosnippet>804</a>
-<a href=#805 id=805 data-nosnippet>805</a>  <span class="attr">#[test]
-<a href=#806 id=806 data-nosnippet>806</a>  </span><span class="kw">fn </span>prefers_main_over_other_documentclass_files() {
+<a href=#785 id=785 data-nosnippet>785</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
+<a href=#786 id=786 data-nosnippet>786</a>
+<a href=#787 id=787 data-nosnippet>787</a>  <span class="kw">fn </span>write(dir: <span class="kw-2">&amp;</span>Path, name: <span class="kw-2">&amp;</span>str, body: <span class="kw-2">&amp;</span>str) { std::fs::write(dir.join(name), body).unwrap(); }
+<a href=#788 id=788 data-nosnippet>788</a>
+<a href=#789 id=789 data-nosnippet>789</a>  <span class="attr">#[test]
+<a href=#790 id=790 data-nosnippet>790</a>  </span><span class="kw">fn </span>picks_documentclass_over_input_only_file() {
+<a href=#791 id=791 data-nosnippet>791</a>    <span class="kw">let </span>d = tempdir().unwrap();
+<a href=#792 id=792 data-nosnippet>792</a>    write(
+<a href=#793 id=793 data-nosnippet>793</a>      d.path(),
+<a href=#794 id=794 data-nosnippet>794</a>      <span class="string">"main.tex"</span>,
+<a href=#795 id=795 data-nosnippet>795</a>      <span class="string">"\\documentclass{article}\n\\begin{document}x\\end{document}"</span>,
+<a href=#796 id=796 data-nosnippet>796</a>    );
+<a href=#797 id=797 data-nosnippet>797</a>    write(d.path(), <span class="string">"intro.tex"</span>, <span class="string">"\\input{intro_body}\n"</span>);
+<a href=#798 id=798 data-nosnippet>798</a>    <span class="kw">let </span>pick = find_main_tex(d.path()).unwrap();
+<a href=#799 id=799 data-nosnippet>799</a>    <span class="macro">assert_eq!</span>(pick.file_name().unwrap(), <span class="string">"main.tex"</span>);
+<a href=#800 id=800 data-nosnippet>800</a>  }
+<a href=#801 id=801 data-nosnippet>801</a>
+<a href=#802 id=802 data-nosnippet>802</a>  <span class="comment">// Pack.pm:180-182 vetoes every `\input` argument; a driver with `\begin{document}` vetoes the `\documentclass` preamble
+<a href=#803 id=803 data-nosnippet>803</a>  // it inputs although the preamble scores higher (1402.3465, 2503.12837, 1505.07539, hep-th0609123), while a wrapper
+<a href=#804 id=804 data-nosnippet>804</a>  // without one keeps the score gate (2307.13586).
+<a href=#805 id=805 data-nosnippet>805</a>  </span><span class="attr">#[test]
+<a href=#806 id=806 data-nosnippet>806</a>  </span><span class="kw">fn </span>driver_vetoes_the_preamble_it_inputs() {
 <a href=#807 id=807 data-nosnippet>807</a>    <span class="kw">let </span>d = tempdir().unwrap();
-<a href=#808 id=808 data-nosnippet>808</a>    write(d.path(), <span class="string">"draft.tex"</span>, <span class="string">"\\documentclass{article}\n"</span>);
-<a href=#809 id=809 data-nosnippet>809</a>    write(d.path(), <span class="string">"main.tex"</span>, <span class="string">"\\documentclass{article}\n"</span>);
-<a href=#810 id=810 data-nosnippet>810</a>    <span class="kw">let </span>pick = find_main_tex(d.path()).unwrap();
-<a href=#811 id=811 data-nosnippet>811</a>    <span class="macro">assert_eq!</span>(pick.file_name().unwrap(), <span class="string">"main.tex"</span>);
-<a href=#812 id=812 data-nosnippet>812</a>  }
-<a href=#813 id=813 data-nosnippet>813</a>
-<a href=#814 id=814 data-nosnippet>814</a>  <span class="attr">#[test]
-<a href=#815 id=815 data-nosnippet>815</a>  </span><span class="kw">fn </span>readme_xxx_toplevelfile_directive_short_circuits() {
-<a href=#816 id=816 data-nosnippet>816</a>    <span class="kw">let </span>d = tempdir().unwrap();
-<a href=#817 id=817 data-nosnippet>817</a>    <span class="comment">// Two candidate documents — main.tex would normally win,
-<a href=#818 id=818 data-nosnippet>818</a>    // but the 00README directive points at draft.tex.
-<a href=#819 id=819 data-nosnippet>819</a>    </span>write(d.path(), <span class="string">"draft.tex"</span>, <span class="string">"\\documentclass{article}\n"</span>);
-<a href=#820 id=820 data-nosnippet>820</a>    write(d.path(), <span class="string">"main.tex"</span>, <span class="string">"\\documentclass{article}\n"</span>);
-<a href=#821 id=821 data-nosnippet>821</a>    write(d.path(), <span class="string">"00README.XXX"</span>, <span class="string">"draft.tex toplevelfile\n"</span>);
-<a href=#822 id=822 data-nosnippet>822</a>    <span class="kw">let </span>pick = find_main_tex(d.path()).unwrap();
-<a href=#823 id=823 data-nosnippet>823</a>    <span class="macro">assert_eq!</span>(pick.file_name().unwrap(), <span class="string">"draft.tex"</span>);
-<a href=#824 id=824 data-nosnippet>824</a>  }
-<a href=#825 id=825 data-nosnippet>825</a>
-<a href=#826 id=826 data-nosnippet>826</a>  <span class="attr">#[test]
-<a href=#827 id=827 data-nosnippet>827</a>  </span><span class="kw">fn </span>readme_xxx_ignore_directive_excludes_candidate() {
-<a href=#828 id=828 data-nosnippet>828</a>    <span class="kw">let </span>d = tempdir().unwrap();
-<a href=#829 id=829 data-nosnippet>829</a>    <span class="comment">// Without a directive, `main.tex` would tie with `old.tex`
-<a href=#830 id=830 data-nosnippet>830</a>    // and the "common name" heuristic prefers `main.tex`. With
-<a href=#831 id=831 data-nosnippet>831</a>    // an `ignore` directive on main.tex, the heuristic falls back
-<a href=#832 id=832 data-nosnippet>832</a>    // to `old.tex`.
-<a href=#833 id=833 data-nosnippet>833</a>    </span>write(d.path(), <span class="string">"old.tex"</span>, <span class="string">"\\documentclass{article}\n"</span>);
-<a href=#834 id=834 data-nosnippet>834</a>    write(d.path(), <span class="string">"main.tex"</span>, <span class="string">"\\documentclass{article}\n"</span>);
-<a href=#835 id=835 data-nosnippet>835</a>    write(d.path(), <span class="string">"00README.XXX"</span>, <span class="string">"main.tex ignore\n"</span>);
-<a href=#836 id=836 data-nosnippet>836</a>    <span class="kw">let </span>pick = find_main_tex(d.path()).unwrap();
-<a href=#837 id=837 data-nosnippet>837</a>    <span class="macro">assert_eq!</span>(pick.file_name().unwrap(), <span class="string">"old.tex"</span>);
-<a href=#838 id=838 data-nosnippet>838</a>  }
-<a href=#839 id=839 data-nosnippet>839</a>
-<a href=#840 id=840 data-nosnippet>840</a>  <span class="attr">#[test]
-<a href=#841 id=841 data-nosnippet>841</a>  </span><span class="kw">fn </span>readme_xxx_mixed_directives() {
-<a href=#842 id=842 data-nosnippet>842</a>    <span class="kw">let </span>d = tempdir().unwrap();
-<a href=#843 id=843 data-nosnippet>843</a>    write(d.path(), <span class="string">"intro.tex"</span>, <span class="string">"\\documentclass{article}\n"</span>);
-<a href=#844 id=844 data-nosnippet>844</a>    write(d.path(), <span class="string">"paper.tex"</span>, <span class="string">"\\documentclass{article}\n"</span>);
-<a href=#845 id=845 data-nosnippet>845</a>    write(d.path(), <span class="string">"junk.tex"</span>, <span class="string">"\\documentclass{article}\n"</span>);
-<a href=#846 id=846 data-nosnippet>846</a>    <span class="comment">// `paper.tex toplevelfile` short-circuits the heuristic; the
-<a href=#847 id=847 data-nosnippet>847</a>    // ignore line is unreachable in this test but exercises the
-<a href=#848 id=848 data-nosnippet>848</a>    // parser's multi-line/multi-kind handling.
-<a href=#849 id=849 data-nosnippet>849</a>    </span>write(
-<a href=#850 id=850 data-nosnippet>850</a>      d.path(),
-<a href=#851 id=851 data-nosnippet>851</a>      <span class="string">"00README.XXX"</span>,
-<a href=#852 id=852 data-nosnippet>852</a>      <span class="string">"junk.tex ignore\npaper.tex toplevelfile\n"</span>,
-<a href=#853 id=853 data-nosnippet>853</a>    );
-<a href=#854 id=854 data-nosnippet>854</a>    <span class="kw">let </span>pick = find_main_tex(d.path()).unwrap();
-<a href=#855 id=855 data-nosnippet>855</a>    <span class="macro">assert_eq!</span>(pick.file_name().unwrap(), <span class="string">"paper.tex"</span>);
-<a href=#856 id=856 data-nosnippet>856</a>  }
-<a href=#857 id=857 data-nosnippet>857</a>
-<a href=#858 id=858 data-nosnippet>858</a>  <span class="comment">// OXIDIZED_DESIGN #132: a matching `.bbl` sibling outranks the pdf-include
-<a href=#859 id=859 data-nosnippet>859</a>  // heuristic. Models the witness class (2407.05010 #1721 et al.): the true
-<a href=#860 id=860 data-nosnippet>860</a>  // main delegates its figures (no direct `\includegraphics`) but ships a
-<a href=#861 id=861 data-nosnippet>861</a>  // `main.bbl`, while a class how-to/template carries an example
-<a href=#862 id=862 data-nosnippet>862</a>  // `\includegraphics{fig.png}`. Perl's pdf-before-bbl order (and our old port)
-<a href=#863 id=863 data-nosnippet>863</a>  // picked the template; bbl-first recovers the real main.
-<a href=#864 id=864 data-nosnippet>864</a>  </span><span class="attr">#[test]
-<a href=#865 id=865 data-nosnippet>865</a>  </span><span class="kw">fn </span>bbl_sibling_outranks_pdf_include_marker() {
-<a href=#866 id=866 data-nosnippet>866</a>    <span class="kw">let </span>d = tempdir().unwrap();
-<a href=#867 id=867 data-nosnippet>867</a>    write(
-<a href=#868 id=868 data-nosnippet>868</a>      d.path(),
-<a href=#869 id=869 data-nosnippet>869</a>      <span class="string">"main.tex"</span>,
-<a href=#870 id=870 data-nosnippet>870</a>      <span class="string">"\\documentclass{IEEEtran}\n\\input{sections/intro}\n\\begin{document}\\title{Real}\\end{document}"</span>,
-<a href=#871 id=871 data-nosnippet>871</a>    );
-<a href=#872 id=872 data-nosnippet>872</a>    write(
-<a href=#873 id=873 data-nosnippet>873</a>      d.path(),
-<a href=#874 id=874 data-nosnippet>874</a>      <span class="string">"New_IEEEtran_how-to.tex"</span>,
-<a href=#875 id=875 data-nosnippet>875</a>      <span class="string">"\\documentclass{IEEEtran}\n\\includegraphics[width=1in]{fig1.png}\n\\begin{document}How to.\\end{document}"</span>,
-<a href=#876 id=876 data-nosnippet>876</a>    );
-<a href=#877 id=877 data-nosnippet>877</a>    write(
-<a href=#878 id=878 data-nosnippet>878</a>      d.path(),
-<a href=#879 id=879 data-nosnippet>879</a>      <span class="string">"main.bbl"</span>,
-<a href=#880 id=880 data-nosnippet>880</a>      <span class="string">"\\begin{thebibliography}{1}\\end{thebibliography}\n"</span>,
-<a href=#881 id=881 data-nosnippet>881</a>    );
-<a href=#882 id=882 data-nosnippet>882</a>    <span class="kw">let </span>pick = find_main_tex(d.path()).unwrap();
-<a href=#883 id=883 data-nosnippet>883</a>    <span class="macro">assert_eq!</span>(pick.file_name().unwrap(), <span class="string">"main.tex"</span>);
-<a href=#884 id=884 data-nosnippet>884</a>  }
-<a href=#885 id=885 data-nosnippet>885</a>
-<a href=#886 id=886 data-nosnippet>886</a>  <span class="comment">// Reorder must not swallow the later common-name tie-break: when &gt;1 candidate
-<a href=#887 id=887 data-nosnippet>887</a>  // carries a `.bbl` (2506.05564, 2401.07129), the `.bbl` set survives and
-<a href=#888 id=888 data-nosnippet>888</a>  // main/ms/paper still wins over an alphabetically-earlier sibling.
-<a href=#889 id=889 data-nosnippet>889</a>  </span><span class="attr">#[test]
-<a href=#890 id=890 data-nosnippet>890</a>  </span><span class="kw">fn </span>reorder_preserves_common_name_when_multiple_bbl() {
-<a href=#891 id=891 data-nosnippet>891</a>    <span class="kw">let </span>d = tempdir().unwrap();
-<a href=#892 id=892 data-nosnippet>892</a>    write(
-<a href=#893 id=893 data-nosnippet>893</a>      d.path(),
-<a href=#894 id=894 data-nosnippet>894</a>      <span class="string">"aaa.tex"</span>,
-<a href=#895 id=895 data-nosnippet>895</a>      <span class="string">"\\documentclass{article}\n\\includegraphics{x.png}\n"</span>,
-<a href=#896 id=896 data-nosnippet>896</a>    );
-<a href=#897 id=897 data-nosnippet>897</a>    write(
-<a href=#898 id=898 data-nosnippet>898</a>      d.path(),
-<a href=#899 id=899 data-nosnippet>899</a>      <span class="string">"main.tex"</span>,
-<a href=#900 id=900 data-nosnippet>900</a>      <span class="string">"\\documentclass{article}\n\\includegraphics{y.png}\n"</span>,
-<a href=#901 id=901 data-nosnippet>901</a>    );
-<a href=#902 id=902 data-nosnippet>902</a>    write(d.path(), <span class="string">"aaa.bbl"</span>, <span class="string">""</span>);
-<a href=#903 id=903 data-nosnippet>903</a>    write(d.path(), <span class="string">"main.bbl"</span>, <span class="string">""</span>);
-<a href=#904 id=904 data-nosnippet>904</a>    <span class="kw">let </span>pick = find_main_tex(d.path()).unwrap();
-<a href=#905 id=905 data-nosnippet>905</a>    <span class="macro">assert_eq!</span>(pick.file_name().unwrap(), <span class="string">"main.tex"</span>);
-<a href=#906 id=906 data-nosnippet>906</a>  }
-<a href=#907 id=907 data-nosnippet>907</a>
-<a href=#908 id=908 data-nosnippet>908</a>  <span class="comment">// Parity fix (Perl `heuristic_check_for_pdftex`): the extension must sit
-<a href=#909 id=909 data-nosnippet>909</a>  // INSIDE the `\includegraphics{…}` argument. The old loose whole-file
-<a href=#910 id=910 data-nosnippet>910</a>  // `contains` false-positived on templates whose examples are extensionless
-<a href=#911 id=911 data-nosnippet>911</a>  // (2401.17263 #442 `{icml_numpapers}`) or `.eps` (2403.17719 #859
-<a href=#912 id=912 data-nosnippet>912</a>  // `{egfigure.eps}`) yet mention a raster extension elsewhere.
-<a href=#913 id=913 data-nosnippet>913</a>  </span><span class="attr">#[test]
-<a href=#914 id=914 data-nosnippet>914</a>  </span><span class="kw">fn </span>strict_pdf_marker_rejects_extensionless_eps_and_comments() {
-<a href=#915 id=915 data-nosnippet>915</a>    <span class="kw">let </span>d = tempdir().unwrap();
-<a href=#916 id=916 data-nosnippet>916</a>    <span class="comment">// extensionless arg + an unrelated `.png` mention in prose → not a marker
-<a href=#917 id=917 data-nosnippet>917</a>    </span>write(
-<a href=#918 id=918 data-nosnippet>918</a>      d.path(),
-<a href=#919 id=919 data-nosnippet>919</a>      <span class="string">"example_paper.tex"</span>,
-<a href=#920 id=920 data-nosnippet>920</a>      <span class="string">"\\centerline{\\includegraphics[width=\\columnwidth]{icml_numpapers}}\nResults saved as results.png.\n"</span>,
-<a href=#921 id=921 data-nosnippet>921</a>    );
-<a href=#922 id=922 data-nosnippet>922</a>    <span class="comment">// `.eps` extension is not in the raster/pdf set
-<a href=#923 id=923 data-nosnippet>923</a>    </span>write(
-<a href=#924 id=924 data-nosnippet>924</a>      d.path(),
-<a href=#925 id=925 data-nosnippet>925</a>      <span class="string">"rebuttal.tex"</span>,
-<a href=#926 id=926 data-nosnippet>926</a>      <span class="string">"\\includegraphics[width=0.8\\linewidth]{egfigure.eps}\n"</span>,
-<a href=#927 id=927 data-nosnippet>927</a>    );
-<a href=#928 id=928 data-nosnippet>928</a>    <span class="comment">// commented-out include must not count (behind `%`)
-<a href=#929 id=929 data-nosnippet>929</a>    </span>write(d.path(), <span class="string">"commented.tex"</span>, <span class="string">"%\\includegraphics{fig.png}\n"</span>);
-<a href=#930 id=930 data-nosnippet>930</a>    <span class="macro">assert!</span>(!has_pdftex_marker(<span class="kw-2">&amp;</span>d.path().join(<span class="string">"example_paper.tex"</span>)));
-<a href=#931 id=931 data-nosnippet>931</a>    <span class="macro">assert!</span>(!has_pdftex_marker(<span class="kw-2">&amp;</span>d.path().join(<span class="string">"rebuttal.tex"</span>)));
-<a href=#932 id=932 data-nosnippet>932</a>    <span class="macro">assert!</span>(!has_pdftex_marker(<span class="kw-2">&amp;</span>d.path().join(<span class="string">"commented.tex"</span>)));
-<a href=#933 id=933 data-nosnippet>933</a>  }
-<a href=#934 id=934 data-nosnippet>934</a>
-<a href=#935 id=935 data-nosnippet>935</a>  <span class="attr">#[test]
-<a href=#936 id=936 data-nosnippet>936</a>  </span><span class="kw">fn </span>strict_pdf_marker_accepts_arg_extension_and_pdfoutput() {
-<a href=#937 id=937 data-nosnippet>937</a>    <span class="kw">let </span>d = tempdir().unwrap();
-<a href=#938 id=938 data-nosnippet>938</a>    write(
-<a href=#939 id=939 data-nosnippet>939</a>      d.path(),
-<a href=#940 id=940 data-nosnippet>940</a>      <span class="string">"fig.tex"</span>,
-<a href=#941 id=941 data-nosnippet>941</a>      <span class="string">"\\includegraphics[width=2in]{diagram.pdf}\n"</span>,
-<a href=#942 id=942 data-nosnippet>942</a>    );
-<a href=#943 id=943 data-nosnippet>943</a>    write(d.path(), <span class="string">"gif.tex"</span>, <span class="string">"\\includegraphics{anim.gif}\n"</span>); <span class="comment">// Perl includes gif
-<a href=#944 id=944 data-nosnippet>944</a>    </span>write(
-<a href=#945 id=945 data-nosnippet>945</a>      d.path(),
-<a href=#946 id=946 data-nosnippet>946</a>      <span class="string">"pdfout.tex"</span>,
-<a href=#947 id=947 data-nosnippet>947</a>      <span class="string">"\\pdfoutput=1\n\\includegraphics{noext}\n"</span>,
-<a href=#948 id=948 data-nosnippet>948</a>    );
-<a href=#949 id=949 data-nosnippet>949</a>    <span class="macro">assert!</span>(has_pdftex_marker(<span class="kw-2">&amp;</span>d.path().join(<span class="string">"fig.tex"</span>)));
-<a href=#950 id=950 data-nosnippet>950</a>    <span class="macro">assert!</span>(has_pdftex_marker(<span class="kw-2">&amp;</span>d.path().join(<span class="string">"gif.tex"</span>)));
-<a href=#951 id=951 data-nosnippet>951</a>    <span class="macro">assert!</span>(has_pdftex_marker(<span class="kw-2">&amp;</span>d.path().join(<span class="string">"pdfout.tex"</span>)));
-<a href=#952 id=952 data-nosnippet>952</a>  }
-<a href=#953 id=953 data-nosnippet>953</a>
-<a href=#954 id=954 data-nosnippet>954</a>  <span class="comment">// Multi-top-level detection (find_top_level_texs). Models the real
-<a href=#955 id=955 data-nosnippet>955</a>  // main+supplement pattern (2408.13687, 2401.07129, …): both documents carry
-<a href=#956 id=956 data-nosnippet>956</a>  // their own `.bbl`; the supplement self-identifies by title/filename.
-<a href=#957 id=957 data-nosnippet>957</a>  </span><span class="attr">#[test]
-<a href=#958 id=958 data-nosnippet>958</a>  </span><span class="kw">fn </span>top_level_texs_appends_supplement() {
-<a href=#959 id=959 data-nosnippet>959</a>    <span class="kw">let </span>d = tempdir().unwrap();
-<a href=#960 id=960 data-nosnippet>960</a>    write(
+<a href=#808 id=808 data-nosnippet>808</a>    write(
+<a href=#809 id=809 data-nosnippet>809</a>      d.path(),
+<a href=#810 id=810 data-nosnippet>810</a>      <span class="string">"paper.tex"</span>,
+<a href=#811 id=811 data-nosnippet>811</a>      <span class="string">"\\input{preamble}\n\\begin{document}\nMain body text.\n\\end{document}\n"</span>,
+<a href=#812 id=812 data-nosnippet>812</a>    );
+<a href=#813 id=813 data-nosnippet>813</a>    write(
+<a href=#814 id=814 data-nosnippet>814</a>      d.path(),
+<a href=#815 id=815 data-nosnippet>815</a>      <span class="string">"preamble.tex"</span>,
+<a href=#816 id=816 data-nosnippet>816</a>      <span class="string">"\\documentclass{article}\n\\usepackage{amsmath}\n"</span>,
+<a href=#817 id=817 data-nosnippet>817</a>    );
+<a href=#818 id=818 data-nosnippet>818</a>    <span class="kw">let </span>pick = find_main_tex(d.path()).unwrap();
+<a href=#819 id=819 data-nosnippet>819</a>    <span class="macro">assert_eq!</span>(pick.file_name().unwrap(), <span class="string">"paper.tex"</span>);
+<a href=#820 id=820 data-nosnippet>820</a>  }
+<a href=#821 id=821 data-nosnippet>821</a>
+<a href=#822 id=822 data-nosnippet>822</a>  <span class="attr">#[test]
+<a href=#823 id=823 data-nosnippet>823</a>  </span><span class="kw">fn </span>wrapper_without_begin_document_keeps_its_main() {
+<a href=#824 id=824 data-nosnippet>824</a>    <span class="kw">let </span>d = tempdir().unwrap();
+<a href=#825 id=825 data-nosnippet>825</a>    write(d.path(), <span class="string">"wrapper.tex"</span>, <span class="string">"%\n\\input{main}\n"</span>);
+<a href=#826 id=826 data-nosnippet>826</a>    write(
+<a href=#827 id=827 data-nosnippet>827</a>      d.path(),
+<a href=#828 id=828 data-nosnippet>828</a>      <span class="string">"main.tex"</span>,
+<a href=#829 id=829 data-nosnippet>829</a>      <span class="string">"\\documentclass{article}\n\\begin{document}x\\end{document}\n"</span>,
+<a href=#830 id=830 data-nosnippet>830</a>    );
+<a href=#831 id=831 data-nosnippet>831</a>    <span class="kw">let </span>pick = find_main_tex(d.path()).unwrap();
+<a href=#832 id=832 data-nosnippet>832</a>    <span class="macro">assert_eq!</span>(pick.file_name().unwrap(), <span class="string">"main.tex"</span>);
+<a href=#833 id=833 data-nosnippet>833</a>  }
+<a href=#834 id=834 data-nosnippet>834</a>
+<a href=#835 id=835 data-nosnippet>835</a>  <span class="attr">#[test]
+<a href=#836 id=836 data-nosnippet>836</a>  </span><span class="kw">fn </span>errors_when_directory_has_no_tex() {
+<a href=#837 id=837 data-nosnippet>837</a>    <span class="kw">let </span>d = tempdir().unwrap();
+<a href=#838 id=838 data-nosnippet>838</a>    <span class="kw">let </span>err = find_main_tex(d.path()).unwrap_err();
+<a href=#839 id=839 data-nosnippet>839</a>    <span class="macro">assert!</span>(err.contains(<span class="string">"No .tex files"</span>));
+<a href=#840 id=840 data-nosnippet>840</a>  }
+<a href=#841 id=841 data-nosnippet>841</a>
+<a href=#842 id=842 data-nosnippet>842</a>  <span class="attr">#[test]
+<a href=#843 id=843 data-nosnippet>843</a>  </span><span class="kw">fn </span>prefers_main_over_other_documentclass_files() {
+<a href=#844 id=844 data-nosnippet>844</a>    <span class="kw">let </span>d = tempdir().unwrap();
+<a href=#845 id=845 data-nosnippet>845</a>    write(d.path(), <span class="string">"draft.tex"</span>, <span class="string">"\\documentclass{article}\n"</span>);
+<a href=#846 id=846 data-nosnippet>846</a>    write(d.path(), <span class="string">"main.tex"</span>, <span class="string">"\\documentclass{article}\n"</span>);
+<a href=#847 id=847 data-nosnippet>847</a>    <span class="kw">let </span>pick = find_main_tex(d.path()).unwrap();
+<a href=#848 id=848 data-nosnippet>848</a>    <span class="macro">assert_eq!</span>(pick.file_name().unwrap(), <span class="string">"main.tex"</span>);
+<a href=#849 id=849 data-nosnippet>849</a>  }
+<a href=#850 id=850 data-nosnippet>850</a>
+<a href=#851 id=851 data-nosnippet>851</a>  <span class="attr">#[test]
+<a href=#852 id=852 data-nosnippet>852</a>  </span><span class="kw">fn </span>readme_xxx_toplevelfile_directive_short_circuits() {
+<a href=#853 id=853 data-nosnippet>853</a>    <span class="kw">let </span>d = tempdir().unwrap();
+<a href=#854 id=854 data-nosnippet>854</a>    <span class="comment">// Two candidate documents — main.tex would normally win,
+<a href=#855 id=855 data-nosnippet>855</a>    // but the 00README directive points at draft.tex.
+<a href=#856 id=856 data-nosnippet>856</a>    </span>write(d.path(), <span class="string">"draft.tex"</span>, <span class="string">"\\documentclass{article}\n"</span>);
+<a href=#857 id=857 data-nosnippet>857</a>    write(d.path(), <span class="string">"main.tex"</span>, <span class="string">"\\documentclass{article}\n"</span>);
+<a href=#858 id=858 data-nosnippet>858</a>    write(d.path(), <span class="string">"00README.XXX"</span>, <span class="string">"draft.tex toplevelfile\n"</span>);
+<a href=#859 id=859 data-nosnippet>859</a>    <span class="kw">let </span>pick = find_main_tex(d.path()).unwrap();
+<a href=#860 id=860 data-nosnippet>860</a>    <span class="macro">assert_eq!</span>(pick.file_name().unwrap(), <span class="string">"draft.tex"</span>);
+<a href=#861 id=861 data-nosnippet>861</a>  }
+<a href=#862 id=862 data-nosnippet>862</a>
+<a href=#863 id=863 data-nosnippet>863</a>  <span class="attr">#[test]
+<a href=#864 id=864 data-nosnippet>864</a>  </span><span class="kw">fn </span>readme_xxx_ignore_directive_excludes_candidate() {
+<a href=#865 id=865 data-nosnippet>865</a>    <span class="kw">let </span>d = tempdir().unwrap();
+<a href=#866 id=866 data-nosnippet>866</a>    <span class="comment">// Without a directive, `main.tex` would tie with `old.tex`
+<a href=#867 id=867 data-nosnippet>867</a>    // and the "common name" heuristic prefers `main.tex`. With
+<a href=#868 id=868 data-nosnippet>868</a>    // an `ignore` directive on main.tex, the heuristic falls back
+<a href=#869 id=869 data-nosnippet>869</a>    // to `old.tex`.
+<a href=#870 id=870 data-nosnippet>870</a>    </span>write(d.path(), <span class="string">"old.tex"</span>, <span class="string">"\\documentclass{article}\n"</span>);
+<a href=#871 id=871 data-nosnippet>871</a>    write(d.path(), <span class="string">"main.tex"</span>, <span class="string">"\\documentclass{article}\n"</span>);
+<a href=#872 id=872 data-nosnippet>872</a>    write(d.path(), <span class="string">"00README.XXX"</span>, <span class="string">"main.tex ignore\n"</span>);
+<a href=#873 id=873 data-nosnippet>873</a>    <span class="kw">let </span>pick = find_main_tex(d.path()).unwrap();
+<a href=#874 id=874 data-nosnippet>874</a>    <span class="macro">assert_eq!</span>(pick.file_name().unwrap(), <span class="string">"old.tex"</span>);
+<a href=#875 id=875 data-nosnippet>875</a>  }
+<a href=#876 id=876 data-nosnippet>876</a>
+<a href=#877 id=877 data-nosnippet>877</a>  <span class="attr">#[test]
+<a href=#878 id=878 data-nosnippet>878</a>  </span><span class="kw">fn </span>readme_xxx_mixed_directives() {
+<a href=#879 id=879 data-nosnippet>879</a>    <span class="kw">let </span>d = tempdir().unwrap();
+<a href=#880 id=880 data-nosnippet>880</a>    write(d.path(), <span class="string">"intro.tex"</span>, <span class="string">"\\documentclass{article}\n"</span>);
+<a href=#881 id=881 data-nosnippet>881</a>    write(d.path(), <span class="string">"paper.tex"</span>, <span class="string">"\\documentclass{article}\n"</span>);
+<a href=#882 id=882 data-nosnippet>882</a>    write(d.path(), <span class="string">"junk.tex"</span>, <span class="string">"\\documentclass{article}\n"</span>);
+<a href=#883 id=883 data-nosnippet>883</a>    <span class="comment">// `paper.tex toplevelfile` short-circuits the heuristic; the
+<a href=#884 id=884 data-nosnippet>884</a>    // ignore line is unreachable in this test but exercises the
+<a href=#885 id=885 data-nosnippet>885</a>    // parser's multi-line/multi-kind handling.
+<a href=#886 id=886 data-nosnippet>886</a>    </span>write(
+<a href=#887 id=887 data-nosnippet>887</a>      d.path(),
+<a href=#888 id=888 data-nosnippet>888</a>      <span class="string">"00README.XXX"</span>,
+<a href=#889 id=889 data-nosnippet>889</a>      <span class="string">"junk.tex ignore\npaper.tex toplevelfile\n"</span>,
+<a href=#890 id=890 data-nosnippet>890</a>    );
+<a href=#891 id=891 data-nosnippet>891</a>    <span class="kw">let </span>pick = find_main_tex(d.path()).unwrap();
+<a href=#892 id=892 data-nosnippet>892</a>    <span class="macro">assert_eq!</span>(pick.file_name().unwrap(), <span class="string">"paper.tex"</span>);
+<a href=#893 id=893 data-nosnippet>893</a>  }
+<a href=#894 id=894 data-nosnippet>894</a>
+<a href=#895 id=895 data-nosnippet>895</a>  <span class="comment">// OXIDIZED_DESIGN #132: a matching `.bbl` sibling outranks the pdf-include
+<a href=#896 id=896 data-nosnippet>896</a>  // heuristic. Models the witness class (2407.05010 #1721 et al.): the true
+<a href=#897 id=897 data-nosnippet>897</a>  // main delegates its figures (no direct `\includegraphics`) but ships a
+<a href=#898 id=898 data-nosnippet>898</a>  // `main.bbl`, while a class how-to/template carries an example
+<a href=#899 id=899 data-nosnippet>899</a>  // `\includegraphics{fig.png}`. Perl's pdf-before-bbl order (and our old port)
+<a href=#900 id=900 data-nosnippet>900</a>  // picked the template; bbl-first recovers the real main.
+<a href=#901 id=901 data-nosnippet>901</a>  </span><span class="attr">#[test]
+<a href=#902 id=902 data-nosnippet>902</a>  </span><span class="kw">fn </span>bbl_sibling_outranks_pdf_include_marker() {
+<a href=#903 id=903 data-nosnippet>903</a>    <span class="kw">let </span>d = tempdir().unwrap();
+<a href=#904 id=904 data-nosnippet>904</a>    write(
+<a href=#905 id=905 data-nosnippet>905</a>      d.path(),
+<a href=#906 id=906 data-nosnippet>906</a>      <span class="string">"main.tex"</span>,
+<a href=#907 id=907 data-nosnippet>907</a>      <span class="string">"\\documentclass{IEEEtran}\n\\input{sections/intro}\n\\begin{document}\\title{Real}\\end{document}"</span>,
+<a href=#908 id=908 data-nosnippet>908</a>    );
+<a href=#909 id=909 data-nosnippet>909</a>    write(
+<a href=#910 id=910 data-nosnippet>910</a>      d.path(),
+<a href=#911 id=911 data-nosnippet>911</a>      <span class="string">"New_IEEEtran_how-to.tex"</span>,
+<a href=#912 id=912 data-nosnippet>912</a>      <span class="string">"\\documentclass{IEEEtran}\n\\includegraphics[width=1in]{fig1.png}\n\\begin{document}How to.\\end{document}"</span>,
+<a href=#913 id=913 data-nosnippet>913</a>    );
+<a href=#914 id=914 data-nosnippet>914</a>    write(
+<a href=#915 id=915 data-nosnippet>915</a>      d.path(),
+<a href=#916 id=916 data-nosnippet>916</a>      <span class="string">"main.bbl"</span>,
+<a href=#917 id=917 data-nosnippet>917</a>      <span class="string">"\\begin{thebibliography}{1}\\end{thebibliography}\n"</span>,
+<a href=#918 id=918 data-nosnippet>918</a>    );
+<a href=#919 id=919 data-nosnippet>919</a>    <span class="kw">let </span>pick = find_main_tex(d.path()).unwrap();
+<a href=#920 id=920 data-nosnippet>920</a>    <span class="macro">assert_eq!</span>(pick.file_name().unwrap(), <span class="string">"main.tex"</span>);
+<a href=#921 id=921 data-nosnippet>921</a>  }
+<a href=#922 id=922 data-nosnippet>922</a>
+<a href=#923 id=923 data-nosnippet>923</a>  <span class="comment">// Reorder must not swallow the later common-name tie-break: when &gt;1 candidate
+<a href=#924 id=924 data-nosnippet>924</a>  // carries a `.bbl` (2506.05564, 2401.07129), the `.bbl` set survives and
+<a href=#925 id=925 data-nosnippet>925</a>  // main/ms/paper still wins over an alphabetically-earlier sibling.
+<a href=#926 id=926 data-nosnippet>926</a>  </span><span class="attr">#[test]
+<a href=#927 id=927 data-nosnippet>927</a>  </span><span class="kw">fn </span>reorder_preserves_common_name_when_multiple_bbl() {
+<a href=#928 id=928 data-nosnippet>928</a>    <span class="kw">let </span>d = tempdir().unwrap();
+<a href=#929 id=929 data-nosnippet>929</a>    write(
+<a href=#930 id=930 data-nosnippet>930</a>      d.path(),
+<a href=#931 id=931 data-nosnippet>931</a>      <span class="string">"aaa.tex"</span>,
+<a href=#932 id=932 data-nosnippet>932</a>      <span class="string">"\\documentclass{article}\n\\includegraphics{x.png}\n"</span>,
+<a href=#933 id=933 data-nosnippet>933</a>    );
+<a href=#934 id=934 data-nosnippet>934</a>    write(
+<a href=#935 id=935 data-nosnippet>935</a>      d.path(),
+<a href=#936 id=936 data-nosnippet>936</a>      <span class="string">"main.tex"</span>,
+<a href=#937 id=937 data-nosnippet>937</a>      <span class="string">"\\documentclass{article}\n\\includegraphics{y.png}\n"</span>,
+<a href=#938 id=938 data-nosnippet>938</a>    );
+<a href=#939 id=939 data-nosnippet>939</a>    write(d.path(), <span class="string">"aaa.bbl"</span>, <span class="string">""</span>);
+<a href=#940 id=940 data-nosnippet>940</a>    write(d.path(), <span class="string">"main.bbl"</span>, <span class="string">""</span>);
+<a href=#941 id=941 data-nosnippet>941</a>    <span class="kw">let </span>pick = find_main_tex(d.path()).unwrap();
+<a href=#942 id=942 data-nosnippet>942</a>    <span class="macro">assert_eq!</span>(pick.file_name().unwrap(), <span class="string">"main.tex"</span>);
+<a href=#943 id=943 data-nosnippet>943</a>  }
+<a href=#944 id=944 data-nosnippet>944</a>
+<a href=#945 id=945 data-nosnippet>945</a>  <span class="comment">// Parity fix (Perl `heuristic_check_for_pdftex`): the extension must sit
+<a href=#946 id=946 data-nosnippet>946</a>  // INSIDE the `\includegraphics{…}` argument. The old loose whole-file
+<a href=#947 id=947 data-nosnippet>947</a>  // `contains` false-positived on templates whose examples are extensionless
+<a href=#948 id=948 data-nosnippet>948</a>  // (2401.17263 #442 `{icml_numpapers}`) or `.eps` (2403.17719 #859
+<a href=#949 id=949 data-nosnippet>949</a>  // `{egfigure.eps}`) yet mention a raster extension elsewhere.
+<a href=#950 id=950 data-nosnippet>950</a>  </span><span class="attr">#[test]
+<a href=#951 id=951 data-nosnippet>951</a>  </span><span class="kw">fn </span>strict_pdf_marker_rejects_extensionless_eps_and_comments() {
+<a href=#952 id=952 data-nosnippet>952</a>    <span class="kw">let </span>d = tempdir().unwrap();
+<a href=#953 id=953 data-nosnippet>953</a>    <span class="comment">// extensionless arg + an unrelated `.png` mention in prose → not a marker
+<a href=#954 id=954 data-nosnippet>954</a>    </span>write(
+<a href=#955 id=955 data-nosnippet>955</a>      d.path(),
+<a href=#956 id=956 data-nosnippet>956</a>      <span class="string">"example_paper.tex"</span>,
+<a href=#957 id=957 data-nosnippet>957</a>      <span class="string">"\\centerline{\\includegraphics[width=\\columnwidth]{icml_numpapers}}\nResults saved as results.png.\n"</span>,
+<a href=#958 id=958 data-nosnippet>958</a>    );
+<a href=#959 id=959 data-nosnippet>959</a>    <span class="comment">// `.eps` extension is not in the raster/pdf set
+<a href=#960 id=960 data-nosnippet>960</a>    </span>write(
 <a href=#961 id=961 data-nosnippet>961</a>      d.path(),
-<a href=#962 id=962 data-nosnippet>962</a>      <span class="string">"main.tex"</span>,
-<a href=#963 id=963 data-nosnippet>963</a>      <span class="string">"\\documentclass{article}\n\\title{Quantum error correction}\n"</span>,
+<a href=#962 id=962 data-nosnippet>962</a>      <span class="string">"rebuttal.tex"</span>,
+<a href=#963 id=963 data-nosnippet>963</a>      <span class="string">"\\includegraphics[width=0.8\\linewidth]{egfigure.eps}\n"</span>,
 <a href=#964 id=964 data-nosnippet>964</a>    );
-<a href=#965 id=965 data-nosnippet>965</a>    write(
-<a href=#966 id=966 data-nosnippet>966</a>      d.path(),
-<a href=#967 id=967 data-nosnippet>967</a>      <span class="string">"supplement.tex"</span>,
-<a href=#968 id=968 data-nosnippet>968</a>      <span class="string">"\\documentclass{article}\n\\title{Supplementary Information for Quantum error correction}\n"</span>,
-<a href=#969 id=969 data-nosnippet>969</a>    );
-<a href=#970 id=970 data-nosnippet>970</a>    write(d.path(), <span class="string">"main.bbl"</span>, <span class="string">""</span>);
-<a href=#971 id=971 data-nosnippet>971</a>    write(d.path(), <span class="string">"supplement.bbl"</span>, <span class="string">""</span>);
-<a href=#972 id=972 data-nosnippet>972</a>    <span class="kw">let </span>tops = find_top_level_texs(d.path()).unwrap();
-<a href=#973 id=973 data-nosnippet>973</a>    <span class="kw">let </span>names: Vec&lt;<span class="kw">_</span>&gt; = tops
-<a href=#974 id=974 data-nosnippet>974</a>      .iter()
-<a href=#975 id=975 data-nosnippet>975</a>      .map(|p| p.file_name().unwrap().to_str().unwrap())
-<a href=#976 id=976 data-nosnippet>976</a>      .collect();
-<a href=#977 id=977 data-nosnippet>977</a>    <span class="macro">assert_eq!</span>(names, <span class="macro">vec!</span>[<span class="string">"main.tex"</span>, <span class="string">"supplement.tex"</span>]);
-<a href=#978 id=978 data-nosnippet>978</a>    <span class="comment">// `find_main_tex` stays the first entry.
-<a href=#979 id=979 data-nosnippet>979</a>    </span><span class="macro">assert_eq!</span>(find_main_tex(d.path()).unwrap(), tops[<span class="number">0</span>]);
-<a href=#980 id=980 data-nosnippet>980</a>  }
-<a href=#981 id=981 data-nosnippet>981</a>
-<a href=#982 id=982 data-nosnippet>982</a>  <span class="comment">// Main first even when the supplement sorts alphabetically before it
-<a href=#983 id=983 data-nosnippet>983</a>  // (2506.05564: `Note.tex` main + `Appendix.tex` supplement).
-<a href=#984 id=984 data-nosnippet>984</a>  </span><span class="attr">#[test]
-<a href=#985 id=985 data-nosnippet>985</a>  </span><span class="kw">fn </span>top_level_texs_orders_main_first_despite_alpha() {
-<a href=#986 id=986 data-nosnippet>986</a>    <span class="kw">let </span>d = tempdir().unwrap();
-<a href=#987 id=987 data-nosnippet>987</a>    write(
-<a href=#988 id=988 data-nosnippet>988</a>      d.path(),
-<a href=#989 id=989 data-nosnippet>989</a>      <span class="string">"Note.tex"</span>,
-<a href=#990 id=990 data-nosnippet>990</a>      <span class="string">"\\documentclass{article}\n\\title{Bayesian Inference of the Landau Parameter}\n"</span>,
-<a href=#991 id=991 data-nosnippet>991</a>    );
-<a href=#992 id=992 data-nosnippet>992</a>    write(
-<a href=#993 id=993 data-nosnippet>993</a>      d.path(),
-<a href=#994 id=994 data-nosnippet>994</a>      <span class="string">"Appendix.tex"</span>,
-<a href=#995 id=995 data-nosnippet>995</a>      <span class="string">"\\documentclass{article}\n\\title{SUPPLEMENTAL MATERIALS}\n"</span>,
-<a href=#996 id=996 data-nosnippet>996</a>    );
-<a href=#997 id=997 data-nosnippet>997</a>    write(d.path(), <span class="string">"Note.bbl"</span>, <span class="string">""</span>);
-<a href=#998 id=998 data-nosnippet>998</a>    write(d.path(), <span class="string">"Appendix.bbl"</span>, <span class="string">""</span>);
-<a href=#999 id=999 data-nosnippet>999</a>    <span class="kw">let </span>tops = find_top_level_texs(d.path()).unwrap();
-<a href=#1000 id=1000 data-nosnippet>1000</a>    <span class="kw">let </span>names: Vec&lt;<span class="kw">_</span>&gt; = tops
-<a href=#1001 id=1001 data-nosnippet>1001</a>      .iter()
-<a href=#1002 id=1002 data-nosnippet>1002</a>      .map(|p| p.file_name().unwrap().to_str().unwrap())
-<a href=#1003 id=1003 data-nosnippet>1003</a>      .collect();
-<a href=#1004 id=1004 data-nosnippet>1004</a>    <span class="macro">assert_eq!</span>(names, <span class="macro">vec!</span>[<span class="string">"Note.tex"</span>, <span class="string">"Appendix.tex"</span>]);
-<a href=#1005 id=1005 data-nosnippet>1005</a>  }
-<a href=#1006 id=1006 data-nosnippet>1006</a>
-<a href=#1007 id=1007 data-nosnippet>1007</a>  <span class="comment">// Template safety: a bundled template (no `.bbl`, does not self-identify as a
-<a href=#1008 id=1008 data-nosnippet>1008</a>  // supplement) is never appended, even when it carries example graphics.
-<a href=#1009 id=1009 data-nosnippet>1009</a>  </span><span class="attr">#[test]
-<a href=#1010 id=1010 data-nosnippet>1010</a>  </span><span class="kw">fn </span>top_level_texs_excludes_template_without_bbl() {
-<a href=#1011 id=1011 data-nosnippet>1011</a>    <span class="kw">let </span>d = tempdir().unwrap();
-<a href=#1012 id=1012 data-nosnippet>1012</a>    write(
-<a href=#1013 id=1013 data-nosnippet>1013</a>      d.path(),
-<a href=#1014 id=1014 data-nosnippet>1014</a>      <span class="string">"main.tex"</span>,
-<a href=#1015 id=1015 data-nosnippet>1015</a>      <span class="string">"\\documentclass{IEEEtran}\n\\input{sec}\n\\title{Real Paper}\n"</span>,
-<a href=#1016 id=1016 data-nosnippet>1016</a>    );
-<a href=#1017 id=1017 data-nosnippet>1017</a>    write(
-<a href=#1018 id=1018 data-nosnippet>1018</a>      d.path(),
-<a href=#1019 id=1019 data-nosnippet>1019</a>      <span class="string">"New_IEEEtran_how-to.tex"</span>,
-<a href=#1020 id=1020 data-nosnippet>1020</a>      <span class="string">"\\documentclass{IEEEtran}\n\\includegraphics{fig1.png}\n\\title{How to Use the IEEEtran Templates}\n"</span>,
-<a href=#1021 id=1021 data-nosnippet>1021</a>    );
-<a href=#1022 id=1022 data-nosnippet>1022</a>    write(d.path(), <span class="string">"main.bbl"</span>, <span class="string">""</span>);
-<a href=#1023 id=1023 data-nosnippet>1023</a>    <span class="kw">let </span>tops = find_top_level_texs(d.path()).unwrap();
-<a href=#1024 id=1024 data-nosnippet>1024</a>    <span class="kw">let </span>names: Vec&lt;<span class="kw">_</span>&gt; = tops
-<a href=#1025 id=1025 data-nosnippet>1025</a>      .iter()
-<a href=#1026 id=1026 data-nosnippet>1026</a>      .map(|p| p.file_name().unwrap().to_str().unwrap())
-<a href=#1027 id=1027 data-nosnippet>1027</a>      .collect();
-<a href=#1028 id=1028 data-nosnippet>1028</a>    <span class="macro">assert_eq!</span>(names, <span class="macro">vec!</span>[<span class="string">"main.tex"</span>]);
-<a href=#1029 id=1029 data-nosnippet>1029</a>  }
-<a href=#1030 id=1030 data-nosnippet>1030</a>
-<a href=#1031 id=1031 data-nosnippet>1031</a>  <span class="comment">// Precision: a supplement-titled document WITHOUT its own `.bbl` is not
-<a href=#1032 id=1032 data-nosnippet>1032</a>  // auto-detected (conservative residual).
-<a href=#1033 id=1033 data-nosnippet>1033</a>  </span><span class="attr">#[test]
-<a href=#1034 id=1034 data-nosnippet>1034</a>  </span><span class="kw">fn </span>supplement_without_bbl_is_not_detected() {
-<a href=#1035 id=1035 data-nosnippet>1035</a>    <span class="kw">let </span>d = tempdir().unwrap();
-<a href=#1036 id=1036 data-nosnippet>1036</a>    write(
-<a href=#1037 id=1037 data-nosnippet>1037</a>      d.path(),
-<a href=#1038 id=1038 data-nosnippet>1038</a>      <span class="string">"main.tex"</span>,
-<a href=#1039 id=1039 data-nosnippet>1039</a>      <span class="string">"\\documentclass{article}\n\\title{Real Paper}\n"</span>,
-<a href=#1040 id=1040 data-nosnippet>1040</a>    );
-<a href=#1041 id=1041 data-nosnippet>1041</a>    write(
-<a href=#1042 id=1042 data-nosnippet>1042</a>      d.path(),
-<a href=#1043 id=1043 data-nosnippet>1043</a>      <span class="string">"supp.tex"</span>,
-<a href=#1044 id=1044 data-nosnippet>1044</a>      <span class="string">"\\documentclass{article}\n\\title{Supplementary Information}\n"</span>,
-<a href=#1045 id=1045 data-nosnippet>1045</a>    );
-<a href=#1046 id=1046 data-nosnippet>1046</a>    write(d.path(), <span class="string">"main.bbl"</span>, <span class="string">""</span>);
-<a href=#1047 id=1047 data-nosnippet>1047</a>    <span class="kw">let </span>tops = find_top_level_texs(d.path()).unwrap();
-<a href=#1048 id=1048 data-nosnippet>1048</a>    <span class="macro">assert_eq!</span>(tops.len(), <span class="number">1</span>);
-<a href=#1049 id=1049 data-nosnippet>1049</a>    <span class="macro">assert_eq!</span>(tops[<span class="number">0</span>].file_name().unwrap(), <span class="string">"main.tex"</span>);
-<a href=#1050 id=1050 data-nosnippet>1050</a>  }
-<a href=#1051 id=1051 data-nosnippet>1051</a>
-<a href=#1052 id=1052 data-nosnippet>1052</a>  <span class="comment">// Explicit 00README with two toplevelfile lines → both, main-first even when
-<a href=#1053 id=1053 data-nosnippet>1053</a>  // listed supplement-first.
-<a href=#1054 id=1054 data-nosnippet>1054</a>  </span><span class="attr">#[test]
-<a href=#1055 id=1055 data-nosnippet>1055</a>  </span><span class="kw">fn </span>readme_two_toplevelfiles_ordered_main_first() {
-<a href=#1056 id=1056 data-nosnippet>1056</a>    <span class="kw">let </span>d = tempdir().unwrap();
-<a href=#1057 id=1057 data-nosnippet>1057</a>    write(
-<a href=#1058 id=1058 data-nosnippet>1058</a>      d.path(),
-<a href=#1059 id=1059 data-nosnippet>1059</a>      <span class="string">"main.tex"</span>,
-<a href=#1060 id=1060 data-nosnippet>1060</a>      <span class="string">"\\documentclass{article}\n\\title{Paper}\n"</span>,
-<a href=#1061 id=1061 data-nosnippet>1061</a>    );
-<a href=#1062 id=1062 data-nosnippet>1062</a>    write(
-<a href=#1063 id=1063 data-nosnippet>1063</a>      d.path(),
-<a href=#1064 id=1064 data-nosnippet>1064</a>      <span class="string">"si.tex"</span>,
-<a href=#1065 id=1065 data-nosnippet>1065</a>      <span class="string">"\\documentclass{article}\n\\title{Supporting Information}\n"</span>,
-<a href=#1066 id=1066 data-nosnippet>1066</a>    );
-<a href=#1067 id=1067 data-nosnippet>1067</a>    write(
-<a href=#1068 id=1068 data-nosnippet>1068</a>      d.path(),
-<a href=#1069 id=1069 data-nosnippet>1069</a>      <span class="string">"00README.XXX"</span>,
-<a href=#1070 id=1070 data-nosnippet>1070</a>      <span class="string">"si.tex toplevelfile\nmain.tex toplevelfile\n"</span>,
-<a href=#1071 id=1071 data-nosnippet>1071</a>    );
-<a href=#1072 id=1072 data-nosnippet>1072</a>    <span class="kw">let </span>tops = find_top_level_texs(d.path()).unwrap();
-<a href=#1073 id=1073 data-nosnippet>1073</a>    <span class="kw">let </span>names: Vec&lt;<span class="kw">_</span>&gt; = tops
-<a href=#1074 id=1074 data-nosnippet>1074</a>      .iter()
-<a href=#1075 id=1075 data-nosnippet>1075</a>      .map(|p| p.file_name().unwrap().to_str().unwrap())
-<a href=#1076 id=1076 data-nosnippet>1076</a>      .collect();
-<a href=#1077 id=1077 data-nosnippet>1077</a>    <span class="macro">assert_eq!</span>(names, <span class="macro">vec!</span>[<span class="string">"main.tex"</span>, <span class="string">"si.tex"</span>]);
-<a href=#1078 id=1078 data-nosnippet>1078</a>  }
-<a href=#1079 id=1079 data-nosnippet>1079</a>}
+<a href=#965 id=965 data-nosnippet>965</a>    <span class="comment">// commented-out include must not count (behind `%`)
+<a href=#966 id=966 data-nosnippet>966</a>    </span>write(d.path(), <span class="string">"commented.tex"</span>, <span class="string">"%\\includegraphics{fig.png}\n"</span>);
+<a href=#967 id=967 data-nosnippet>967</a>    <span class="macro">assert!</span>(!has_pdftex_marker(<span class="kw-2">&amp;</span>d.path().join(<span class="string">"example_paper.tex"</span>)));
+<a href=#968 id=968 data-nosnippet>968</a>    <span class="macro">assert!</span>(!has_pdftex_marker(<span class="kw-2">&amp;</span>d.path().join(<span class="string">"rebuttal.tex"</span>)));
+<a href=#969 id=969 data-nosnippet>969</a>    <span class="macro">assert!</span>(!has_pdftex_marker(<span class="kw-2">&amp;</span>d.path().join(<span class="string">"commented.tex"</span>)));
+<a href=#970 id=970 data-nosnippet>970</a>  }
+<a href=#971 id=971 data-nosnippet>971</a>
+<a href=#972 id=972 data-nosnippet>972</a>  <span class="attr">#[test]
+<a href=#973 id=973 data-nosnippet>973</a>  </span><span class="kw">fn </span>strict_pdf_marker_accepts_arg_extension_and_pdfoutput() {
+<a href=#974 id=974 data-nosnippet>974</a>    <span class="kw">let </span>d = tempdir().unwrap();
+<a href=#975 id=975 data-nosnippet>975</a>    write(
+<a href=#976 id=976 data-nosnippet>976</a>      d.path(),
+<a href=#977 id=977 data-nosnippet>977</a>      <span class="string">"fig.tex"</span>,
+<a href=#978 id=978 data-nosnippet>978</a>      <span class="string">"\\includegraphics[width=2in]{diagram.pdf}\n"</span>,
+<a href=#979 id=979 data-nosnippet>979</a>    );
+<a href=#980 id=980 data-nosnippet>980</a>    write(d.path(), <span class="string">"gif.tex"</span>, <span class="string">"\\includegraphics{anim.gif}\n"</span>); <span class="comment">// Perl includes gif
+<a href=#981 id=981 data-nosnippet>981</a>    </span>write(
+<a href=#982 id=982 data-nosnippet>982</a>      d.path(),
+<a href=#983 id=983 data-nosnippet>983</a>      <span class="string">"pdfout.tex"</span>,
+<a href=#984 id=984 data-nosnippet>984</a>      <span class="string">"\\pdfoutput=1\n\\includegraphics{noext}\n"</span>,
+<a href=#985 id=985 data-nosnippet>985</a>    );
+<a href=#986 id=986 data-nosnippet>986</a>    <span class="macro">assert!</span>(has_pdftex_marker(<span class="kw-2">&amp;</span>d.path().join(<span class="string">"fig.tex"</span>)));
+<a href=#987 id=987 data-nosnippet>987</a>    <span class="macro">assert!</span>(has_pdftex_marker(<span class="kw-2">&amp;</span>d.path().join(<span class="string">"gif.tex"</span>)));
+<a href=#988 id=988 data-nosnippet>988</a>    <span class="macro">assert!</span>(has_pdftex_marker(<span class="kw-2">&amp;</span>d.path().join(<span class="string">"pdfout.tex"</span>)));
+<a href=#989 id=989 data-nosnippet>989</a>  }
+<a href=#990 id=990 data-nosnippet>990</a>
+<a href=#991 id=991 data-nosnippet>991</a>  <span class="comment">// Multi-top-level detection (find_top_level_texs). Models the real
+<a href=#992 id=992 data-nosnippet>992</a>  // main+supplement pattern (2408.13687, 2401.07129, …): both documents carry
+<a href=#993 id=993 data-nosnippet>993</a>  // their own `.bbl`; the supplement self-identifies by title/filename.
+<a href=#994 id=994 data-nosnippet>994</a>  </span><span class="attr">#[test]
+<a href=#995 id=995 data-nosnippet>995</a>  </span><span class="kw">fn </span>top_level_texs_appends_supplement() {
+<a href=#996 id=996 data-nosnippet>996</a>    <span class="kw">let </span>d = tempdir().unwrap();
+<a href=#997 id=997 data-nosnippet>997</a>    write(
+<a href=#998 id=998 data-nosnippet>998</a>      d.path(),
+<a href=#999 id=999 data-nosnippet>999</a>      <span class="string">"main.tex"</span>,
+<a href=#1000 id=1000 data-nosnippet>1000</a>      <span class="string">"\\documentclass{article}\n\\title{Quantum error correction}\n"</span>,
+<a href=#1001 id=1001 data-nosnippet>1001</a>    );
+<a href=#1002 id=1002 data-nosnippet>1002</a>    write(
+<a href=#1003 id=1003 data-nosnippet>1003</a>      d.path(),
+<a href=#1004 id=1004 data-nosnippet>1004</a>      <span class="string">"supplement.tex"</span>,
+<a href=#1005 id=1005 data-nosnippet>1005</a>      <span class="string">"\\documentclass{article}\n\\title{Supplementary Information for Quantum error correction}\n"</span>,
+<a href=#1006 id=1006 data-nosnippet>1006</a>    );
+<a href=#1007 id=1007 data-nosnippet>1007</a>    write(d.path(), <span class="string">"main.bbl"</span>, <span class="string">""</span>);
+<a href=#1008 id=1008 data-nosnippet>1008</a>    write(d.path(), <span class="string">"supplement.bbl"</span>, <span class="string">""</span>);
+<a href=#1009 id=1009 data-nosnippet>1009</a>    <span class="kw">let </span>tops = find_top_level_texs(d.path()).unwrap();
+<a href=#1010 id=1010 data-nosnippet>1010</a>    <span class="kw">let </span>names: Vec&lt;<span class="kw">_</span>&gt; = tops
+<a href=#1011 id=1011 data-nosnippet>1011</a>      .iter()
+<a href=#1012 id=1012 data-nosnippet>1012</a>      .map(|p| p.file_name().unwrap().to_str().unwrap())
+<a href=#1013 id=1013 data-nosnippet>1013</a>      .collect();
+<a href=#1014 id=1014 data-nosnippet>1014</a>    <span class="macro">assert_eq!</span>(names, <span class="macro">vec!</span>[<span class="string">"main.tex"</span>, <span class="string">"supplement.tex"</span>]);
+<a href=#1015 id=1015 data-nosnippet>1015</a>    <span class="comment">// `find_main_tex` stays the first entry.
+<a href=#1016 id=1016 data-nosnippet>1016</a>    </span><span class="macro">assert_eq!</span>(find_main_tex(d.path()).unwrap(), tops[<span class="number">0</span>]);
+<a href=#1017 id=1017 data-nosnippet>1017</a>  }
+<a href=#1018 id=1018 data-nosnippet>1018</a>
+<a href=#1019 id=1019 data-nosnippet>1019</a>  <span class="comment">// Main first even when the supplement sorts alphabetically before it
+<a href=#1020 id=1020 data-nosnippet>1020</a>  // (2506.05564: `Note.tex` main + `Appendix.tex` supplement).
+<a href=#1021 id=1021 data-nosnippet>1021</a>  </span><span class="attr">#[test]
+<a href=#1022 id=1022 data-nosnippet>1022</a>  </span><span class="kw">fn </span>top_level_texs_orders_main_first_despite_alpha() {
+<a href=#1023 id=1023 data-nosnippet>1023</a>    <span class="kw">let </span>d = tempdir().unwrap();
+<a href=#1024 id=1024 data-nosnippet>1024</a>    write(
+<a href=#1025 id=1025 data-nosnippet>1025</a>      d.path(),
+<a href=#1026 id=1026 data-nosnippet>1026</a>      <span class="string">"Note.tex"</span>,
+<a href=#1027 id=1027 data-nosnippet>1027</a>      <span class="string">"\\documentclass{article}\n\\title{Bayesian Inference of the Landau Parameter}\n"</span>,
+<a href=#1028 id=1028 data-nosnippet>1028</a>    );
+<a href=#1029 id=1029 data-nosnippet>1029</a>    write(
+<a href=#1030 id=1030 data-nosnippet>1030</a>      d.path(),
+<a href=#1031 id=1031 data-nosnippet>1031</a>      <span class="string">"Appendix.tex"</span>,
+<a href=#1032 id=1032 data-nosnippet>1032</a>      <span class="string">"\\documentclass{article}\n\\title{SUPPLEMENTAL MATERIALS}\n"</span>,
+<a href=#1033 id=1033 data-nosnippet>1033</a>    );
+<a href=#1034 id=1034 data-nosnippet>1034</a>    write(d.path(), <span class="string">"Note.bbl"</span>, <span class="string">""</span>);
+<a href=#1035 id=1035 data-nosnippet>1035</a>    write(d.path(), <span class="string">"Appendix.bbl"</span>, <span class="string">""</span>);
+<a href=#1036 id=1036 data-nosnippet>1036</a>    <span class="kw">let </span>tops = find_top_level_texs(d.path()).unwrap();
+<a href=#1037 id=1037 data-nosnippet>1037</a>    <span class="kw">let </span>names: Vec&lt;<span class="kw">_</span>&gt; = tops
+<a href=#1038 id=1038 data-nosnippet>1038</a>      .iter()
+<a href=#1039 id=1039 data-nosnippet>1039</a>      .map(|p| p.file_name().unwrap().to_str().unwrap())
+<a href=#1040 id=1040 data-nosnippet>1040</a>      .collect();
+<a href=#1041 id=1041 data-nosnippet>1041</a>    <span class="macro">assert_eq!</span>(names, <span class="macro">vec!</span>[<span class="string">"Note.tex"</span>, <span class="string">"Appendix.tex"</span>]);
+<a href=#1042 id=1042 data-nosnippet>1042</a>  }
+<a href=#1043 id=1043 data-nosnippet>1043</a>
+<a href=#1044 id=1044 data-nosnippet>1044</a>  <span class="comment">// Template safety: a bundled template (no `.bbl`, does not self-identify as a
+<a href=#1045 id=1045 data-nosnippet>1045</a>  // supplement) is never appended, even when it carries example graphics.
+<a href=#1046 id=1046 data-nosnippet>1046</a>  </span><span class="attr">#[test]
+<a href=#1047 id=1047 data-nosnippet>1047</a>  </span><span class="kw">fn </span>top_level_texs_excludes_template_without_bbl() {
+<a href=#1048 id=1048 data-nosnippet>1048</a>    <span class="kw">let </span>d = tempdir().unwrap();
+<a href=#1049 id=1049 data-nosnippet>1049</a>    write(
+<a href=#1050 id=1050 data-nosnippet>1050</a>      d.path(),
+<a href=#1051 id=1051 data-nosnippet>1051</a>      <span class="string">"main.tex"</span>,
+<a href=#1052 id=1052 data-nosnippet>1052</a>      <span class="string">"\\documentclass{IEEEtran}\n\\input{sec}\n\\title{Real Paper}\n"</span>,
+<a href=#1053 id=1053 data-nosnippet>1053</a>    );
+<a href=#1054 id=1054 data-nosnippet>1054</a>    write(
+<a href=#1055 id=1055 data-nosnippet>1055</a>      d.path(),
+<a href=#1056 id=1056 data-nosnippet>1056</a>      <span class="string">"New_IEEEtran_how-to.tex"</span>,
+<a href=#1057 id=1057 data-nosnippet>1057</a>      <span class="string">"\\documentclass{IEEEtran}\n\\includegraphics{fig1.png}\n\\title{How to Use the IEEEtran Templates}\n"</span>,
+<a href=#1058 id=1058 data-nosnippet>1058</a>    );
+<a href=#1059 id=1059 data-nosnippet>1059</a>    write(d.path(), <span class="string">"main.bbl"</span>, <span class="string">""</span>);
+<a href=#1060 id=1060 data-nosnippet>1060</a>    <span class="kw">let </span>tops = find_top_level_texs(d.path()).unwrap();
+<a href=#1061 id=1061 data-nosnippet>1061</a>    <span class="kw">let </span>names: Vec&lt;<span class="kw">_</span>&gt; = tops
+<a href=#1062 id=1062 data-nosnippet>1062</a>      .iter()
+<a href=#1063 id=1063 data-nosnippet>1063</a>      .map(|p| p.file_name().unwrap().to_str().unwrap())
+<a href=#1064 id=1064 data-nosnippet>1064</a>      .collect();
+<a href=#1065 id=1065 data-nosnippet>1065</a>    <span class="macro">assert_eq!</span>(names, <span class="macro">vec!</span>[<span class="string">"main.tex"</span>]);
+<a href=#1066 id=1066 data-nosnippet>1066</a>  }
+<a href=#1067 id=1067 data-nosnippet>1067</a>
+<a href=#1068 id=1068 data-nosnippet>1068</a>  <span class="comment">// Precision: a supplement-titled document WITHOUT its own `.bbl` is not
+<a href=#1069 id=1069 data-nosnippet>1069</a>  // auto-detected (conservative residual).
+<a href=#1070 id=1070 data-nosnippet>1070</a>  </span><span class="attr">#[test]
+<a href=#1071 id=1071 data-nosnippet>1071</a>  </span><span class="kw">fn </span>supplement_without_bbl_is_not_detected() {
+<a href=#1072 id=1072 data-nosnippet>1072</a>    <span class="kw">let </span>d = tempdir().unwrap();
+<a href=#1073 id=1073 data-nosnippet>1073</a>    write(
+<a href=#1074 id=1074 data-nosnippet>1074</a>      d.path(),
+<a href=#1075 id=1075 data-nosnippet>1075</a>      <span class="string">"main.tex"</span>,
+<a href=#1076 id=1076 data-nosnippet>1076</a>      <span class="string">"\\documentclass{article}\n\\title{Real Paper}\n"</span>,
+<a href=#1077 id=1077 data-nosnippet>1077</a>    );
+<a href=#1078 id=1078 data-nosnippet>1078</a>    write(
+<a href=#1079 id=1079 data-nosnippet>1079</a>      d.path(),
+<a href=#1080 id=1080 data-nosnippet>1080</a>      <span class="string">"supp.tex"</span>,
+<a href=#1081 id=1081 data-nosnippet>1081</a>      <span class="string">"\\documentclass{article}\n\\title{Supplementary Information}\n"</span>,
+<a href=#1082 id=1082 data-nosnippet>1082</a>    );
+<a href=#1083 id=1083 data-nosnippet>1083</a>    write(d.path(), <span class="string">"main.bbl"</span>, <span class="string">""</span>);
+<a href=#1084 id=1084 data-nosnippet>1084</a>    <span class="kw">let </span>tops = find_top_level_texs(d.path()).unwrap();
+<a href=#1085 id=1085 data-nosnippet>1085</a>    <span class="macro">assert_eq!</span>(tops.len(), <span class="number">1</span>);
+<a href=#1086 id=1086 data-nosnippet>1086</a>    <span class="macro">assert_eq!</span>(tops[<span class="number">0</span>].file_name().unwrap(), <span class="string">"main.tex"</span>);
+<a href=#1087 id=1087 data-nosnippet>1087</a>  }
+<a href=#1088 id=1088 data-nosnippet>1088</a>
+<a href=#1089 id=1089 data-nosnippet>1089</a>  <span class="comment">// Explicit 00README with two toplevelfile lines → both, main-first even when
+<a href=#1090 id=1090 data-nosnippet>1090</a>  // listed supplement-first.
+<a href=#1091 id=1091 data-nosnippet>1091</a>  </span><span class="attr">#[test]
+<a href=#1092 id=1092 data-nosnippet>1092</a>  </span><span class="kw">fn </span>readme_two_toplevelfiles_ordered_main_first() {
+<a href=#1093 id=1093 data-nosnippet>1093</a>    <span class="kw">let </span>d = tempdir().unwrap();
+<a href=#1094 id=1094 data-nosnippet>1094</a>    write(
+<a href=#1095 id=1095 data-nosnippet>1095</a>      d.path(),
+<a href=#1096 id=1096 data-nosnippet>1096</a>      <span class="string">"main.tex"</span>,
+<a href=#1097 id=1097 data-nosnippet>1097</a>      <span class="string">"\\documentclass{article}\n\\title{Paper}\n"</span>,
+<a href=#1098 id=1098 data-nosnippet>1098</a>    );
+<a href=#1099 id=1099 data-nosnippet>1099</a>    write(
+<a href=#1100 id=1100 data-nosnippet>1100</a>      d.path(),
+<a href=#1101 id=1101 data-nosnippet>1101</a>      <span class="string">"si.tex"</span>,
+<a href=#1102 id=1102 data-nosnippet>1102</a>      <span class="string">"\\documentclass{article}\n\\title{Supporting Information}\n"</span>,
+<a href=#1103 id=1103 data-nosnippet>1103</a>    );
+<a href=#1104 id=1104 data-nosnippet>1104</a>    write(
+<a href=#1105 id=1105 data-nosnippet>1105</a>      d.path(),
+<a href=#1106 id=1106 data-nosnippet>1106</a>      <span class="string">"00README.XXX"</span>,
+<a href=#1107 id=1107 data-nosnippet>1107</a>      <span class="string">"si.tex toplevelfile\nmain.tex toplevelfile\n"</span>,
+<a href=#1108 id=1108 data-nosnippet>1108</a>    );
+<a href=#1109 id=1109 data-nosnippet>1109</a>    <span class="kw">let </span>tops = find_top_level_texs(d.path()).unwrap();
+<a href=#1110 id=1110 data-nosnippet>1110</a>    <span class="kw">let </span>names: Vec&lt;<span class="kw">_</span>&gt; = tops
+<a href=#1111 id=1111 data-nosnippet>1111</a>      .iter()
+<a href=#1112 id=1112 data-nosnippet>1112</a>      .map(|p| p.file_name().unwrap().to_str().unwrap())
+<a href=#1113 id=1113 data-nosnippet>1113</a>      .collect();
+<a href=#1114 id=1114 data-nosnippet>1114</a>    <span class="macro">assert_eq!</span>(names, <span class="macro">vec!</span>[<span class="string">"main.tex"</span>, <span class="string">"si.tex"</span>]);
+<a href=#1115 id=1115 data-nosnippet>1115</a>  }
+<a href=#1116 id=1116 data-nosnippet>1116</a>
+<a href=#1117 id=1117 data-nosnippet>1117</a>  <span class="doccomment">/// A `00README` top-level entry outside the source directory (absolute, `..`, a link out) is ignored with one
+<a href=#1118 id=1118 data-nosnippet>1118</a>  /// `Warning:archive:path` and the heuristic picks the archive's own main; an entry inside it is kept, unwarned.
+<a href=#1119 id=1119 data-nosnippet>1119</a>  </span><span class="attr">#[test]
+<a href=#1120 id=1120 data-nosnippet>1120</a>  </span><span class="kw">fn </span>readme_entries_outside_the_source_directory_are_ignored() {
+<a href=#1121 id=1121 data-nosnippet>1121</a>    <span class="kw">use </span>latexml_core::common::error::{LogStatus, get_status, log_session_warnings};
+<a href=#1122 id=1122 data-nosnippet>1122</a>    <span class="kw">let </span>root = tempdir().unwrap();
+<a href=#1123 id=1123 data-nosnippet>1123</a>    <span class="kw">let </span>(src, out) = (root.path().join(<span class="string">"src"</span>), root.path().join(<span class="string">"x"</span>));
+<a href=#1124 id=1124 data-nosnippet>1124</a>    std::fs::create_dir_all(src.join(<span class="string">"sub"</span>)).unwrap();
+<a href=#1125 id=1125 data-nosnippet>1125</a>    std::fs::create_dir_all(<span class="kw-2">&amp;</span>out).unwrap();
+<a href=#1126 id=1126 data-nosnippet>1126</a>    <span class="kw">let </span>canary = out.join(<span class="string">"canary.tex"</span>);
+<a href=#1127 id=1127 data-nosnippet>1127</a>    write(<span class="kw-2">&amp;</span>out, <span class="string">"canary.tex"</span>, <span class="string">"\\documentclass{article}\n"</span>);
+<a href=#1128 id=1128 data-nosnippet>1128</a>    <span class="kw">let </span>abs = canary.to_string_lossy().into_owned();
+<a href=#1129 id=1129 data-nosnippet>1129</a>    <span class="attr">#[cfg(unix)]
+<a href=#1130 id=1130 data-nosnippet>1130</a>    </span>std::os::unix::fs::symlink(<span class="kw-2">&amp;</span>canary, src.join(<span class="string">"link.tex"</span>)).unwrap();
+<a href=#1131 id=1131 data-nosnippet>1131</a>    <span class="kw">let </span>json =
+<a href=#1132 id=1132 data-nosnippet>1132</a>      |name: <span class="kw-2">&amp;</span>str| <span class="macro">format!</span>(<span class="string">r#"{{"sources":[{{"filename":"{name}","usage":"toplevel"}}]}}"#</span>);
+<a href=#1133 id=1133 data-nosnippet>1133</a>    <span class="kw">let </span><span class="kw-2">mut </span>rows: Vec&lt;(<span class="kw-2">&amp;</span>str, String, <span class="kw-2">&amp;</span>str, usize)&gt; = <span class="macro">vec!</span>[
+<a href=#1134 id=1134 data-nosnippet>1134</a>      (<span class="string">"00README.json"</span>, json(<span class="string">"../x/canary.tex"</span>), <span class="string">"main.tex"</span>, <span class="number">1</span>),
+<a href=#1135 id=1135 data-nosnippet>1135</a>      (<span class="string">"00README.json"</span>, json(<span class="kw-2">&amp;</span>abs), <span class="string">"main.tex"</span>, <span class="number">1</span>),
+<a href=#1136 id=1136 data-nosnippet>1136</a>      (
+<a href=#1137 id=1137 data-nosnippet>1137</a>        <span class="string">"00README.XXX"</span>,
+<a href=#1138 id=1138 data-nosnippet>1138</a>        <span class="string">"../x/canary.tex toplevelfile\n"</span>.into(),
+<a href=#1139 id=1139 data-nosnippet>1139</a>        <span class="string">"main.tex"</span>,
+<a href=#1140 id=1140 data-nosnippet>1140</a>        <span class="number">1</span>,
+<a href=#1141 id=1141 data-nosnippet>1141</a>      ),
+<a href=#1142 id=1142 data-nosnippet>1142</a>      (
+<a href=#1143 id=1143 data-nosnippet>1143</a>        <span class="string">"00README.XXX"</span>,
+<a href=#1144 id=1144 data-nosnippet>1144</a>        <span class="macro">format!</span>(<span class="string">"{abs} toplevelfile\n"</span>),
+<a href=#1145 id=1145 data-nosnippet>1145</a>        <span class="string">"main.tex"</span>,
+<a href=#1146 id=1146 data-nosnippet>1146</a>        <span class="number">1</span>,
+<a href=#1147 id=1147 data-nosnippet>1147</a>      ),
+<a href=#1148 id=1148 data-nosnippet>1148</a>      (<span class="string">"00README.json"</span>, json(<span class="string">"sub/../sub/paper.tex"</span>), <span class="string">"main.tex"</span>, <span class="number">1</span>),
+<a href=#1149 id=1149 data-nosnippet>1149</a>      (<span class="string">"00README.json"</span>, json(<span class="string">"sub/paper.tex"</span>), <span class="string">"sub/paper.tex"</span>, <span class="number">0</span>),
+<a href=#1150 id=1150 data-nosnippet>1150</a>      (<span class="string">"00README.json"</span>, json(<span class="string">"absent.tex"</span>), <span class="string">"main.tex"</span>, <span class="number">0</span>),
+<a href=#1151 id=1151 data-nosnippet>1151</a>      (<span class="string">"00README.XXX"</span>, <span class="string">". toplevelfile\n"</span>.into(), <span class="string">"main.tex"</span>, <span class="number">0</span>),
+<a href=#1152 id=1152 data-nosnippet>1152</a>      (<span class="string">"00README.json"</span>, json(<span class="string">"sub"</span>), <span class="string">"main.tex"</span>, <span class="number">0</span>),
+<a href=#1153 id=1153 data-nosnippet>1153</a>    ];
+<a href=#1154 id=1154 data-nosnippet>1154</a>    <span class="attr">#[cfg(unix)]
+<a href=#1155 id=1155 data-nosnippet>1155</a>    </span>rows.push((
+<a href=#1156 id=1156 data-nosnippet>1156</a>      <span class="string">"00README.XXX"</span>,
+<a href=#1157 id=1157 data-nosnippet>1157</a>      <span class="string">"link.tex toplevelfile\n"</span>.into(),
+<a href=#1158 id=1158 data-nosnippet>1158</a>      <span class="string">"main.tex"</span>,
+<a href=#1159 id=1159 data-nosnippet>1159</a>      <span class="number">1</span>,
+<a href=#1160 id=1160 data-nosnippet>1160</a>    ));
+<a href=#1161 id=1161 data-nosnippet>1161</a>    <span class="attr">#[cfg(windows)]
+<a href=#1162 id=1162 data-nosnippet>1162</a>    </span>rows.push((
+<a href=#1163 id=1163 data-nosnippet>1163</a>      <span class="string">"00README.XXX"</span>,
+<a href=#1164 id=1164 data-nosnippet>1164</a>      <span class="string">"..\\x\\canary.tex toplevelfile\n"</span>.into(),
+<a href=#1165 id=1165 data-nosnippet>1165</a>      <span class="string">"main.tex"</span>,
+<a href=#1166 id=1166 data-nosnippet>1166</a>      <span class="number">1</span>,
+<a href=#1167 id=1167 data-nosnippet>1167</a>    ));
+<a href=#1168 id=1168 data-nosnippet>1168</a>    <span class="comment">// A short source directory and an entry whose path passes 260 characters, which Windows canonicalizes to another
+<a href=#1169 id=1169 data-nosnippet>1169</a>    // form: both sides are compared in one.
+<a href=#1170 id=1170 data-nosnippet>1170</a>    </span><span class="kw">let </span>deep = [
+<a href=#1171 id=1171 data-nosnippet>1171</a>      <span class="string">"d"</span>.repeat(<span class="number">60</span>),
+<a href=#1172 id=1172 data-nosnippet>1172</a>      <span class="string">"e"</span>.repeat(<span class="number">60</span>),
+<a href=#1173 id=1173 data-nosnippet>1173</a>      <span class="string">"f"</span>.repeat(<span class="number">60</span>),
+<a href=#1174 id=1174 data-nosnippet>1174</a>      <span class="string">"g"</span>.repeat(<span class="number">60</span>),
+<a href=#1175 id=1175 data-nosnippet>1175</a>    ]
+<a href=#1176 id=1176 data-nosnippet>1176</a>    .join(<span class="string">"/"</span>);
+<a href=#1177 id=1177 data-nosnippet>1177</a>    std::fs::create_dir_all(src.join(<span class="kw-2">&amp;</span>deep)).unwrap();
+<a href=#1178 id=1178 data-nosnippet>1178</a>    write(<span class="kw-2">&amp;</span>src.join(<span class="kw-2">&amp;</span>deep), <span class="string">"paper.tex"</span>, <span class="string">"\\input{x}\n"</span>);
+<a href=#1179 id=1179 data-nosnippet>1179</a>    <span class="kw">let </span>deep = <span class="macro">format!</span>(<span class="string">"{deep}/paper.tex"</span>);
+<a href=#1180 id=1180 data-nosnippet>1180</a>    rows.push((<span class="string">"00README.json"</span>, json(<span class="kw-2">&amp;</span>deep), deep.as_str(), <span class="number">0</span>));
+<a href=#1181 id=1181 data-nosnippet>1181</a>    <span class="kw">for </span>(readme, body, pick, warnings) <span class="kw">in </span>rows {
+<a href=#1182 id=1182 data-nosnippet>1182</a>      <span class="kw">for </span>name <span class="kw">in </span>[<span class="string">"00README.json"</span>, <span class="string">"00README.XXX"</span>] {
+<a href=#1183 id=1183 data-nosnippet>1183</a>        <span class="kw">let _ </span>= std::fs::remove_file(src.join(name));
+<a href=#1184 id=1184 data-nosnippet>1184</a>      }
+<a href=#1185 id=1185 data-nosnippet>1185</a>      write(
+<a href=#1186 id=1186 data-nosnippet>1186</a>        <span class="kw-2">&amp;</span>src,
+<a href=#1187 id=1187 data-nosnippet>1187</a>        <span class="string">"main.tex"</span>,
+<a href=#1188 id=1188 data-nosnippet>1188</a>        <span class="string">"\\documentclass{article}\n\\begin{document}x\\end{document}\n"</span>,
+<a href=#1189 id=1189 data-nosnippet>1189</a>      );
+<a href=#1190 id=1190 data-nosnippet>1190</a>      write(<span class="kw-2">&amp;</span>src.join(<span class="string">"sub"</span>), <span class="string">"paper.tex"</span>, <span class="string">"\\input{x}\n"</span>);
+<a href=#1191 id=1191 data-nosnippet>1191</a>      write(<span class="kw-2">&amp;</span>src, readme, <span class="kw-2">&amp;</span>body);
+<a href=#1192 id=1192 data-nosnippet>1192</a>      <span class="kw">let </span>before = get_status(LogStatus::Warning);
+<a href=#1193 id=1193 data-nosnippet>1193</a>      <span class="kw">let </span>main = find_main_tex(<span class="kw-2">&amp;</span>src).unwrap();
+<a href=#1194 id=1194 data-nosnippet>1194</a>      <span class="comment">// `find_top_level_texs` reads the entries twice and warns once.
+<a href=#1195 id=1195 data-nosnippet>1195</a>      </span><span class="kw">let </span>tops = find_top_level_texs(<span class="kw-2">&amp;</span>src).unwrap();
+<a href=#1196 id=1196 data-nosnippet>1196</a>      log_session_warnings();
+<a href=#1197 id=1197 data-nosnippet>1197</a>      <span class="macro">assert_eq!</span>(main, src.join(pick), <span class="string">"{readme}: {body}"</span>);
+<a href=#1198 id=1198 data-nosnippet>1198</a>      <span class="macro">assert_eq!</span>(tops, <span class="macro">vec!</span>[main], <span class="string">"{readme}: {body}"</span>);
+<a href=#1199 id=1199 data-nosnippet>1199</a>      <span class="macro">assert_eq!</span>(
+<a href=#1200 id=1200 data-nosnippet>1200</a>        get_status(LogStatus::Warning) - before,
+<a href=#1201 id=1201 data-nosnippet>1201</a>        <span class="number">2 </span>* warnings,
+<a href=#1202 id=1202 data-nosnippet>1202</a>        <span class="string">"{readme}: {body}"
+<a href=#1203 id=1203 data-nosnippet>1203</a>      </span>);
+<a href=#1204 id=1204 data-nosnippet>1204</a>    }
+<a href=#1205 id=1205 data-nosnippet>1205</a>  }
+<a href=#1206 id=1206 data-nosnippet>1206</a>}
 </code></pre></div></section></main></body></html>
