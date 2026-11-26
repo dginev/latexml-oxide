@@ -1053,6 +1053,21 @@ Rules that keep this file honest and mergeable:
     `[proc]` the PDF empties them too: a FIDELITY_CHARTER §2 question); a stored `\@subjclass` without a year gets
     "1991 Mathematics Subject Classification" (Perl ams_support.sty.ltxml:131) where TL 2025's amsart prints "2020"
     (amsart.cls:555, :789); 1704.06431's `Fatal` enumerate/`\lx@tags` recursion (pre-existing on main); 3
+  - MSCINFER-LATER — the MSC edition follows the codes (OD #1168) only for the amsart family and amsppt; elsarticle
+    `\MSC` (its name "MSC: " drops the year it prints; 1405.7537), svjour `\subclass` "(2000)", informs, compositio
+    and iopart `\ams` still print their own year unchecked: each needs its label-year fix through `\lx@msc@infer`; 2
+  - MSCINFER-AMSPPT — amsppt keeps one global `\lx@ppt@year`: a second topmatter re-stamps the first classification
+    after its Info was logged (RED `sectioning-frontmatter/amsppt_msc_edition_two_topmatters_share_one_year_red`), and
+    two `\subjclass` in one topmatter are both kept where TeX prints the last; one year macro per call; 1
+  - MSCINFER-COUNT — when the class keeps the author's renewed label, the whole label is passed as the print, so
+    `note_info_counted` counts its words as accounted-for losses though they still print (it could mask a real
+    lost-word Warning); count nothing when the name is kept, and say in the Info that only the scheme follows; 1
+  - MSCINFER-RENEW — a `\subjclassname` renewed after the call names what `\maketitle` prints, but the scheme keeps the
+    call's edition (RED `msc_edition_renewed_after_the_call_names_the_scheme_red`, 0811.1789); 1
+  - MSCINFER-DATE — arXiv single-file sources arrive undated (an unzip-restored "no time" entry reads as 1980 and is
+    dropped below 1991, `source_date.rs`), so the era rule seldom applies and the corpus takes DG's oldest-edition
+    fallback (2026-11-26): math9909024 → 1991, hep-th0307062 → 1991 (its era's 2000), 1504.02453 → 2000 (its era's
+    2010); `source_date` should treat a 1980 zip entry as undated rather than rely on the 1991 floor; 2
   - ITEMTHEBLANK (needs a ruling) — `\item[…]` lets `\the<ctr>` be empty (Perl latex_constructs.pool.ltxml:1390), so
     `\item[(\theenumi)] B\label{y}` prints "()" and "See ." where TeX prints "(1)" and "See 1."; `\item[\fnum@fc]` gives
     "Fig. :" (TeX "Fig. 1:"); a nested list reusing the counter labels its inner item "Fig. 0:" (TeX "Fig. 1:"). Keep

@@ -1,0 +1,29 @@
+% mechanism: every amsppt classification's scheme and name read one global `\lx@ppt@year`, which each `\endtopmatter`
+%   `\gdef`s again (amsppt_sty.rs `\lx@ppt@subjclass`); a second topmatter re-stamps the first classification after
+%   its Info was logged (OXIDIZED_DESIGN_DIVERGENCES #1168)
+% witness: synthetic (MSCINFER re-review); also several `\subjclass` in one topmatter, and a `\subjclass` after an
+%   earlier `\endtopmatter`
+% oracle:  amstex (TL 2025) 0 errors: "2000 … 14T05, 14M25" in the first topmatter, "1991 … 16R10" in the second
+% engines: rust INT081AD = both 1991; MSCINFER = both 1991, and the log's Info says "MSC 2000 (the class's print) -> 2010"
+%   for the first, which its output does not show
+% expect:  each classification takes its own topmatter's year: the first stamped 2010 with that Info, the second 1991
+%   (one year macro per call, `\endtopmatter` setting only the pending call's)
+% status:  RED (MSCINFER)
+% moves:   post-merge
+\input amstex
+\documentstyle{amsppt}
+\topmatter
+\title Title Text\endtitle
+\author A. Author\endauthor
+\subjclass 14T05, 14M25\endsubjclass
+\subjclassyear{2000}
+\endtopmatter
+\document
+Body text.
+\topmatter
+\title Second\endtitle
+\subjclass 16R10\endsubjclass
+\subjclassyear{1991}
+\endtopmatter
+More text.
+\enddocument
