@@ -4,7 +4,7 @@
 <a href=#4 id=4 data-nosnippet>4</a>  collections::VecDeque,
 <a href=#5 id=5 data-nosnippet>5</a>  rc::Rc,
 <a href=#6 id=6 data-nosnippet>6</a>  sync::LazyLock,
-<a href=#7 id=7 data-nosnippet>7</a>  time::Instant,
+<a href=#7 id=7 data-nosnippet>7</a>  time::{Duration, Instant},
 <a href=#8 id=8 data-nosnippet>8</a>};
 <a href=#9 id=9 data-nosnippet>9</a>
 <a href=#10 id=10 data-nosnippet>10</a><span class="kw">use crate</span>::{digested::DigestedData, pin};
@@ -30,417 +30,417 @@
 <a href=#30 id=30 data-nosnippet>30</a></span><span class="kw">static </span>TRACE_TERMINAL: LazyLock&lt;bool&gt; =
 <a href=#31 id=31 data-nosnippet>31</a>  LazyLock::new(|| std::env::var(<span class="string">"LXML_TRACE_TERMINAL"</span>).is_ok());
 <a href=#32 id=32 data-nosnippet>32</a>
-<a href=#33 id=33 data-nosnippet>33</a><span class="comment">// Conversion timeout: thread-local deadline. When set, digest loops check it.
-<a href=#34 id=34 data-nosnippet>34</a></span><span class="macro">thread_local!</span> {
-<a href=#35 id=35 data-nosnippet>35</a>  <span class="kw">static </span>CONVERSION_DEADLINE: Cell&lt;<span class="prelude-ty">Option</span>&lt;Instant&gt;&gt; = <span class="kw">const </span>{ Cell::new(<span class="prelude-val">None</span>) };
-<a href=#36 id=36 data-nosnippet>36</a>}
-<a href=#37 id=37 data-nosnippet>37</a>
-<a href=#38 id=38 data-nosnippet>38</a><span class="doccomment">/// Set a conversion timeout (seconds from now). 0 = no timeout.
-<a href=#39 id=39 data-nosnippet>39</a></span><span class="kw">pub fn </span>set_timeout(seconds: u64) {
-<a href=#40 id=40 data-nosnippet>40</a>  <span class="kw">if </span>seconds &gt; <span class="number">0 </span>{
-<a href=#41 id=41 data-nosnippet>41</a>    CONVERSION_DEADLINE.with(|d| {
-<a href=#42 id=42 data-nosnippet>42</a>      d.set(<span class="prelude-val">Some</span>(
-<a href=#43 id=43 data-nosnippet>43</a>        Instant::now() + std::time::Duration::from_secs(seconds),
-<a href=#44 id=44 data-nosnippet>44</a>      ))
-<a href=#45 id=45 data-nosnippet>45</a>    });
-<a href=#46 id=46 data-nosnippet>46</a>  } <span class="kw">else </span>{
-<a href=#47 id=47 data-nosnippet>47</a>    CONVERSION_DEADLINE.with(|d| d.set(<span class="prelude-val">None</span>));
-<a href=#48 id=48 data-nosnippet>48</a>  }
-<a href=#49 id=49 data-nosnippet>49</a>}
-<a href=#50 id=50 data-nosnippet>50</a>
-<a href=#51 id=51 data-nosnippet>51</a><span class="doccomment">/// Whether the conversion's deadline ([`set_timeout`]) has passed — for a reader that may never return to a digestion
-<a href=#52 id=52 data-nosnippet>52</a>/// loop (the gullet's token reads).
-<a href=#53 id=53 data-nosnippet>53</a></span><span class="kw">pub fn </span>conversion_deadline_passed() -&gt; bool {
-<a href=#54 id=54 data-nosnippet>54</a>  CONVERSION_DEADLINE.with(|d| d.get().is_some_and(|deadline| Instant::now() &gt; deadline))
-<a href=#55 id=55 data-nosnippet>55</a>}
-<a href=#56 id=56 data-nosnippet>56</a>
-<a href=#57 id=57 data-nosnippet>57</a><span class="comment">// Explicit override for the cooperative soft-RSS budget (bytes). When set it
-<a href=#58 id=58 data-nosnippet>58</a>// takes precedence over the `LATEXML_RSS_CAP_BYTES` env; when `None` the env /
-<a href=#59 id=59 data-nosnippet>59</a>// built-in default applies. The binary sets it from the single `--max-memory`
-<a href=#60 id=60 data-nosnippet>60</a>// knob (via [`soft_cap_from_ceiling`]) so that ONE flag governs the whole
-<a href=#61 id=61 data-nosnippet>61</a>// memory limit — this cooperative fuse rides a fixed fraction below the hard
-<a href=#62 id=62 data-nosnippet>62</a>// Watchdog ceiling rather than being an independent number, and `--max-memory=0`
-<a href=#63 id=63 data-nosnippet>63</a>// disables both (this fuse via a `0` cap → `None`, the Watchdog via
-<a href=#64 id=64 data-nosnippet>64</a>// `max_rss_kb == 0`).
-<a href=#65 id=65 data-nosnippet>65</a></span><span class="macro">thread_local!</span> {
-<a href=#66 id=66 data-nosnippet>66</a>  <span class="kw">static </span>RSS_CAP_OVERRIDE: Cell&lt;<span class="prelude-ty">Option</span>&lt;u64&gt;&gt; = <span class="kw">const </span>{ Cell::new(<span class="prelude-val">None</span>) };
-<a href=#67 id=67 data-nosnippet>67</a>}
-<a href=#68 id=68 data-nosnippet>68</a>
-<a href=#69 id=69 data-nosnippet>69</a><span class="doccomment">/// Override the cooperative soft-RSS memory budget, in bytes. `Some(0)`
-<a href=#70 id=70 data-nosnippet>70</a>/// disables the budget; `Some(n)` caps at `n` bytes; `None` restores the
-<a href=#71 id=71 data-nosnippet>71</a>/// `LATEXML_RSS_CAP_BYTES` env / built-in default. Mirrors the `--max-memory`
-<a href=#72 id=72 data-nosnippet>72</a>/// CLI convention where `0` means "no limit". See `resolve_rss_cap` (private)
-<a href=#73 id=73 data-nosnippet>73</a>/// for the precedence order.
-<a href=#74 id=74 data-nosnippet>74</a></span><span class="kw">pub fn </span>set_memory_cap(bytes: <span class="prelude-ty">Option</span>&lt;u64&gt;) { RSS_CAP_OVERRIDE.with(|c| c.set(bytes)); }
-<a href=#75 id=75 data-nosnippet>75</a>
-<a href=#76 id=76 data-nosnippet>76</a><span class="doccomment">/// The streaming-restart watermark (bytes of RSS): set by the CLI for an
-<a href=#77 id=77 data-nosnippet>77</a>/// EAGER run that may be rerun under `--streaming`. Crossing it stops
-<a href=#78 id=78 data-nosnippet>78</a>/// digestion with `ErrorCategory::StreamingRestart` — an Info, not a Fatal —
-<a href=#79 id=79 data-nosnippet>79</a>/// just below the fuse, so the abandoned attempt leaves no Fatal line and no
-<a href=#80 id=80 data-nosnippet>80</a>/// salvaged partial document behind (`streaming_restart::restart_watermark`
-<a href=#81 id=81 data-nosnippet>81</a>/// sets where). `None` (the default, and every path that does not rerun) = no
-<a href=#82 id=82 data-nosnippet>82</a>/// watermark.
-<a href=#83 id=83 data-nosnippet>83</a></span><span class="attr">#[thread_local]
-<a href=#84 id=84 data-nosnippet>84</a></span><span class="kw">static </span>STREAMING_RESTART_WATERMARK: Cell&lt;<span class="prelude-ty">Option</span>&lt;u64&gt;&gt; = Cell::new(<span class="prelude-val">None</span>);
-<a href=#85 id=85 data-nosnippet>85</a>
-<a href=#86 id=86 data-nosnippet>86</a><span class="doccomment">/// Arm (or clear) the streaming-restart watermark for this thread.
-<a href=#87 id=87 data-nosnippet>87</a></span><span class="kw">pub fn </span>set_streaming_restart_watermark(bytes: <span class="prelude-ty">Option</span>&lt;u64&gt;) {
-<a href=#88 id=88 data-nosnippet>88</a>  STREAMING_RESTART_WATERMARK.set(bytes);
-<a href=#89 id=89 data-nosnippet>89</a>}
+<a href=#33 id=33 data-nosnippet>33</a><span class="comment">// Conversion timeout: thread-local deadline, with the setup time kept off the clock when it was set
+<a href=#34 id=34 data-nosnippet>34</a>// (`watchdog::off_the_clock`). When set, digest loops check it.
+<a href=#35 id=35 data-nosnippet>35</a></span><span class="macro">thread_local!</span> {
+<a href=#36 id=36 data-nosnippet>36</a>  <span class="kw">static </span>CONVERSION_DEADLINE: Cell&lt;<span class="prelude-ty">Option</span>&lt;(Instant, Duration)&gt;&gt; = <span class="kw">const </span>{ Cell::new(<span class="prelude-val">None</span>) };
+<a href=#37 id=37 data-nosnippet>37</a>}
+<a href=#38 id=38 data-nosnippet>38</a>
+<a href=#39 id=39 data-nosnippet>39</a><span class="doccomment">/// Set a conversion timeout (seconds from now). 0 = no timeout.
+<a href=#40 id=40 data-nosnippet>40</a></span><span class="kw">pub fn </span>set_timeout(seconds: u64) {
+<a href=#41 id=41 data-nosnippet>41</a>  <span class="kw">if </span>seconds &gt; <span class="number">0 </span>{
+<a href=#42 id=42 data-nosnippet>42</a>    CONVERSION_DEADLINE.with(|d| {
+<a href=#43 id=43 data-nosnippet>43</a>      d.set(<span class="prelude-val">Some</span>((
+<a href=#44 id=44 data-nosnippet>44</a>        Instant::now() + Duration::from_secs(seconds),
+<a href=#45 id=45 data-nosnippet>45</a>        <span class="kw">crate</span>::watchdog::time_off_the_clock(),
+<a href=#46 id=46 data-nosnippet>46</a>      )))
+<a href=#47 id=47 data-nosnippet>47</a>    });
+<a href=#48 id=48 data-nosnippet>48</a>  } <span class="kw">else </span>{
+<a href=#49 id=49 data-nosnippet>49</a>    CONVERSION_DEADLINE.with(|d| d.set(<span class="prelude-val">None</span>));
+<a href=#50 id=50 data-nosnippet>50</a>  }
+<a href=#51 id=51 data-nosnippet>51</a>}
+<a href=#52 id=52 data-nosnippet>52</a>
+<a href=#53 id=53 data-nosnippet>53</a><span class="doccomment">/// Whether the conversion's deadline ([`set_timeout`]) has passed — for a reader that may never return to a digestion
+<a href=#54 id=54 data-nosnippet>54</a>/// loop (the gullet's token reads).
+<a href=#55 id=55 data-nosnippet>55</a></span><span class="kw">pub fn </span>conversion_deadline_passed() -&gt; bool {
+<a href=#56 id=56 data-nosnippet>56</a>  CONVERSION_DEADLINE.with(|d| {
+<a href=#57 id=57 data-nosnippet>57</a>    d.get()
+<a href=#58 id=58 data-nosnippet>58</a>      .is_some_and(|(deadline, off)| <span class="kw">crate</span>::watchdog::deadline_passed(deadline, off))
+<a href=#59 id=59 data-nosnippet>59</a>  })
+<a href=#60 id=60 data-nosnippet>60</a>}
+<a href=#61 id=61 data-nosnippet>61</a>
+<a href=#62 id=62 data-nosnippet>62</a><span class="comment">// Explicit override for the cooperative soft-RSS budget (bytes). When set it
+<a href=#63 id=63 data-nosnippet>63</a>// takes precedence over the `LATEXML_RSS_CAP_BYTES` env; when `None` the env /
+<a href=#64 id=64 data-nosnippet>64</a>// built-in default applies. The binary sets it from the single `--max-memory`
+<a href=#65 id=65 data-nosnippet>65</a>// knob (via [`soft_cap_from_ceiling`]) so that ONE flag governs the whole
+<a href=#66 id=66 data-nosnippet>66</a>// memory limit — this cooperative fuse rides a fixed fraction below the hard
+<a href=#67 id=67 data-nosnippet>67</a>// Watchdog ceiling rather than being an independent number, and `--max-memory=0`
+<a href=#68 id=68 data-nosnippet>68</a>// disables both (this fuse via a `0` cap → `None`, the Watchdog via
+<a href=#69 id=69 data-nosnippet>69</a>// `max_rss_kb == 0`).
+<a href=#70 id=70 data-nosnippet>70</a></span><span class="macro">thread_local!</span> {
+<a href=#71 id=71 data-nosnippet>71</a>  <span class="kw">static </span>RSS_CAP_OVERRIDE: Cell&lt;<span class="prelude-ty">Option</span>&lt;u64&gt;&gt; = <span class="kw">const </span>{ Cell::new(<span class="prelude-val">None</span>) };
+<a href=#72 id=72 data-nosnippet>72</a>}
+<a href=#73 id=73 data-nosnippet>73</a>
+<a href=#74 id=74 data-nosnippet>74</a><span class="doccomment">/// Override the cooperative soft-RSS memory budget, in bytes. `Some(0)`
+<a href=#75 id=75 data-nosnippet>75</a>/// disables the budget; `Some(n)` caps at `n` bytes; `None` restores the
+<a href=#76 id=76 data-nosnippet>76</a>/// `LATEXML_RSS_CAP_BYTES` env / built-in default. Mirrors the `--max-memory`
+<a href=#77 id=77 data-nosnippet>77</a>/// CLI convention where `0` means "no limit". See `resolve_rss_cap` (private)
+<a href=#78 id=78 data-nosnippet>78</a>/// for the precedence order.
+<a href=#79 id=79 data-nosnippet>79</a></span><span class="kw">pub fn </span>set_memory_cap(bytes: <span class="prelude-ty">Option</span>&lt;u64&gt;) { RSS_CAP_OVERRIDE.with(|c| c.set(bytes)); }
+<a href=#80 id=80 data-nosnippet>80</a>
+<a href=#81 id=81 data-nosnippet>81</a><span class="doccomment">/// The streaming-restart watermark (bytes of RSS): set by the CLI for an
+<a href=#82 id=82 data-nosnippet>82</a>/// EAGER run that may be rerun under `--streaming`. Crossing it stops
+<a href=#83 id=83 data-nosnippet>83</a>/// digestion with `ErrorCategory::StreamingRestart` — an Info, not a Fatal —
+<a href=#84 id=84 data-nosnippet>84</a>/// just below the fuse, so the abandoned attempt leaves no Fatal line and no
+<a href=#85 id=85 data-nosnippet>85</a>/// salvaged partial document behind (`streaming_restart::restart_watermark`
+<a href=#86 id=86 data-nosnippet>86</a>/// sets where). `None` (the default, and every path that does not rerun) = no
+<a href=#87 id=87 data-nosnippet>87</a>/// watermark.
+<a href=#88 id=88 data-nosnippet>88</a></span><span class="attr">#[thread_local]
+<a href=#89 id=89 data-nosnippet>89</a></span><span class="kw">static </span>STREAMING_RESTART_WATERMARK: Cell&lt;<span class="prelude-ty">Option</span>&lt;u64&gt;&gt; = Cell::new(<span class="prelude-val">None</span>);
 <a href=#90 id=90 data-nosnippet>90</a>
-<a href=#91 id=91 data-nosnippet>91</a><span class="doccomment">/// Why eager digestion stopped for memory on this thread.
-<a href=#92 id=92 data-nosnippet>92</a></span><span class="attr">#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-<a href=#93 id=93 data-nosnippet>93</a></span><span class="kw">pub enum </span>RestartSignal {
-<a href=#94 id=94 data-nosnippet>94</a>  <span class="doccomment">/// The streaming-restart watermark (an Info, no output lost yet).
-<a href=#95 id=95 data-nosnippet>95</a>  </span>Watermark,
-<a href=#96 id=96 data-nosnippet>96</a>  <span class="doccomment">/// The cooperative memory fuse (a Fatal; the attempt's output is partial).
-<a href=#97 id=97 data-nosnippet>97</a>  </span>Fuse,
-<a href=#98 id=98 data-nosnippet>98</a>}
-<a href=#99 id=99 data-nosnippet>99</a>
-<a href=#100 id=100 data-nosnippet>100</a><span class="doccomment">/// Thread-local, so a worker with several conversion threads never restarts
-<a href=#101 id=101 data-nosnippet>101</a>/// one paper on another's stop (the watchdog's process-wide memory latch is
-<a href=#102 id=102 data-nosnippet>102</a>/// for the end-of-run report only).
-<a href=#103 id=103 data-nosnippet>103</a></span><span class="attr">#[thread_local]
-<a href=#104 id=104 data-nosnippet>104</a></span><span class="kw">static </span>STREAMING_RESTART_SIGNAL: Cell&lt;<span class="prelude-ty">Option</span>&lt;RestartSignal&gt;&gt; = Cell::new(<span class="prelude-val">None</span>);
-<a href=#105 id=105 data-nosnippet>105</a>
-<a href=#106 id=106 data-nosnippet>106</a><span class="doccomment">/// Record a memory stop for the restart decision (`take_streaming_restart_signal`).
-<a href=#107 id=107 data-nosnippet>107</a></span><span class="kw">pub fn </span>note_streaming_restart_signal(signal: RestartSignal) {
-<a href=#108 id=108 data-nosnippet>108</a>  STREAMING_RESTART_SIGNAL.set(<span class="prelude-val">Some</span>(signal));
-<a href=#109 id=109 data-nosnippet>109</a>}
+<a href=#91 id=91 data-nosnippet>91</a><span class="doccomment">/// Arm (or clear) the streaming-restart watermark for this thread.
+<a href=#92 id=92 data-nosnippet>92</a></span><span class="kw">pub fn </span>set_streaming_restart_watermark(bytes: <span class="prelude-ty">Option</span>&lt;u64&gt;) {
+<a href=#93 id=93 data-nosnippet>93</a>  STREAMING_RESTART_WATERMARK.set(bytes);
+<a href=#94 id=94 data-nosnippet>94</a>}
+<a href=#95 id=95 data-nosnippet>95</a>
+<a href=#96 id=96 data-nosnippet>96</a><span class="doccomment">/// Why eager digestion stopped for memory on this thread.
+<a href=#97 id=97 data-nosnippet>97</a></span><span class="attr">#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+<a href=#98 id=98 data-nosnippet>98</a></span><span class="kw">pub enum </span>RestartSignal {
+<a href=#99 id=99 data-nosnippet>99</a>  <span class="doccomment">/// The streaming-restart watermark (an Info, no output lost yet).
+<a href=#100 id=100 data-nosnippet>100</a>  </span>Watermark,
+<a href=#101 id=101 data-nosnippet>101</a>  <span class="doccomment">/// The cooperative memory fuse (a Fatal; the attempt's output is partial).
+<a href=#102 id=102 data-nosnippet>102</a>  </span>Fuse,
+<a href=#103 id=103 data-nosnippet>103</a>}
+<a href=#104 id=104 data-nosnippet>104</a>
+<a href=#105 id=105 data-nosnippet>105</a><span class="doccomment">/// Thread-local, so a worker with several conversion threads never restarts
+<a href=#106 id=106 data-nosnippet>106</a>/// one paper on another's stop (the watchdog's process-wide memory latch is
+<a href=#107 id=107 data-nosnippet>107</a>/// for the end-of-run report only).
+<a href=#108 id=108 data-nosnippet>108</a></span><span class="attr">#[thread_local]
+<a href=#109 id=109 data-nosnippet>109</a></span><span class="kw">static </span>STREAMING_RESTART_SIGNAL: Cell&lt;<span class="prelude-ty">Option</span>&lt;RestartSignal&gt;&gt; = Cell::new(<span class="prelude-val">None</span>);
 <a href=#110 id=110 data-nosnippet>110</a>
-<a href=#111 id=111 data-nosnippet>111</a><span class="doccomment">/// The pending memory stop, cleared by the read.
-<a href=#112 id=112 data-nosnippet>112</a></span><span class="kw">pub fn </span>take_streaming_restart_signal() -&gt; <span class="prelude-ty">Option</span>&lt;RestartSignal&gt; { STREAMING_RESTART_SIGNAL.take() }
-<a href=#113 id=113 data-nosnippet>113</a>
-<a href=#114 id=114 data-nosnippet>114</a><span class="doccomment">/// Derive the cooperative soft-RSS budget (bytes) from the hard `--max-memory`
-<a href=#115 id=115 data-nosnippet>115</a>/// ceiling (MiB). The soft fuse sits at 75% of the ceiling, leaving ~25%
-<a href=#116 id=116 data-nosnippet>116</a>/// headroom for the post-processing phase (libxml DOM + XSLT) that runs above
-<a href=#117 id=117 data-nosnippet>117</a>/// digestion and which this cooperative guard cannot see. `0` in → `0` out
-<a href=#118 id=118 data-nosnippet>118</a>/// (disabled), so `--max-memory=0` disables the whole memory limit. This keeps
-<a href=#119 id=119 data-nosnippet>119</a>/// `--max-memory` the single knob: the hard Watchdog rides the ceiling, this
-<a href=#120 id=120 data-nosnippet>120</a>/// fuse rides a fixed fraction below it — no independent second number.
-<a href=#121 id=121 data-nosnippet>121</a>///
-<a href=#122 id=122 data-nosnippet>122</a>/// The 75% factor reproduces the historical ~4.5 GB-under-6 GiB relationship at
-<a href=#123 id=123 data-nosnippet>123</a>/// the 6144 MiB default (→ 4608 MiB) while scaling with any user-chosen ceiling
-<a href=#124 id=124 data-nosnippet>124</a>/// (so a tight `--max-memory` also gets the graceful cooperative failure first,
-<a href=#125 id=125 data-nosnippet>125</a>/// and a generous one raises both guards together).
-<a href=#126 id=126 data-nosnippet>126</a></span><span class="kw">pub fn </span>soft_cap_from_ceiling(max_memory_mib: u64) -&gt; u64 {
-<a href=#127 id=127 data-nosnippet>127</a>  (max_memory_mib.saturating_mul(<span class="number">3</span>) / <span class="number">4</span>).saturating_mul(<span class="number">1024 </span>* <span class="number">1024</span>)
-<a href=#128 id=128 data-nosnippet>128</a>}
-<a href=#129 id=129 data-nosnippet>129</a>
-<a href=#130 id=130 data-nosnippet>130</a><span class="doccomment">/// Minimum boxes that must accumulate before the **soft-RSS** yield branch may
-<a href=#131 id=131 data-nosnippet>131</a>/// fire (the box-budget branch is unaffected and still yields on its own).
-<a href=#132 id=132 data-nosnippet>132</a>///
-<a href=#133 id=133 data-nosnippet>133</a>/// The soft-RSS test is a LEVEL test with no hysteresis: `rss &gt; watermark`. A
-<a href=#134 id=134 data-nosnippet>134</a>/// document whose irreducible resident floor sits above the watermark therefore
-<a href=#135 id=135 data-nosnippet>135</a>/// latches it on permanently and yields at every legal seam, accumulating
-<a href=#136 id=136 data-nosnippet>136</a>/// almost nothing between yields. Measured on the 131 MB witness at
-<a href=#137 id=137 data-nosnippet>137</a>/// `--max-memory 48000` (watermark 12 GB, pass-1 RSS 13.3-14.9 GB — above it
-<a href=#138 id=138 data-nosnippet>138</a>/// for the entire run): **24,051,712 yields** producing **459,579 segments
-<a href=#139 id=139 data-nosnippet>139</a>/// averaging 5.5 KB**, against a box budget of ~2.0 M boxes that would on its
-<a href=#140 id=140 data-nosnippet>140</a>/// own have yielded ~12 times. The same binary on a witness that never crosses
-<a href=#141 id=141 data-nosnippet>141</a>/// its watermark yields **8** times.
-<a href=#142 id=142 data-nosnippet>142</a>///
-<a href=#143 id=143 data-nosnippet>143</a>/// A floor restores the trigger's intent — "respond to memory pressure sooner
-<a href=#144 id=144 data-nosnippet>144</a>/// than the box budget would" — without the degenerate per-seam case. 1024
-<a href=#145 id=145 data-nosnippet>145</a>/// boxes is ~2.5 MB of box memory at the measured 2416 B/box, i.e. negligible
-<a href=#146 id=146 data-nosnippet>146</a>/// against any watermark large enough to matter, so the pressure response stays
-<a href=#147 id=147 data-nosnippet>147</a>/// effectively immediate while the yield count drops by ~3 orders of magnitude.
-<a href=#148 id=148 data-nosnippet>148</a>///
-<a href=#149 id=149 data-nosnippet>149</a>/// **The floor is waived under real pressure** — see `soft_yield_is_urgent`.
-<a href=#150 id=150 data-nosnippet>150</a>/// The soft-RSS branch exists because "the box budget alone assumes a per-box
-<a href=#151 id=151 data-nosnippet>151</a>/// footprint; on content whose real cost per box is higher (math-dense trees),
-<a href=#152 id=152 data-nosnippet>152</a>/// RSS crosses the ceiling long before the box count does". A floor that
-<a href=#153 id=153 data-nosnippet>153</a>/// applied unconditionally would blunt that valve for exactly the pathological
-<a href=#154 id=154 data-nosnippet>154</a>/// input it was added for: 1024 boxes of ordinary content is ~2.5 MB, but 1024
-<a href=#155 id=155 data-nosnippet>155</a>/// boxes of something pathological is unbounded, and the fuse could fire inside
-<a href=#156 id=156 data-nosnippet>156</a>/// one un-yielded window. So above a higher RSS mark the floor is ignored.
-<a href=#157 id=157 data-nosnippet>157</a>///
-<a href=#158 id=158 data-nosnippet>158</a>/// Env-overridable for calibration only (`LATEXML_SOFT_YIELD_MIN_BOXES`),
-<a href=#159 id=159 data-nosnippet>159</a>/// deliberately not a CLI flag — same reasoning as `LATEXML_SPILL_AT_MIB`.
-<a href=#160 id=160 data-nosnippet>160</a>/// Override the soft-RSS floor directly, bypassing the env lookup. For tests
-<a href=#161 id=161 data-nosnippet>161</a>/// that need to drive the degenerate (floor = 1) and fixed (floor = N) regimes
-<a href=#162 id=162 data-nosnippet>162</a>/// in one process — see `115_soft_yield_floor`.
-<a href=#163 id=163 data-nosnippet>163</a></span><span class="kw">pub fn </span>set_soft_yield_min_boxes(boxes: usize) { SOFT_YIELD_MIN_BOXES.set(<span class="prelude-val">Some</span>(boxes)); }
-<a href=#164 id=164 data-nosnippet>164</a>
-<a href=#165 id=165 data-nosnippet>165</a><span class="doccomment">/// Is memory pressure URGENT enough to waive the soft-yield floor?
-<a href=#166 id=166 data-nosnippet>166</a>///
-<a href=#167 id=167 data-nosnippet>167</a>/// Halfway from the spill watermark to the cooperative fuse. Below this the
-<a href=#168 id=168 data-nosnippet>168</a>/// floor applies and yields stay coarse; above it every legal seam yields, as
-<a href=#169 id=169 data-nosnippet>169</a>/// before this floor existed — so a document whose per-box footprint is wildly
-<a href=#170 id=170 data-nosnippet>170</a>/// larger than the 2416 B the box budget assumes still gets the immediate
-<a href=#171 id=171 data-nosnippet>171</a>/// response the soft-RSS branch was introduced to provide, instead of Fatal-ing
-<a href=#172 id=172 data-nosnippet>172</a>/// inside a 1024-box window.
-<a href=#173 id=173 data-nosnippet>173</a></span><span class="kw">fn </span>soft_yield_is_urgent(rss_kb: u64) -&gt; bool {
-<a href=#174 id=174 data-nosnippet>174</a>  soft_yield_urgency(
-<a href=#175 id=175 data-nosnippet>175</a>    rss_kb,
-<a href=#176 id=176 data-nosnippet>176</a>    spill_mark_kb().map(|kb| kb * <span class="number">1024</span>),
-<a href=#177 id=177 data-nosnippet>177</a>    resolve_rss_cap(),
-<a href=#178 id=178 data-nosnippet>178</a>  )
-<a href=#179 id=179 data-nosnippet>179</a>}
-<a href=#180 id=180 data-nosnippet>180</a>
-<a href=#181 id=181 data-nosnippet>181</a><span class="doccomment">/// The pure predicate behind [`soft_yield_is_urgent`], split out so the
-<a href=#182 id=182 data-nosnippet>182</a>/// arithmetic is unit-testable (an integration test would need a real RSS cap
-<a href=#183 id=183 data-nosnippet>183</a>/// near the test process's actual footprint — flaky by construction on the
-<a href=#184 id=184 data-nosnippet>184</a>/// 16 GB CI runner). `watermark`/`fuse` in bytes, `rss_kb` in KiB.
-<a href=#185 id=185 data-nosnippet>185</a></span><span class="kw">fn </span>soft_yield_urgency(rss_kb: u64, watermark: <span class="prelude-ty">Option</span>&lt;u64&gt;, fuse: <span class="prelude-ty">Option</span>&lt;u64&gt;) -&gt; bool {
-<a href=#186 id=186 data-nosnippet>186</a>  <span class="kw">match </span>(watermark, fuse) {
-<a href=#187 id=187 data-nosnippet>187</a>    (<span class="prelude-val">Some</span>(watermark), <span class="prelude-val">Some</span>(fuse)) <span class="kw">if </span>fuse &gt; watermark =&gt; {
-<a href=#188 id=188 data-nosnippet>188</a>      rss_kb.saturating_mul(<span class="number">1024</span>) &gt;= watermark + (fuse - watermark) / <span class="number">2
-<a href=#189 id=189 data-nosnippet>189</a>    </span>},
-<a href=#190 id=190 data-nosnippet>190</a>    <span class="comment">// No fuse to divide (`--max-memory=0`): the floor always applies, matching
-<a href=#191 id=191 data-nosnippet>191</a>    // the watermark fallback's own "no ceiling to race" reasoning.
-<a href=#192 id=192 data-nosnippet>192</a>    </span><span class="kw">_ </span>=&gt; <span class="bool-val">false</span>,
-<a href=#193 id=193 data-nosnippet>193</a>  }
-<a href=#194 id=194 data-nosnippet>194</a>}
-<a href=#195 id=195 data-nosnippet>195</a>
-<a href=#196 id=196 data-nosnippet>196</a><span class="macro">thread_local!</span> {
-<a href=#197 id=197 data-nosnippet>197</a>  <span class="doccomment">/// Set while a `\left`/`\middle`/`\right` delimiter is digested ([`digest_as_delimiter`]).
-<a href=#198 id=198 data-nosnippet>198</a>  </span><span class="kw">static </span>DIGESTING_DELIMITER: Cell&lt;bool&gt; = <span class="kw">const </span>{ Cell::new(<span class="bool-val">false</span>) };
+<a href=#111 id=111 data-nosnippet>111</a><span class="doccomment">/// Record a memory stop for the restart decision (`take_streaming_restart_signal`).
+<a href=#112 id=112 data-nosnippet>112</a></span><span class="kw">pub fn </span>note_streaming_restart_signal(signal: RestartSignal) {
+<a href=#113 id=113 data-nosnippet>113</a>  STREAMING_RESTART_SIGNAL.set(<span class="prelude-val">Some</span>(signal));
+<a href=#114 id=114 data-nosnippet>114</a>}
+<a href=#115 id=115 data-nosnippet>115</a>
+<a href=#116 id=116 data-nosnippet>116</a><span class="doccomment">/// The pending memory stop, cleared by the read.
+<a href=#117 id=117 data-nosnippet>117</a></span><span class="kw">pub fn </span>take_streaming_restart_signal() -&gt; <span class="prelude-ty">Option</span>&lt;RestartSignal&gt; { STREAMING_RESTART_SIGNAL.take() }
+<a href=#118 id=118 data-nosnippet>118</a>
+<a href=#119 id=119 data-nosnippet>119</a><span class="doccomment">/// Derive the cooperative soft-RSS budget (bytes) from the hard `--max-memory`
+<a href=#120 id=120 data-nosnippet>120</a>/// ceiling (MiB). The soft fuse sits at 75% of the ceiling, leaving ~25%
+<a href=#121 id=121 data-nosnippet>121</a>/// headroom for the post-processing phase (libxml DOM + XSLT) that runs above
+<a href=#122 id=122 data-nosnippet>122</a>/// digestion and which this cooperative guard cannot see. `0` in → `0` out
+<a href=#123 id=123 data-nosnippet>123</a>/// (disabled), so `--max-memory=0` disables the whole memory limit. This keeps
+<a href=#124 id=124 data-nosnippet>124</a>/// `--max-memory` the single knob: the hard Watchdog rides the ceiling, this
+<a href=#125 id=125 data-nosnippet>125</a>/// fuse rides a fixed fraction below it — no independent second number.
+<a href=#126 id=126 data-nosnippet>126</a>///
+<a href=#127 id=127 data-nosnippet>127</a>/// The 75% factor reproduces the historical ~4.5 GB-under-6 GiB relationship at
+<a href=#128 id=128 data-nosnippet>128</a>/// the 6144 MiB default (→ 4608 MiB) while scaling with any user-chosen ceiling
+<a href=#129 id=129 data-nosnippet>129</a>/// (so a tight `--max-memory` also gets the graceful cooperative failure first,
+<a href=#130 id=130 data-nosnippet>130</a>/// and a generous one raises both guards together).
+<a href=#131 id=131 data-nosnippet>131</a></span><span class="kw">pub fn </span>soft_cap_from_ceiling(max_memory_mib: u64) -&gt; u64 {
+<a href=#132 id=132 data-nosnippet>132</a>  (max_memory_mib.saturating_mul(<span class="number">3</span>) / <span class="number">4</span>).saturating_mul(<span class="number">1024 </span>* <span class="number">1024</span>)
+<a href=#133 id=133 data-nosnippet>133</a>}
+<a href=#134 id=134 data-nosnippet>134</a>
+<a href=#135 id=135 data-nosnippet>135</a><span class="doccomment">/// Minimum boxes that must accumulate before the **soft-RSS** yield branch may
+<a href=#136 id=136 data-nosnippet>136</a>/// fire (the box-budget branch is unaffected and still yields on its own).
+<a href=#137 id=137 data-nosnippet>137</a>///
+<a href=#138 id=138 data-nosnippet>138</a>/// The soft-RSS test is a LEVEL test with no hysteresis: `rss &gt; watermark`. A
+<a href=#139 id=139 data-nosnippet>139</a>/// document whose irreducible resident floor sits above the watermark therefore
+<a href=#140 id=140 data-nosnippet>140</a>/// latches it on permanently and yields at every legal seam, accumulating
+<a href=#141 id=141 data-nosnippet>141</a>/// almost nothing between yields. Measured on the 131 MB witness at
+<a href=#142 id=142 data-nosnippet>142</a>/// `--max-memory 48000` (watermark 12 GB, pass-1 RSS 13.3-14.9 GB — above it
+<a href=#143 id=143 data-nosnippet>143</a>/// for the entire run): **24,051,712 yields** producing **459,579 segments
+<a href=#144 id=144 data-nosnippet>144</a>/// averaging 5.5 KB**, against a box budget of ~2.0 M boxes that would on its
+<a href=#145 id=145 data-nosnippet>145</a>/// own have yielded ~12 times. The same binary on a witness that never crosses
+<a href=#146 id=146 data-nosnippet>146</a>/// its watermark yields **8** times.
+<a href=#147 id=147 data-nosnippet>147</a>///
+<a href=#148 id=148 data-nosnippet>148</a>/// A floor restores the trigger's intent — "respond to memory pressure sooner
+<a href=#149 id=149 data-nosnippet>149</a>/// than the box budget would" — without the degenerate per-seam case. 1024
+<a href=#150 id=150 data-nosnippet>150</a>/// boxes is ~2.5 MB of box memory at the measured 2416 B/box, i.e. negligible
+<a href=#151 id=151 data-nosnippet>151</a>/// against any watermark large enough to matter, so the pressure response stays
+<a href=#152 id=152 data-nosnippet>152</a>/// effectively immediate while the yield count drops by ~3 orders of magnitude.
+<a href=#153 id=153 data-nosnippet>153</a>///
+<a href=#154 id=154 data-nosnippet>154</a>/// **The floor is waived under real pressure** — see `soft_yield_is_urgent`.
+<a href=#155 id=155 data-nosnippet>155</a>/// The soft-RSS branch exists because "the box budget alone assumes a per-box
+<a href=#156 id=156 data-nosnippet>156</a>/// footprint; on content whose real cost per box is higher (math-dense trees),
+<a href=#157 id=157 data-nosnippet>157</a>/// RSS crosses the ceiling long before the box count does". A floor that
+<a href=#158 id=158 data-nosnippet>158</a>/// applied unconditionally would blunt that valve for exactly the pathological
+<a href=#159 id=159 data-nosnippet>159</a>/// input it was added for: 1024 boxes of ordinary content is ~2.5 MB, but 1024
+<a href=#160 id=160 data-nosnippet>160</a>/// boxes of something pathological is unbounded, and the fuse could fire inside
+<a href=#161 id=161 data-nosnippet>161</a>/// one un-yielded window. So above a higher RSS mark the floor is ignored.
+<a href=#162 id=162 data-nosnippet>162</a>///
+<a href=#163 id=163 data-nosnippet>163</a>/// Env-overridable for calibration only (`LATEXML_SOFT_YIELD_MIN_BOXES`),
+<a href=#164 id=164 data-nosnippet>164</a>/// deliberately not a CLI flag — same reasoning as `LATEXML_SPILL_AT_MIB`.
+<a href=#165 id=165 data-nosnippet>165</a>/// Override the soft-RSS floor directly, bypassing the env lookup. For tests
+<a href=#166 id=166 data-nosnippet>166</a>/// that need to drive the degenerate (floor = 1) and fixed (floor = N) regimes
+<a href=#167 id=167 data-nosnippet>167</a>/// in one process — see `115_soft_yield_floor`.
+<a href=#168 id=168 data-nosnippet>168</a></span><span class="kw">pub fn </span>set_soft_yield_min_boxes(boxes: usize) { SOFT_YIELD_MIN_BOXES.set(<span class="prelude-val">Some</span>(boxes)); }
+<a href=#169 id=169 data-nosnippet>169</a>
+<a href=#170 id=170 data-nosnippet>170</a><span class="doccomment">/// Is memory pressure URGENT enough to waive the soft-yield floor?
+<a href=#171 id=171 data-nosnippet>171</a>///
+<a href=#172 id=172 data-nosnippet>172</a>/// Halfway from the spill watermark to the cooperative fuse. Below this the
+<a href=#173 id=173 data-nosnippet>173</a>/// floor applies and yields stay coarse; above it every legal seam yields, as
+<a href=#174 id=174 data-nosnippet>174</a>/// before this floor existed — so a document whose per-box footprint is wildly
+<a href=#175 id=175 data-nosnippet>175</a>/// larger than the 2416 B the box budget assumes still gets the immediate
+<a href=#176 id=176 data-nosnippet>176</a>/// response the soft-RSS branch was introduced to provide, instead of Fatal-ing
+<a href=#177 id=177 data-nosnippet>177</a>/// inside a 1024-box window.
+<a href=#178 id=178 data-nosnippet>178</a></span><span class="kw">fn </span>soft_yield_is_urgent(rss_kb: u64) -&gt; bool {
+<a href=#179 id=179 data-nosnippet>179</a>  soft_yield_urgency(
+<a href=#180 id=180 data-nosnippet>180</a>    rss_kb,
+<a href=#181 id=181 data-nosnippet>181</a>    spill_mark_kb().map(|kb| kb * <span class="number">1024</span>),
+<a href=#182 id=182 data-nosnippet>182</a>    resolve_rss_cap(),
+<a href=#183 id=183 data-nosnippet>183</a>  )
+<a href=#184 id=184 data-nosnippet>184</a>}
+<a href=#185 id=185 data-nosnippet>185</a>
+<a href=#186 id=186 data-nosnippet>186</a><span class="doccomment">/// The pure predicate behind [`soft_yield_is_urgent`], split out so the
+<a href=#187 id=187 data-nosnippet>187</a>/// arithmetic is unit-testable (an integration test would need a real RSS cap
+<a href=#188 id=188 data-nosnippet>188</a>/// near the test process's actual footprint — flaky by construction on the
+<a href=#189 id=189 data-nosnippet>189</a>/// 16 GB CI runner). `watermark`/`fuse` in bytes, `rss_kb` in KiB.
+<a href=#190 id=190 data-nosnippet>190</a></span><span class="kw">fn </span>soft_yield_urgency(rss_kb: u64, watermark: <span class="prelude-ty">Option</span>&lt;u64&gt;, fuse: <span class="prelude-ty">Option</span>&lt;u64&gt;) -&gt; bool {
+<a href=#191 id=191 data-nosnippet>191</a>  <span class="kw">match </span>(watermark, fuse) {
+<a href=#192 id=192 data-nosnippet>192</a>    (<span class="prelude-val">Some</span>(watermark), <span class="prelude-val">Some</span>(fuse)) <span class="kw">if </span>fuse &gt; watermark =&gt; {
+<a href=#193 id=193 data-nosnippet>193</a>      rss_kb.saturating_mul(<span class="number">1024</span>) &gt;= watermark + (fuse - watermark) / <span class="number">2
+<a href=#194 id=194 data-nosnippet>194</a>    </span>},
+<a href=#195 id=195 data-nosnippet>195</a>    <span class="comment">// No fuse to divide (`--max-memory=0`): the floor always applies, matching
+<a href=#196 id=196 data-nosnippet>196</a>    // the watermark fallback's own "no ceiling to race" reasoning.
+<a href=#197 id=197 data-nosnippet>197</a>    </span><span class="kw">_ </span>=&gt; <span class="bool-val">false</span>,
+<a href=#198 id=198 data-nosnippet>198</a>  }
 <a href=#199 id=199 data-nosnippet>199</a>}
 <a href=#200 id=200 data-nosnippet>200</a>
-<a href=#201 id=201 data-nosnippet>201</a><span class="doccomment">/// Digests `f`'s token as a delimiter: tex.web §1160 `scan_delimiter` takes a letter or other character by its
-<a href=#202 id=202 data-nosnippet>202</a>/// `\delcode`, never its `\mathcode`, so a math-active character (`\mathcode`(="8000`, the active `(` a `\left(`) is
-<a href=#203 id=203 data-nosnippet>203</a>/// that character, not its active meaning — which, `\left(` itself, recursed without end (2609.40266).
-<a href=#204 id=204 data-nosnippet>204</a></span><span class="kw">pub fn </span>digest_as_delimiter&lt;T&gt;(f: <span class="kw">impl </span>FnOnce() -&gt; T) -&gt; T {
-<a href=#205 id=205 data-nosnippet>205</a>  <span class="comment">// Restored on unwind too: a sweep catches a paper's panic and converts the next on this thread.
-<a href=#206 id=206 data-nosnippet>206</a>  </span><span class="kw">struct </span>Restore(bool);
-<a href=#207 id=207 data-nosnippet>207</a>  <span class="kw">impl </span>Drop <span class="kw">for </span>Restore {
-<a href=#208 id=208 data-nosnippet>208</a>    <span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) { DIGESTING_DELIMITER.set(<span class="self">self</span>.<span class="number">0</span>); }
-<a href=#209 id=209 data-nosnippet>209</a>  }
-<a href=#210 id=210 data-nosnippet>210</a>  <span class="kw">let </span>_restore = Restore(DIGESTING_DELIMITER.replace(<span class="bool-val">true</span>));
-<a href=#211 id=211 data-nosnippet>211</a>  f()
-<a href=#212 id=212 data-nosnippet>212</a>}
-<a href=#213 id=213 data-nosnippet>213</a>
-<a href=#214 id=214 data-nosnippet>214</a><span class="doccomment">/// Whether a delimiter is being digested ([`digest_as_delimiter`]).
-<a href=#215 id=215 data-nosnippet>215</a></span><span class="kw">pub fn </span>digesting_delimiter() -&gt; bool { DIGESTING_DELIMITER.get() }
-<a href=#216 id=216 data-nosnippet>216</a>
-<a href=#217 id=217 data-nosnippet>217</a><span class="macro">thread_local!</span> {
-<a href=#218 id=218 data-nosnippet>218</a>  <span class="doccomment">/// RSS (KB) at the last fragment yield (or at digestion start): the soft-RSS
-<a href=#219 id=219 data-nosnippet>219</a>  /// seam's GROWTH floor measures accumulation directly as resident memory
-<a href=#220 id=220 data-nosnippet>220</a>  /// gained since then — the box-count floor never fires for a few huge
-<a href=#221 id=221 data-nosnippet>221</a>  /// top-level bodies (pgf-spectra LSE: ~194 pictures, 6.4 GB, never 1024
-<a href=#222 id=222 data-nosnippet>222</a>  /// boxes), with no fuse (`--max-memory=0`) nothing is ever "urgent", and a
-<a href=#223 id=223 data-nosnippet>223</a>  /// box-tree byte ESTIMATE is a per-box-capped lower bound that undercounts
-<a href=#224 id=224 data-nosnippet>224</a>  /// such pictures ~100× (measured: 6.36 GB, no transition).
-<a href=#225 id=225 data-nosnippet>225</a>  </span><span class="kw">static </span>LAST_YIELD_RSS_KB: Cell&lt;u64&gt; = <span class="kw">const </span>{ Cell::new(<span class="number">0</span>) };
-<a href=#226 id=226 data-nosnippet>226</a>}
-<a href=#227 id=227 data-nosnippet>227</a>
-<a href=#228 id=228 data-nosnippet>228</a><span class="doccomment">/// The growth floor of the soft-RSS yield, in KB: once over the watermark, a
-<a href=#229 id=229 data-nosnippet>229</a>/// seam yields when at least this much resident memory was gained since the
-<a href=#230 id=230 data-nosnippet>230</a>/// last yield — enough to be worth a spill, and far above the degenerate
-<a href=#231 id=231 data-nosnippet>231</a>/// regime's 5.5 KB segments.
-<a href=#232 id=232 data-nosnippet>232</a></span><span class="kw">const </span>SOFT_YIELD_MIN_GROWTH_KB: u64 = <span class="number">64 </span>* <span class="number">1024</span>;
-<a href=#233 id=233 data-nosnippet>233</a>
-<a href=#234 id=234 data-nosnippet>234</a><span class="doccomment">/// Record the RSS baseline the growth floor measures from (digestion start
-<a href=#235 id=235 data-nosnippet>235</a>/// and every yield).
-<a href=#236 id=236 data-nosnippet>236</a></span><span class="kw">fn </span>note_yield_rss_baseline(rss_kb: u64) { LAST_YIELD_RSS_KB.set(rss_kb); }
-<a href=#237 id=237 data-nosnippet>237</a>
-<a href=#238 id=238 data-nosnippet>238</a><span class="doccomment">/// Re-baseline the growth floor on the CURRENT resident set — called where the
-<a href=#239 id=239 data-nosnippet>239</a>/// adaptive eager phase arms the soft trigger, i.e. after the engine load, so
-<a href=#240 id=240 data-nosnippet>240</a>/// the first growth window measures the document alone.
-<a href=#241 id=241 data-nosnippet>241</a></span><span class="kw">pub fn </span>rebaseline_soft_yield_growth() {
-<a href=#242 id=242 data-nosnippet>242</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(rss_kb) = <span class="kw">crate</span>::watchdog::process_rss_kb() {
-<a href=#243 id=243 data-nosnippet>243</a>    LAST_SAMPLED_RSS_KB.set(rss_kb);
-<a href=#244 id=244 data-nosnippet>244</a>    note_yield_rss_baseline(rss_kb);
-<a href=#245 id=245 data-nosnippet>245</a>  }
-<a href=#246 id=246 data-nosnippet>246</a>}
-<a href=#247 id=247 data-nosnippet>247</a>
-<a href=#248 id=248 data-nosnippet>248</a><span class="doccomment">/// Cached: this sits on the per-seam yield predicate, which the 131 MB witness
-<a href=#249 id=249 data-nosnippet>249</a>/// evaluates tens of millions of times — an `std::env::var` there would be its
-<a href=#250 id=250 data-nosnippet>250</a>/// own hotspot.
-<a href=#251 id=251 data-nosnippet>251</a></span><span class="kw">pub fn </span>soft_yield_min_boxes() -&gt; usize {
-<a href=#252 id=252 data-nosnippet>252</a>  <span class="kw">const </span>DEFAULT: usize = <span class="number">1024</span>;
-<a href=#253 id=253 data-nosnippet>253</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(cached) = SOFT_YIELD_MIN_BOXES.get() {
-<a href=#254 id=254 data-nosnippet>254</a>    <span class="kw">return </span>cached;
-<a href=#255 id=255 data-nosnippet>255</a>  }
-<a href=#256 id=256 data-nosnippet>256</a>  <span class="kw">let </span>resolved = std::env::var(<span class="string">"LATEXML_SOFT_YIELD_MIN_BOXES"</span>)
-<a href=#257 id=257 data-nosnippet>257</a>    .ok()
-<a href=#258 id=258 data-nosnippet>258</a>    .and_then(|v| v.parse::&lt;usize&gt;().ok())
-<a href=#259 id=259 data-nosnippet>259</a>    .unwrap_or(DEFAULT);
-<a href=#260 id=260 data-nosnippet>260</a>  SOFT_YIELD_MIN_BOXES.set(<span class="prelude-val">Some</span>(resolved));
-<a href=#261 id=261 data-nosnippet>261</a>  resolved
-<a href=#262 id=262 data-nosnippet>262</a>}
-<a href=#263 id=263 data-nosnippet>263</a>
-<a href=#264 id=264 data-nosnippet>264</a><span class="macro">thread_local!</span> {
-<a href=#265 id=265 data-nosnippet>265</a>  <span class="doccomment">/// In-process override of the spill watermark (bytes), consulted before the
-<a href=#266 id=266 data-nosnippet>266</a>  /// operator-facing `LATEXML_SPILL_AT_MIB` env. The environment is READ-ONLY
-<a href=#267 id=267 data-nosnippet>267</a>  /// for this code base — a test or an embedder that needs a different
-<a href=#268 id=268 data-nosnippet>268</a>  /// watermark sets this knob instead of mutating the process env.
-<a href=#269 id=269 data-nosnippet>269</a>  </span><span class="kw">static </span>SPILL_WATERMARK_OVERRIDE: Cell&lt;<span class="prelude-ty">Option</span>&lt;u64&gt;&gt; = <span class="kw">const </span>{ Cell::new(<span class="prelude-val">None</span>) };
-<a href=#270 id=270 data-nosnippet>270</a>}
-<a href=#271 id=271 data-nosnippet>271</a>
-<a href=#272 id=272 data-nosnippet>272</a><span class="doccomment">/// See `SPILL_WATERMARK_OVERRIDE`; `None` restores the env/default policy.
-<a href=#273 id=273 data-nosnippet>273</a></span><span class="kw">pub fn </span>set_spill_watermark_override(bytes: <span class="prelude-ty">Option</span>&lt;u64&gt;) {
-<a href=#274 id=274 data-nosnippet>274</a>  SPILL_WATERMARK_OVERRIDE.with(|c| c.set(bytes));
+<a href=#201 id=201 data-nosnippet>201</a><span class="macro">thread_local!</span> {
+<a href=#202 id=202 data-nosnippet>202</a>  <span class="doccomment">/// Set while a `\left`/`\middle`/`\right` delimiter is digested ([`digest_as_delimiter`]).
+<a href=#203 id=203 data-nosnippet>203</a>  </span><span class="kw">static </span>DIGESTING_DELIMITER: Cell&lt;bool&gt; = <span class="kw">const </span>{ Cell::new(<span class="bool-val">false</span>) };
+<a href=#204 id=204 data-nosnippet>204</a>}
+<a href=#205 id=205 data-nosnippet>205</a>
+<a href=#206 id=206 data-nosnippet>206</a><span class="doccomment">/// Digests `f`'s token as a delimiter: tex.web §1160 `scan_delimiter` takes a letter or other character by its
+<a href=#207 id=207 data-nosnippet>207</a>/// `\delcode`, never its `\mathcode`, so a math-active character (`\mathcode`(="8000`, the active `(` a `\left(`) is
+<a href=#208 id=208 data-nosnippet>208</a>/// that character, not its active meaning — which, `\left(` itself, recursed without end (2609.40266).
+<a href=#209 id=209 data-nosnippet>209</a></span><span class="kw">pub fn </span>digest_as_delimiter&lt;T&gt;(f: <span class="kw">impl </span>FnOnce() -&gt; T) -&gt; T {
+<a href=#210 id=210 data-nosnippet>210</a>  <span class="comment">// Restored on unwind too: a sweep catches a paper's panic and converts the next on this thread.
+<a href=#211 id=211 data-nosnippet>211</a>  </span><span class="kw">struct </span>Restore(bool);
+<a href=#212 id=212 data-nosnippet>212</a>  <span class="kw">impl </span>Drop <span class="kw">for </span>Restore {
+<a href=#213 id=213 data-nosnippet>213</a>    <span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) { DIGESTING_DELIMITER.set(<span class="self">self</span>.<span class="number">0</span>); }
+<a href=#214 id=214 data-nosnippet>214</a>  }
+<a href=#215 id=215 data-nosnippet>215</a>  <span class="kw">let </span>_restore = Restore(DIGESTING_DELIMITER.replace(<span class="bool-val">true</span>));
+<a href=#216 id=216 data-nosnippet>216</a>  f()
+<a href=#217 id=217 data-nosnippet>217</a>}
+<a href=#218 id=218 data-nosnippet>218</a>
+<a href=#219 id=219 data-nosnippet>219</a><span class="doccomment">/// Whether a delimiter is being digested ([`digest_as_delimiter`]).
+<a href=#220 id=220 data-nosnippet>220</a></span><span class="kw">pub fn </span>digesting_delimiter() -&gt; bool { DIGESTING_DELIMITER.get() }
+<a href=#221 id=221 data-nosnippet>221</a>
+<a href=#222 id=222 data-nosnippet>222</a><span class="macro">thread_local!</span> {
+<a href=#223 id=223 data-nosnippet>223</a>  <span class="doccomment">/// RSS (KB) at the last fragment yield (or at digestion start): the soft-RSS
+<a href=#224 id=224 data-nosnippet>224</a>  /// seam's GROWTH floor measures accumulation directly as resident memory
+<a href=#225 id=225 data-nosnippet>225</a>  /// gained since then — the box-count floor never fires for a few huge
+<a href=#226 id=226 data-nosnippet>226</a>  /// top-level bodies (pgf-spectra LSE: ~194 pictures, 6.4 GB, never 1024
+<a href=#227 id=227 data-nosnippet>227</a>  /// boxes), with no fuse (`--max-memory=0`) nothing is ever "urgent", and a
+<a href=#228 id=228 data-nosnippet>228</a>  /// box-tree byte ESTIMATE is a per-box-capped lower bound that undercounts
+<a href=#229 id=229 data-nosnippet>229</a>  /// such pictures ~100× (measured: 6.36 GB, no transition).
+<a href=#230 id=230 data-nosnippet>230</a>  </span><span class="kw">static </span>LAST_YIELD_RSS_KB: Cell&lt;u64&gt; = <span class="kw">const </span>{ Cell::new(<span class="number">0</span>) };
+<a href=#231 id=231 data-nosnippet>231</a>}
+<a href=#232 id=232 data-nosnippet>232</a>
+<a href=#233 id=233 data-nosnippet>233</a><span class="doccomment">/// The growth floor of the soft-RSS yield, in KB: once over the watermark, a
+<a href=#234 id=234 data-nosnippet>234</a>/// seam yields when at least this much resident memory was gained since the
+<a href=#235 id=235 data-nosnippet>235</a>/// last yield — enough to be worth a spill, and far above the degenerate
+<a href=#236 id=236 data-nosnippet>236</a>/// regime's 5.5 KB segments.
+<a href=#237 id=237 data-nosnippet>237</a></span><span class="kw">const </span>SOFT_YIELD_MIN_GROWTH_KB: u64 = <span class="number">64 </span>* <span class="number">1024</span>;
+<a href=#238 id=238 data-nosnippet>238</a>
+<a href=#239 id=239 data-nosnippet>239</a><span class="doccomment">/// Record the RSS baseline the growth floor measures from (digestion start
+<a href=#240 id=240 data-nosnippet>240</a>/// and every yield).
+<a href=#241 id=241 data-nosnippet>241</a></span><span class="kw">fn </span>note_yield_rss_baseline(rss_kb: u64) { LAST_YIELD_RSS_KB.set(rss_kb); }
+<a href=#242 id=242 data-nosnippet>242</a>
+<a href=#243 id=243 data-nosnippet>243</a><span class="doccomment">/// Re-baseline the growth floor on the CURRENT resident set — called where the
+<a href=#244 id=244 data-nosnippet>244</a>/// adaptive eager phase arms the soft trigger, i.e. after the engine load, so
+<a href=#245 id=245 data-nosnippet>245</a>/// the first growth window measures the document alone.
+<a href=#246 id=246 data-nosnippet>246</a></span><span class="kw">pub fn </span>rebaseline_soft_yield_growth() {
+<a href=#247 id=247 data-nosnippet>247</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(rss_kb) = <span class="kw">crate</span>::watchdog::process_rss_kb() {
+<a href=#248 id=248 data-nosnippet>248</a>    LAST_SAMPLED_RSS_KB.set(rss_kb);
+<a href=#249 id=249 data-nosnippet>249</a>    note_yield_rss_baseline(rss_kb);
+<a href=#250 id=250 data-nosnippet>250</a>  }
+<a href=#251 id=251 data-nosnippet>251</a>}
+<a href=#252 id=252 data-nosnippet>252</a>
+<a href=#253 id=253 data-nosnippet>253</a><span class="doccomment">/// Cached: this sits on the per-seam yield predicate, which the 131 MB witness
+<a href=#254 id=254 data-nosnippet>254</a>/// evaluates tens of millions of times — an `std::env::var` there would be its
+<a href=#255 id=255 data-nosnippet>255</a>/// own hotspot.
+<a href=#256 id=256 data-nosnippet>256</a></span><span class="kw">pub fn </span>soft_yield_min_boxes() -&gt; usize {
+<a href=#257 id=257 data-nosnippet>257</a>  <span class="kw">const </span>DEFAULT: usize = <span class="number">1024</span>;
+<a href=#258 id=258 data-nosnippet>258</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(cached) = SOFT_YIELD_MIN_BOXES.get() {
+<a href=#259 id=259 data-nosnippet>259</a>    <span class="kw">return </span>cached;
+<a href=#260 id=260 data-nosnippet>260</a>  }
+<a href=#261 id=261 data-nosnippet>261</a>  <span class="kw">let </span>resolved = std::env::var(<span class="string">"LATEXML_SOFT_YIELD_MIN_BOXES"</span>)
+<a href=#262 id=262 data-nosnippet>262</a>    .ok()
+<a href=#263 id=263 data-nosnippet>263</a>    .and_then(|v| v.parse::&lt;usize&gt;().ok())
+<a href=#264 id=264 data-nosnippet>264</a>    .unwrap_or(DEFAULT);
+<a href=#265 id=265 data-nosnippet>265</a>  SOFT_YIELD_MIN_BOXES.set(<span class="prelude-val">Some</span>(resolved));
+<a href=#266 id=266 data-nosnippet>266</a>  resolved
+<a href=#267 id=267 data-nosnippet>267</a>}
+<a href=#268 id=268 data-nosnippet>268</a>
+<a href=#269 id=269 data-nosnippet>269</a><span class="macro">thread_local!</span> {
+<a href=#270 id=270 data-nosnippet>270</a>  <span class="doccomment">/// In-process override of the spill watermark (bytes), consulted before the
+<a href=#271 id=271 data-nosnippet>271</a>  /// operator-facing `LATEXML_SPILL_AT_MIB` env. The environment is READ-ONLY
+<a href=#272 id=272 data-nosnippet>272</a>  /// for this code base — a test or an embedder that needs a different
+<a href=#273 id=273 data-nosnippet>273</a>  /// watermark sets this knob instead of mutating the process env.
+<a href=#274 id=274 data-nosnippet>274</a>  </span><span class="kw">static </span>SPILL_WATERMARK_OVERRIDE: Cell&lt;<span class="prelude-ty">Option</span>&lt;u64&gt;&gt; = <span class="kw">const </span>{ Cell::new(<span class="prelude-val">None</span>) };
 <a href=#275 id=275 data-nosnippet>275</a>}
 <a href=#276 id=276 data-nosnippet>276</a>
-<a href=#277 id=277 data-nosnippet>277</a><span class="macro">thread_local!</span> {
-<a href=#278 id=278 data-nosnippet>278</a>  <span class="doccomment">/// Set by `--streaming=false`: the conversion has no spill watermark, so an eager run never turns into
-<a href=#279 id=279 data-nosnippet>279</a>  /// streaming pass 1 (`digest_adaptive` arms its yield only at a watermark).
-<a href=#280 id=280 data-nosnippet>280</a>  </span><span class="kw">static </span>SPILL_DISABLED: Cell&lt;bool&gt; = <span class="kw">const </span>{ Cell::new(<span class="bool-val">false</span>) };
-<a href=#281 id=281 data-nosnippet>281</a>}
-<a href=#282 id=282 data-nosnippet>282</a>
-<a href=#283 id=283 data-nosnippet>283</a><span class="doccomment">/// See `SPILL_DISABLED`; wins over the override, the env and the default.
-<a href=#284 id=284 data-nosnippet>284</a></span><span class="kw">pub fn </span>set_spill_disabled(disabled: bool) { SPILL_DISABLED.with(|c| c.set(disabled)); }
-<a href=#285 id=285 data-nosnippet>285</a>
-<a href=#286 id=286 data-nosnippet>286</a><span class="doccomment">/// The RAM watermark, in bytes above the conversion's starting RSS ([`spill_mark_kb`]), at which streaming pass 1
-<a href=#287 id=287 data-nosnippet>287</a>/// begins spilling closed subtrees to disk — the second derived quantity of the single
-<a href=#288 id=288 data-nosnippet>288</a>/// `--max-memory` knob, and deliberately NOT a flag of its own (a watermark a
-<a href=#289 id=289 data-nosnippet>289</a>/// user could raise above the fuse would Fatal before it ever spilled).
-<a href=#290 id=290 data-nosnippet>290</a>///
-<a href=#291 id=291 data-nosnippet>291</a>/// **A third of the cooperative fuse.** Not a half: the yields fire only at
-<a href=#292 id=292 data-nosnippet>292</a>/// legal seams (a large alignment digests straight through any threshold), the
-<a href=#293 id=293 data-nosnippet>293</a>/// RSS sample lags by up to 1024 guard ticks, and per-run bookkeeping creeps
-<a href=#294 id=294 data-nosnippet>294</a>/// monotonically — measured on the 131 MB witness, a half-of-fuse watermark
-<a href=#295 id=295 data-nosnippet>295</a>/// steadied pass 1 around 33 GB and the creep then walked it into the 37.7 GB
-<a href=#296 id=296 data-nosnippet>296</a>/// fuse and died, where a third completed at 28.1 GB peak.
-<a href=#297 id=297 data-nosnippet>297</a>///
-<a href=#298 id=298 data-nosnippet>298</a>/// **With `--max-memory=0` there is no fuse to divide, and the watermark must
-<a href=#299 id=299 data-nosnippet>299</a>/// still exist**: disabling the death ceiling says "do not kill me", not "let
-<a href=#300 id=300 data-nosnippet>300</a>/// the machine run out". Fall back to an eighth of physical RAM, which lands
-<a href=#301 id=301 data-nosnippet>301</a>/// the same 12 GiB on a 96 GB host that the validated 48 GiB ceiling derives.
-<a href=#302 id=302 data-nosnippet>302</a></span><span class="kw">pub fn </span>spill_watermark_bytes() -&gt; <span class="prelude-ty">Option</span>&lt;u64&gt; {
-<a href=#303 id=303 data-nosnippet>303</a>  <span class="kw">if </span>SPILL_DISABLED.with(Cell::get) {
-<a href=#304 id=304 data-nosnippet>304</a>    <span class="kw">return </span><span class="prelude-val">None</span>;
-<a href=#305 id=305 data-nosnippet>305</a>  }
-<a href=#306 id=306 data-nosnippet>306</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(bytes) = SPILL_WATERMARK_OVERRIDE.with(|c| c.get()) {
-<a href=#307 id=307 data-nosnippet>307</a>    <span class="kw">return </span><span class="prelude-val">Some</span>(bytes);
-<a href=#308 id=308 data-nosnippet>308</a>  }
-<a href=#309 id=309 data-nosnippet>309</a>  <span class="comment">// Calibration override (`LATEXML_SPILL_AT_MIB`), deliberately env-only and
-<a href=#310 id=310 data-nosnippet>310</a>  // NOT a CLI flag: a user-settable watermark could be raised above the fuse,
-<a href=#311 id=311 data-nosnippet>311</a>  // producing a run that Fatals before it ever spills. It exists so the
-<a href=#312 id=312 data-nosnippet>312</a>  // fuse-fraction below can be re-derived by measurement rather than argued.
-<a href=#313 id=313 data-nosnippet>313</a>  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(mib) = std::env::var(<span class="string">"LATEXML_SPILL_AT_MIB"</span>)
-<a href=#314 id=314 data-nosnippet>314</a>    .ok()
-<a href=#315 id=315 data-nosnippet>315</a>    .and_then(|v| v.parse::&lt;u64&gt;().ok())
-<a href=#316 id=316 data-nosnippet>316</a>  {
-<a href=#317 id=317 data-nosnippet>317</a>    <span class="kw">return </span><span class="prelude-val">Some</span>(mib.saturating_mul(<span class="number">1024 </span>* <span class="number">1024</span>));
-<a href=#318 id=318 data-nosnippet>318</a>  }
-<a href=#319 id=319 data-nosnippet>319</a>  <span class="kw">match </span>resolve_rss_cap() {
-<a href=#320 id=320 data-nosnippet>320</a>    <span class="prelude-val">Some</span>(fuse) =&gt; <span class="prelude-val">Some</span>(fuse / <span class="number">3</span>),
-<a href=#321 id=321 data-nosnippet>321</a>    <span class="prelude-val">None </span>=&gt; <span class="kw">crate</span>::watchdog::total_memory_bytes().map(|ram| ram / <span class="number">8</span>),
-<a href=#322 id=322 data-nosnippet>322</a>  }
-<a href=#323 id=323 data-nosnippet>323</a>}
-<a href=#324 id=324 data-nosnippet>324</a>
-<a href=#325 id=325 data-nosnippet>325</a><span class="macro">thread_local!</span> {
-<a href=#326 id=326 data-nosnippet>326</a>  <span class="doccomment">/// The process's resident set (KB) when this conversion's digestion was set up ([`mark_conversion_rss_baseline`]).
-<a href=#327 id=327 data-nosnippet>327</a>  </span><span class="kw">static </span>CONVERSION_RSS_BASELINE_KB: Cell&lt;u64&gt; = <span class="kw">const </span>{ Cell::new(<span class="number">0</span>) };
+<a href=#277 id=277 data-nosnippet>277</a><span class="doccomment">/// See `SPILL_WATERMARK_OVERRIDE`; `None` restores the env/default policy.
+<a href=#278 id=278 data-nosnippet>278</a></span><span class="kw">pub fn </span>set_spill_watermark_override(bytes: <span class="prelude-ty">Option</span>&lt;u64&gt;) {
+<a href=#279 id=279 data-nosnippet>279</a>  SPILL_WATERMARK_OVERRIDE.with(|c| c.set(bytes));
+<a href=#280 id=280 data-nosnippet>280</a>}
+<a href=#281 id=281 data-nosnippet>281</a>
+<a href=#282 id=282 data-nosnippet>282</a><span class="macro">thread_local!</span> {
+<a href=#283 id=283 data-nosnippet>283</a>  <span class="doccomment">/// Set by `--streaming=false`: the conversion has no spill watermark, so an eager run never turns into
+<a href=#284 id=284 data-nosnippet>284</a>  /// streaming pass 1 (`digest_adaptive` arms its yield only at a watermark).
+<a href=#285 id=285 data-nosnippet>285</a>  </span><span class="kw">static </span>SPILL_DISABLED: Cell&lt;bool&gt; = <span class="kw">const </span>{ Cell::new(<span class="bool-val">false</span>) };
+<a href=#286 id=286 data-nosnippet>286</a>}
+<a href=#287 id=287 data-nosnippet>287</a>
+<a href=#288 id=288 data-nosnippet>288</a><span class="doccomment">/// See `SPILL_DISABLED`; wins over the override, the env and the default.
+<a href=#289 id=289 data-nosnippet>289</a></span><span class="kw">pub fn </span>set_spill_disabled(disabled: bool) { SPILL_DISABLED.with(|c| c.set(disabled)); }
+<a href=#290 id=290 data-nosnippet>290</a>
+<a href=#291 id=291 data-nosnippet>291</a><span class="doccomment">/// The RAM watermark, in bytes above the conversion's starting RSS ([`spill_mark_kb`]), at which streaming pass 1
+<a href=#292 id=292 data-nosnippet>292</a>/// begins spilling closed subtrees to disk — the second derived quantity of the single
+<a href=#293 id=293 data-nosnippet>293</a>/// `--max-memory` knob, and deliberately NOT a flag of its own (a watermark a
+<a href=#294 id=294 data-nosnippet>294</a>/// user could raise above the fuse would Fatal before it ever spilled).
+<a href=#295 id=295 data-nosnippet>295</a>///
+<a href=#296 id=296 data-nosnippet>296</a>/// **A third of the cooperative fuse.** Not a half: the yields fire only at
+<a href=#297 id=297 data-nosnippet>297</a>/// legal seams (a large alignment digests straight through any threshold), the
+<a href=#298 id=298 data-nosnippet>298</a>/// RSS sample lags by up to 1024 guard ticks, and per-run bookkeeping creeps
+<a href=#299 id=299 data-nosnippet>299</a>/// monotonically — measured on the 131 MB witness, a half-of-fuse watermark
+<a href=#300 id=300 data-nosnippet>300</a>/// steadied pass 1 around 33 GB and the creep then walked it into the 37.7 GB
+<a href=#301 id=301 data-nosnippet>301</a>/// fuse and died, where a third completed at 28.1 GB peak.
+<a href=#302 id=302 data-nosnippet>302</a>///
+<a href=#303 id=303 data-nosnippet>303</a>/// **With `--max-memory=0` there is no fuse to divide, and the watermark must
+<a href=#304 id=304 data-nosnippet>304</a>/// still exist**: disabling the death ceiling says "do not kill me", not "let
+<a href=#305 id=305 data-nosnippet>305</a>/// the machine run out". Fall back to an eighth of physical RAM, which lands
+<a href=#306 id=306 data-nosnippet>306</a>/// the same 12 GiB on a 96 GB host that the validated 48 GiB ceiling derives.
+<a href=#307 id=307 data-nosnippet>307</a></span><span class="kw">pub fn </span>spill_watermark_bytes() -&gt; <span class="prelude-ty">Option</span>&lt;u64&gt; {
+<a href=#308 id=308 data-nosnippet>308</a>  <span class="kw">if </span>SPILL_DISABLED.with(Cell::get) {
+<a href=#309 id=309 data-nosnippet>309</a>    <span class="kw">return </span><span class="prelude-val">None</span>;
+<a href=#310 id=310 data-nosnippet>310</a>  }
+<a href=#311 id=311 data-nosnippet>311</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(bytes) = SPILL_WATERMARK_OVERRIDE.with(|c| c.get()) {
+<a href=#312 id=312 data-nosnippet>312</a>    <span class="kw">return </span><span class="prelude-val">Some</span>(bytes);
+<a href=#313 id=313 data-nosnippet>313</a>  }
+<a href=#314 id=314 data-nosnippet>314</a>  <span class="comment">// Calibration override (`LATEXML_SPILL_AT_MIB`), deliberately env-only and
+<a href=#315 id=315 data-nosnippet>315</a>  // NOT a CLI flag: a user-settable watermark could be raised above the fuse,
+<a href=#316 id=316 data-nosnippet>316</a>  // producing a run that Fatals before it ever spills. It exists so the
+<a href=#317 id=317 data-nosnippet>317</a>  // fuse-fraction below can be re-derived by measurement rather than argued.
+<a href=#318 id=318 data-nosnippet>318</a>  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(mib) = std::env::var(<span class="string">"LATEXML_SPILL_AT_MIB"</span>)
+<a href=#319 id=319 data-nosnippet>319</a>    .ok()
+<a href=#320 id=320 data-nosnippet>320</a>    .and_then(|v| v.parse::&lt;u64&gt;().ok())
+<a href=#321 id=321 data-nosnippet>321</a>  {
+<a href=#322 id=322 data-nosnippet>322</a>    <span class="kw">return </span><span class="prelude-val">Some</span>(mib.saturating_mul(<span class="number">1024 </span>* <span class="number">1024</span>));
+<a href=#323 id=323 data-nosnippet>323</a>  }
+<a href=#324 id=324 data-nosnippet>324</a>  <span class="kw">match </span>resolve_rss_cap() {
+<a href=#325 id=325 data-nosnippet>325</a>    <span class="prelude-val">Some</span>(fuse) =&gt; <span class="prelude-val">Some</span>(fuse / <span class="number">3</span>),
+<a href=#326 id=326 data-nosnippet>326</a>    <span class="prelude-val">None </span>=&gt; <span class="kw">crate</span>::watchdog::total_memory_bytes().map(|ram| ram / <span class="number">8</span>),
+<a href=#327 id=327 data-nosnippet>327</a>  }
 <a href=#328 id=328 data-nosnippet>328</a>}
 <a href=#329 id=329 data-nosnippet>329</a>
-<a href=#330 id=330 data-nosnippet>330</a><span class="doccomment">/// Record the resident set the spill watermark is measured from: the conversion's own start, so a persistent worker
-<a href=#331 id=331 data-nosnippet>331</a>/// switches a paper to streaming where that paper alone would (ST3b: 2507.13358 after 63 others).
-<a href=#332 id=332 data-nosnippet>332</a></span><span class="kw">pub fn </span>mark_conversion_rss_baseline() {
-<a href=#333 id=333 data-nosnippet>333</a>  CONVERSION_RSS_BASELINE_KB.set(<span class="kw">crate</span>::watchdog::process_rss_kb().unwrap_or(<span class="number">0</span>));
-<a href=#334 id=334 data-nosnippet>334</a>}
-<a href=#335 id=335 data-nosnippet>335</a>
-<a href=#336 id=336 data-nosnippet>336</a><span class="doccomment">/// The resident set (KB) at which this conversion spills: [`spill_watermark_bytes`] above its starting RSS, never
-<a href=#337 id=337 data-nosnippet>337</a>/// closer to the fuse (process RSS, it guards the machine) than two watermarks — the headroom the fuse fraction was
-<a href=#338 id=338 data-nosnippet>338</a>/// calibrated for (a half-of-fuse mark crept into the fuse, [`spill_watermark_bytes`]). With the default third-of-fuse
-<a href=#339 id=339 data-nosnippet>339</a>/// watermark that cap is the watermark itself, so under a fuse the mark is absolute, as before the conversion's
-<a href=#340 id=340 data-nosnippet>340</a>/// baseline (revSTRM: a worker near its recycle threshold must not spill later than the calibration allows); the
-<a href=#341 id=341 data-nosnippet>341</a>/// baseline moves the mark only without a fuse or under a smaller calibration watermark. Order independence rests on a
-<a href=#342 id=342 data-nosnippet>342</a>/// switched conversion writing the eager XML, not on the mark. A zero watermark (a test's or a calibration's
-<a href=#343 id=343 data-nosnippet>343</a>/// `LATEXML_SPILL_AT_MIB=0`) puts every seam over it.
-<a href=#344 id=344 data-nosnippet>344</a></span><span class="kw">pub fn </span>spill_mark_kb() -&gt; <span class="prelude-ty">Option</span>&lt;u64&gt; {
-<a href=#345 id=345 data-nosnippet>345</a>  <span class="kw">let </span>watermark_kb = spill_watermark_bytes()<span class="question-mark">? </span>/ <span class="number">1024</span>;
-<a href=#346 id=346 data-nosnippet>346</a>  <span class="prelude-val">Some</span>(spill_mark(
-<a href=#347 id=347 data-nosnippet>347</a>    CONVERSION_RSS_BASELINE_KB.get(),
-<a href=#348 id=348 data-nosnippet>348</a>    watermark_kb,
-<a href=#349 id=349 data-nosnippet>349</a>    resolve_rss_cap(),
-<a href=#350 id=350 data-nosnippet>350</a>  ))
-<a href=#351 id=351 data-nosnippet>351</a>}
-<a href=#352 id=352 data-nosnippet>352</a>
-<a href=#353 id=353 data-nosnippet>353</a><span class="doccomment">/// The arithmetic of [`spill_mark_kb`] (KB; `fuse` in bytes).
-<a href=#354 id=354 data-nosnippet>354</a></span><span class="kw">fn </span>spill_mark(baseline_kb: u64, watermark_kb: u64, fuse: <span class="prelude-ty">Option</span>&lt;u64&gt;) -&gt; u64 {
-<a href=#355 id=355 data-nosnippet>355</a>  <span class="kw">if </span>watermark_kb == <span class="number">0 </span>{
-<a href=#356 id=356 data-nosnippet>356</a>    <span class="kw">return </span><span class="number">0</span>;
-<a href=#357 id=357 data-nosnippet>357</a>  }
-<a href=#358 id=358 data-nosnippet>358</a>  <span class="kw">let </span>mark = baseline_kb.saturating_add(watermark_kb);
-<a href=#359 id=359 data-nosnippet>359</a>  <span class="kw">match </span>fuse {
-<a href=#360 id=360 data-nosnippet>360</a>    <span class="prelude-val">Some</span>(fuse) =&gt; mark.min(
-<a href=#361 id=361 data-nosnippet>361</a>      (fuse / <span class="number">1024</span>)
-<a href=#362 id=362 data-nosnippet>362</a>        .saturating_sub(<span class="number">2 </span>* watermark_kb)
-<a href=#363 id=363 data-nosnippet>363</a>        .max(watermark_kb),
-<a href=#364 id=364 data-nosnippet>364</a>    ),
-<a href=#365 id=365 data-nosnippet>365</a>    <span class="prelude-val">None </span>=&gt; mark,
-<a href=#366 id=366 data-nosnippet>366</a>  }
-<a href=#367 id=367 data-nosnippet>367</a>}
-<a href=#368 id=368 data-nosnippet>368</a>
-<a href=#369 id=369 data-nosnippet>369</a><span class="doccomment">/// Apply the single `--max-memory` ceiling (MiB) to this thread's cooperative
-<a href=#370 id=370 data-nosnippet>370</a>/// soft fuse, so the one knob means the same thing on every conversion path.
-<a href=#371 id=371 data-nosnippet>371</a>///
-<a href=#372 id=372 data-nosnippet>372</a>/// **`--max-memory` wins over `LATEXML_RSS_CAP_BYTES`, unconditionally.** The
-<a href=#373 id=373 data-nosnippet>373</a>/// flag is the single knob; an env var must not silently override what the user
-<a href=#374 id=374 data-nosnippet>374</a>/// typed. This deliberately overwrites the env, which is why the env keeps its
-<a href=#375 id=375 data-nosnippet>375</a>/// meaning exactly where no flag exists to contradict it: embedders that never
-<a href=#376 id=376 data-nosnippet>376</a>/// parse CLI arguments and so never reach this function — the library test
-<a href=#377 id=377 data-nosnippet>377</a>/// harness (`util::test`, which pins 9 GB) and the `cortex_worker` fleet (which
-<a href=#378 id=378 data-nosnippet>378</a>/// pins each child to its `--max-rss-mb`). Both are unaffected.
-<a href=#379 id=379 data-nosnippet>379</a>///
-<a href=#380 id=380 data-nosnippet>380</a>/// Callers must be EVERY conversion path: the plain one, the `--server` forked
-<a href=#381 id=381 data-nosnippet>381</a>/// body child, and the in-process fallback. When only the first called it,
-<a href=#382 id=382 data-nosnippet>382</a>/// `--server --max-memory=0` still ran against a live 4.5 GB fuse while the help
-<a href=#383 id=383 data-nosnippet>383</a>/// text promised the limit was off.
-<a href=#384 id=384 data-nosnippet>384</a></span><span class="kw">pub fn </span>apply_memory_ceiling(max_memory_mib: u64) {
-<a href=#385 id=385 data-nosnippet>385</a>  set_memory_cap(<span class="prelude-val">Some</span>(soft_cap_from_ceiling(max_memory_mib)));
-<a href=#386 id=386 data-nosnippet>386</a>}
-<a href=#387 id=387 data-nosnippet>387</a>
-<a href=#388 id=388 data-nosnippet>388</a><span class="doccomment">/// Resolve the effective soft-RSS budget: `None` = disabled (no ceiling),
-<a href=#389 id=389 data-nosnippet>389</a>/// `Some(n)` = abort above `n` bytes. Precedence: the explicit
-<a href=#390 id=390 data-nosnippet>390</a>/// [`set_memory_cap`] override, else `LATEXML_RSS_CAP_BYTES`, else the 4.5 GB
-<a href=#391 id=391 data-nosnippet>391</a>/// default. A cap of `0` from EITHER source resolves to `None`, so
-<a href=#392 id=392 data-nosnippet>392</a>/// `--max-memory=0` / `LATEXML_RSS_CAP_BYTES=0` mean "no limit" — not "abort
-<a href=#393 id=393 data-nosnippet>393</a>/// immediately" (a literal `0` compared as `rss_bytes &gt; 0` is always true).
-<a href=#394 id=394 data-nosnippet>394</a>///
-<a href=#395 id=395 data-nosnippet>395</a>/// Note the env is consulted only when nothing set the override — i.e. only for
-<a href=#396 id=396 data-nosnippet>396</a>/// embedders that never call [`apply_memory_ceiling`]. Every path in the
-<a href=#397 id=397 data-nosnippet>397</a>/// `latexml_oxide` binary calls it, so there `--max-memory` always wins.
-<a href=#398 id=398 data-nosnippet>398</a></span><span class="kw">pub fn </span>resolve_rss_cap() -&gt; <span class="prelude-ty">Option</span>&lt;u64&gt; {
-<a href=#399 id=399 data-nosnippet>399</a>  <span class="kw">let </span>cap = RSS_CAP_OVERRIDE.with(|c| c.get()).unwrap_or_else(|| {
-<a href=#400 id=400 data-nosnippet>400</a>    std::env::var(<span class="string">"LATEXML_RSS_CAP_BYTES"</span>)
-<a href=#401 id=401 data-nosnippet>401</a>      .ok()
-<a href=#402 id=402 data-nosnippet>402</a>      .and_then(|v| v.parse::&lt;u64&gt;().ok())
-<a href=#403 id=403 data-nosnippet>403</a>      .unwrap_or(<span class="number">4_500_000_000</span>)
-<a href=#404 id=404 data-nosnippet>404</a>  });
-<a href=#405 id=405 data-nosnippet>405</a>  (cap &gt; <span class="number">0</span>).then_some(cap)
-<a href=#406 id=406 data-nosnippet>406</a>}
-<a href=#407 id=407 data-nosnippet>407</a>
-<a href=#408 id=408 data-nosnippet>408</a><span class="doccomment">/// Check if conversion has timed out. Returns Err if deadline exceeded.
-<a href=#409 id=409 data-nosnippet>409</a>///
-<a href=#410 id=410 data-nosnippet>410</a>/// Also samples RSS via /proc/self/status every ~1024 calls and raises
-<a href=#411 id=411 data-nosnippet>411</a>/// `Fatal:oom:memory_budget` if the process is approaching the worker
-<a href=#412 id=412 data-nosnippet>412</a>/// memory cap. R35.A witnesses (plain-TeX `$$\displaylines{ … \picture
-<a href=#413 id=413 data-nosnippet>413</a>/// … }$$`, 7 sandbox papers from 1999–2006) trigger a runaway where
-<a href=#414 id=414 data-nosnippet>414</a>/// `set_alloc_error_hook` fires AFTER the process has already allocated
-<a href=#415 id=415 data-nosnippet>415</a>/// ~5+ GB; that hook can't easily walk back the call site under
-<a href=#416 id=416 data-nosnippet>416</a>/// `panic="unwind"`. Sampling RSS here at well below the OS ulimit
-<a href=#417 id=417 data-nosnippet>417</a>/// gives us a clean diagnostic and a unwound stack via `fatal!`.
-<a href=#418 id=418 data-nosnippet>418</a></span><span class="kw">pub fn </span>check_timeout() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-<a href=#419 id=419 data-nosnippet>419</a>  <span class="comment">// Box-list cycle guard fired in `push_box_list` (which cannot unwind) —
-<a href=#420 id=420 data-nosnippet>420</a>  // surface it here, the regular Result-returning digestion checkpoint.
-<a href=#421 id=421 data-nosnippet>421</a>  // (The `stomach_mut!` macro is defined textually below; use STOMACH
-<a href=#422 id=422 data-nosnippet>422</a>  // directly, with a try-borrow so a transient borrow just defers to the
-<a href=#423 id=423 data-nosnippet>423</a>  // next tick.)
-<a href=#424 id=424 data-nosnippet>424</a>  </span><span class="kw">let </span>pending = STOMACH
-<a href=#425 id=425 data-nosnippet>425</a>    .try_borrow_mut()
-<a href=#426 id=426 data-nosnippet>426</a>    .ok()
-<a href=#427 id=427 data-nosnippet>427</a>    .and_then(|<span class="kw-2">mut </span>s| s.pending_cycle_fatal.take());
-<a href=#428 id=428 data-nosnippet>428</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>((category, msg)) = pending {
-<a href=#429 id=429 data-nosnippet>429</a>    <span class="kw">use </span><span class="kw">crate</span>::common::error::{Error <span class="kw">as </span>LatexmlError, ErrorTarget};
-<a href=#430 id=430 data-nosnippet>430</a>    <span class="kw">return </span><span class="prelude-val">Err</span>(LatexmlError::from(ErrorData {
-<a href=#431 id=431 data-nosnippet>431</a>      target: ErrorTarget::Stomach,
-<a href=#432 id=432 data-nosnippet>432</a>      category,
-<a href=#433 id=433 data-nosnippet>433</a>      message: msg,
-<a href=#434 id=434 data-nosnippet>434</a>    }));
-<a href=#435 id=435 data-nosnippet>435</a>  }
-<a href=#436 id=436 data-nosnippet>436</a>  CONVERSION_DEADLINE.with(|d| {
-<a href=#437 id=437 data-nosnippet>437</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(deadline) = d.get()
-<a href=#438 id=438 data-nosnippet>438</a>      &amp;&amp; Instant::now() &gt; deadline
-<a href=#439 id=439 data-nosnippet>439</a>    {
-<a href=#440 id=440 data-nosnippet>440</a>      <span class="macro">fatal!</span>(Timeout, Convert, <span class="string">"Conversion timed out!"</span>);
-<a href=#441 id=441 data-nosnippet>441</a>    }
-<a href=#442 id=442 data-nosnippet>442</a>    <span class="prelude-val">Ok</span>(())
-<a href=#443 id=443 data-nosnippet>443</a>  })<span class="question-mark">?</span>;
+<a href=#330 id=330 data-nosnippet>330</a><span class="macro">thread_local!</span> {
+<a href=#331 id=331 data-nosnippet>331</a>  <span class="doccomment">/// The process's resident set (KB) when this conversion's digestion was set up ([`mark_conversion_rss_baseline`]).
+<a href=#332 id=332 data-nosnippet>332</a>  </span><span class="kw">static </span>CONVERSION_RSS_BASELINE_KB: Cell&lt;u64&gt; = <span class="kw">const </span>{ Cell::new(<span class="number">0</span>) };
+<a href=#333 id=333 data-nosnippet>333</a>}
+<a href=#334 id=334 data-nosnippet>334</a>
+<a href=#335 id=335 data-nosnippet>335</a><span class="doccomment">/// Record the resident set the spill watermark is measured from: the conversion's own start, so a persistent worker
+<a href=#336 id=336 data-nosnippet>336</a>/// switches a paper to streaming where that paper alone would (ST3b: 2507.13358 after 63 others).
+<a href=#337 id=337 data-nosnippet>337</a></span><span class="kw">pub fn </span>mark_conversion_rss_baseline() {
+<a href=#338 id=338 data-nosnippet>338</a>  CONVERSION_RSS_BASELINE_KB.set(<span class="kw">crate</span>::watchdog::process_rss_kb().unwrap_or(<span class="number">0</span>));
+<a href=#339 id=339 data-nosnippet>339</a>}
+<a href=#340 id=340 data-nosnippet>340</a>
+<a href=#341 id=341 data-nosnippet>341</a><span class="doccomment">/// The resident set (KB) at which this conversion spills: [`spill_watermark_bytes`] above its starting RSS, never
+<a href=#342 id=342 data-nosnippet>342</a>/// closer to the fuse (process RSS, it guards the machine) than two watermarks — the headroom the fuse fraction was
+<a href=#343 id=343 data-nosnippet>343</a>/// calibrated for (a half-of-fuse mark crept into the fuse, [`spill_watermark_bytes`]). With the default third-of-fuse
+<a href=#344 id=344 data-nosnippet>344</a>/// watermark that cap is the watermark itself, so under a fuse the mark is absolute, as before the conversion's
+<a href=#345 id=345 data-nosnippet>345</a>/// baseline (revSTRM: a worker near its recycle threshold must not spill later than the calibration allows); the
+<a href=#346 id=346 data-nosnippet>346</a>/// baseline moves the mark only without a fuse or under a smaller calibration watermark. Order independence rests on a
+<a href=#347 id=347 data-nosnippet>347</a>/// switched conversion writing the eager XML, not on the mark. A zero watermark (a test's or a calibration's
+<a href=#348 id=348 data-nosnippet>348</a>/// `LATEXML_SPILL_AT_MIB=0`) puts every seam over it.
+<a href=#349 id=349 data-nosnippet>349</a></span><span class="kw">pub fn </span>spill_mark_kb() -&gt; <span class="prelude-ty">Option</span>&lt;u64&gt; {
+<a href=#350 id=350 data-nosnippet>350</a>  <span class="kw">let </span>watermark_kb = spill_watermark_bytes()<span class="question-mark">? </span>/ <span class="number">1024</span>;
+<a href=#351 id=351 data-nosnippet>351</a>  <span class="prelude-val">Some</span>(spill_mark(
+<a href=#352 id=352 data-nosnippet>352</a>    CONVERSION_RSS_BASELINE_KB.get(),
+<a href=#353 id=353 data-nosnippet>353</a>    watermark_kb,
+<a href=#354 id=354 data-nosnippet>354</a>    resolve_rss_cap(),
+<a href=#355 id=355 data-nosnippet>355</a>  ))
+<a href=#356 id=356 data-nosnippet>356</a>}
+<a href=#357 id=357 data-nosnippet>357</a>
+<a href=#358 id=358 data-nosnippet>358</a><span class="doccomment">/// The arithmetic of [`spill_mark_kb`] (KB; `fuse` in bytes).
+<a href=#359 id=359 data-nosnippet>359</a></span><span class="kw">fn </span>spill_mark(baseline_kb: u64, watermark_kb: u64, fuse: <span class="prelude-ty">Option</span>&lt;u64&gt;) -&gt; u64 {
+<a href=#360 id=360 data-nosnippet>360</a>  <span class="kw">if </span>watermark_kb == <span class="number">0 </span>{
+<a href=#361 id=361 data-nosnippet>361</a>    <span class="kw">return </span><span class="number">0</span>;
+<a href=#362 id=362 data-nosnippet>362</a>  }
+<a href=#363 id=363 data-nosnippet>363</a>  <span class="kw">let </span>mark = baseline_kb.saturating_add(watermark_kb);
+<a href=#364 id=364 data-nosnippet>364</a>  <span class="kw">match </span>fuse {
+<a href=#365 id=365 data-nosnippet>365</a>    <span class="prelude-val">Some</span>(fuse) =&gt; mark.min(
+<a href=#366 id=366 data-nosnippet>366</a>      (fuse / <span class="number">1024</span>)
+<a href=#367 id=367 data-nosnippet>367</a>        .saturating_sub(<span class="number">2 </span>* watermark_kb)
+<a href=#368 id=368 data-nosnippet>368</a>        .max(watermark_kb),
+<a href=#369 id=369 data-nosnippet>369</a>    ),
+<a href=#370 id=370 data-nosnippet>370</a>    <span class="prelude-val">None </span>=&gt; mark,
+<a href=#371 id=371 data-nosnippet>371</a>  }
+<a href=#372 id=372 data-nosnippet>372</a>}
+<a href=#373 id=373 data-nosnippet>373</a>
+<a href=#374 id=374 data-nosnippet>374</a><span class="doccomment">/// Apply the single `--max-memory` ceiling (MiB) to this thread's cooperative
+<a href=#375 id=375 data-nosnippet>375</a>/// soft fuse, so the one knob means the same thing on every conversion path.
+<a href=#376 id=376 data-nosnippet>376</a>///
+<a href=#377 id=377 data-nosnippet>377</a>/// **`--max-memory` wins over `LATEXML_RSS_CAP_BYTES`, unconditionally.** The
+<a href=#378 id=378 data-nosnippet>378</a>/// flag is the single knob; an env var must not silently override what the user
+<a href=#379 id=379 data-nosnippet>379</a>/// typed. This deliberately overwrites the env, which is why the env keeps its
+<a href=#380 id=380 data-nosnippet>380</a>/// meaning exactly where no flag exists to contradict it: embedders that never
+<a href=#381 id=381 data-nosnippet>381</a>/// parse CLI arguments and so never reach this function — the library test
+<a href=#382 id=382 data-nosnippet>382</a>/// harness (`util::test`, which pins 9 GB) and the `cortex_worker` fleet (which
+<a href=#383 id=383 data-nosnippet>383</a>/// pins each child to its `--max-rss-mb`). Both are unaffected.
+<a href=#384 id=384 data-nosnippet>384</a>///
+<a href=#385 id=385 data-nosnippet>385</a>/// Callers must be EVERY conversion path: the plain one, the `--server` forked
+<a href=#386 id=386 data-nosnippet>386</a>/// body child, and the in-process fallback. When only the first called it,
+<a href=#387 id=387 data-nosnippet>387</a>/// `--server --max-memory=0` still ran against a live 4.5 GB fuse while the help
+<a href=#388 id=388 data-nosnippet>388</a>/// text promised the limit was off.
+<a href=#389 id=389 data-nosnippet>389</a></span><span class="kw">pub fn </span>apply_memory_ceiling(max_memory_mib: u64) {
+<a href=#390 id=390 data-nosnippet>390</a>  set_memory_cap(<span class="prelude-val">Some</span>(soft_cap_from_ceiling(max_memory_mib)));
+<a href=#391 id=391 data-nosnippet>391</a>}
+<a href=#392 id=392 data-nosnippet>392</a>
+<a href=#393 id=393 data-nosnippet>393</a><span class="doccomment">/// Resolve the effective soft-RSS budget: `None` = disabled (no ceiling),
+<a href=#394 id=394 data-nosnippet>394</a>/// `Some(n)` = abort above `n` bytes. Precedence: the explicit
+<a href=#395 id=395 data-nosnippet>395</a>/// [`set_memory_cap`] override, else `LATEXML_RSS_CAP_BYTES`, else the 4.5 GB
+<a href=#396 id=396 data-nosnippet>396</a>/// default. A cap of `0` from EITHER source resolves to `None`, so
+<a href=#397 id=397 data-nosnippet>397</a>/// `--max-memory=0` / `LATEXML_RSS_CAP_BYTES=0` mean "no limit" — not "abort
+<a href=#398 id=398 data-nosnippet>398</a>/// immediately" (a literal `0` compared as `rss_bytes &gt; 0` is always true).
+<a href=#399 id=399 data-nosnippet>399</a>///
+<a href=#400 id=400 data-nosnippet>400</a>/// Note the env is consulted only when nothing set the override — i.e. only for
+<a href=#401 id=401 data-nosnippet>401</a>/// embedders that never call [`apply_memory_ceiling`]. Every path in the
+<a href=#402 id=402 data-nosnippet>402</a>/// `latexml_oxide` binary calls it, so there `--max-memory` always wins.
+<a href=#403 id=403 data-nosnippet>403</a></span><span class="kw">pub fn </span>resolve_rss_cap() -&gt; <span class="prelude-ty">Option</span>&lt;u64&gt; {
+<a href=#404 id=404 data-nosnippet>404</a>  <span class="kw">let </span>cap = RSS_CAP_OVERRIDE.with(|c| c.get()).unwrap_or_else(|| {
+<a href=#405 id=405 data-nosnippet>405</a>    std::env::var(<span class="string">"LATEXML_RSS_CAP_BYTES"</span>)
+<a href=#406 id=406 data-nosnippet>406</a>      .ok()
+<a href=#407 id=407 data-nosnippet>407</a>      .and_then(|v| v.parse::&lt;u64&gt;().ok())
+<a href=#408 id=408 data-nosnippet>408</a>      .unwrap_or(<span class="number">4_500_000_000</span>)
+<a href=#409 id=409 data-nosnippet>409</a>  });
+<a href=#410 id=410 data-nosnippet>410</a>  (cap &gt; <span class="number">0</span>).then_some(cap)
+<a href=#411 id=411 data-nosnippet>411</a>}
+<a href=#412 id=412 data-nosnippet>412</a>
+<a href=#413 id=413 data-nosnippet>413</a><span class="doccomment">/// Check if conversion has timed out. Returns Err if deadline exceeded.
+<a href=#414 id=414 data-nosnippet>414</a>///
+<a href=#415 id=415 data-nosnippet>415</a>/// Also samples RSS via /proc/self/status every ~1024 calls and raises
+<a href=#416 id=416 data-nosnippet>416</a>/// `Fatal:oom:memory_budget` if the process is approaching the worker
+<a href=#417 id=417 data-nosnippet>417</a>/// memory cap. R35.A witnesses (plain-TeX `$$\displaylines{ … \picture
+<a href=#418 id=418 data-nosnippet>418</a>/// … }$$`, 7 sandbox papers from 1999–2006) trigger a runaway where
+<a href=#419 id=419 data-nosnippet>419</a>/// `set_alloc_error_hook` fires AFTER the process has already allocated
+<a href=#420 id=420 data-nosnippet>420</a>/// ~5+ GB; that hook can't easily walk back the call site under
+<a href=#421 id=421 data-nosnippet>421</a>/// `panic="unwind"`. Sampling RSS here at well below the OS ulimit
+<a href=#422 id=422 data-nosnippet>422</a>/// gives us a clean diagnostic and a unwound stack via `fatal!`.
+<a href=#423 id=423 data-nosnippet>423</a></span><span class="kw">pub fn </span>check_timeout() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#424 id=424 data-nosnippet>424</a>  <span class="comment">// Box-list cycle guard fired in `push_box_list` (which cannot unwind) —
+<a href=#425 id=425 data-nosnippet>425</a>  // surface it here, the regular Result-returning digestion checkpoint.
+<a href=#426 id=426 data-nosnippet>426</a>  // (The `stomach_mut!` macro is defined textually below; use STOMACH
+<a href=#427 id=427 data-nosnippet>427</a>  // directly, with a try-borrow so a transient borrow just defers to the
+<a href=#428 id=428 data-nosnippet>428</a>  // next tick.)
+<a href=#429 id=429 data-nosnippet>429</a>  </span><span class="kw">let </span>pending = STOMACH
+<a href=#430 id=430 data-nosnippet>430</a>    .try_borrow_mut()
+<a href=#431 id=431 data-nosnippet>431</a>    .ok()
+<a href=#432 id=432 data-nosnippet>432</a>    .and_then(|<span class="kw-2">mut </span>s| s.pending_cycle_fatal.take());
+<a href=#433 id=433 data-nosnippet>433</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>((category, msg)) = pending {
+<a href=#434 id=434 data-nosnippet>434</a>    <span class="kw">use </span><span class="kw">crate</span>::common::error::{Error <span class="kw">as </span>LatexmlError, ErrorTarget};
+<a href=#435 id=435 data-nosnippet>435</a>    <span class="kw">return </span><span class="prelude-val">Err</span>(LatexmlError::from(ErrorData {
+<a href=#436 id=436 data-nosnippet>436</a>      target: ErrorTarget::Stomach,
+<a href=#437 id=437 data-nosnippet>437</a>      category,
+<a href=#438 id=438 data-nosnippet>438</a>      message: msg,
+<a href=#439 id=439 data-nosnippet>439</a>    }));
+<a href=#440 id=440 data-nosnippet>440</a>  }
+<a href=#441 id=441 data-nosnippet>441</a>  <span class="kw">if </span>conversion_deadline_passed() {
+<a href=#442 id=442 data-nosnippet>442</a>    <span class="macro">fatal!</span>(Timeout, Convert, <span class="string">"Conversion timed out!"</span>);
+<a href=#443 id=443 data-nosnippet>443</a>  }
 <a href=#444 id=444 data-nosnippet>444</a>  <span class="comment">// Soft memory budget: every ~1024 calls, peek at our own RSS.
 <a href=#445 id=445 data-nosnippet>445</a>  // 1024-call cadence keeps overhead negligible on the hot path
 <a href=#446 id=446 data-nosnippet>446</a>  // (each call reads /proc/self/statm — a single syscall).

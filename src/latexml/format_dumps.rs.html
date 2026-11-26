@@ -166,514 +166,521 @@
 <a href=#166 id=166 data-nosnippet>166</a>  }
 <a href=#167 id=167 data-nosnippet>167</a>  <span class="kw">static </span>ENSURED: OnceLock&lt;()&gt; = OnceLock::new();
 <a href=#168 id=168 data-nosnippet>168</a>  ENSURED.get_or_init(|| {
-<a href=#169 id=169 data-nosnippet>169</a>    <span class="kw">if let </span><span class="prelude-val">Err</span>(reason) = ensure() {
-<a href=#170 id=170 data-nosnippet>170</a>      <span class="comment">// A Warning, as each conversion logs it (`converter::note_format_build_failure`).
-<a href=#171 id=171 data-nosnippet>171</a>      </span>note(log::Level::Warn, <span class="macro">format_args!</span>(
-<a href=#172 id=172 data-nosnippet>172</a>        <span class="string">"[format_dumps] {reason}: the format loads from the engine's own definitions instead of a dump"
-<a href=#173 id=173 data-nosnippet>173</a>      </span>));
-<a href=#174 id=174 data-nosnippet>174</a>      dump_paths::set_format_build_failure(reason);
-<a href=#175 id=175 data-nosnippet>175</a>    }
-<a href=#176 id=176 data-nosnippet>176</a>  });
-<a href=#177 id=177 data-nosnippet>177</a>}
-<a href=#178 id=178 data-nosnippet>178</a>
-<a href=#179 id=179 data-nosnippet>179</a><span class="kw">fn </span>ensure() -&gt; <span class="prelude-ty">Result</span>&lt;(), String&gt; {
-<a href=#180 id=180 data-nosnippet>180</a>  <span class="kw">if </span>std::env::var_os(<span class="string">"LATEXML_NODUMP"</span>).is_some() || std::env::var_os(<span class="string">"LATEXML_INI_MODE"</span>).is_some()
-<a href=#181 id=181 data-nosnippet>181</a>  {
-<a href=#182 id=182 data-nosnippet>182</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
-<a href=#183 id=183 data-nosnippet>183</a>  }
-<a href=#184 id=184 data-nosnippet>184</a>  <span class="kw">let </span>kinds: Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; = [<span class="string">"plain"</span>, <span class="string">"latex"</span>]
-<a href=#185 id=185 data-nosnippet>185</a>    .into_iter()
-<a href=#186 id=186 data-nosnippet>186</a>    .filter(|kind| dump_paths::runtime_source_stamps(kind).is_some())
-<a href=#187 id=187 data-nosnippet>187</a>    .collect();
-<a href=#188 id=188 data-nosnippet>188</a>  <span class="kw">if </span>kinds.is_empty() {
+<a href=#169 id=169 data-nosnippet>169</a>    <span class="comment">// Once per TeX tree, not the document's work: off the conversion's `--timeout`, which a busy host's build outlasted
+<a href=#170 id=170 data-nosnippet>170</a>    // and, killed twice, marked the format failed. Bounded (under a non-zero `--timeout`) by the lock wait and a build.
+<a href=#171 id=171 data-nosnippet>171</a>    </span><span class="kw">let </span>ensured = latexml_core::watchdog::off_the_clock(
+<a href=#172 id=172 data-nosnippet>172</a>      <span class="string">"the format build"</span>,
+<a href=#173 id=173 data-nosnippet>173</a>      LOCK_WAIT + Duration::from_secs(<span class="number">300</span>),
+<a href=#174 id=174 data-nosnippet>174</a>      ensure,
+<a href=#175 id=175 data-nosnippet>175</a>    );
+<a href=#176 id=176 data-nosnippet>176</a>    <span class="kw">if let </span><span class="prelude-val">Err</span>(reason) = ensured {
+<a href=#177 id=177 data-nosnippet>177</a>      <span class="comment">// A Warning, as each conversion logs it (`converter::note_format_build_failure`).
+<a href=#178 id=178 data-nosnippet>178</a>      </span>note(log::Level::Warn, <span class="macro">format_args!</span>(
+<a href=#179 id=179 data-nosnippet>179</a>        <span class="string">"[format_dumps] {reason}: the format loads from the engine's own definitions instead of a dump"
+<a href=#180 id=180 data-nosnippet>180</a>      </span>));
+<a href=#181 id=181 data-nosnippet>181</a>      dump_paths::set_format_build_failure(reason);
+<a href=#182 id=182 data-nosnippet>182</a>    }
+<a href=#183 id=183 data-nosnippet>183</a>  });
+<a href=#184 id=184 data-nosnippet>184</a>}
+<a href=#185 id=185 data-nosnippet>185</a>
+<a href=#186 id=186 data-nosnippet>186</a><span class="kw">fn </span>ensure() -&gt; <span class="prelude-ty">Result</span>&lt;(), String&gt; {
+<a href=#187 id=187 data-nosnippet>187</a>  <span class="kw">if </span>std::env::var_os(<span class="string">"LATEXML_NODUMP"</span>).is_some() || std::env::var_os(<span class="string">"LATEXML_INI_MODE"</span>).is_some()
+<a href=#188 id=188 data-nosnippet>188</a>  {
 <a href=#189 id=189 data-nosnippet>189</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
 <a href=#190 id=190 data-nosnippet>190</a>  }
-<a href=#191 id=191 data-nosnippet>191</a>  <span class="comment">// A dump the configuration names, installs or keeps beside the sources is used before the cache's;
-<a href=#192 id=192 data-nosnippet>192</a>  // the embedded one only after it, as reading it back costs every process a 4 MB dump.
-<a href=#193 id=193 data-nosnippet>193</a>  </span><span class="kw">let </span>wanted: Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; = kinds
-<a href=#194 id=194 data-nosnippet>194</a>    .into_iter()
-<a href=#195 id=195 data-nosnippet>195</a>    .filter(|kind| !dump_paths::format_dump_on_disk(kind))
-<a href=#196 id=196 data-nosnippet>196</a>    .collect();
-<a href=#197 id=197 data-nosnippet>197</a>  <span class="kw">if </span>wanted.is_empty() {
-<a href=#198 id=198 data-nosnippet>198</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
-<a href=#199 id=199 data-nosnippet>199</a>  }
-<a href=#200 id=200 data-nosnippet>200</a>  <span class="comment">// Only the dump's file name carries the year.
-<a href=#201 id=201 data-nosnippet>201</a>  </span><span class="kw">let </span>year = dump_paths::detect_ambient_texlive_year().unwrap_or(<span class="number">2000</span>);
-<a href=#202 id=202 data-nosnippet>202</a>  <span class="kw">let </span>dir = <span class="kw">match </span>cache_dir() {
-<a href=#203 id=203 data-nosnippet>203</a>    <span class="prelude-val">Ok</span>(dir) =&gt; dir,
-<a href=#204 id=204 data-nosnippet>204</a>    <span class="prelude-val">Err</span>(<span class="kw">_</span>)
-<a href=#205 id=205 data-nosnippet>205</a>      <span class="kw">if </span>wanted
-<a href=#206 id=206 data-nosnippet>206</a>        .iter()
-<a href=#207 id=207 data-nosnippet>207</a>        .all(|kind| dump_paths::format_dump_available(kind)) =&gt;
-<a href=#208 id=208 data-nosnippet>208</a>    {
-<a href=#209 id=209 data-nosnippet>209</a>      <span class="kw">return </span><span class="prelude-val">Ok</span>(());
-<a href=#210 id=210 data-nosnippet>210</a>    },
-<a href=#211 id=211 data-nosnippet>211</a>    <span class="prelude-val">Err</span>(reason) =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(reason),
-<a href=#212 id=212 data-nosnippet>212</a>  };
-<a href=#213 id=213 data-nosnippet>213</a>  <span class="comment">// Each kind uses the cache's dump on its own merits.
-<a href=#214 id=214 data-nosnippet>214</a>  </span><span class="kw">let </span>use_cached = |kind: <span class="kw-2">&amp;</span>str| <span class="kw">match </span>cached_dump(<span class="kw-2">&amp;</span>dir, kind, year) {
-<a href=#215 id=215 data-nosnippet>215</a>    <span class="prelude-val">Some</span>((path, found_year)) =&gt; {
-<a href=#216 id=216 data-nosnippet>216</a>      dump_paths::set_rebuilt_dump(kind, path, found_year);
-<a href=#217 id=217 data-nosnippet>217</a>      <span class="bool-val">true
-<a href=#218 id=218 data-nosnippet>218</a>    </span>},
-<a href=#219 id=219 data-nosnippet>219</a>    <span class="prelude-val">None </span>=&gt; <span class="bool-val">false</span>,
-<a href=#220 id=220 data-nosnippet>220</a>  };
-<a href=#221 id=221 data-nosnippet>221</a>  <span class="kw">let </span>missing: Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; = wanted
-<a href=#222 id=222 data-nosnippet>222</a>    .into_iter()
-<a href=#223 id=223 data-nosnippet>223</a>    .filter(|kind| !use_cached(kind) &amp;&amp; !dump_paths::format_dump_available(kind))
-<a href=#224 id=224 data-nosnippet>224</a>    .collect();
-<a href=#225 id=225 data-nosnippet>225</a>  <span class="kw">if </span>missing.is_empty() {
-<a href=#226 id=226 data-nosnippet>226</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
-<a href=#227 id=227 data-nosnippet>227</a>  }
-<a href=#228 id=228 data-nosnippet>228</a>  private_dir(<span class="kw-2">&amp;</span>dir)<span class="question-mark">?</span>;
-<a href=#229 id=229 data-nosnippet>229</a>  <span class="kw">let </span><span class="kw-2">mut </span>reasons = Vec::new();
-<a href=#230 id=230 data-nosnippet>230</a>  <span class="kw">let </span>missing: Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; = missing
-<a href=#231 id=231 data-nosnippet>231</a>    .into_iter()
-<a href=#232 id=232 data-nosnippet>232</a>    .filter(|kind| <span class="kw">match </span>failed_before(<span class="kw-2">&amp;</span>dir, kind) {
-<a href=#233 id=233 data-nosnippet>233</a>      <span class="prelude-val">Some</span>(reason) =&gt; {
-<a href=#234 id=234 data-nosnippet>234</a>        reasons.push(reason);
-<a href=#235 id=235 data-nosnippet>235</a>        <span class="bool-val">false
-<a href=#236 id=236 data-nosnippet>236</a>      </span>},
-<a href=#237 id=237 data-nosnippet>237</a>      <span class="prelude-val">None </span>=&gt; <span class="bool-val">true</span>,
-<a href=#238 id=238 data-nosnippet>238</a>    })
-<a href=#239 id=239 data-nosnippet>239</a>    .collect();
-<a href=#240 id=240 data-nosnippet>240</a>  <span class="kw">if </span>!missing.is_empty() {
-<a href=#241 id=241 data-nosnippet>241</a>    <span class="comment">// What the builds so far have left, to tell whether one failed while this process waited. (A
-<a href=#242 id=242 data-nosnippet>242</a>    // build that fails between this read and its release of the lock goes unseen: the window is
-<a href=#243 id=243 data-nosnippet>243</a>    // the few instructions between its last write and its unlock.)
-<a href=#244 id=244 data-nosnippet>244</a>    </span><span class="kw">let </span>seen: Vec&lt;<span class="prelude-ty">Option</span>&lt;String&gt;&gt; = missing
-<a href=#245 id=245 data-nosnippet>245</a>      .iter()
-<a href=#246 id=246 data-nosnippet>246</a>      .map(|kind| attempts_text(<span class="kw-2">&amp;</span>dir, kind))
-<a href=#247 id=247 data-nosnippet>247</a>      .collect();
-<a href=#248 id=248 data-nosnippet>248</a>    <span class="comment">// One process builds; the others wait for it and find the dump, or its failure.
-<a href=#249 id=249 data-nosnippet>249</a>    </span><span class="kw">let </span>_lock = <span class="kw">match </span>lock_dir(<span class="kw-2">&amp;</span>dir) {
-<a href=#250 id=250 data-nosnippet>250</a>      <span class="prelude-val">Ok</span>(lock) =&gt; lock,
-<a href=#251 id=251 data-nosnippet>251</a>      <span class="prelude-val">Err</span>(reason) =&gt; {
-<a href=#252 id=252 data-nosnippet>252</a>        reasons.push(reason);
-<a href=#253 id=253 data-nosnippet>253</a>        <span class="kw">return </span><span class="prelude-val">Err</span>(reasons.join(<span class="string">"; "</span>));
-<a href=#254 id=254 data-nosnippet>254</a>      },
-<a href=#255 id=255 data-nosnippet>255</a>    };
-<a href=#256 id=256 data-nosnippet>256</a>    <span class="comment">// No other process builds here while this one holds the lock: a partial dump is a killed
-<a href=#257 id=257 data-nosnippet>257</a>    // build's.
-<a href=#258 id=258 data-nosnippet>258</a>    </span>remove_partial_dumps(<span class="kw-2">&amp;</span>dir);
-<a href=#259 id=259 data-nosnippet>259</a>    <span class="kw">for </span>(kind, seen) <span class="kw">in </span>missing.into_iter().zip(seen) {
-<a href=#260 id=260 data-nosnippet>260</a>      <span class="comment">// Built by the process this one waited for.
-<a href=#261 id=261 data-nosnippet>261</a>      </span><span class="kw">if </span>use_cached(kind) {
-<a href=#262 id=262 data-nosnippet>262</a>        <span class="kw">continue</span>;
-<a href=#263 id=263 data-nosnippet>263</a>      }
-<a href=#264 id=264 data-nosnippet>264</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(reason) = failed_before(<span class="kw-2">&amp;</span>dir, kind) {
-<a href=#265 id=265 data-nosnippet>265</a>        reasons.push(reason);
-<a href=#266 id=266 data-nosnippet>266</a>        <span class="kw">continue</span>;
-<a href=#267 id=267 data-nosnippet>267</a>      }
-<a href=#268 id=268 data-nosnippet>268</a>      <span class="comment">// A build that failed while this process waited is not tried again at once: a passing
-<a href=#269 id=269 data-nosnippet>269</a>      // failure would likely recur, and a later process retries it.
-<a href=#270 id=270 data-nosnippet>270</a>      </span><span class="kw">let </span>now = attempts_text(<span class="kw-2">&amp;</span>dir, kind);
-<a href=#271 id=271 data-nosnippet>271</a>      <span class="kw">if </span>now.is_some() &amp;&amp; now != seen {
-<a href=#272 id=272 data-nosnippet>272</a>        reasons.push(previous_attempts(<span class="kw-2">&amp;</span>dir, kind).<span class="number">1</span>);
+<a href=#191 id=191 data-nosnippet>191</a>  <span class="kw">let </span>kinds: Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; = [<span class="string">"plain"</span>, <span class="string">"latex"</span>]
+<a href=#192 id=192 data-nosnippet>192</a>    .into_iter()
+<a href=#193 id=193 data-nosnippet>193</a>    .filter(|kind| dump_paths::runtime_source_stamps(kind).is_some())
+<a href=#194 id=194 data-nosnippet>194</a>    .collect();
+<a href=#195 id=195 data-nosnippet>195</a>  <span class="kw">if </span>kinds.is_empty() {
+<a href=#196 id=196 data-nosnippet>196</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+<a href=#197 id=197 data-nosnippet>197</a>  }
+<a href=#198 id=198 data-nosnippet>198</a>  <span class="comment">// A dump the configuration names, installs or keeps beside the sources is used before the cache's;
+<a href=#199 id=199 data-nosnippet>199</a>  // the embedded one only after it, as reading it back costs every process a 4 MB dump.
+<a href=#200 id=200 data-nosnippet>200</a>  </span><span class="kw">let </span>wanted: Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; = kinds
+<a href=#201 id=201 data-nosnippet>201</a>    .into_iter()
+<a href=#202 id=202 data-nosnippet>202</a>    .filter(|kind| !dump_paths::format_dump_on_disk(kind))
+<a href=#203 id=203 data-nosnippet>203</a>    .collect();
+<a href=#204 id=204 data-nosnippet>204</a>  <span class="kw">if </span>wanted.is_empty() {
+<a href=#205 id=205 data-nosnippet>205</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+<a href=#206 id=206 data-nosnippet>206</a>  }
+<a href=#207 id=207 data-nosnippet>207</a>  <span class="comment">// Only the dump's file name carries the year.
+<a href=#208 id=208 data-nosnippet>208</a>  </span><span class="kw">let </span>year = dump_paths::detect_ambient_texlive_year().unwrap_or(<span class="number">2000</span>);
+<a href=#209 id=209 data-nosnippet>209</a>  <span class="kw">let </span>dir = <span class="kw">match </span>cache_dir() {
+<a href=#210 id=210 data-nosnippet>210</a>    <span class="prelude-val">Ok</span>(dir) =&gt; dir,
+<a href=#211 id=211 data-nosnippet>211</a>    <span class="prelude-val">Err</span>(<span class="kw">_</span>)
+<a href=#212 id=212 data-nosnippet>212</a>      <span class="kw">if </span>wanted
+<a href=#213 id=213 data-nosnippet>213</a>        .iter()
+<a href=#214 id=214 data-nosnippet>214</a>        .all(|kind| dump_paths::format_dump_available(kind)) =&gt;
+<a href=#215 id=215 data-nosnippet>215</a>    {
+<a href=#216 id=216 data-nosnippet>216</a>      <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+<a href=#217 id=217 data-nosnippet>217</a>    },
+<a href=#218 id=218 data-nosnippet>218</a>    <span class="prelude-val">Err</span>(reason) =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(reason),
+<a href=#219 id=219 data-nosnippet>219</a>  };
+<a href=#220 id=220 data-nosnippet>220</a>  <span class="comment">// Each kind uses the cache's dump on its own merits.
+<a href=#221 id=221 data-nosnippet>221</a>  </span><span class="kw">let </span>use_cached = |kind: <span class="kw-2">&amp;</span>str| <span class="kw">match </span>cached_dump(<span class="kw-2">&amp;</span>dir, kind, year) {
+<a href=#222 id=222 data-nosnippet>222</a>    <span class="prelude-val">Some</span>((path, found_year)) =&gt; {
+<a href=#223 id=223 data-nosnippet>223</a>      dump_paths::set_rebuilt_dump(kind, path, found_year);
+<a href=#224 id=224 data-nosnippet>224</a>      <span class="bool-val">true
+<a href=#225 id=225 data-nosnippet>225</a>    </span>},
+<a href=#226 id=226 data-nosnippet>226</a>    <span class="prelude-val">None </span>=&gt; <span class="bool-val">false</span>,
+<a href=#227 id=227 data-nosnippet>227</a>  };
+<a href=#228 id=228 data-nosnippet>228</a>  <span class="kw">let </span>missing: Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; = wanted
+<a href=#229 id=229 data-nosnippet>229</a>    .into_iter()
+<a href=#230 id=230 data-nosnippet>230</a>    .filter(|kind| !use_cached(kind) &amp;&amp; !dump_paths::format_dump_available(kind))
+<a href=#231 id=231 data-nosnippet>231</a>    .collect();
+<a href=#232 id=232 data-nosnippet>232</a>  <span class="kw">if </span>missing.is_empty() {
+<a href=#233 id=233 data-nosnippet>233</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+<a href=#234 id=234 data-nosnippet>234</a>  }
+<a href=#235 id=235 data-nosnippet>235</a>  private_dir(<span class="kw-2">&amp;</span>dir)<span class="question-mark">?</span>;
+<a href=#236 id=236 data-nosnippet>236</a>  <span class="kw">let </span><span class="kw-2">mut </span>reasons = Vec::new();
+<a href=#237 id=237 data-nosnippet>237</a>  <span class="kw">let </span>missing: Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; = missing
+<a href=#238 id=238 data-nosnippet>238</a>    .into_iter()
+<a href=#239 id=239 data-nosnippet>239</a>    .filter(|kind| <span class="kw">match </span>failed_before(<span class="kw-2">&amp;</span>dir, kind) {
+<a href=#240 id=240 data-nosnippet>240</a>      <span class="prelude-val">Some</span>(reason) =&gt; {
+<a href=#241 id=241 data-nosnippet>241</a>        reasons.push(reason);
+<a href=#242 id=242 data-nosnippet>242</a>        <span class="bool-val">false
+<a href=#243 id=243 data-nosnippet>243</a>      </span>},
+<a href=#244 id=244 data-nosnippet>244</a>      <span class="prelude-val">None </span>=&gt; <span class="bool-val">true</span>,
+<a href=#245 id=245 data-nosnippet>245</a>    })
+<a href=#246 id=246 data-nosnippet>246</a>    .collect();
+<a href=#247 id=247 data-nosnippet>247</a>  <span class="kw">if </span>!missing.is_empty() {
+<a href=#248 id=248 data-nosnippet>248</a>    <span class="comment">// What the builds so far have left, to tell whether one failed while this process waited. (A
+<a href=#249 id=249 data-nosnippet>249</a>    // build that fails between this read and its release of the lock goes unseen: the window is
+<a href=#250 id=250 data-nosnippet>250</a>    // the few instructions between its last write and its unlock.)
+<a href=#251 id=251 data-nosnippet>251</a>    </span><span class="kw">let </span>seen: Vec&lt;<span class="prelude-ty">Option</span>&lt;String&gt;&gt; = missing
+<a href=#252 id=252 data-nosnippet>252</a>      .iter()
+<a href=#253 id=253 data-nosnippet>253</a>      .map(|kind| attempts_text(<span class="kw-2">&amp;</span>dir, kind))
+<a href=#254 id=254 data-nosnippet>254</a>      .collect();
+<a href=#255 id=255 data-nosnippet>255</a>    <span class="comment">// One process builds; the others wait for it and find the dump, or its failure.
+<a href=#256 id=256 data-nosnippet>256</a>    </span><span class="kw">let </span>_lock = <span class="kw">match </span>lock_dir(<span class="kw-2">&amp;</span>dir) {
+<a href=#257 id=257 data-nosnippet>257</a>      <span class="prelude-val">Ok</span>(lock) =&gt; lock,
+<a href=#258 id=258 data-nosnippet>258</a>      <span class="prelude-val">Err</span>(reason) =&gt; {
+<a href=#259 id=259 data-nosnippet>259</a>        reasons.push(reason);
+<a href=#260 id=260 data-nosnippet>260</a>        <span class="kw">return </span><span class="prelude-val">Err</span>(reasons.join(<span class="string">"; "</span>));
+<a href=#261 id=261 data-nosnippet>261</a>      },
+<a href=#262 id=262 data-nosnippet>262</a>    };
+<a href=#263 id=263 data-nosnippet>263</a>    <span class="comment">// No other process builds here while this one holds the lock: a partial dump is a killed
+<a href=#264 id=264 data-nosnippet>264</a>    // build's.
+<a href=#265 id=265 data-nosnippet>265</a>    </span>remove_partial_dumps(<span class="kw-2">&amp;</span>dir);
+<a href=#266 id=266 data-nosnippet>266</a>    <span class="kw">for </span>(kind, seen) <span class="kw">in </span>missing.into_iter().zip(seen) {
+<a href=#267 id=267 data-nosnippet>267</a>      <span class="comment">// Built by the process this one waited for.
+<a href=#268 id=268 data-nosnippet>268</a>      </span><span class="kw">if </span>use_cached(kind) {
+<a href=#269 id=269 data-nosnippet>269</a>        <span class="kw">continue</span>;
+<a href=#270 id=270 data-nosnippet>270</a>      }
+<a href=#271 id=271 data-nosnippet>271</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(reason) = failed_before(<span class="kw-2">&amp;</span>dir, kind) {
+<a href=#272 id=272 data-nosnippet>272</a>        reasons.push(reason);
 <a href=#273 id=273 data-nosnippet>273</a>        <span class="kw">continue</span>;
 <a href=#274 id=274 data-nosnippet>274</a>      }
-<a href=#275 id=275 data-nosnippet>275</a>      <span class="kw">if let </span><span class="prelude-val">Err</span>(reason) = attempt(kind, year, <span class="kw-2">&amp;</span>dir, <span class="kw-2">&amp;</span>use_cached) {
-<a href=#276 id=276 data-nosnippet>276</a>        reasons.push(reason);
-<a href=#277 id=277 data-nosnippet>277</a>      }
-<a href=#278 id=278 data-nosnippet>278</a>    }
-<a href=#279 id=279 data-nosnippet>279</a>  }
-<a href=#280 id=280 data-nosnippet>280</a>  <span class="kw">if </span>reasons.is_empty() {
-<a href=#281 id=281 data-nosnippet>281</a>    <span class="prelude-val">Ok</span>(())
-<a href=#282 id=282 data-nosnippet>282</a>  } <span class="kw">else </span>{
-<a href=#283 id=283 data-nosnippet>283</a>    <span class="prelude-val">Err</span>(reasons.join(<span class="string">"; "</span>))
-<a href=#284 id=284 data-nosnippet>284</a>  }
-<a href=#285 id=285 data-nosnippet>285</a>}
-<a href=#286 id=286 data-nosnippet>286</a>
-<a href=#287 id=287 data-nosnippet>287</a><span class="doccomment">/// Builds the `kind` dump into `dir`, counting it until it succeeds and marking the format
-<a href=#288 id=288 data-nosnippet>288</a>/// [`FAILED`] after [`MAX_ATTEMPTS`] builds in a row that did not.
-<a href=#289 id=289 data-nosnippet>289</a></span><span class="kw">fn </span>attempt(
-<a href=#290 id=290 data-nosnippet>290</a>  kind: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str,
-<a href=#291 id=291 data-nosnippet>291</a>  year: u32,
-<a href=#292 id=292 data-nosnippet>292</a>  dir: <span class="kw-2">&amp;</span>Path,
-<a href=#293 id=293 data-nosnippet>293</a>  use_cached: <span class="kw-2">&amp;</span><span class="kw">dyn </span>Fn(<span class="kw-2">&amp;</span>str) -&gt; bool,
-<a href=#294 id=294 data-nosnippet>294</a>) -&gt; <span class="prelude-ty">Result</span>&lt;(), String&gt; {
-<a href=#295 id=295 data-nosnippet>295</a>  <span class="kw">let </span>(failed, last_reason) = previous_attempts(dir, kind);
-<a href=#296 id=296 data-nosnippet>296</a>  <span class="kw">if </span>failed &gt;= MAX_ATTEMPTS {
-<a href=#297 id=297 data-nosnippet>297</a>    <span class="kw">return </span><span class="prelude-val">Err</span>(mark_failed(dir, kind, <span class="kw-2">&amp;</span>last_reason));
-<a href=#298 id=298 data-nosnippet>298</a>  }
-<a href=#299 id=299 data-nosnippet>299</a>  <span class="comment">// Installed before the build leaves anything to undo, so an interrupt always finds what it left.
-<a href=#300 id=300 data-nosnippet>300</a>  </span><span class="kw">if </span>CANCEL_ON_INTERRUPT.load(Ordering::Acquire) {
-<a href=#301 id=301 data-nosnippet>301</a>    install_interrupt_handler();
-<a href=#302 id=302 data-nosnippet>302</a>  }
-<a href=#303 id=303 data-nosnippet>303</a>  {
-<a href=#304 id=304 data-nosnippet>304</a>    <span class="comment">// What an interrupt undoes is recorded and its note written under one lock: an interrupt
-<a href=#305 id=305 data-nosnippet>305</a>    // meanwhile waits, then undoes both (it could otherwise undo before the note was written).
-<a href=#306 id=306 data-nosnippet>306</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>slot = IN_FLIGHT.lock().unwrap_or_else(PoisonError::into_inner);
-<a href=#307 id=307 data-nosnippet>307</a>    <span class="kw-2">*</span>slot = <span class="prelude-val">Some</span>(InFlight {
-<a href=#308 id=308 data-nosnippet>308</a>      attempts: kind_file(dir, ATTEMPTS, kind),
-<a href=#309 id=309 data-nosnippet>309</a>      before:   attempts_text(dir, kind),
-<a href=#310 id=310 data-nosnippet>310</a>      partial:  partial_dump(dir, kind, year),
-<a href=#311 id=311 data-nosnippet>311</a>    });
-<a href=#312 id=312 data-nosnippet>312</a>    <span class="kw">if let </span><span class="prelude-val">Err</span>(reason) = note_attempt(
-<a href=#313 id=313 data-nosnippet>313</a>      dir,
-<a href=#314 id=314 data-nosnippet>314</a>      kind,
-<a href=#315 id=315 data-nosnippet>315</a>      failed + <span class="number">1</span>,
-<a href=#316 id=316 data-nosnippet>316</a>      <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"the {kind} format build died with its process"</span>),
-<a href=#317 id=317 data-nosnippet>317</a>    ) {
-<a href=#318 id=318 data-nosnippet>318</a>      <span class="kw-2">*</span>slot = <span class="prelude-val">None</span>;
-<a href=#319 id=319 data-nosnippet>319</a>      <span class="kw">return </span><span class="prelude-val">Err</span>(reason);
-<a href=#320 id=320 data-nosnippet>320</a>    }
-<a href=#321 id=321 data-nosnippet>321</a>  }
-<a href=#322 id=322 data-nosnippet>322</a>  note(
-<a href=#323 id=323 data-nosnippet>323</a>    log::Level::Info,
-<a href=#324 id=324 data-nosnippet>324</a>    <span class="macro">format_args!</span>(
-<a href=#325 id=325 data-nosnippet>325</a>      <span class="string">"[format_dumps] no {kind} dump matches this TeX tree; building one into {} (once for this tree; later \
-<a href=#326 id=326 data-nosnippet>326</a>     conversions reuse it)"</span>,
-<a href=#327 id=327 data-nosnippet>327</a>      dir.display()
-<a href=#328 id=328 data-nosnippet>328</a>    ),
-<a href=#329 id=329 data-nosnippet>329</a>  );
-<a href=#330 id=330 data-nosnippet>330</a>  <span class="kw">let </span>built = build(kind, year, dir);
-<a href=#331 id=331 data-nosnippet>331</a>  <span class="comment">// The build has ended (a published dump cleared the record as it was published, `publish`): what
-<a href=#332 id=332 data-nosnippet>332</a>  // follows records its outcome, which an interrupt no longer undoes.
-<a href=#333 id=333 data-nosnippet>333</a>  </span>set_in_flight(<span class="prelude-val">None</span>);
-<a href=#334 id=334 data-nosnippet>334</a>  <span class="kw">let </span>built = built.and_then(|()| {
-<a href=#335 id=335 data-nosnippet>335</a>    <span class="kw">if </span>use_cached(kind) {
-<a href=#336 id=336 data-nosnippet>336</a>      <span class="prelude-val">Ok</span>(())
-<a href=#337 id=337 data-nosnippet>337</a>    } <span class="kw">else </span>{
-<a href=#338 id=338 data-nosnippet>338</a>      <span class="prelude-val">Err</span>(<span class="macro">format!</span>(
-<a href=#339 id=339 data-nosnippet>339</a>        <span class="string">"the {kind} dump built into {} does not match this TeX tree"</span>,
-<a href=#340 id=340 data-nosnippet>340</a>        dir.display()
-<a href=#341 id=341 data-nosnippet>341</a>      ))
-<a href=#342 id=342 data-nosnippet>342</a>    }
-<a href=#343 id=343 data-nosnippet>343</a>  });
-<a href=#344 id=344 data-nosnippet>344</a>  <span class="kw">match </span>built {
-<a href=#345 id=345 data-nosnippet>345</a>    <span class="prelude-val">Ok</span>(()) =&gt; {
-<a href=#346 id=346 data-nosnippet>346</a>      <span class="kw">let _ </span>= std::fs::remove_file(kind_file(dir, ATTEMPTS, kind));
-<a href=#347 id=347 data-nosnippet>347</a>      <span class="prelude-val">Ok</span>(())
-<a href=#348 id=348 data-nosnippet>348</a>    },
-<a href=#349 id=349 data-nosnippet>349</a>    <span class="prelude-val">Err</span>(reason) =&gt; {
-<a href=#350 id=350 data-nosnippet>350</a>      <span class="kw">let _ </span>= note_attempt(dir, kind, failed + <span class="number">1</span>, <span class="kw-2">&amp;</span>reason);
-<a href=#351 id=351 data-nosnippet>351</a>      <span class="kw">if </span>failed + <span class="number">1 </span>&gt;= MAX_ATTEMPTS {
-<a href=#352 id=352 data-nosnippet>352</a>        <span class="prelude-val">Err</span>(mark_failed(dir, kind, <span class="kw-2">&amp;</span>reason))
-<a href=#353 id=353 data-nosnippet>353</a>      } <span class="kw">else </span>{
-<a href=#354 id=354 data-nosnippet>354</a>        <span class="prelude-val">Err</span>(reason)
-<a href=#355 id=355 data-nosnippet>355</a>      }
-<a href=#356 id=356 data-nosnippet>356</a>    },
-<a href=#357 id=357 data-nosnippet>357</a>  }
-<a href=#358 id=358 data-nosnippet>358</a>}
-<a href=#359 id=359 data-nosnippet>359</a>
-<a href=#360 id=360 data-nosnippet>360</a><span class="doccomment">/// `dir`'s `marker` file (`.attempts`, `.failed`) for the `kind` format.
-<a href=#361 id=361 data-nosnippet>361</a></span><span class="kw">fn </span>kind_file(dir: <span class="kw-2">&amp;</span>Path, marker: <span class="kw-2">&amp;</span>str, kind: <span class="kw-2">&amp;</span>str) -&gt; PathBuf {
-<a href=#362 id=362 data-nosnippet>362</a>  dir.join(<span class="macro">format!</span>(<span class="string">"{marker}.{kind}"</span>))
-<a href=#363 id=363 data-nosnippet>363</a>}
-<a href=#364 id=364 data-nosnippet>364</a>
-<a href=#365 id=365 data-nosnippet>365</a><span class="doccomment">/// What the builds of the `kind` format into `dir` that have not succeeded have recorded.
-<a href=#366 id=366 data-nosnippet>366</a></span><span class="kw">fn </span>attempts_text(dir: <span class="kw-2">&amp;</span>Path, kind: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;String&gt; {
-<a href=#367 id=367 data-nosnippet>367</a>  std::fs::read_to_string(kind_file(dir, ATTEMPTS, kind)).ok()
-<a href=#368 id=368 data-nosnippet>368</a>}
-<a href=#369 id=369 data-nosnippet>369</a>
-<a href=#370 id=370 data-nosnippet>370</a><span class="doccomment">/// The builds of the `kind` format into `dir` that have not succeeded in a row so far, and the last
-<a href=#371 id=371 data-nosnippet>371</a>/// one's reason.
-<a href=#372 id=372 data-nosnippet>372</a></span><span class="kw">fn </span>previous_attempts(dir: <span class="kw-2">&amp;</span>Path, kind: <span class="kw-2">&amp;</span>str) -&gt; (u32, String) {
-<a href=#373 id=373 data-nosnippet>373</a>  <span class="kw">let </span><span class="prelude-val">Some</span>(text) = attempts_text(dir, kind) <span class="kw">else </span>{
-<a href=#374 id=374 data-nosnippet>374</a>    <span class="kw">return </span>(<span class="number">0</span>, String::new());
-<a href=#375 id=375 data-nosnippet>375</a>  };
-<a href=#376 id=376 data-nosnippet>376</a>  <span class="kw">let </span>(count, reason) = text.split_once(<span class="string">'\t'</span>).unwrap_or((<span class="kw-2">&amp;</span>text, <span class="string">""</span>));
-<a href=#377 id=377 data-nosnippet>377</a>  <span class="kw">let </span>reason = <span class="kw">if </span>reason.is_empty() {
-<a href=#378 id=378 data-nosnippet>378</a>    <span class="macro">format!</span>(<span class="string">"the {kind} format build did not succeed"</span>)
-<a href=#379 id=379 data-nosnippet>379</a>  } <span class="kw">else </span>{
-<a href=#380 id=380 data-nosnippet>380</a>    reason.to_string()
-<a href=#381 id=381 data-nosnippet>381</a>  };
-<a href=#382 id=382 data-nosnippet>382</a>  (count.trim().parse().unwrap_or(<span class="number">1</span>), reason)
-<a href=#383 id=383 data-nosnippet>383</a>}
-<a href=#384 id=384 data-nosnippet>384</a>
-<a href=#385 id=385 data-nosnippet>385</a><span class="doccomment">/// Records that the `count`th build of the `kind` format into `dir` in a row has not succeeded
-<a href=#386 id=386 data-nosnippet>386</a>/// (yet), and why.
-<a href=#387 id=387 data-nosnippet>387</a></span><span class="kw">fn </span>note_attempt(dir: <span class="kw-2">&amp;</span>Path, kind: <span class="kw-2">&amp;</span>str, count: u32, reason: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;(), String&gt; {
-<a href=#388 id=388 data-nosnippet>388</a>  <span class="kw">let </span>path = kind_file(dir, ATTEMPTS, kind);
-<a href=#389 id=389 data-nosnippet>389</a>  std::fs::write(<span class="kw-2">&amp;</span>path, <span class="macro">format!</span>(<span class="string">"{count}\t{reason}"</span>))
-<a href=#390 id=390 data-nosnippet>390</a>    .map_err(|e| <span class="macro">format!</span>(<span class="string">"cannot write {}: {e}"</span>, path.display()))
-<a href=#391 id=391 data-nosnippet>391</a>}
-<a href=#392 id=392 data-nosnippet>392</a>
-<a href=#393 id=393 data-nosnippet>393</a><span class="doccomment">/// Marks the `kind` format as one that could not be built into `dir`, and says so. The mark holds
-<a href=#394 id=394 data-nosnippet>394</a>/// the reason in place of the count, so removing it gives the format fresh attempts.
-<a href=#395 id=395 data-nosnippet>395</a></span><span class="kw">fn </span>mark_failed(dir: <span class="kw-2">&amp;</span>Path, kind: <span class="kw-2">&amp;</span>str, reason: <span class="kw-2">&amp;</span>str) -&gt; String {
-<a href=#396 id=396 data-nosnippet>396</a>  <span class="kw">let </span>path = kind_file(dir, FAILED, kind);
-<a href=#397 id=397 data-nosnippet>397</a>  <span class="kw">if </span>std::fs::write(<span class="kw-2">&amp;</span>path, reason).is_ok() {
-<a href=#398 id=398 data-nosnippet>398</a>    <span class="kw">let _ </span>= std::fs::remove_file(kind_file(dir, ATTEMPTS, kind));
-<a href=#399 id=399 data-nosnippet>399</a>  }
-<a href=#400 id=400 data-nosnippet>400</a>  failure_message(<span class="kw-2">&amp;</span>path, reason)
-<a href=#401 id=401 data-nosnippet>401</a>}
-<a href=#402 id=402 data-nosnippet>402</a>
-<a href=#403 id=403 data-nosnippet>403</a><span class="doccomment">/// The failure a [`FAILED`] mark at `path` records, with how to retry.
-<a href=#404 id=404 data-nosnippet>404</a></span><span class="kw">fn </span>failure_message(path: <span class="kw-2">&amp;</span>Path, reason: <span class="kw-2">&amp;</span>str) -&gt; String {
-<a href=#405 id=405 data-nosnippet>405</a>  <span class="macro">format!</span>(
-<a href=#406 id=406 data-nosnippet>406</a>    <span class="string">"no dump matches this TeX tree and none could be built ({reason}; remove {} to retry)"</span>,
-<a href=#407 id=407 data-nosnippet>407</a>    path.display()
-<a href=#408 id=408 data-nosnippet>408</a>  )
-<a href=#409 id=409 data-nosnippet>409</a>}
-<a href=#410 id=410 data-nosnippet>410</a>
-<a href=#411 id=411 data-nosnippet>411</a><span class="doccomment">/// Where dumps built here go: `$LATEXML_FORMAT_CACHE`, else the user's cache directory
-<a href=#412 id=412 data-nosnippet>412</a>/// (`$XDG_CACHE_HOME`, `~/.cache`, when absolute), else the temp dir under the user's id — one
-<a href=#413 id=413 data-nosnippet>413</a>/// directory per engine build and TeX tree, so a process reuses what an earlier one built. The build
-<a href=#414 id=414 data-nosnippet>414</a>/// is the executable's size and modification time beside the version: the embedded git revision is
-<a href=#415 id=415 data-nosnippet>415</a>/// the one `build.rs` last saw, and a dump is the engine's as much as the tree's. Absolute, as the
-<a href=#416 id=416 data-nosnippet>416</a>/// build runs in it.
-<a href=#417 id=417 data-nosnippet>417</a></span><span class="kw">fn </span>cache_dir() -&gt; <span class="prelude-ty">Result</span>&lt;PathBuf, String&gt; {
-<a href=#418 id=418 data-nosnippet>418</a>  <span class="kw">let </span>absolute_var = |name: <span class="kw-2">&amp;</span>str| {
-<a href=#419 id=419 data-nosnippet>419</a>    std::env::var_os(name)
-<a href=#420 id=420 data-nosnippet>420</a>      .map(PathBuf::from)
-<a href=#421 id=421 data-nosnippet>421</a>      .filter(|dir| dir.is_absolute())
-<a href=#422 id=422 data-nosnippet>422</a>  };
-<a href=#423 id=423 data-nosnippet>423</a>  <span class="kw">let </span>base = std::env::var_os(<span class="string">"LATEXML_FORMAT_CACHE"</span>)
-<a href=#424 id=424 data-nosnippet>424</a>    .map(PathBuf::from)
-<a href=#425 id=425 data-nosnippet>425</a>    .or_else(|| absolute_var(<span class="string">"XDG_CACHE_HOME"</span>).map(|dir| dir.join(<span class="string">"latexml-oxide/formats"</span>)))
-<a href=#426 id=426 data-nosnippet>426</a>    .or_else(|| absolute_var(<span class="string">"HOME"</span>).map(|dir| dir.join(<span class="string">".cache/latexml-oxide/formats"</span>)))
-<a href=#427 id=427 data-nosnippet>427</a>    .unwrap_or_else(|| std::env::temp_dir().join(<span class="macro">format!</span>(<span class="string">"latexml-oxide-formats-{}"</span>, user_id())));
-<a href=#428 id=428 data-nosnippet>428</a>  <span class="kw">let </span>base = std::path::absolute(<span class="kw-2">&amp;</span>base)
-<a href=#429 id=429 data-nosnippet>429</a>    .map_err(|e| <span class="macro">format!</span>(<span class="string">"cannot place the format cache {}: {e}"</span>, base.display()))<span class="question-mark">?</span>;
-<a href=#430 id=430 data-nosnippet>430</a>  <span class="kw">let </span>tree: String = [<span class="string">"plain"</span>, <span class="string">"latex"</span>]
-<a href=#431 id=431 data-nosnippet>431</a>    .into_iter()
-<a href=#432 id=432 data-nosnippet>432</a>    .filter_map(dump_paths::runtime_source_stamps)
-<a href=#433 id=433 data-nosnippet>433</a>    .flatten()
-<a href=#434 id=434 data-nosnippet>434</a>    .map(|stamp| <span class="macro">format!</span>(<span class="string">"{:08x}"</span>, stamp.checksum))
-<a href=#435 id=435 data-nosnippet>435</a>    .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
-<a href=#436 id=436 data-nosnippet>436</a>    .join(<span class="string">"-"</span>);
-<a href=#437 id=437 data-nosnippet>437</a>  <span class="kw">let </span>build = std::env::current_exe()
-<a href=#438 id=438 data-nosnippet>438</a>    .and_then(std::fs::metadata)
-<a href=#439 id=439 data-nosnippet>439</a>    .map(|meta| {
-<a href=#440 id=440 data-nosnippet>440</a>      <span class="kw">let </span>modified = meta
-<a href=#441 id=441 data-nosnippet>441</a>        .modified()
-<a href=#442 id=442 data-nosnippet>442</a>        .ok()
-<a href=#443 id=443 data-nosnippet>443</a>        .and_then(|time| time.duration_since(std::time::UNIX_EPOCH).ok())
-<a href=#444 id=444 data-nosnippet>444</a>        .map_or(<span class="number">0</span>, |since| since.as_nanos());
-<a href=#445 id=445 data-nosnippet>445</a>      <span class="macro">format!</span>(<span class="string">"{:x}-{modified:x}"</span>, meta.len())
-<a href=#446 id=446 data-nosnippet>446</a>    })
-<a href=#447 id=447 data-nosnippet>447</a>    .unwrap_or_default();
-<a href=#448 id=448 data-nosnippet>448</a>  <span class="prelude-val">Ok</span>(base.join(<span class="macro">format!</span>(<span class="string">"{}-{build}-{tree}"</span>, <span class="kw">crate</span>::identity::VERSION)))
-<a href=#449 id=449 data-nosnippet>449</a>}
-<a href=#450 id=450 data-nosnippet>450</a>
-<a href=#451 id=451 data-nosnippet>451</a><span class="doccomment">/// The cache's `kind` dump for this tree and its year, if this user built it: a dump is loaded as
-<a href=#452 id=452 data-nosnippet>452</a>/// the format, so one in a directory or file another user could have written is not used.
-<a href=#453 id=453 data-nosnippet>453</a></span><span class="kw">fn </span>cached_dump(dir: <span class="kw-2">&amp;</span>Path, kind: <span class="kw-2">&amp;</span>str, year: u32) -&gt; <span class="prelude-ty">Option</span>&lt;(PathBuf, u32)&gt; {
-<a href=#454 id=454 data-nosnippet>454</a>  <span class="kw">if </span>!trusted_dir(dir) {
-<a href=#455 id=455 data-nosnippet>455</a>    <span class="kw">return </span><span class="prelude-val">None</span>;
-<a href=#456 id=456 data-nosnippet>456</a>  }
-<a href=#457 id=457 data-nosnippet>457</a>  dump_paths::resolve_versioned_in_dir(dir, kind, <span class="prelude-val">Some</span>(year))
-<a href=#458 id=458 data-nosnippet>458</a>    .filter(|(path, <span class="kw">_</span>)| private_to_user(path))
-<a href=#459 id=459 data-nosnippet>459</a>}
-<a href=#460 id=460 data-nosnippet>460</a>
-<a href=#461 id=461 data-nosnippet>461</a><span class="doccomment">/// The failure an earlier build of the `kind` format into `dir` recorded, if its mark has not lapsed
-<a href=#462 id=462 data-nosnippet>462</a>/// ([`FAILED_LAPSE`]); a lapsed mark is removed (no count is kept beside a mark, see `mark_failed`).
-<a href=#463 id=463 data-nosnippet>463</a></span><span class="kw">fn </span>failed_before(dir: <span class="kw-2">&amp;</span>Path, kind: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;String&gt; {
-<a href=#464 id=464 data-nosnippet>464</a>  <span class="kw">let </span>path = kind_file(dir, FAILED, kind);
-<a href=#465 id=465 data-nosnippet>465</a>  <span class="kw">let </span>reason = std::fs::read_to_string(<span class="kw-2">&amp;</span>path).ok()<span class="question-mark">?</span>;
-<a href=#466 id=466 data-nosnippet>466</a>  <span class="kw">let </span>lapsed = std::fs::metadata(<span class="kw-2">&amp;</span>path)
-<a href=#467 id=467 data-nosnippet>467</a>    .and_then(|meta| meta.modified())
-<a href=#468 id=468 data-nosnippet>468</a>    .ok()
-<a href=#469 id=469 data-nosnippet>469</a>    .and_then(|marked| marked.elapsed().ok())
-<a href=#470 id=470 data-nosnippet>470</a>    .is_some_and(|age| age &gt; FAILED_LAPSE);
-<a href=#471 id=471 data-nosnippet>471</a>  <span class="kw">if </span>lapsed {
-<a href=#472 id=472 data-nosnippet>472</a>    <span class="kw">let _ </span>= std::fs::remove_file(<span class="kw-2">&amp;</span>path);
-<a href=#473 id=473 data-nosnippet>473</a>    <span class="kw">return </span><span class="prelude-val">None</span>;
-<a href=#474 id=474 data-nosnippet>474</a>  }
-<a href=#475 id=475 data-nosnippet>475</a>  <span class="prelude-val">Some</span>(failure_message(<span class="kw-2">&amp;</span>path, <span class="kw-2">&amp;</span>reason))
-<a href=#476 id=476 data-nosnippet>476</a>}
-<a href=#477 id=477 data-nosnippet>477</a>
-<a href=#478 id=478 data-nosnippet>478</a><span class="doccomment">/// Takes `dir`'s build lock, waiting up to [`LOCK_WAIT`] for a process building there.
-<a href=#479 id=479 data-nosnippet>479</a></span><span class="kw">fn </span>lock_dir(dir: <span class="kw-2">&amp;</span>Path) -&gt; <span class="prelude-ty">Result</span>&lt;std::fs::File, String&gt; {
-<a href=#480 id=480 data-nosnippet>480</a>  <span class="kw">let </span>file = std::fs::File::create(dir.join(<span class="string">".lock"</span>))
-<a href=#481 id=481 data-nosnippet>481</a>    .map_err(|e| <span class="macro">format!</span>(<span class="string">"cannot lock {}: {e}"</span>, dir.display()))<span class="question-mark">?</span>;
-<a href=#482 id=482 data-nosnippet>482</a>  <span class="kw">let </span>deadline = Instant::now() + LOCK_WAIT;
-<a href=#483 id=483 data-nosnippet>483</a>  <span class="kw">loop </span>{
-<a href=#484 id=484 data-nosnippet>484</a>    <span class="kw">match </span>file.try_lock() {
-<a href=#485 id=485 data-nosnippet>485</a>      <span class="prelude-val">Ok</span>(()) =&gt; <span class="kw">return </span><span class="prelude-val">Ok</span>(file),
-<a href=#486 id=486 data-nosnippet>486</a>      <span class="prelude-val">Err</span>(std::fs::TryLockError::WouldBlock) <span class="kw">if </span>Instant::now() &lt; deadline =&gt; {
-<a href=#487 id=487 data-nosnippet>487</a>        std::thread::sleep(Duration::from_millis(<span class="number">100</span>));
-<a href=#488 id=488 data-nosnippet>488</a>      },
-<a href=#489 id=489 data-nosnippet>489</a>      <span class="prelude-val">Err</span>(std::fs::TryLockError::WouldBlock) =&gt; {
-<a href=#490 id=490 data-nosnippet>490</a>        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(
-<a href=#491 id=491 data-nosnippet>491</a>          <span class="string">"another process has been building into {} for {} s"</span>,
-<a href=#492 id=492 data-nosnippet>492</a>          dir.display(),
-<a href=#493 id=493 data-nosnippet>493</a>          LOCK_WAIT.as_secs()
-<a href=#494 id=494 data-nosnippet>494</a>        ));
+<a href=#275 id=275 data-nosnippet>275</a>      <span class="comment">// A build that failed while this process waited is not tried again at once: a passing
+<a href=#276 id=276 data-nosnippet>276</a>      // failure would likely recur, and a later process retries it.
+<a href=#277 id=277 data-nosnippet>277</a>      </span><span class="kw">let </span>now = attempts_text(<span class="kw-2">&amp;</span>dir, kind);
+<a href=#278 id=278 data-nosnippet>278</a>      <span class="kw">if </span>now.is_some() &amp;&amp; now != seen {
+<a href=#279 id=279 data-nosnippet>279</a>        reasons.push(previous_attempts(<span class="kw-2">&amp;</span>dir, kind).<span class="number">1</span>);
+<a href=#280 id=280 data-nosnippet>280</a>        <span class="kw">continue</span>;
+<a href=#281 id=281 data-nosnippet>281</a>      }
+<a href=#282 id=282 data-nosnippet>282</a>      <span class="kw">if let </span><span class="prelude-val">Err</span>(reason) = attempt(kind, year, <span class="kw-2">&amp;</span>dir, <span class="kw-2">&amp;</span>use_cached) {
+<a href=#283 id=283 data-nosnippet>283</a>        reasons.push(reason);
+<a href=#284 id=284 data-nosnippet>284</a>      }
+<a href=#285 id=285 data-nosnippet>285</a>    }
+<a href=#286 id=286 data-nosnippet>286</a>  }
+<a href=#287 id=287 data-nosnippet>287</a>  <span class="kw">if </span>reasons.is_empty() {
+<a href=#288 id=288 data-nosnippet>288</a>    <span class="prelude-val">Ok</span>(())
+<a href=#289 id=289 data-nosnippet>289</a>  } <span class="kw">else </span>{
+<a href=#290 id=290 data-nosnippet>290</a>    <span class="prelude-val">Err</span>(reasons.join(<span class="string">"; "</span>))
+<a href=#291 id=291 data-nosnippet>291</a>  }
+<a href=#292 id=292 data-nosnippet>292</a>}
+<a href=#293 id=293 data-nosnippet>293</a>
+<a href=#294 id=294 data-nosnippet>294</a><span class="doccomment">/// Builds the `kind` dump into `dir`, counting it until it succeeds and marking the format
+<a href=#295 id=295 data-nosnippet>295</a>/// [`FAILED`] after [`MAX_ATTEMPTS`] builds in a row that did not.
+<a href=#296 id=296 data-nosnippet>296</a></span><span class="kw">fn </span>attempt(
+<a href=#297 id=297 data-nosnippet>297</a>  kind: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str,
+<a href=#298 id=298 data-nosnippet>298</a>  year: u32,
+<a href=#299 id=299 data-nosnippet>299</a>  dir: <span class="kw-2">&amp;</span>Path,
+<a href=#300 id=300 data-nosnippet>300</a>  use_cached: <span class="kw-2">&amp;</span><span class="kw">dyn </span>Fn(<span class="kw-2">&amp;</span>str) -&gt; bool,
+<a href=#301 id=301 data-nosnippet>301</a>) -&gt; <span class="prelude-ty">Result</span>&lt;(), String&gt; {
+<a href=#302 id=302 data-nosnippet>302</a>  <span class="kw">let </span>(failed, last_reason) = previous_attempts(dir, kind);
+<a href=#303 id=303 data-nosnippet>303</a>  <span class="kw">if </span>failed &gt;= MAX_ATTEMPTS {
+<a href=#304 id=304 data-nosnippet>304</a>    <span class="kw">return </span><span class="prelude-val">Err</span>(mark_failed(dir, kind, <span class="kw-2">&amp;</span>last_reason));
+<a href=#305 id=305 data-nosnippet>305</a>  }
+<a href=#306 id=306 data-nosnippet>306</a>  <span class="comment">// Installed before the build leaves anything to undo, so an interrupt always finds what it left.
+<a href=#307 id=307 data-nosnippet>307</a>  </span><span class="kw">if </span>CANCEL_ON_INTERRUPT.load(Ordering::Acquire) {
+<a href=#308 id=308 data-nosnippet>308</a>    install_interrupt_handler();
+<a href=#309 id=309 data-nosnippet>309</a>  }
+<a href=#310 id=310 data-nosnippet>310</a>  {
+<a href=#311 id=311 data-nosnippet>311</a>    <span class="comment">// What an interrupt undoes is recorded and its note written under one lock: an interrupt
+<a href=#312 id=312 data-nosnippet>312</a>    // meanwhile waits, then undoes both (it could otherwise undo before the note was written).
+<a href=#313 id=313 data-nosnippet>313</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>slot = IN_FLIGHT.lock().unwrap_or_else(PoisonError::into_inner);
+<a href=#314 id=314 data-nosnippet>314</a>    <span class="kw-2">*</span>slot = <span class="prelude-val">Some</span>(InFlight {
+<a href=#315 id=315 data-nosnippet>315</a>      attempts: kind_file(dir, ATTEMPTS, kind),
+<a href=#316 id=316 data-nosnippet>316</a>      before:   attempts_text(dir, kind),
+<a href=#317 id=317 data-nosnippet>317</a>      partial:  partial_dump(dir, kind, year),
+<a href=#318 id=318 data-nosnippet>318</a>    });
+<a href=#319 id=319 data-nosnippet>319</a>    <span class="kw">if let </span><span class="prelude-val">Err</span>(reason) = note_attempt(
+<a href=#320 id=320 data-nosnippet>320</a>      dir,
+<a href=#321 id=321 data-nosnippet>321</a>      kind,
+<a href=#322 id=322 data-nosnippet>322</a>      failed + <span class="number">1</span>,
+<a href=#323 id=323 data-nosnippet>323</a>      <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"the {kind} format build died with its process"</span>),
+<a href=#324 id=324 data-nosnippet>324</a>    ) {
+<a href=#325 id=325 data-nosnippet>325</a>      <span class="kw-2">*</span>slot = <span class="prelude-val">None</span>;
+<a href=#326 id=326 data-nosnippet>326</a>      <span class="kw">return </span><span class="prelude-val">Err</span>(reason);
+<a href=#327 id=327 data-nosnippet>327</a>    }
+<a href=#328 id=328 data-nosnippet>328</a>  }
+<a href=#329 id=329 data-nosnippet>329</a>  note(
+<a href=#330 id=330 data-nosnippet>330</a>    log::Level::Info,
+<a href=#331 id=331 data-nosnippet>331</a>    <span class="macro">format_args!</span>(
+<a href=#332 id=332 data-nosnippet>332</a>      <span class="string">"[format_dumps] no {kind} dump matches this TeX tree; building one into {} (once for this tree; later \
+<a href=#333 id=333 data-nosnippet>333</a>     conversions reuse it)"</span>,
+<a href=#334 id=334 data-nosnippet>334</a>      dir.display()
+<a href=#335 id=335 data-nosnippet>335</a>    ),
+<a href=#336 id=336 data-nosnippet>336</a>  );
+<a href=#337 id=337 data-nosnippet>337</a>  <span class="kw">let </span>built = build(kind, year, dir);
+<a href=#338 id=338 data-nosnippet>338</a>  <span class="comment">// The build has ended (a published dump cleared the record as it was published, `publish`): what
+<a href=#339 id=339 data-nosnippet>339</a>  // follows records its outcome, which an interrupt no longer undoes.
+<a href=#340 id=340 data-nosnippet>340</a>  </span>set_in_flight(<span class="prelude-val">None</span>);
+<a href=#341 id=341 data-nosnippet>341</a>  <span class="kw">let </span>built = built.and_then(|()| {
+<a href=#342 id=342 data-nosnippet>342</a>    <span class="kw">if </span>use_cached(kind) {
+<a href=#343 id=343 data-nosnippet>343</a>      <span class="prelude-val">Ok</span>(())
+<a href=#344 id=344 data-nosnippet>344</a>    } <span class="kw">else </span>{
+<a href=#345 id=345 data-nosnippet>345</a>      <span class="prelude-val">Err</span>(<span class="macro">format!</span>(
+<a href=#346 id=346 data-nosnippet>346</a>        <span class="string">"the {kind} dump built into {} does not match this TeX tree"</span>,
+<a href=#347 id=347 data-nosnippet>347</a>        dir.display()
+<a href=#348 id=348 data-nosnippet>348</a>      ))
+<a href=#349 id=349 data-nosnippet>349</a>    }
+<a href=#350 id=350 data-nosnippet>350</a>  });
+<a href=#351 id=351 data-nosnippet>351</a>  <span class="kw">match </span>built {
+<a href=#352 id=352 data-nosnippet>352</a>    <span class="prelude-val">Ok</span>(()) =&gt; {
+<a href=#353 id=353 data-nosnippet>353</a>      <span class="kw">let _ </span>= std::fs::remove_file(kind_file(dir, ATTEMPTS, kind));
+<a href=#354 id=354 data-nosnippet>354</a>      <span class="prelude-val">Ok</span>(())
+<a href=#355 id=355 data-nosnippet>355</a>    },
+<a href=#356 id=356 data-nosnippet>356</a>    <span class="prelude-val">Err</span>(reason) =&gt; {
+<a href=#357 id=357 data-nosnippet>357</a>      <span class="kw">let _ </span>= note_attempt(dir, kind, failed + <span class="number">1</span>, <span class="kw-2">&amp;</span>reason);
+<a href=#358 id=358 data-nosnippet>358</a>      <span class="kw">if </span>failed + <span class="number">1 </span>&gt;= MAX_ATTEMPTS {
+<a href=#359 id=359 data-nosnippet>359</a>        <span class="prelude-val">Err</span>(mark_failed(dir, kind, <span class="kw-2">&amp;</span>reason))
+<a href=#360 id=360 data-nosnippet>360</a>      } <span class="kw">else </span>{
+<a href=#361 id=361 data-nosnippet>361</a>        <span class="prelude-val">Err</span>(reason)
+<a href=#362 id=362 data-nosnippet>362</a>      }
+<a href=#363 id=363 data-nosnippet>363</a>    },
+<a href=#364 id=364 data-nosnippet>364</a>  }
+<a href=#365 id=365 data-nosnippet>365</a>}
+<a href=#366 id=366 data-nosnippet>366</a>
+<a href=#367 id=367 data-nosnippet>367</a><span class="doccomment">/// `dir`'s `marker` file (`.attempts`, `.failed`) for the `kind` format.
+<a href=#368 id=368 data-nosnippet>368</a></span><span class="kw">fn </span>kind_file(dir: <span class="kw-2">&amp;</span>Path, marker: <span class="kw-2">&amp;</span>str, kind: <span class="kw-2">&amp;</span>str) -&gt; PathBuf {
+<a href=#369 id=369 data-nosnippet>369</a>  dir.join(<span class="macro">format!</span>(<span class="string">"{marker}.{kind}"</span>))
+<a href=#370 id=370 data-nosnippet>370</a>}
+<a href=#371 id=371 data-nosnippet>371</a>
+<a href=#372 id=372 data-nosnippet>372</a><span class="doccomment">/// What the builds of the `kind` format into `dir` that have not succeeded have recorded.
+<a href=#373 id=373 data-nosnippet>373</a></span><span class="kw">fn </span>attempts_text(dir: <span class="kw-2">&amp;</span>Path, kind: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;String&gt; {
+<a href=#374 id=374 data-nosnippet>374</a>  std::fs::read_to_string(kind_file(dir, ATTEMPTS, kind)).ok()
+<a href=#375 id=375 data-nosnippet>375</a>}
+<a href=#376 id=376 data-nosnippet>376</a>
+<a href=#377 id=377 data-nosnippet>377</a><span class="doccomment">/// The builds of the `kind` format into `dir` that have not succeeded in a row so far, and the last
+<a href=#378 id=378 data-nosnippet>378</a>/// one's reason.
+<a href=#379 id=379 data-nosnippet>379</a></span><span class="kw">fn </span>previous_attempts(dir: <span class="kw-2">&amp;</span>Path, kind: <span class="kw-2">&amp;</span>str) -&gt; (u32, String) {
+<a href=#380 id=380 data-nosnippet>380</a>  <span class="kw">let </span><span class="prelude-val">Some</span>(text) = attempts_text(dir, kind) <span class="kw">else </span>{
+<a href=#381 id=381 data-nosnippet>381</a>    <span class="kw">return </span>(<span class="number">0</span>, String::new());
+<a href=#382 id=382 data-nosnippet>382</a>  };
+<a href=#383 id=383 data-nosnippet>383</a>  <span class="kw">let </span>(count, reason) = text.split_once(<span class="string">'\t'</span>).unwrap_or((<span class="kw-2">&amp;</span>text, <span class="string">""</span>));
+<a href=#384 id=384 data-nosnippet>384</a>  <span class="kw">let </span>reason = <span class="kw">if </span>reason.is_empty() {
+<a href=#385 id=385 data-nosnippet>385</a>    <span class="macro">format!</span>(<span class="string">"the {kind} format build did not succeed"</span>)
+<a href=#386 id=386 data-nosnippet>386</a>  } <span class="kw">else </span>{
+<a href=#387 id=387 data-nosnippet>387</a>    reason.to_string()
+<a href=#388 id=388 data-nosnippet>388</a>  };
+<a href=#389 id=389 data-nosnippet>389</a>  (count.trim().parse().unwrap_or(<span class="number">1</span>), reason)
+<a href=#390 id=390 data-nosnippet>390</a>}
+<a href=#391 id=391 data-nosnippet>391</a>
+<a href=#392 id=392 data-nosnippet>392</a><span class="doccomment">/// Records that the `count`th build of the `kind` format into `dir` in a row has not succeeded
+<a href=#393 id=393 data-nosnippet>393</a>/// (yet), and why.
+<a href=#394 id=394 data-nosnippet>394</a></span><span class="kw">fn </span>note_attempt(dir: <span class="kw-2">&amp;</span>Path, kind: <span class="kw-2">&amp;</span>str, count: u32, reason: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;(), String&gt; {
+<a href=#395 id=395 data-nosnippet>395</a>  <span class="kw">let </span>path = kind_file(dir, ATTEMPTS, kind);
+<a href=#396 id=396 data-nosnippet>396</a>  std::fs::write(<span class="kw-2">&amp;</span>path, <span class="macro">format!</span>(<span class="string">"{count}\t{reason}"</span>))
+<a href=#397 id=397 data-nosnippet>397</a>    .map_err(|e| <span class="macro">format!</span>(<span class="string">"cannot write {}: {e}"</span>, path.display()))
+<a href=#398 id=398 data-nosnippet>398</a>}
+<a href=#399 id=399 data-nosnippet>399</a>
+<a href=#400 id=400 data-nosnippet>400</a><span class="doccomment">/// Marks the `kind` format as one that could not be built into `dir`, and says so. The mark holds
+<a href=#401 id=401 data-nosnippet>401</a>/// the reason in place of the count, so removing it gives the format fresh attempts.
+<a href=#402 id=402 data-nosnippet>402</a></span><span class="kw">fn </span>mark_failed(dir: <span class="kw-2">&amp;</span>Path, kind: <span class="kw-2">&amp;</span>str, reason: <span class="kw-2">&amp;</span>str) -&gt; String {
+<a href=#403 id=403 data-nosnippet>403</a>  <span class="kw">let </span>path = kind_file(dir, FAILED, kind);
+<a href=#404 id=404 data-nosnippet>404</a>  <span class="kw">if </span>std::fs::write(<span class="kw-2">&amp;</span>path, reason).is_ok() {
+<a href=#405 id=405 data-nosnippet>405</a>    <span class="kw">let _ </span>= std::fs::remove_file(kind_file(dir, ATTEMPTS, kind));
+<a href=#406 id=406 data-nosnippet>406</a>  }
+<a href=#407 id=407 data-nosnippet>407</a>  failure_message(<span class="kw-2">&amp;</span>path, reason)
+<a href=#408 id=408 data-nosnippet>408</a>}
+<a href=#409 id=409 data-nosnippet>409</a>
+<a href=#410 id=410 data-nosnippet>410</a><span class="doccomment">/// The failure a [`FAILED`] mark at `path` records, with how to retry.
+<a href=#411 id=411 data-nosnippet>411</a></span><span class="kw">fn </span>failure_message(path: <span class="kw-2">&amp;</span>Path, reason: <span class="kw-2">&amp;</span>str) -&gt; String {
+<a href=#412 id=412 data-nosnippet>412</a>  <span class="macro">format!</span>(
+<a href=#413 id=413 data-nosnippet>413</a>    <span class="string">"no dump matches this TeX tree and none could be built ({reason}; remove {} to retry)"</span>,
+<a href=#414 id=414 data-nosnippet>414</a>    path.display()
+<a href=#415 id=415 data-nosnippet>415</a>  )
+<a href=#416 id=416 data-nosnippet>416</a>}
+<a href=#417 id=417 data-nosnippet>417</a>
+<a href=#418 id=418 data-nosnippet>418</a><span class="doccomment">/// Where dumps built here go: `$LATEXML_FORMAT_CACHE`, else the user's cache directory
+<a href=#419 id=419 data-nosnippet>419</a>/// (`$XDG_CACHE_HOME`, `~/.cache`, when absolute), else the temp dir under the user's id — one
+<a href=#420 id=420 data-nosnippet>420</a>/// directory per engine build and TeX tree, so a process reuses what an earlier one built. The build
+<a href=#421 id=421 data-nosnippet>421</a>/// is the executable's size and modification time beside the version: the embedded git revision is
+<a href=#422 id=422 data-nosnippet>422</a>/// the one `build.rs` last saw, and a dump is the engine's as much as the tree's. Absolute, as the
+<a href=#423 id=423 data-nosnippet>423</a>/// build runs in it.
+<a href=#424 id=424 data-nosnippet>424</a></span><span class="kw">fn </span>cache_dir() -&gt; <span class="prelude-ty">Result</span>&lt;PathBuf, String&gt; {
+<a href=#425 id=425 data-nosnippet>425</a>  <span class="kw">let </span>absolute_var = |name: <span class="kw-2">&amp;</span>str| {
+<a href=#426 id=426 data-nosnippet>426</a>    std::env::var_os(name)
+<a href=#427 id=427 data-nosnippet>427</a>      .map(PathBuf::from)
+<a href=#428 id=428 data-nosnippet>428</a>      .filter(|dir| dir.is_absolute())
+<a href=#429 id=429 data-nosnippet>429</a>  };
+<a href=#430 id=430 data-nosnippet>430</a>  <span class="kw">let </span>base = std::env::var_os(<span class="string">"LATEXML_FORMAT_CACHE"</span>)
+<a href=#431 id=431 data-nosnippet>431</a>    .map(PathBuf::from)
+<a href=#432 id=432 data-nosnippet>432</a>    .or_else(|| absolute_var(<span class="string">"XDG_CACHE_HOME"</span>).map(|dir| dir.join(<span class="string">"latexml-oxide/formats"</span>)))
+<a href=#433 id=433 data-nosnippet>433</a>    .or_else(|| absolute_var(<span class="string">"HOME"</span>).map(|dir| dir.join(<span class="string">".cache/latexml-oxide/formats"</span>)))
+<a href=#434 id=434 data-nosnippet>434</a>    .unwrap_or_else(|| std::env::temp_dir().join(<span class="macro">format!</span>(<span class="string">"latexml-oxide-formats-{}"</span>, user_id())));
+<a href=#435 id=435 data-nosnippet>435</a>  <span class="kw">let </span>base = std::path::absolute(<span class="kw-2">&amp;</span>base)
+<a href=#436 id=436 data-nosnippet>436</a>    .map_err(|e| <span class="macro">format!</span>(<span class="string">"cannot place the format cache {}: {e}"</span>, base.display()))<span class="question-mark">?</span>;
+<a href=#437 id=437 data-nosnippet>437</a>  <span class="kw">let </span>tree: String = [<span class="string">"plain"</span>, <span class="string">"latex"</span>]
+<a href=#438 id=438 data-nosnippet>438</a>    .into_iter()
+<a href=#439 id=439 data-nosnippet>439</a>    .filter_map(dump_paths::runtime_source_stamps)
+<a href=#440 id=440 data-nosnippet>440</a>    .flatten()
+<a href=#441 id=441 data-nosnippet>441</a>    .map(|stamp| <span class="macro">format!</span>(<span class="string">"{:08x}"</span>, stamp.checksum))
+<a href=#442 id=442 data-nosnippet>442</a>    .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
+<a href=#443 id=443 data-nosnippet>443</a>    .join(<span class="string">"-"</span>);
+<a href=#444 id=444 data-nosnippet>444</a>  <span class="kw">let </span>build = std::env::current_exe()
+<a href=#445 id=445 data-nosnippet>445</a>    .and_then(std::fs::metadata)
+<a href=#446 id=446 data-nosnippet>446</a>    .map(|meta| {
+<a href=#447 id=447 data-nosnippet>447</a>      <span class="kw">let </span>modified = meta
+<a href=#448 id=448 data-nosnippet>448</a>        .modified()
+<a href=#449 id=449 data-nosnippet>449</a>        .ok()
+<a href=#450 id=450 data-nosnippet>450</a>        .and_then(|time| time.duration_since(std::time::UNIX_EPOCH).ok())
+<a href=#451 id=451 data-nosnippet>451</a>        .map_or(<span class="number">0</span>, |since| since.as_nanos());
+<a href=#452 id=452 data-nosnippet>452</a>      <span class="macro">format!</span>(<span class="string">"{:x}-{modified:x}"</span>, meta.len())
+<a href=#453 id=453 data-nosnippet>453</a>    })
+<a href=#454 id=454 data-nosnippet>454</a>    .unwrap_or_default();
+<a href=#455 id=455 data-nosnippet>455</a>  <span class="prelude-val">Ok</span>(base.join(<span class="macro">format!</span>(<span class="string">"{}-{build}-{tree}"</span>, <span class="kw">crate</span>::identity::VERSION)))
+<a href=#456 id=456 data-nosnippet>456</a>}
+<a href=#457 id=457 data-nosnippet>457</a>
+<a href=#458 id=458 data-nosnippet>458</a><span class="doccomment">/// The cache's `kind` dump for this tree and its year, if this user built it: a dump is loaded as
+<a href=#459 id=459 data-nosnippet>459</a>/// the format, so one in a directory or file another user could have written is not used.
+<a href=#460 id=460 data-nosnippet>460</a></span><span class="kw">fn </span>cached_dump(dir: <span class="kw-2">&amp;</span>Path, kind: <span class="kw-2">&amp;</span>str, year: u32) -&gt; <span class="prelude-ty">Option</span>&lt;(PathBuf, u32)&gt; {
+<a href=#461 id=461 data-nosnippet>461</a>  <span class="kw">if </span>!trusted_dir(dir) {
+<a href=#462 id=462 data-nosnippet>462</a>    <span class="kw">return </span><span class="prelude-val">None</span>;
+<a href=#463 id=463 data-nosnippet>463</a>  }
+<a href=#464 id=464 data-nosnippet>464</a>  dump_paths::resolve_versioned_in_dir(dir, kind, <span class="prelude-val">Some</span>(year))
+<a href=#465 id=465 data-nosnippet>465</a>    .filter(|(path, <span class="kw">_</span>)| private_to_user(path))
+<a href=#466 id=466 data-nosnippet>466</a>}
+<a href=#467 id=467 data-nosnippet>467</a>
+<a href=#468 id=468 data-nosnippet>468</a><span class="doccomment">/// The failure an earlier build of the `kind` format into `dir` recorded, if its mark has not lapsed
+<a href=#469 id=469 data-nosnippet>469</a>/// ([`FAILED_LAPSE`]); a lapsed mark is removed (no count is kept beside a mark, see `mark_failed`).
+<a href=#470 id=470 data-nosnippet>470</a></span><span class="kw">fn </span>failed_before(dir: <span class="kw-2">&amp;</span>Path, kind: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;String&gt; {
+<a href=#471 id=471 data-nosnippet>471</a>  <span class="kw">let </span>path = kind_file(dir, FAILED, kind);
+<a href=#472 id=472 data-nosnippet>472</a>  <span class="kw">let </span>reason = std::fs::read_to_string(<span class="kw-2">&amp;</span>path).ok()<span class="question-mark">?</span>;
+<a href=#473 id=473 data-nosnippet>473</a>  <span class="kw">let </span>lapsed = std::fs::metadata(<span class="kw-2">&amp;</span>path)
+<a href=#474 id=474 data-nosnippet>474</a>    .and_then(|meta| meta.modified())
+<a href=#475 id=475 data-nosnippet>475</a>    .ok()
+<a href=#476 id=476 data-nosnippet>476</a>    .and_then(|marked| marked.elapsed().ok())
+<a href=#477 id=477 data-nosnippet>477</a>    .is_some_and(|age| age &gt; FAILED_LAPSE);
+<a href=#478 id=478 data-nosnippet>478</a>  <span class="kw">if </span>lapsed {
+<a href=#479 id=479 data-nosnippet>479</a>    <span class="kw">let _ </span>= std::fs::remove_file(<span class="kw-2">&amp;</span>path);
+<a href=#480 id=480 data-nosnippet>480</a>    <span class="kw">return </span><span class="prelude-val">None</span>;
+<a href=#481 id=481 data-nosnippet>481</a>  }
+<a href=#482 id=482 data-nosnippet>482</a>  <span class="prelude-val">Some</span>(failure_message(<span class="kw-2">&amp;</span>path, <span class="kw-2">&amp;</span>reason))
+<a href=#483 id=483 data-nosnippet>483</a>}
+<a href=#484 id=484 data-nosnippet>484</a>
+<a href=#485 id=485 data-nosnippet>485</a><span class="doccomment">/// Takes `dir`'s build lock, waiting up to [`LOCK_WAIT`] for a process building there.
+<a href=#486 id=486 data-nosnippet>486</a></span><span class="kw">fn </span>lock_dir(dir: <span class="kw-2">&amp;</span>Path) -&gt; <span class="prelude-ty">Result</span>&lt;std::fs::File, String&gt; {
+<a href=#487 id=487 data-nosnippet>487</a>  <span class="kw">let </span>file = std::fs::File::create(dir.join(<span class="string">".lock"</span>))
+<a href=#488 id=488 data-nosnippet>488</a>    .map_err(|e| <span class="macro">format!</span>(<span class="string">"cannot lock {}: {e}"</span>, dir.display()))<span class="question-mark">?</span>;
+<a href=#489 id=489 data-nosnippet>489</a>  <span class="kw">let </span>deadline = Instant::now() + LOCK_WAIT;
+<a href=#490 id=490 data-nosnippet>490</a>  <span class="kw">loop </span>{
+<a href=#491 id=491 data-nosnippet>491</a>    <span class="kw">match </span>file.try_lock() {
+<a href=#492 id=492 data-nosnippet>492</a>      <span class="prelude-val">Ok</span>(()) =&gt; <span class="kw">return </span><span class="prelude-val">Ok</span>(file),
+<a href=#493 id=493 data-nosnippet>493</a>      <span class="prelude-val">Err</span>(std::fs::TryLockError::WouldBlock) <span class="kw">if </span>Instant::now() &lt; deadline =&gt; {
+<a href=#494 id=494 data-nosnippet>494</a>        std::thread::sleep(Duration::from_millis(<span class="number">100</span>));
 <a href=#495 id=495 data-nosnippet>495</a>      },
-<a href=#496 id=496 data-nosnippet>496</a>      <span class="prelude-val">Err</span>(std::fs::TryLockError::Error(e)) =&gt; {
-<a href=#497 id=497 data-nosnippet>497</a>        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">"cannot lock {}: {e}"</span>, dir.display()));
-<a href=#498 id=498 data-nosnippet>498</a>      },
-<a href=#499 id=499 data-nosnippet>499</a>    }
-<a href=#500 id=500 data-nosnippet>500</a>  }
-<a href=#501 id=501 data-nosnippet>501</a>}
-<a href=#502 id=502 data-nosnippet>502</a>
-<a href=#503 id=503 data-nosnippet>503</a><span class="doccomment">/// The file this process's build writes the `kind` dump into, beside its final name in `dir`.
-<a href=#504 id=504 data-nosnippet>504</a></span><span class="kw">fn </span>partial_dump(dir: <span class="kw-2">&amp;</span>Path, kind: <span class="kw-2">&amp;</span>str, year: u32) -&gt; PathBuf {
-<a href=#505 id=505 data-nosnippet>505</a>  dir.join(<span class="macro">format!</span>(
-<a href=#506 id=506 data-nosnippet>506</a>    <span class="string">".{}.{}.partial"</span>,
-<a href=#507 id=507 data-nosnippet>507</a>    dump_paths::dump_filename(kind, year),
-<a href=#508 id=508 data-nosnippet>508</a>    std::process::id()
-<a href=#509 id=509 data-nosnippet>509</a>  ))
-<a href=#510 id=510 data-nosnippet>510</a>}
-<a href=#511 id=511 data-nosnippet>511</a>
-<a href=#512 id=512 data-nosnippet>512</a><span class="doccomment">/// Removes the partial dumps killed builds left in `dir`.
-<a href=#513 id=513 data-nosnippet>513</a></span><span class="kw">fn </span>remove_partial_dumps(dir: <span class="kw-2">&amp;</span>Path) {
-<a href=#514 id=514 data-nosnippet>514</a>  <span class="kw">let </span><span class="prelude-val">Ok</span>(entries) = std::fs::read_dir(dir) <span class="kw">else </span>{
-<a href=#515 id=515 data-nosnippet>515</a>    <span class="kw">return</span>;
-<a href=#516 id=516 data-nosnippet>516</a>  };
-<a href=#517 id=517 data-nosnippet>517</a>  <span class="kw">for </span>entry <span class="kw">in </span>entries.flatten() {
-<a href=#518 id=518 data-nosnippet>518</a>    <span class="kw">if </span>entry.file_name().to_string_lossy().ends_with(<span class="string">".partial"</span>) {
-<a href=#519 id=519 data-nosnippet>519</a>      <span class="kw">let _ </span>= std::fs::remove_file(entry.path());
-<a href=#520 id=520 data-nosnippet>520</a>    }
-<a href=#521 id=521 data-nosnippet>521</a>  }
-<a href=#522 id=522 data-nosnippet>522</a>}
-<a href=#523 id=523 data-nosnippet>523</a>
-<a href=#524 id=524 data-nosnippet>524</a><span class="doccomment">/// Builds the `kind` dump into `dir` as `--init` does, on a thread of its own: the engine's state is
-<a href=#525 id=525 data-nosnippet>525</a>/// per thread, so the build starts from a fresh one, leaves the caller's untouched, and is released
-<a href=#526 id=526 data-nosnippet>526</a>/// when it ends. Like fmtutil, it runs in a directory holding no TeX files — `dir` — as kpathsea
-<a href=#527 id=527 data-nosnippet>527</a>/// searches `.` first and a document's own copy of a format file (`./expl3-code.tex`) must not go
-<a href=#528 id=528 data-nosnippet>528</a>/// into the format; the working directory is the process's, so it is `dir` for every thread until
-<a href=#529 id=529 data-nosnippet>529</a>/// the build ends, whatever the outcome. As `tools/make_formats.sh` does, a build that logs an
-<a href=#530 id=530 data-nosnippet>530</a>/// error or a fatal one is not kept. Written beside its final name and renamed, so a concurrent
-<a href=#531 id=531 data-nosnippet>531</a>/// reader never sees half a dump.
-<a href=#532 id=532 data-nosnippet>532</a></span><span class="kw">fn </span>build(kind: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, year: u32, dir: <span class="kw-2">&amp;</span>Path) -&gt; <span class="prelude-ty">Result</span>&lt;(), String&gt; {
-<a href=#533 id=533 data-nosnippet>533</a>  <span class="kw">let </span>dest = dir.join(dump_paths::dump_filename(kind, year));
-<a href=#534 id=534 data-nosnippet>534</a>  <span class="kw">let </span>partial = partial_dump(dir, kind, year);
-<a href=#535 id=535 data-nosnippet>535</a>  <span class="kw">let </span>partial_name = partial.to_string_lossy().into_owned();
-<a href=#536 id=536 data-nosnippet>536</a>  <span class="kw">let </span>init_file = <span class="kw">if </span>kind == <span class="string">"latex" </span>{
-<a href=#537 id=537 data-nosnippet>537</a>    <span class="string">"latex.ltx"
-<a href=#538 id=538 data-nosnippet>538</a>  </span>} <span class="kw">else </span>{
-<a href=#539 id=539 data-nosnippet>539</a>    <span class="string">"plain.tex"
-<a href=#540 id=540 data-nosnippet>540</a>  </span>};
-<a href=#541 id=541 data-nosnippet>541</a>  <span class="kw">let </span>previous = std::env::current_dir().map_err(|e| <span class="macro">format!</span>(<span class="string">"no working directory: {e}"</span>))<span class="question-mark">?</span>;
-<a href=#542 id=542 data-nosnippet>542</a>  <span class="kw">let </span>workdir = dir.to_path_buf();
-<a href=#543 id=543 data-nosnippet>543</a>  <span class="kw">let </span>joined = std::thread::Builder::new()
-<a href=#544 id=544 data-nosnippet>544</a>    .name(<span class="macro">format!</span>(<span class="string">"{kind}-format"</span>))
-<a href=#545 id=545 data-nosnippet>545</a>    .stack_size(<span class="number">256 </span>* <span class="number">1024 </span>* <span class="number">1024</span>)
-<a href=#546 id=546 data-nosnippet>546</a>    .spawn(<span class="kw">move </span>|| -&gt; <span class="prelude-ty">Result</span>&lt;(), String&gt; {
-<a href=#547 id=547 data-nosnippet>547</a>      dump_paths::set_building_format(<span class="bool-val">true</span>);
-<a href=#548 id=548 data-nosnippet>548</a>      std::env::set_current_dir(<span class="kw-2">&amp;</span>workdir)
-<a href=#549 id=549 data-nosnippet>549</a>        .map_err(|e| <span class="macro">format!</span>(<span class="string">"cannot enter {}: {e}"</span>, workdir.display()))<span class="question-mark">?</span>;
-<a href=#550 id=550 data-nosnippet>550</a>      <span class="kw">let </span>opts = latexml_core::common::Config {
-<a href=#551 id=551 data-nosnippet>551</a>        bindings_dispatch: <span class="prelude-val">Some</span>(std::rc::Rc::new(latexml_package::dispatch)),
-<a href=#552 id=552 data-nosnippet>552</a>        extra_bindings_dispatch: <span class="prelude-val">Some</span>(std::rc::Rc::new(latexml_contrib::dispatch)),
-<a href=#553 id=553 data-nosnippet>553</a>        ..latexml_core::common::Config::default()
-<a href=#554 id=554 data-nosnippet>554</a>      };
-<a href=#555 id=555 data-nosnippet>555</a>      <span class="kw">let </span><span class="kw-2">mut </span>converter = <span class="kw">crate</span>::converter::Converter::from_config(opts.clone());
-<a href=#556 id=556 data-nosnippet>556</a>      <span class="kw">let </span>result = converter
-<a href=#557 id=557 data-nosnippet>557</a>        .prepare_session(<span class="kw-2">&amp;</span>opts)
-<a href=#558 id=558 data-nosnippet>558</a>        .map_err(|e| <span class="macro">format!</span>(<span class="string">"cannot prepare the {kind} format build: {e}"</span>))
-<a href=#559 id=559 data-nosnippet>559</a>        .and_then(|()| <span class="kw">crate</span>::ini_tex::dump_format(<span class="kw-2">&amp;mut </span>converter, init_file, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>partial_name)))
-<a href=#560 id=560 data-nosnippet>560</a>        .and_then(|<span class="kw">_</span>| {
-<a href=#561 id=561 data-nosnippet>561</a>          <span class="kw">let </span>counts = latexml_core::common::error::snapshot_report_counts();
-<a href=#562 id=562 data-nosnippet>562</a>          <span class="kw">if </span>counts.fatal || counts.error &gt; <span class="number">0 </span>{
-<a href=#563 id=563 data-nosnippet>563</a>            <span class="prelude-val">Err</span>(<span class="macro">format!</span>(
-<a href=#564 id=564 data-nosnippet>564</a>              <span class="string">"building the {kind} format logged {} error(s){}"</span>,
-<a href=#565 id=565 data-nosnippet>565</a>              counts.error,
-<a href=#566 id=566 data-nosnippet>566</a>              <span class="kw">if </span>counts.fatal { <span class="string">" and a fatal one" </span>} <span class="kw">else </span>{ <span class="string">"" </span>}
-<a href=#567 id=567 data-nosnippet>567</a>            ))
-<a href=#568 id=568 data-nosnippet>568</a>          } <span class="kw">else </span>{
-<a href=#569 id=569 data-nosnippet>569</a>            <span class="prelude-val">Ok</span>(())
-<a href=#570 id=570 data-nosnippet>570</a>          }
-<a href=#571 id=571 data-nosnippet>571</a>        });
-<a href=#572 id=572 data-nosnippet>572</a>      drop(converter);
-<a href=#573 id=573 data-nosnippet>573</a>      latexml_core::reset_thread_engine();
-<a href=#574 id=574 data-nosnippet>574</a>      result
-<a href=#575 id=575 data-nosnippet>575</a>    })
-<a href=#576 id=576 data-nosnippet>576</a>    .map_err(|e| <span class="macro">format!</span>(<span class="string">"cannot start the {kind} format build: {e}"</span>))<span class="question-mark">?
-<a href=#577 id=577 data-nosnippet>577</a>    </span>.join();
-<a href=#578 id=578 data-nosnippet>578</a>  <span class="kw">let </span>returned = std::env::set_current_dir(<span class="kw-2">&amp;</span>previous);
-<a href=#579 id=579 data-nosnippet>579</a>  <span class="kw">let </span>built = joined
-<a href=#580 id=580 data-nosnippet>580</a>    .map_err(|<span class="kw">_</span>| <span class="macro">format!</span>(<span class="string">"the {kind} format build panicked"</span>))
-<a href=#581 id=581 data-nosnippet>581</a>    .and_then(|built| built)
-<a href=#582 id=582 data-nosnippet>582</a>    .and_then(|()| returned.map_err(|e| <span class="macro">format!</span>(<span class="string">"cannot return to {}: {e}"</span>, previous.display())))
-<a href=#583 id=583 data-nosnippet>583</a>    .and_then(|()| publish(kind, <span class="kw-2">&amp;</span>partial, <span class="kw-2">&amp;</span>dest));
-<a href=#584 id=584 data-nosnippet>584</a>  <span class="kw">if </span>built.is_err() {
-<a href=#585 id=585 data-nosnippet>585</a>    <span class="kw">let _ </span>= std::fs::remove_file(<span class="kw-2">&amp;</span>partial);
-<a href=#586 id=586 data-nosnippet>586</a>  }
-<a href=#587 id=587 data-nosnippet>587</a>  built
-<a href=#588 id=588 data-nosnippet>588</a>}
-<a href=#589 id=589 data-nosnippet>589</a>
-<a href=#590 id=590 data-nosnippet>590</a><span class="doccomment">/// Publishes the finished `kind` dump at `partial` as `dest`. The build's [`IN_FLIGHT`] record is
-<a href=#591 id=591 data-nosnippet>591</a>/// cleared under the same lock as the rename: an interrupt in between would put the attempt note
-<a href=#592 id=592 data-nosnippet>592</a>/// from before the build back beside the finished dump; one now waits, and finds nothing to undo.
-<a href=#593 id=593 data-nosnippet>593</a></span><span class="kw">fn </span>publish(kind: <span class="kw-2">&amp;</span>str, partial: <span class="kw-2">&amp;</span>Path, dest: <span class="kw-2">&amp;</span>Path) -&gt; <span class="prelude-ty">Result</span>&lt;(), String&gt; {
-<a href=#594 id=594 data-nosnippet>594</a>  publish_read_only(partial)
-<a href=#595 id=595 data-nosnippet>595</a>    .map_err(|e| <span class="macro">format!</span>(<span class="string">"cannot set the {kind} dump's permissions: {e}"</span>))<span class="question-mark">?</span>;
-<a href=#596 id=596 data-nosnippet>596</a>  <span class="kw">let </span><span class="kw-2">mut </span>slot = IN_FLIGHT.lock().unwrap_or_else(PoisonError::into_inner);
-<a href=#597 id=597 data-nosnippet>597</a>  std::fs::rename(partial, dest)
-<a href=#598 id=598 data-nosnippet>598</a>    .map_err(|e| <span class="macro">format!</span>(<span class="string">"cannot move the {kind} dump to {}: {e}"</span>, dest.display()))<span class="question-mark">?</span>;
-<a href=#599 id=599 data-nosnippet>599</a>  <span class="kw-2">*</span>slot = <span class="prelude-val">None</span>;
-<a href=#600 id=600 data-nosnippet>600</a>  <span class="prelude-val">Ok</span>(())
-<a href=#601 id=601 data-nosnippet>601</a>}
-<a href=#602 id=602 data-nosnippet>602</a>
-<a href=#603 id=603 data-nosnippet>603</a><span class="attr">#[cfg(test)]
-<a href=#604 id=604 data-nosnippet>604</a></span><span class="kw">mod </span>tests {
-<a href=#605 id=605 data-nosnippet>605</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
-<a href=#606 id=606 data-nosnippet>606</a>
-<a href=#607 id=607 data-nosnippet>607</a>  <span class="doccomment">/// The tests share the process's [`IN_FLIGHT`] record: one at a time under `cargo test`.
-<a href=#608 id=608 data-nosnippet>608</a>  </span><span class="kw">static </span>SERIAL: Mutex&lt;()&gt; = Mutex::new(());
+<a href=#496 id=496 data-nosnippet>496</a>      <span class="prelude-val">Err</span>(std::fs::TryLockError::WouldBlock) =&gt; {
+<a href=#497 id=497 data-nosnippet>497</a>        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(
+<a href=#498 id=498 data-nosnippet>498</a>          <span class="string">"another process has been building into {} for {} s"</span>,
+<a href=#499 id=499 data-nosnippet>499</a>          dir.display(),
+<a href=#500 id=500 data-nosnippet>500</a>          LOCK_WAIT.as_secs()
+<a href=#501 id=501 data-nosnippet>501</a>        ));
+<a href=#502 id=502 data-nosnippet>502</a>      },
+<a href=#503 id=503 data-nosnippet>503</a>      <span class="prelude-val">Err</span>(std::fs::TryLockError::Error(e)) =&gt; {
+<a href=#504 id=504 data-nosnippet>504</a>        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">"cannot lock {}: {e}"</span>, dir.display()));
+<a href=#505 id=505 data-nosnippet>505</a>      },
+<a href=#506 id=506 data-nosnippet>506</a>    }
+<a href=#507 id=507 data-nosnippet>507</a>  }
+<a href=#508 id=508 data-nosnippet>508</a>}
+<a href=#509 id=509 data-nosnippet>509</a>
+<a href=#510 id=510 data-nosnippet>510</a><span class="doccomment">/// The file this process's build writes the `kind` dump into, beside its final name in `dir`.
+<a href=#511 id=511 data-nosnippet>511</a></span><span class="kw">fn </span>partial_dump(dir: <span class="kw-2">&amp;</span>Path, kind: <span class="kw-2">&amp;</span>str, year: u32) -&gt; PathBuf {
+<a href=#512 id=512 data-nosnippet>512</a>  dir.join(<span class="macro">format!</span>(
+<a href=#513 id=513 data-nosnippet>513</a>    <span class="string">".{}.{}.partial"</span>,
+<a href=#514 id=514 data-nosnippet>514</a>    dump_paths::dump_filename(kind, year),
+<a href=#515 id=515 data-nosnippet>515</a>    std::process::id()
+<a href=#516 id=516 data-nosnippet>516</a>  ))
+<a href=#517 id=517 data-nosnippet>517</a>}
+<a href=#518 id=518 data-nosnippet>518</a>
+<a href=#519 id=519 data-nosnippet>519</a><span class="doccomment">/// Removes the partial dumps killed builds left in `dir`.
+<a href=#520 id=520 data-nosnippet>520</a></span><span class="kw">fn </span>remove_partial_dumps(dir: <span class="kw-2">&amp;</span>Path) {
+<a href=#521 id=521 data-nosnippet>521</a>  <span class="kw">let </span><span class="prelude-val">Ok</span>(entries) = std::fs::read_dir(dir) <span class="kw">else </span>{
+<a href=#522 id=522 data-nosnippet>522</a>    <span class="kw">return</span>;
+<a href=#523 id=523 data-nosnippet>523</a>  };
+<a href=#524 id=524 data-nosnippet>524</a>  <span class="kw">for </span>entry <span class="kw">in </span>entries.flatten() {
+<a href=#525 id=525 data-nosnippet>525</a>    <span class="kw">if </span>entry.file_name().to_string_lossy().ends_with(<span class="string">".partial"</span>) {
+<a href=#526 id=526 data-nosnippet>526</a>      <span class="kw">let _ </span>= std::fs::remove_file(entry.path());
+<a href=#527 id=527 data-nosnippet>527</a>    }
+<a href=#528 id=528 data-nosnippet>528</a>  }
+<a href=#529 id=529 data-nosnippet>529</a>}
+<a href=#530 id=530 data-nosnippet>530</a>
+<a href=#531 id=531 data-nosnippet>531</a><span class="doccomment">/// Builds the `kind` dump into `dir` as `--init` does, on a thread of its own: the engine's state is
+<a href=#532 id=532 data-nosnippet>532</a>/// per thread, so the build starts from a fresh one, leaves the caller's untouched, and is released
+<a href=#533 id=533 data-nosnippet>533</a>/// when it ends. Like fmtutil, it runs in a directory holding no TeX files — `dir` — as kpathsea
+<a href=#534 id=534 data-nosnippet>534</a>/// searches `.` first and a document's own copy of a format file (`./expl3-code.tex`) must not go
+<a href=#535 id=535 data-nosnippet>535</a>/// into the format; the working directory is the process's, so it is `dir` for every thread until
+<a href=#536 id=536 data-nosnippet>536</a>/// the build ends, whatever the outcome. As `tools/make_formats.sh` does, a build that logs an
+<a href=#537 id=537 data-nosnippet>537</a>/// error or a fatal one is not kept. Written beside its final name and renamed, so a concurrent
+<a href=#538 id=538 data-nosnippet>538</a>/// reader never sees half a dump.
+<a href=#539 id=539 data-nosnippet>539</a></span><span class="kw">fn </span>build(kind: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, year: u32, dir: <span class="kw-2">&amp;</span>Path) -&gt; <span class="prelude-ty">Result</span>&lt;(), String&gt; {
+<a href=#540 id=540 data-nosnippet>540</a>  <span class="kw">let </span>dest = dir.join(dump_paths::dump_filename(kind, year));
+<a href=#541 id=541 data-nosnippet>541</a>  <span class="kw">let </span>partial = partial_dump(dir, kind, year);
+<a href=#542 id=542 data-nosnippet>542</a>  <span class="kw">let </span>partial_name = partial.to_string_lossy().into_owned();
+<a href=#543 id=543 data-nosnippet>543</a>  <span class="kw">let </span>init_file = <span class="kw">if </span>kind == <span class="string">"latex" </span>{
+<a href=#544 id=544 data-nosnippet>544</a>    <span class="string">"latex.ltx"
+<a href=#545 id=545 data-nosnippet>545</a>  </span>} <span class="kw">else </span>{
+<a href=#546 id=546 data-nosnippet>546</a>    <span class="string">"plain.tex"
+<a href=#547 id=547 data-nosnippet>547</a>  </span>};
+<a href=#548 id=548 data-nosnippet>548</a>  <span class="kw">let </span>previous = std::env::current_dir().map_err(|e| <span class="macro">format!</span>(<span class="string">"no working directory: {e}"</span>))<span class="question-mark">?</span>;
+<a href=#549 id=549 data-nosnippet>549</a>  <span class="kw">let </span>workdir = dir.to_path_buf();
+<a href=#550 id=550 data-nosnippet>550</a>  <span class="kw">let </span>joined = std::thread::Builder::new()
+<a href=#551 id=551 data-nosnippet>551</a>    .name(<span class="macro">format!</span>(<span class="string">"{kind}-format"</span>))
+<a href=#552 id=552 data-nosnippet>552</a>    .stack_size(<span class="number">256 </span>* <span class="number">1024 </span>* <span class="number">1024</span>)
+<a href=#553 id=553 data-nosnippet>553</a>    .spawn(<span class="kw">move </span>|| -&gt; <span class="prelude-ty">Result</span>&lt;(), String&gt; {
+<a href=#554 id=554 data-nosnippet>554</a>      dump_paths::set_building_format(<span class="bool-val">true</span>);
+<a href=#555 id=555 data-nosnippet>555</a>      std::env::set_current_dir(<span class="kw-2">&amp;</span>workdir)
+<a href=#556 id=556 data-nosnippet>556</a>        .map_err(|e| <span class="macro">format!</span>(<span class="string">"cannot enter {}: {e}"</span>, workdir.display()))<span class="question-mark">?</span>;
+<a href=#557 id=557 data-nosnippet>557</a>      <span class="kw">let </span>opts = latexml_core::common::Config {
+<a href=#558 id=558 data-nosnippet>558</a>        bindings_dispatch: <span class="prelude-val">Some</span>(std::rc::Rc::new(latexml_package::dispatch)),
+<a href=#559 id=559 data-nosnippet>559</a>        extra_bindings_dispatch: <span class="prelude-val">Some</span>(std::rc::Rc::new(latexml_contrib::dispatch)),
+<a href=#560 id=560 data-nosnippet>560</a>        ..latexml_core::common::Config::default()
+<a href=#561 id=561 data-nosnippet>561</a>      };
+<a href=#562 id=562 data-nosnippet>562</a>      <span class="kw">let </span><span class="kw-2">mut </span>converter = <span class="kw">crate</span>::converter::Converter::from_config(opts.clone());
+<a href=#563 id=563 data-nosnippet>563</a>      <span class="kw">let </span>result = converter
+<a href=#564 id=564 data-nosnippet>564</a>        .prepare_session(<span class="kw-2">&amp;</span>opts)
+<a href=#565 id=565 data-nosnippet>565</a>        .map_err(|e| <span class="macro">format!</span>(<span class="string">"cannot prepare the {kind} format build: {e}"</span>))
+<a href=#566 id=566 data-nosnippet>566</a>        .and_then(|()| <span class="kw">crate</span>::ini_tex::dump_format(<span class="kw-2">&amp;mut </span>converter, init_file, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>partial_name)))
+<a href=#567 id=567 data-nosnippet>567</a>        .and_then(|<span class="kw">_</span>| {
+<a href=#568 id=568 data-nosnippet>568</a>          <span class="kw">let </span>counts = latexml_core::common::error::snapshot_report_counts();
+<a href=#569 id=569 data-nosnippet>569</a>          <span class="kw">if </span>counts.fatal || counts.error &gt; <span class="number">0 </span>{
+<a href=#570 id=570 data-nosnippet>570</a>            <span class="prelude-val">Err</span>(<span class="macro">format!</span>(
+<a href=#571 id=571 data-nosnippet>571</a>              <span class="string">"building the {kind} format logged {} error(s){}"</span>,
+<a href=#572 id=572 data-nosnippet>572</a>              counts.error,
+<a href=#573 id=573 data-nosnippet>573</a>              <span class="kw">if </span>counts.fatal { <span class="string">" and a fatal one" </span>} <span class="kw">else </span>{ <span class="string">"" </span>}
+<a href=#574 id=574 data-nosnippet>574</a>            ))
+<a href=#575 id=575 data-nosnippet>575</a>          } <span class="kw">else </span>{
+<a href=#576 id=576 data-nosnippet>576</a>            <span class="prelude-val">Ok</span>(())
+<a href=#577 id=577 data-nosnippet>577</a>          }
+<a href=#578 id=578 data-nosnippet>578</a>        });
+<a href=#579 id=579 data-nosnippet>579</a>      drop(converter);
+<a href=#580 id=580 data-nosnippet>580</a>      latexml_core::reset_thread_engine();
+<a href=#581 id=581 data-nosnippet>581</a>      result
+<a href=#582 id=582 data-nosnippet>582</a>    })
+<a href=#583 id=583 data-nosnippet>583</a>    .map_err(|e| <span class="macro">format!</span>(<span class="string">"cannot start the {kind} format build: {e}"</span>))<span class="question-mark">?
+<a href=#584 id=584 data-nosnippet>584</a>    </span>.join();
+<a href=#585 id=585 data-nosnippet>585</a>  <span class="kw">let </span>returned = std::env::set_current_dir(<span class="kw-2">&amp;</span>previous);
+<a href=#586 id=586 data-nosnippet>586</a>  <span class="kw">let </span>built = joined
+<a href=#587 id=587 data-nosnippet>587</a>    .map_err(|<span class="kw">_</span>| <span class="macro">format!</span>(<span class="string">"the {kind} format build panicked"</span>))
+<a href=#588 id=588 data-nosnippet>588</a>    .and_then(|built| built)
+<a href=#589 id=589 data-nosnippet>589</a>    .and_then(|()| returned.map_err(|e| <span class="macro">format!</span>(<span class="string">"cannot return to {}: {e}"</span>, previous.display())))
+<a href=#590 id=590 data-nosnippet>590</a>    .and_then(|()| publish(kind, <span class="kw-2">&amp;</span>partial, <span class="kw-2">&amp;</span>dest));
+<a href=#591 id=591 data-nosnippet>591</a>  <span class="kw">if </span>built.is_err() {
+<a href=#592 id=592 data-nosnippet>592</a>    <span class="kw">let _ </span>= std::fs::remove_file(<span class="kw-2">&amp;</span>partial);
+<a href=#593 id=593 data-nosnippet>593</a>  }
+<a href=#594 id=594 data-nosnippet>594</a>  built
+<a href=#595 id=595 data-nosnippet>595</a>}
+<a href=#596 id=596 data-nosnippet>596</a>
+<a href=#597 id=597 data-nosnippet>597</a><span class="doccomment">/// Publishes the finished `kind` dump at `partial` as `dest`. The build's [`IN_FLIGHT`] record is
+<a href=#598 id=598 data-nosnippet>598</a>/// cleared under the same lock as the rename: an interrupt in between would put the attempt note
+<a href=#599 id=599 data-nosnippet>599</a>/// from before the build back beside the finished dump; one now waits, and finds nothing to undo.
+<a href=#600 id=600 data-nosnippet>600</a></span><span class="kw">fn </span>publish(kind: <span class="kw-2">&amp;</span>str, partial: <span class="kw-2">&amp;</span>Path, dest: <span class="kw-2">&amp;</span>Path) -&gt; <span class="prelude-ty">Result</span>&lt;(), String&gt; {
+<a href=#601 id=601 data-nosnippet>601</a>  publish_read_only(partial)
+<a href=#602 id=602 data-nosnippet>602</a>    .map_err(|e| <span class="macro">format!</span>(<span class="string">"cannot set the {kind} dump's permissions: {e}"</span>))<span class="question-mark">?</span>;
+<a href=#603 id=603 data-nosnippet>603</a>  <span class="kw">let </span><span class="kw-2">mut </span>slot = IN_FLIGHT.lock().unwrap_or_else(PoisonError::into_inner);
+<a href=#604 id=604 data-nosnippet>604</a>  std::fs::rename(partial, dest)
+<a href=#605 id=605 data-nosnippet>605</a>    .map_err(|e| <span class="macro">format!</span>(<span class="string">"cannot move the {kind} dump to {}: {e}"</span>, dest.display()))<span class="question-mark">?</span>;
+<a href=#606 id=606 data-nosnippet>606</a>  <span class="kw-2">*</span>slot = <span class="prelude-val">None</span>;
+<a href=#607 id=607 data-nosnippet>607</a>  <span class="prelude-val">Ok</span>(())
+<a href=#608 id=608 data-nosnippet>608</a>}
 <a href=#609 id=609 data-nosnippet>609</a>
-<a href=#610 id=610 data-nosnippet>610</a>  <span class="doccomment">/// An interrupted build is undone (issue 988): its attempt note goes back to what it held before
-<a href=#611 id=611 data-nosnippet>611</a>  /// the build (none, or the count of earlier builds that did not succeed) and its partial dump is
-<a href=#612 id=612 data-nosnippet>612</a>  /// removed, so the next process builds the format again instead of counting the interrupted build
-<a href=#613 id=613 data-nosnippet>613</a>  /// towards marking it failed.
-<a href=#614 id=614 data-nosnippet>614</a>  </span><span class="attr">#[test]
-<a href=#615 id=615 data-nosnippet>615</a>  </span><span class="kw">fn </span>an_interrupted_build_is_undone() {
-<a href=#616 id=616 data-nosnippet>616</a>    <span class="kw">let </span>_serial = SERIAL.lock().unwrap_or_else(PoisonError::into_inner);
-<a href=#617 id=617 data-nosnippet>617</a>    <span class="kw">let </span>dir = tempfile::tempdir().expect(<span class="string">"create tempdir"</span>);
-<a href=#618 id=618 data-nosnippet>618</a>    <span class="kw">let </span>dir = dir.path();
-<a href=#619 id=619 data-nosnippet>619</a>    <span class="kw">for </span>before <span class="kw">in </span>[<span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(<span class="string">"1\tbuilding the latex format logged 3 error(s)"</span>)] {
-<a href=#620 id=620 data-nosnippet>620</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(text) = before {
-<a href=#621 id=621 data-nosnippet>621</a>        std::fs::write(kind_file(dir, ATTEMPTS, <span class="string">"latex"</span>), text).expect(<span class="string">"write the earlier note"</span>);
-<a href=#622 id=622 data-nosnippet>622</a>      }
-<a href=#623 id=623 data-nosnippet>623</a>      <span class="kw">let </span>count = previous_attempts(dir, <span class="string">"latex"</span>).<span class="number">0 </span>+ <span class="number">1</span>;
-<a href=#624 id=624 data-nosnippet>624</a>      <span class="kw">let </span>before_build = attempts_text(dir, <span class="string">"latex"</span>);
-<a href=#625 id=625 data-nosnippet>625</a>      note_attempt(
-<a href=#626 id=626 data-nosnippet>626</a>        dir,
-<a href=#627 id=627 data-nosnippet>627</a>        <span class="string">"latex"</span>,
-<a href=#628 id=628 data-nosnippet>628</a>        count,
-<a href=#629 id=629 data-nosnippet>629</a>        <span class="string">"the latex format build died with its process"</span>,
-<a href=#630 id=630 data-nosnippet>630</a>      )
-<a href=#631 id=631 data-nosnippet>631</a>      .expect(<span class="string">"note the attempt"</span>);
-<a href=#632 id=632 data-nosnippet>632</a>      <span class="kw">let </span>partial = partial_dump(dir, <span class="string">"latex"</span>, <span class="number">2025</span>);
-<a href=#633 id=633 data-nosnippet>633</a>      std::fs::write(<span class="kw-2">&amp;</span>partial, <span class="string">"half a dump"</span>).expect(<span class="string">"write the partial dump"</span>);
-<a href=#634 id=634 data-nosnippet>634</a>      set_in_flight(<span class="prelude-val">Some</span>(InFlight {
-<a href=#635 id=635 data-nosnippet>635</a>        attempts: kind_file(dir, ATTEMPTS, <span class="string">"latex"</span>),
-<a href=#636 id=636 data-nosnippet>636</a>        before:   before_build,
-<a href=#637 id=637 data-nosnippet>637</a>        partial:  partial.clone(),
-<a href=#638 id=638 data-nosnippet>638</a>      }));
-<a href=#639 id=639 data-nosnippet>639</a>      <span class="macro">assert!</span>(cancel_in_flight_build());
-<a href=#640 id=640 data-nosnippet>640</a>      <span class="macro">assert_eq!</span>(attempts_text(dir, <span class="string">"latex"</span>).as_deref(), before);
-<a href=#641 id=641 data-nosnippet>641</a>      <span class="macro">assert!</span>(!partial.exists(), <span class="string">"the partial dump stayed"</span>);
-<a href=#642 id=642 data-nosnippet>642</a>      <span class="macro">assert!</span>(!cancel_in_flight_build(), <span class="string">"a build is undone once"</span>);
-<a href=#643 id=643 data-nosnippet>643</a>    }
-<a href=#644 id=644 data-nosnippet>644</a>  }
-<a href=#645 id=645 data-nosnippet>645</a>
-<a href=#646 id=646 data-nosnippet>646</a>  <span class="doccomment">/// A published dump is no longer the build's to undo: an interrupt after the rename used to put
-<a href=#647 id=647 data-nosnippet>647</a>  /// the attempt note from before the build back beside the finished dump (CLIHARD 1b).
-<a href=#648 id=648 data-nosnippet>648</a>  </span><span class="attr">#[test]
-<a href=#649 id=649 data-nosnippet>649</a>  </span><span class="kw">fn </span>a_published_build_is_not_undone() {
-<a href=#650 id=650 data-nosnippet>650</a>    <span class="kw">let </span>_serial = SERIAL.lock().unwrap_or_else(PoisonError::into_inner);
-<a href=#651 id=651 data-nosnippet>651</a>    <span class="kw">let </span>dir = tempfile::tempdir().expect(<span class="string">"create tempdir"</span>);
-<a href=#652 id=652 data-nosnippet>652</a>    <span class="kw">let </span>dir = dir.path();
-<a href=#653 id=653 data-nosnippet>653</a>    <span class="kw">let </span>before = <span class="string">"1\tbuilding the latex format logged 3 error(s)"</span>;
-<a href=#654 id=654 data-nosnippet>654</a>    std::fs::write(kind_file(dir, ATTEMPTS, <span class="string">"latex"</span>), before).expect(<span class="string">"write the earlier note"</span>);
-<a href=#655 id=655 data-nosnippet>655</a>    note_attempt(
-<a href=#656 id=656 data-nosnippet>656</a>      dir,
-<a href=#657 id=657 data-nosnippet>657</a>      <span class="string">"latex"</span>,
-<a href=#658 id=658 data-nosnippet>658</a>      <span class="number">2</span>,
-<a href=#659 id=659 data-nosnippet>659</a>      <span class="string">"the latex format build died with its process"</span>,
-<a href=#660 id=660 data-nosnippet>660</a>    )
-<a href=#661 id=661 data-nosnippet>661</a>    .expect(<span class="string">"note the attempt"</span>);
-<a href=#662 id=662 data-nosnippet>662</a>    <span class="kw">let </span>partial = partial_dump(dir, <span class="string">"latex"</span>, <span class="number">2025</span>);
-<a href=#663 id=663 data-nosnippet>663</a>    std::fs::write(<span class="kw-2">&amp;</span>partial, <span class="string">"a dump"</span>).expect(<span class="string">"write the dump"</span>);
-<a href=#664 id=664 data-nosnippet>664</a>    set_in_flight(<span class="prelude-val">Some</span>(InFlight {
-<a href=#665 id=665 data-nosnippet>665</a>      attempts: kind_file(dir, ATTEMPTS, <span class="string">"latex"</span>),
-<a href=#666 id=666 data-nosnippet>666</a>      before:   <span class="prelude-val">Some</span>(before.to_string()),
-<a href=#667 id=667 data-nosnippet>667</a>      partial:  partial.clone(),
-<a href=#668 id=668 data-nosnippet>668</a>    }));
-<a href=#669 id=669 data-nosnippet>669</a>    <span class="kw">let </span>dest = dir.join(dump_paths::dump_filename(<span class="string">"latex"</span>, <span class="number">2025</span>));
-<a href=#670 id=670 data-nosnippet>670</a>    publish(<span class="string">"latex"</span>, <span class="kw-2">&amp;</span>partial, <span class="kw-2">&amp;</span>dest).expect(<span class="string">"publish"</span>);
-<a href=#671 id=671 data-nosnippet>671</a>    <span class="macro">assert!</span>(!cancel_in_flight_build(), <span class="string">"the published build was undone"</span>);
-<a href=#672 id=672 data-nosnippet>672</a>    <span class="macro">assert_eq!</span>(
-<a href=#673 id=673 data-nosnippet>673</a>      attempts_text(dir, <span class="string">"latex"</span>).as_deref(),
-<a href=#674 id=674 data-nosnippet>674</a>      <span class="prelude-val">Some</span>(<span class="string">"2\tthe latex format build died with its process"</span>)
-<a href=#675 id=675 data-nosnippet>675</a>    );
-<a href=#676 id=676 data-nosnippet>676</a>    <span class="macro">assert!</span>(dest.is_file());
-<a href=#677 id=677 data-nosnippet>677</a>  }
-<a href=#678 id=678 data-nosnippet>678</a>}
+<a href=#610 id=610 data-nosnippet>610</a><span class="attr">#[cfg(test)]
+<a href=#611 id=611 data-nosnippet>611</a></span><span class="kw">mod </span>tests {
+<a href=#612 id=612 data-nosnippet>612</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
+<a href=#613 id=613 data-nosnippet>613</a>
+<a href=#614 id=614 data-nosnippet>614</a>  <span class="doccomment">/// The tests share the process's [`IN_FLIGHT`] record: one at a time under `cargo test`.
+<a href=#615 id=615 data-nosnippet>615</a>  </span><span class="kw">static </span>SERIAL: Mutex&lt;()&gt; = Mutex::new(());
+<a href=#616 id=616 data-nosnippet>616</a>
+<a href=#617 id=617 data-nosnippet>617</a>  <span class="doccomment">/// An interrupted build is undone (issue 988): its attempt note goes back to what it held before
+<a href=#618 id=618 data-nosnippet>618</a>  /// the build (none, or the count of earlier builds that did not succeed) and its partial dump is
+<a href=#619 id=619 data-nosnippet>619</a>  /// removed, so the next process builds the format again instead of counting the interrupted build
+<a href=#620 id=620 data-nosnippet>620</a>  /// towards marking it failed.
+<a href=#621 id=621 data-nosnippet>621</a>  </span><span class="attr">#[test]
+<a href=#622 id=622 data-nosnippet>622</a>  </span><span class="kw">fn </span>an_interrupted_build_is_undone() {
+<a href=#623 id=623 data-nosnippet>623</a>    <span class="kw">let </span>_serial = SERIAL.lock().unwrap_or_else(PoisonError::into_inner);
+<a href=#624 id=624 data-nosnippet>624</a>    <span class="kw">let </span>dir = tempfile::tempdir().expect(<span class="string">"create tempdir"</span>);
+<a href=#625 id=625 data-nosnippet>625</a>    <span class="kw">let </span>dir = dir.path();
+<a href=#626 id=626 data-nosnippet>626</a>    <span class="kw">for </span>before <span class="kw">in </span>[<span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(<span class="string">"1\tbuilding the latex format logged 3 error(s)"</span>)] {
+<a href=#627 id=627 data-nosnippet>627</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(text) = before {
+<a href=#628 id=628 data-nosnippet>628</a>        std::fs::write(kind_file(dir, ATTEMPTS, <span class="string">"latex"</span>), text).expect(<span class="string">"write the earlier note"</span>);
+<a href=#629 id=629 data-nosnippet>629</a>      }
+<a href=#630 id=630 data-nosnippet>630</a>      <span class="kw">let </span>count = previous_attempts(dir, <span class="string">"latex"</span>).<span class="number">0 </span>+ <span class="number">1</span>;
+<a href=#631 id=631 data-nosnippet>631</a>      <span class="kw">let </span>before_build = attempts_text(dir, <span class="string">"latex"</span>);
+<a href=#632 id=632 data-nosnippet>632</a>      note_attempt(
+<a href=#633 id=633 data-nosnippet>633</a>        dir,
+<a href=#634 id=634 data-nosnippet>634</a>        <span class="string">"latex"</span>,
+<a href=#635 id=635 data-nosnippet>635</a>        count,
+<a href=#636 id=636 data-nosnippet>636</a>        <span class="string">"the latex format build died with its process"</span>,
+<a href=#637 id=637 data-nosnippet>637</a>      )
+<a href=#638 id=638 data-nosnippet>638</a>      .expect(<span class="string">"note the attempt"</span>);
+<a href=#639 id=639 data-nosnippet>639</a>      <span class="kw">let </span>partial = partial_dump(dir, <span class="string">"latex"</span>, <span class="number">2025</span>);
+<a href=#640 id=640 data-nosnippet>640</a>      std::fs::write(<span class="kw-2">&amp;</span>partial, <span class="string">"half a dump"</span>).expect(<span class="string">"write the partial dump"</span>);
+<a href=#641 id=641 data-nosnippet>641</a>      set_in_flight(<span class="prelude-val">Some</span>(InFlight {
+<a href=#642 id=642 data-nosnippet>642</a>        attempts: kind_file(dir, ATTEMPTS, <span class="string">"latex"</span>),
+<a href=#643 id=643 data-nosnippet>643</a>        before:   before_build,
+<a href=#644 id=644 data-nosnippet>644</a>        partial:  partial.clone(),
+<a href=#645 id=645 data-nosnippet>645</a>      }));
+<a href=#646 id=646 data-nosnippet>646</a>      <span class="macro">assert!</span>(cancel_in_flight_build());
+<a href=#647 id=647 data-nosnippet>647</a>      <span class="macro">assert_eq!</span>(attempts_text(dir, <span class="string">"latex"</span>).as_deref(), before);
+<a href=#648 id=648 data-nosnippet>648</a>      <span class="macro">assert!</span>(!partial.exists(), <span class="string">"the partial dump stayed"</span>);
+<a href=#649 id=649 data-nosnippet>649</a>      <span class="macro">assert!</span>(!cancel_in_flight_build(), <span class="string">"a build is undone once"</span>);
+<a href=#650 id=650 data-nosnippet>650</a>    }
+<a href=#651 id=651 data-nosnippet>651</a>  }
+<a href=#652 id=652 data-nosnippet>652</a>
+<a href=#653 id=653 data-nosnippet>653</a>  <span class="doccomment">/// A published dump is no longer the build's to undo: an interrupt after the rename used to put
+<a href=#654 id=654 data-nosnippet>654</a>  /// the attempt note from before the build back beside the finished dump (CLIHARD 1b).
+<a href=#655 id=655 data-nosnippet>655</a>  </span><span class="attr">#[test]
+<a href=#656 id=656 data-nosnippet>656</a>  </span><span class="kw">fn </span>a_published_build_is_not_undone() {
+<a href=#657 id=657 data-nosnippet>657</a>    <span class="kw">let </span>_serial = SERIAL.lock().unwrap_or_else(PoisonError::into_inner);
+<a href=#658 id=658 data-nosnippet>658</a>    <span class="kw">let </span>dir = tempfile::tempdir().expect(<span class="string">"create tempdir"</span>);
+<a href=#659 id=659 data-nosnippet>659</a>    <span class="kw">let </span>dir = dir.path();
+<a href=#660 id=660 data-nosnippet>660</a>    <span class="kw">let </span>before = <span class="string">"1\tbuilding the latex format logged 3 error(s)"</span>;
+<a href=#661 id=661 data-nosnippet>661</a>    std::fs::write(kind_file(dir, ATTEMPTS, <span class="string">"latex"</span>), before).expect(<span class="string">"write the earlier note"</span>);
+<a href=#662 id=662 data-nosnippet>662</a>    note_attempt(
+<a href=#663 id=663 data-nosnippet>663</a>      dir,
+<a href=#664 id=664 data-nosnippet>664</a>      <span class="string">"latex"</span>,
+<a href=#665 id=665 data-nosnippet>665</a>      <span class="number">2</span>,
+<a href=#666 id=666 data-nosnippet>666</a>      <span class="string">"the latex format build died with its process"</span>,
+<a href=#667 id=667 data-nosnippet>667</a>    )
+<a href=#668 id=668 data-nosnippet>668</a>    .expect(<span class="string">"note the attempt"</span>);
+<a href=#669 id=669 data-nosnippet>669</a>    <span class="kw">let </span>partial = partial_dump(dir, <span class="string">"latex"</span>, <span class="number">2025</span>);
+<a href=#670 id=670 data-nosnippet>670</a>    std::fs::write(<span class="kw-2">&amp;</span>partial, <span class="string">"a dump"</span>).expect(<span class="string">"write the dump"</span>);
+<a href=#671 id=671 data-nosnippet>671</a>    set_in_flight(<span class="prelude-val">Some</span>(InFlight {
+<a href=#672 id=672 data-nosnippet>672</a>      attempts: kind_file(dir, ATTEMPTS, <span class="string">"latex"</span>),
+<a href=#673 id=673 data-nosnippet>673</a>      before:   <span class="prelude-val">Some</span>(before.to_string()),
+<a href=#674 id=674 data-nosnippet>674</a>      partial:  partial.clone(),
+<a href=#675 id=675 data-nosnippet>675</a>    }));
+<a href=#676 id=676 data-nosnippet>676</a>    <span class="kw">let </span>dest = dir.join(dump_paths::dump_filename(<span class="string">"latex"</span>, <span class="number">2025</span>));
+<a href=#677 id=677 data-nosnippet>677</a>    publish(<span class="string">"latex"</span>, <span class="kw-2">&amp;</span>partial, <span class="kw-2">&amp;</span>dest).expect(<span class="string">"publish"</span>);
+<a href=#678 id=678 data-nosnippet>678</a>    <span class="macro">assert!</span>(!cancel_in_flight_build(), <span class="string">"the published build was undone"</span>);
+<a href=#679 id=679 data-nosnippet>679</a>    <span class="macro">assert_eq!</span>(
+<a href=#680 id=680 data-nosnippet>680</a>      attempts_text(dir, <span class="string">"latex"</span>).as_deref(),
+<a href=#681 id=681 data-nosnippet>681</a>      <span class="prelude-val">Some</span>(<span class="string">"2\tthe latex format build died with its process"</span>)
+<a href=#682 id=682 data-nosnippet>682</a>    );
+<a href=#683 id=683 data-nosnippet>683</a>    <span class="macro">assert!</span>(dest.is_file());
+<a href=#684 id=684 data-nosnippet>684</a>  }
+<a href=#685 id=685 data-nosnippet>685</a>}
 </code></pre></div></section></main></body></html>
