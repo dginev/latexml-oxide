@@ -580,7 +580,8 @@ trio), its `\@parboxrestore` is `Tokens()`, a `p` cell sets `\hsize` alone (TeX_
   1508.03599 (10pt kept), 2605.07451 (none). The binding's `\descriptionlabel` opens with article.cls:364's
   `\hspace\labelsep` (amsart.cls:933's too; Perl latex_constructs.pool.ltxml:1619 and ams_support.sty.ltxml:177 drop
   it); a skip of exactly `\labelsep` in the run is the one cancelled, the label's own glue kept as written (`~`,
-  `\quad`). A label that is only glue narrower than `\labelsep` (`\item[~]`) prints no `<tag>` (Perl: `<tag> </tag>`).
+  `\quad`); an itemize or enumerate makes `\makelabel` its own (latex.ltx:16061, :16072; `begin_itemize`), so one
+  nested in a description (a paralist `{compactenum}`, 1406.1992) does not take `\descriptionlabel`. A label that is only glue narrower than `\labelsep` (`\item[~]`) prints no `<tag>` (Perl: `<tag> </tag>`).
   enumitem's `wide`/`fullwidth` set `\leftmargin\z@` (enumitem.sty:745-758), one reading with a stated `leftmargin`
   for the setup and the CSS (`stated_leftmargin`), the keys in enumitem's order, `\setlist`'s first (`merge_key`), a
   key a `\setlist*` stores again after the others (enumitem.sty:1603-1611). Not modelled: :15864

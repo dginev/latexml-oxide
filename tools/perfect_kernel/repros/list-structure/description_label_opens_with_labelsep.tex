@@ -1,13 +1,18 @@
 % mechanism: article.cls:364 `\descriptionlabel` opens with `\hspace\labelsep`, which latex.ltx:16028-16039 `\@item`'s
 %   `\hskip-\labelsep` cancels; the binding's `\descriptionlabel` opens with it too (Perl latex_constructs.pool.ltxml:1619
 %   drops it), so `net_label_labelsep` cancels that skip and a label's own glue (`\hskip10pt`, `\quad`, `~`) stays as
-%   written; a bare `\item`'s label is boxed as an `\item[…]`'s (`\fnum@@desci`).
-% witness: synthetic (QA14K2 re-review F1, `p6.tex`)
-% oracle:  pdflatex 0 errors; "D" 10pt right of "N", "Q" a quad right, "T" a space right, "bare" at `\labelsep`
-% engines: rust INT081AA as expected; QA14K2 924919feffb `<tag>` U+2002 "D", U+2002 U+200A "Q", "T" (the NBSP lost)
-% expect:  0 errors, 0 warnings; U+2003 "D", U+2003 U+200A "Q", U+00A0 "T", "N" (each bold), no tag on the bare item
-% status:  RED (QA14K2 924919feffb) -> GREEN (QA14K2 fix round 2)
+%   written; a bare `\item`'s label is boxed as an `\item[…]`'s (`\fnum@@desci`). A list nested in it makes
+%   `\makelabel` its own (latex.ltx:16061, :16072; `begin_itemize`), so paralist's "(i)" is not the description's.
+% witness: synthetic (QA14K2 re-review F1, `p6.tex`); the nested list 1406.1992 (`{compactenum}` in `{description}`)
+% oracle:  pdflatex 0 errors; "D" 10pt right of "N", "Q" a quad right, "T" a space right, "bare" at `\labelsep`, "(i)" in
+%   CMR10 (not bold)
+% engines: rust INT081AA as expected but a bold "(i)"; QA14K2 924919feffb `<tag>` U+2002 "D", U+2002 U+200A "Q", "T" (the
+%   NBSP lost), a bold "(i)"; facaf62ee32 U+2002 and a bold "(i)"
+% expect:  0 errors, 0 warnings; U+2003 "D", U+2003 U+200A "Q", U+00A0 "T", "N" (each bold), no tag on the bare item,
+%   `<tag>(i)</tag>`
+% status:  RED (QA14K2 924919feffb, facaf62ee32) -> GREEN (QA14K2 fix round 2)
 \documentclass{article}
+\usepackage{paralist}
 \begin{document}
 \begin{description}
 \item[\hskip10pt D] d
@@ -15,5 +20,6 @@
 \item[~T] t
 \item[N] n
 \item bare
+\item[L] \begin{compactenum}[(i)]\item inner\end{compactenum}
 \end{description}
 \end{document}

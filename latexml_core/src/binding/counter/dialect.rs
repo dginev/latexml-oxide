@@ -1830,6 +1830,13 @@ pub fn begin_itemize(
     0
   };
   let counter = counter.unwrap_or("@item");
+  // latex.ltx's itemize and enumerate (:16061, :16072) make `\makelabel` their own, so an enclosing description's
+  // `\descriptionlabel` never labels their items (1406.1992: a paralist `{compactenum}` in a `{description}`).
+  if matches!(itype.trim_start_matches("inline@"), "itemize" | "enumerate")
+    && is_defined("\\@firstofone")
+  {
+    let_i(&T_CS!("\\makelabel"), &T_CS!("\\@firstofone"), None);
+  }
   let listlevel = lookup_int("itemization_level") + 1; // level for this list overall
   let level = lookup_int(&s!("{counter}level")) + // level for lists of specific type
     (if options.nolevel { 0 } else { 1 });

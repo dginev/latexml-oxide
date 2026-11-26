@@ -39,7 +39,8 @@ type Case = (
 /// `<tag> •</tag>`, the typerefnum's ` k`. Witnesses 2605.07451, 1508.03599.
 /// description_label_opens_with_labelsep, amsart_description_label_opens_with_labelsep: the default
 /// `\descriptionlabel`'s `\hspace\labelsep` is what nets away, the label's own glue stays. Red (QA14K2 924919feffb):
-/// U+2002 "D", U+2002 U+200A "Q", "T" without its NBSP.
+/// U+2002 "D", U+2002 U+200A "Q", "T" without its NBSP; a paralist list nested in it took the description's
+/// `\makelabel` (red on facaf62ee32: U+2002 and a bold "(i)"; 1406.1992).
 /// enumitem_wide_clears_the_left_margin: `wide`/`fullwidth` set `\leftmargin\z@`, keys in order. Red (QA14K2
 /// eb92bd5ebc9): A-D, F "319.99997pt 25.00003pt"; G, H (a `leftmargin` before `wide`) "316.54726pt 28.45274pt"; I (a
 /// `\setlist*` storing `leftmargin` again after `wide`; 924919feffb) "345.0pt 0.0pt".
@@ -366,6 +367,11 @@ fn list_registers_set_the_line_width() {
           "item",
           "S0.I1.i1",
           "<item xml:id=\"S0.I1.i1\"><tags><tag role=\"typerefnum\">item</tag></tags><para xml:id=\"S0.I1.i1.p1\"><p xml:id=\"S0.I1.i1.p1.1\">bare</p></para></item>",
+        ),
+        (
+          "item",
+          "S0.I1.ix5.I1.i1",
+          "<item xml:id=\"S0.I1.ix5.I1.i1\"><tags><tag>(i)</tag><tag role=\"refnum\">i</tag><tag role=\"typerefnum\">item\u{a0}i</tag></tags><para xml:id=\"S0.I1.ix5.I1.i1.p1\"><p xml:id=\"S0.I1.ix5.I1.i1.p1.1\">inner</p></para></item>",
         ),
       ],
     ),
