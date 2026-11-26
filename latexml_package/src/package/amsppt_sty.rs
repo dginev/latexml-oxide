@@ -259,8 +259,8 @@ LoadDefinitions!({
   \lx@ppt@infer{#1}%
   \ifx\lx@msc@edition\empty\def\lx@ppt@year{\subjyear@}\else\let\lx@ppt@year\lx@msc@edition\fi
   \expandafter\lx@ppt@subjclass@add\expandafter{\lx@ppt@year}{#1}}
-\def\lx@ppt@subjclass@add#1#2{\lx@add@classification[scheme={#1\space Mathematics Subject Classification},%
-  name={#1\space Mathematics Subject Classification.\space}]{#2}}");
+\def\lx@ppt@subjclass@add#1#2{\lx@add@classification
+  [scheme={#1\space Mathematics Subject Classification},name={#1\space Mathematics Subject Classification.\space}]{#2}}");
   // `\subjclass\nofrills …` (:411 `\nofrillscheck`, :80-83): the prefix is `\frills@`'s, which `\nofrills` eats, and the
   // author writes their own (0804.1078's `{{\rm 2000}{\it Mathematics Subject Classification}.\usualspace}`, 1107.2266's
   // `{\it Mathematics Subject Classification \rm(2000).}`): no scheme or name, which said "1991" above the author's
