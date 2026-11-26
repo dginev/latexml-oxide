@@ -1,9 +1,10 @@
 % mechanism: enumitem.sty:745-758 `wide` (any value) and `fullwidth` set `\leftmargin\z@`: the list's line is the text's.
-%   One reading (`stated_leftmargin`) gives the `\list` setup and the CSS `--ltx-enum-leftmargin`; a `leftmargin` key
-%   given after `wide` wins, as enumitem applies keys in order; `\setlist` keys too.
+%   One reading (`stated_leftmargin`) gives the `\list` setup and the CSS `--ltx-enum-leftmargin`. Keys apply in order,
+%   `\setlist`'s first (`merge_key`): a `leftmargin` after `wide` wins (E), one before it is gone (G, H).
 % witness: synthetic (QA14K2 review S1)
-% oracle:  pdflatex 0 errors; "A 345.0pt 0.0pt" .. "D", "F" the same; "E 316.54726pt 28.45274pt"
-% engines: rust INT081AA every line "345.0pt 0.0pt" (no margins); QA14K2 eb92bd5ebc9 A-D and F "319.99997pt 25.00003pt"
+% oracle:  pdflatex 0 errors; "A 345.0pt 0.0pt" .. "D", "F", "G", "H" the same; "E 316.54726pt 28.45274pt"
+% engines: rust INT081AA every line "345.0pt 0.0pt" (no margins); QA14K2 eb92bd5ebc9 A-D and F "319.99997pt 25.00003pt",
+%   G and H "316.54726pt 28.45274pt"
 % expect:  0 errors, 0 warnings; the values pdflatex prints
 % status:  RED (QA14K2 eb92bd5ebc9) -> GREEN (QA14K2 fix round)
 \documentclass{article}
@@ -17,4 +18,7 @@
 \begin{itemize}[wide,leftmargin=1cm]\item \W{E}\end{itemize}
 \setlist[description]{wide}
 \begin{description}\item[x] \W{F}\end{description}
+\begin{itemize}[leftmargin=1cm,wide]\item \W{G}\end{itemize}
+\setlist[itemize]{leftmargin=1cm}
+\begin{itemize}[wide]\item \W{H}\end{itemize}
 \end{document}

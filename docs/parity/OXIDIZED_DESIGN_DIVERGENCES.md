@@ -578,7 +578,8 @@ trio), its `\@parboxrestore` is `Tokens()`, a `p` cell sets `\hsize` alone (TeX_
   opens with, an `\unhbox`ed box's too (:17206 `\@begintheorem`, syntax.sty:244), `max(0, sum - \labelsep)` stays and a
   trailing `\labelsep` stays, on every label path (`\item[…]`, a `\list` label, a trivlist item, the typerefnum);
   1508.03599 (10pt kept), 2605.07451 (none). enumitem's `wide`/`fullwidth` set `\leftmargin\z@` (enumitem.sty:745-758),
-  one reading with a stated `leftmargin` for the setup and the CSS (`stated_leftmargin`). Not modelled: :15864
+  one reading with a stated `leftmargin` for the setup and the CSS (`stated_leftmargin`), the keys in enumitem's order,
+  `\setlist`'s first (`merge_key`). Not modelled: :15864
   `\parindent\listparindent` (it would mark every item's paragraphs `ltx_noindent`), `\parshape`, `\@toodeep`. **Perl**:
   `\list` sets no register (latex_constructs.pool.ltxml:1649), `beginItemize` none (:1303), and every margin register is
   0pt (:1690-1702), so a `width=\linewidth` graphic in a list took the text's width. Residuals (RED catalog):

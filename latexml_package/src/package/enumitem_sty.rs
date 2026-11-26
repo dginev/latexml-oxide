@@ -341,7 +341,8 @@ fn stated_margin(hash: &rustc_hash::FxHashMap<String, ArgWrap>, key: &str) -> Op
 }
 
 /// The list's `\leftmargin`, the one reading for its `\list` setup and its CSS: a `leftmargin` key, else `wide`'s or
-/// `fullwidth`'s `\leftmargin\z@` (enumitem.sty:745-758, any `wide` value), as when the key comes first.
+/// `fullwidth`'s `\leftmargin\z@` (enumitem.sty:745-758, any `wide` value); a `leftmargin` before them is gone
+/// (`merge_key`).
 fn stated_leftmargin(hash: &rustc_hash::FxHashMap<String, ArgWrap>) -> Option<Margin> {
   stated_margin(hash, "leftmargin").or_else(|| {
     (hash.contains_key("wide") || hash.contains_key("fullwidth"))
@@ -540,7 +541,7 @@ fn merged_enumitem_keyvals(
             })),
             _ => ArgWrap::None,
           };
-          hash.insert(key.clone(), aw);
+          merge_key(&mut hash, key, aw);
         }
       }
     }
@@ -549,11 +550,20 @@ fn merged_enumitem_keyvals(
   // Merge argument keyvals last (highest priority)
   if let Some(kv) = argkv {
     for (key, val) in kv.get_pairs() {
-      hash.insert(key.clone(), val.clone());
+      merge_key(&mut hash, key, val.clone());
     }
   }
 
   hash
+}
+
+/// A key merged as enumitem applies it, in order: `wide` and `fullwidth` set `\leftmargin\z@` (enumitem.sty:745-758),
+/// over a `leftmargin` before them, a `\setlist`'s too (`stated_leftmargin`).
+fn merge_key(hash: &mut rustc_hash::FxHashMap<String, ArgWrap>, key: &str, value: ArgWrap) {
+  if matches!(key, "wide" | "fullwidth") {
+    hash.remove("leftmargin");
+  }
+  hash.insert(key.to_string(), value);
 }
 
 /// Helper: convert ArgWrap to Option<Tokens>

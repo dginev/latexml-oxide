@@ -37,8 +37,8 @@ type Case = (
 /// label_opening_glue_nets_against_labelsep: a label's leading glue nets against `\labelsep` on every label path, a
 /// trailing one stays, a `\usebox`ed register keeps its own. Red (QA14K2 eb92bd5ebc9): `<tag> x</tag>` (U+2002),
 /// `<tag> •</tag>`, the typerefnum's ` k`. Witnesses 2605.07451, 1508.03599.
-/// enumitem_wide_clears_the_left_margin: `wide`/`fullwidth` set `\leftmargin\z@`. Red (QA14K2 eb92bd5ebc9): A-D, F
-/// "319.99997pt 25.00003pt".
+/// enumitem_wide_clears_the_left_margin: `wide`/`fullwidth` set `\leftmargin\z@`, keys in order. Red (QA14K2
+/// eb92bd5ebc9): A-D, F "319.99997pt 25.00003pt"; G, H (a `leftmargin` before `wide`) "316.54726pt 28.45274pt".
 /// note_and_cell_paragraphs_are_unspaced_in_a_list: a footnote and a `p` cell reset `\parskip`. Red (QA14K2
 /// eb92bd5ebc9): "4.0pt plus 2.0pt minus 1.0pt" (the list's `\parsep`).
 #[test]
@@ -367,6 +367,16 @@ fn list_registers_set_the_line_width() {
           "description",
           "S0.I6",
           "<description cssstyle=\"--ltx-enum-leftmargin:0pt\" xml:id=\"S0.I6\"><item xml:id=\"S0.I6.ix1\"><tags><tag><text font=\"bold\" xml:id=\"S0.I6.ix1.1\">x</text></tag><tag role=\"typerefnum\">item x</tag></tags><para xml:id=\"S0.I6.ix1.p1\"><p xml:id=\"S0.I6.ix1.p1.1\">F 345.0pt 0.0pt</p></para></item></description>",
+        ),
+        (
+          "itemize",
+          "S0.I7",
+          "<itemize cssstyle=\"--ltx-enum-leftmargin:0pt\" xml:id=\"S0.I7\"><item xml:id=\"S0.I7.i1\"><tags><tag>•</tag><tag role=\"typerefnum\">1st item</tag></tags><para xml:id=\"S0.I7.i1.p1\"><p xml:id=\"S0.I7.i1.p1.1\">G 345.0pt 0.0pt</p></para></item></itemize>",
+        ),
+        (
+          "itemize",
+          "S0.I8",
+          "<itemize cssstyle=\"--ltx-enum-leftmargin:0pt\" xml:id=\"S0.I8\"><item xml:id=\"S0.I8.i1\"><tags><tag>•</tag><tag role=\"typerefnum\">1st item</tag></tags><para xml:id=\"S0.I8.i1.p1\"><p xml:id=\"S0.I8.i1.p1.1\">H 345.0pt 0.0pt</p></para></item></itemize>",
         ),
       ],
     ),
