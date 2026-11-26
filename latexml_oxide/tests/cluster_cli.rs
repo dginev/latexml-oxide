@@ -3464,8 +3464,10 @@ mod browser_render_eqn_rows_in_cells {
   //! as spans, and each of its rows stacks under the last, the cells of an aligned display at the same x in every row,
   //! at the column offsets of the same display outside the cell; a `gather*`'s rows as far apart as outside, and an
   //! `\intertext` one line as tall as outside (also in a footnote and a minipage, where the span table has no
-  //! `ltx_inline-block`/`ltx_td` ancestor; the measuring script opens notes). Opt-in and LOCAL like the guards above (Firefox too with
-  //! `LATEXML_FIREFOX`); the CI half is `witnessed_css_delta::equation_rows_in_inline_context_delta_stays_present`.
+  //! `ltx_inline-block`/`ltx_td` ancestor; the measuring script opens notes). No display or note draws a vertical
+  //! scrollbar, and an overfull display widens its cell rather than run over the next one. Opt-in and LOCAL like the
+  //! guards above (Firefox too with `LATEXML_FIREFOX`); the CI half is
+  //! `witnessed_css_delta::{equation_rows_in_inline_context_delta_stays_present, constrained_equation_overflow_delta_stays_present}`.
 
   const DOC: &str =
     include_str!("../../tools/perfect_kernel/repros/block-model/display_rows_in_a_p_cell_972.tex");
@@ -3503,7 +3505,7 @@ mod browser_render_eqn_rows_in_cells {
         [
           "S0.Ex1", "S0.Ex2", "S0.Ex3", "S0.Ex4", "S0.E1", "S0.EGx1", "S0.EGx2", "S0.EGx3",
           "S0.EGx4", "S0.Ex13", "S0.EGx5", "S0.EGx6", "S0.EGx7", "S0.EGx8", "S0.EGx9", "S0.EGx10",
-          "S0.EGx11", "S0.EGx12"
+          "S0.EGx11", "S0.EGx12", "S0.Ex22", "S0.Ex23"
         ],
         "the displays ({key}): {stdout}"
       );
@@ -3545,9 +3547,20 @@ mod browser_render_eqn_rows_in_cells {
           extents.windows(2).all(|w| w[0].1 <= w[1].0 + 0.5),
           "{id}: one row's formulas reach into the next's ({key}): {extents:?}"
         );
+        // Within 1 px: the grown cell is its display's fractional min-content width, which `scrollWidth` rounds up
+        // and `clientWidth` down (the overfull one: 297 against 296 in Chrome).
         assert!(
-          e["scrollWidth"].as_i64() <= e["clientWidth"].as_i64(),
-          "{id}: the display scrolls in its cell ({key}): {stdout}"
+          e["scrollWidth"].as_i64().unwrap() <= e["clientWidth"].as_i64().unwrap() + 1,
+          "{id}: the display overflows its cell ({key}): {stdout}"
+        );
+        // Grow: a display is no scroll container (Chrome drew a vertical scrollbar on every in-cell display, Firefox
+        // under the lowered \raisebox); its box widens, so the overfull one does not run over the next cell either.
+        let ox = e["overflowX"].as_str().unwrap();
+        assert!(
+          !matches!(ox, "auto" | "scroll") && e["vbar"] == false && e["spill"] == false,
+          "{id}: overflow-x {ox}, vertical scrollbar {}, over the next cell {} ({key})",
+          e["vbar"],
+          e["spill"]
         );
       }
       // The in-cell columns sit as outside, within the UA's 1px padding of an outside <td>; before, the tabular's

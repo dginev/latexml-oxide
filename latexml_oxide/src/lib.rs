@@ -1,3 +1,18 @@
+//! latexml-oxide converts LaTeX documents into HTML5 with MathML, XML and EPUB 3: a Rust port of
+//! [LaTeXML](https://github.com/brucemiller/latexml). This crate, published as `latexml`, holds the command-line
+//! binaries (`latexml_oxide`, `latexmlmath_oxide`, `genschema_oxide`, and `cortex_worker` with the `cortex` feature)
+//! and the library that drives a conversion.
+//!
+//! - [`api`]: the stable entry points, `convert_to_xml`, `convert_to_html` and `convert_to_html_with`.
+//! - [`converter::Converter`]: a full conversion with its own configuration (preloads, search paths, split, …).
+//! - [`post`]: the post-processing to HTML, XHTML or EPUB (Perl's `latexmlpost`).
+//! - [`format_dumps`]: the format dumps embedded in the binary or built once for the host TeX tree.
+//! - [`environment`] and [`intermediate_files`]: every environment variable read, and every file written.
+//!
+//! The engine is in `latexml_core` and `latexml_engine`, the bindings in `latexml_package` and `latexml_contrib`,
+//! the math parser in `latexml_math_parser` and the post-processors in `latexml_post`. Start with the
+//! [README](https://github.com/dginev/latexml-oxide/blob/main/README.md) and [USAGE.md](https://github.com/dginev/latexml-oxide/blob/main/docs/USAGE.md).
+
 // Macros (DefMacro!, load_model!, …) live in latexml_engine since the
 // extraction; latexml_package is a regular dep (its prelude is `use`d
 // from binding files, not macros).

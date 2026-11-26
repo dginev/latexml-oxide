@@ -12,7 +12,7 @@ needs — plus libxml2, libxslt and a TeX Live installation:
   ```
   $ sudo apt install pkg-config libxml2-dev libxslt1-dev libkpathsea-dev mold \
                      texlive texlive-latex-extra texlive-science texlive-bibtex-extra \
-                     texlive-publishers imagemagick ghostscript poppler-utils
+                     texlive-publishers imagemagick ghostscript poppler-utils mupdf-tools
   ```
   On x86_64 Linux the build links with `mold` (`.cargo/config.toml`), so install it on
   any distribution.
@@ -71,11 +71,10 @@ also validate the `.epub` they write; without it they print `SKIP epubcheck …`
 
 ## Build profiles
 
-`Cargo.toml` defines named profiles for day-to-day development (`test`), the
-RAM-bounded CI runner (`ci`), local perf measurement (`release`), and the shipped
-distribution binaries (`maxperf` / `maxperf-cortex`). Use the default profile
-(`cargo build` / `cargo test`, no flag) for everyday work; see
-[CLAUDE.md](../CLAUDE.md) for the full profile table.
+`Cargo.toml` defines named profiles for day-to-day development (`test`, the default), the RAM-bounded CI runner
+(`ci`), local performance measurement (`release`, and `bench` for profiling: release with full debuginfo), and the
+shipped distribution binaries (`maxperf` / `maxperf-cortex`). Use the default profile (`cargo build` / `cargo test`,
+no flag) for everyday work; [CLAUDE.md](../CLAUDE.md) has the full profile table.
 
 ## Development Tips
 
@@ -110,15 +109,15 @@ up the way the conversion finds them. A skip prints `Skip: <reason>` and appends
 
 ## Build features
 
-Cargo features, and what the shipped binary turns on. The releases are built with
-`--no-default-features --features runtime-bindings` — that drops `test-utils` but
-deliberately **keeps** the Rhai runtime bindings below.
+The Cargo features, and which the shipped binaries turn on. The releases build with `--no-default-features --features
+runtime-bindings` (plus `kpathsea-build-from-source` on Windows), which is the default feature set named explicitly.
 
 | Feature | Crate | In releases? | What it does |
 |---|---|---|---|
-| `runtime-bindings` | `latexml` → `latexml_contrib` | **yes** (also a default) | Embeds the [Rhai](https://rhai.rs) interpreter so you can add or override TeX package/class bindings **at runtime** — no Rust toolchain, no recompile. See the [Rhai guide](parity/RHAI_BINDINGS_GUIDE.md). |
+| `runtime-bindings` | `latexml` → `latexml_contrib` | **yes** (a default) | Embeds the [Rhai](https://rhai.rs) interpreter so you can add or override TeX package/class bindings **at runtime** — no Rust toolchain, no recompile. See the [Rhai guide](parity/RHAI_BINDINGS_GUIDE.md). |
 | `kpathsea` | `latexml_core` | **yes** (a default) | Resolves `.sty`/`.cls`/`.tfm` from your TeX tree via libkpathsea in-process, falling back to the `kpsewhich` subprocess when the library is absent (e.g. MacTeX). |
-| `test-utils` | `latexml` | no (dropped) | Test-suite discovery helpers; drops `glob` and the A/B comparator's `roxmltree` + `similar` from the distribution build. |
-| `token-locators` | `latexml` (+4 crates) | no | Widens `Token` from 8 to 12 bytes so each token carries its exact source offset through expansion into digestion — the precision build behind `--source-map`. Off everywhere else so normal conversions don't pay. |
+| `kpathsea-build-from-source` | `latexml` → `latexml_core` | Windows only | Compiles a static libkpathsea into the Windows binary, so it resolves files in-process with no DLL; inert elsewhere. |
+| `test-utils` | `latexml` | no | Test-suite helpers, the A/B comparator and the audit binaries (`binding_audit`, `ab_audit`), with `glob`, `roxmltree` and `similar`. Not a default: the workspace's tests turn it on through the crate's dev-dependency on itself. |
+| `token-locators` | `latexml` (+5 crates) | no | Widens `Token` from 8 to 12 bytes so each token carries its exact source offset through expansion into digestion — the precision build behind `--source-map`. Off everywhere else so normal conversions don't pay. |
 | `cortex` | `latexml` | no (worker image only) | The `cortex_worker` binary for the arXiv-scale fleet. |
 | `jemalloc`, `dhat-heap` | `latexml` | no | Allocator swap / heap profiling, for performance work. |

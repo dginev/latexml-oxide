@@ -2,35 +2,28 @@
 
 ## Threat model
 
-`latexml_oxide` is a **batch document compiler**, not a network service or
-multi-tenant process. The program is invoked from a shell or CI runner on
-locally-trusted LaTeX input that the user already chose to compile. Inputs
-come from arXiv-style preprints, user sources, or test fixtures.
+`latexml_oxide` is a **batch document compiler**, not a network service or a multi-tenant process. It runs from a
+shell or a CI runner on LaTeX input the user chose to compile: arXiv-style preprints, their own sources, test
+fixtures.
 
-What follows from that:
+- **No untrusted-network surface.** Nothing is parsed from a socket, and no `unsafe` block touches a network-derived
+  buffer.
+- **No privilege boundary.** The process holds the invoking user's UID and drops no privileges; nothing crosses a
+  sudo, setuid or capability boundary.
+- **One conversion per thread.** `cortex_worker` runs a pool of workers, but each conversion runs on exactly one OS
+  thread: the engine state is a thread-local global (CLAUDE.md design decision 0.3.2).
+- **Memory-safe by default.** The only code that is not Rust is linked C (libxml2/libxslt through the `libxml` and
+  `libxslt` crates, libkpathsea, libmarpa, mimalloc) and the external programs a conversion runs: TeX Live's
+  `texlua` (document Lua), `kpsewhich` and `pdflatex` (queries of the TeX tree), and the image converters
+  Ghostscript (`gs`, `ps2pdf`), MuPDF (`mutool`), Poppler (`pdftocairo`) and ImageMagick (`convert`/`magick`). The
+  image converters run under a timeout in their own process group (`Graphics::run_with_timeout` in
+  `latexml_post/src/graphics.rs`); `texlua` is sandboxed as the next section describes.
 
-- **No untrusted-network surface.** We do not parse data over a socket, and
-  no `unsafe` block touches a network-derived buffer.
-- **No privilege boundary.** The process holds the invoking user's UID and
-  performs no privilege drops; nothing we do crosses a sudo / setuid /
-  capability boundary.
-- **Single conversion job per process** (in practice). The `cortex_worker`
-  spawns a worker pool, but each worker conversion runs on exactly one
-  OS thread — the engine state is pinned to a thread-local global
-  (CLAUDE.md design decision 0.3.2).
-- **Memory-safe by default.** The dependency graph (libxml2 via the `libxml`
-  crate, gs/pdftocairo/mutool as subprocess CLIs, kpathsea via FFI) is
-  the only place we are not pure-Rust, and we sandbox each subprocess to a
-  short timeout (`Graphics::run_with_timeout`, see graphics.rs).
-
-The output is HTML / MathML / XML rendered from LaTeX — the *content* may
-need sanitisation downstream (CSS / `<script>` injection in author-supplied
-`\href`, `\url`, `\write18`), but those are content-policy concerns, not
-memory-safety concerns. We do not execute **document-driven** `\write18` (the
-`\immediate\write` shell-escape) at all. A **trusted binding** can run external
-commands via the `Command` API (allowed by default, opt-out
-`LATEXML_DISABLE_SHELL_ESCAPE`) — the runtime-bindings analog of shell-escape;
-see that section below.
+The output is HTML, MathML or XML rendered from LaTeX. Its *content* may need sanitising downstream (CSS or
+`<script>` injection through an author's `\href` or `\url`), but that is a content-policy concern, not a
+memory-safety one. **Document-driven** `\write18` (shell escape) never runs. A **trusted binding** can run external
+commands through the `Command` API, allowed by default and blocked by `LATEXML_DISABLE_SHELL_ESCAPE`; see the
+runtime-bindings section below.
 
 ## Untrusted input stays in the job
 
@@ -114,7 +107,7 @@ The 34 shipped sites, each with its contract (a `// SAFETY:` comment at the site
 | `latexml_post/src/xslt.rs` | 2 | `xsltMaxDepth`: its `extern` declaration and the `Once`-guarded write | category F | 4 |
 | `latexml_contrib/src/script_bindings/{engine,mod}.rs` | 4 | whatsit / document / properties pointers | category H | 6 |
 
-**The count may only fall** (issue #937 Phase 0): `unsafe_sites_ratchet::unsafe_sites_only_fall`
+**The count may only fall** (issue #937). `unsafe_sites_ratchet::unsafe_sites_only_fall`
 (`latexml_oxide/tests/cluster_package_guards/unsafe_sites_ratchet.rs`, run by CI's workspace nextest) pins the sites
 per file, read from the lexed source (comments and literals excluded, `#[cfg(test)]` code counted). A change that
 removes sites lowers its file's pin (the failure prints the table to paste); one that adds a site fails it, and
@@ -166,10 +159,10 @@ enumeration with:
 rg -n 'unsafe\s*\{|unsafe impl|unsafe fn' latexml_* -g '*.rs'
 ```
 
-The categories below describe what is unavoidable, what is a deliberate
-performance trade, and what could be refactored away at some cost. Locations
-are given at the file/function level (not exact line) to stay robust against
-drift. **When this count changes, update this section** (see Audit posture).
+Still `unsafe` because no safe API covers them yet (later phases of #937): `getrusage` (rustix has none), `raise`
+(thread-directed; `kill_process(getpid())` is process-directed), `sysconf(_SC_PHYS_PAGES)`, the logger's
+`ftruncate`/`write` on a raw fd shared with the signal path, `setsid` in `pre_exec`, the `mmap` probe. Every
+production `unsafe` block carries a `// SAFETY:` comment at the call site.
 
 ---
 
@@ -197,23 +190,16 @@ while a lend is live goes to the overflow page instead of the buffer, so the buf
 `reset` inside any lend, an overflow symbol's included, panics (its `try_borrow_mut` fails). Miri checks the arena tests
 under Stacked and Tree Borrows (`tools/miri_check.sh`).
 
-**Why we accept the `unsafe`**: callgrind measured the checked `resolve`
-(`from_utf8` validation per call) at ~3% of total instruction count. The
-arena is the hottest read site in the engine — every Token-to-string
-serialisation goes through it.
-
-**Refactor option**: replace the `arena.resolve_unchecked(sym)` with `arena.resolve(sym).expect("interned")`. This is
-mechanical and eliminates the block. The cost is a re-validating `from_utf8` per lookup, ~3% of total runtime.
+**Why we accept it:** callgrind measured the checked `resolve` (a `from_utf8` validation per call) at ~3 % of the total
+instruction count; the arena is the engine's hottest read site, since every token-to-string serialisation goes
+through it. **Refactor option:** `arena.resolve(sym).expect("interned")` removes the block at that ~3 % cost.
 
 ### C. Arena re-entrant `&mut *ptr` — removed (0 sites)
 
-Removed 2026-11-15 (ARENAR). `with_arena_mut` cached a raw pointer to the interner on its outermost call, and a
-re-entrant call (a `pin` inside a `with` closure) took `&mut *ptr` while the closure held a `&str` into the buffer: a
-new string could grow and move the buffer under that `&str` (a use-after-free; Stacked Borrows rejected even a nested
-`with` or `get` under a lend). The lends now hold a shared borrow and an intern under one goes to the overflow page
-(category B above); `first_bytes`'s raw-pointer read went with it. Guard:
-`latexml_core::common::arena::tests::lend_survives_interning_many_new_strings` (failed under Miri on the old code at
-the re-entrant `&mut *ptr`).
+A re-entrant `with_arena_mut` used to take `&mut *ptr` to the interner while a closure held a `&str` into its buffer,
+so a new string could move the buffer under that `&str` (a use-after-free). The lends now hold a shared borrow and an
+intern under one goes to the overflow page (category B). Guard:
+`latexml_core::common::arena::tests::lend_survives_interning_many_new_strings` (it fails under Miri on the old code).
 
 ### D. Process start-up: the environment, rusage, a test crash trap (7 sites)
 
@@ -227,12 +213,13 @@ In `latexml_core/src/util/pathname.rs`, `latexml_core/src/watchdog.rs` and `late
 
 `--init` writes no environment since 2026-11-25 (`dump_paths::set_ini_mode()`, an in-process flag).
 
-### E. Subprocess process-group lifecycle + test EnvGuard in graphics (~7 sites)
+Image converters (`gs`, `pdftocairo`, `mutool draw`, `ps2pdf`, `convert`) can spawn grandchildren, which a plain
+`Child::kill()` does not reach, so each runs as a process-group leader.
 
-`latexml_post/src/graphics.rs` + `latexml_post/src/graphics_cache.rs` —
-process-group control is needed because subprocess rasterizers (`gs`,
-`pdftocairo`, `mutool draw`, `ps2pdf`, `convert`) can spawn grandchildren,
-and a plain `Child::kill()` does not reap those.
+| Sites | Call | Why |
+|---|---|---|
+| `latexml_post/src/graphics.rs` (1) | `cmd.pre_exec(|| setsid(); setpgid(0,0); prctl(…))` | Runs between `fork()` and `exec()`, so it must be async-signal-safe. `setsid(2)` makes the child a group leader so the whole group can be killed; the signalling itself is safe `rustix::process` (`watchdog.rs`). `Command::process_group` gives no `setsid` + `killpg`. |
+| `latexml_post/src/test_env.rs` (3), `latexml_post/src/graphics_cache.rs` (1) | `set_var`/`remove_var` in `EnvGuard`; one `OnceLock`-initialised test `set_var` | **Test-only.** Both hold the binary-wide `env_lock` across set, use and restore. The residual, documented in `test_env.rs`: a linked C library can call `getenv` concurrently, which no Rust lock serialises, so no correctness rests on these variables (the graphics cache takes an explicit `CachePolicy`). |
 
 | Call | Why |
 |---|---|
@@ -243,46 +230,38 @@ and a plain `Child::kill()` does not reap those.
 terminal; and `PR_SET_PDEATHSIG` can only be set between `fork` and `exec`. So the `pre_exec` stays. (The prune
 lock's `flock` is `File::try_lock` since 2026-11-24.)
 
-### F. libxslt/libxml global config via FFI (2 sites)
+### G. Editor server child processes (1 site)
 
-`latexml_post/src/xslt.rs` — a `Once`-guarded write to libxslt's
-process-global `xsltMaxDepth` recursion cap (`= 1000`, a faithful port of Perl
-`XML::LibXSLT->max_depth(1000)`) through a plain `unsafe extern "C"` static
-declaration (resolved at link time; WISDOM #56 says why not the crate's binding
-or `dlsym`), plus a read-back in a parity test. (That test's capture of libxslt's fd-2 report is safe `rustix`
-`dup`/`dup2_stderr` since 2026-11-24.)
-The `libxslt` crate exposes no safe setter; libxslt only READS the value (when
-building each transform context), so the single guarded write cannot race a
-transform. Hardens the post-processor against stack-overflow/OOM on
-pathologically-deep stylesheet recursion (it aborts gracefully, like Perl).
+`latexml_oxide/src/lsp_server/unix.rs`, the off-by-default `--server` editor mode (design archived at
+`docs/archive/LSP_SERVER.md`), forks a worker child per request and drives it over a pipe. Only `fork(2)` is
+`unsafe`; `pipe`, `read`/`write`, `poll`, `waitpid`, `kill_process` and the child's `open("/dev/null")` +
+`dup2_stdout` are safe `rustix`, with the pipe ends `OwnedFd`s closed exactly once by their drop. The invariant is
+**single-threaded at fork** (asserted before `fork()`), with plain syscalls between `fork()` and the child's
+conversion.
 
-### G. LSP server POSIX child-process management (1 site)
+### H. Script-bindings context bridge (4 sites; 3 more in its tests)
 
-`latexml_oxide/src/lsp_server/unix.rs` — the **off-by-default** `--server`
-editor mode (design archived at `docs/archive/LSP_SERVER.md`) forks a worker
-child per request and drives it over a pipe. Only `fork(2)` is `unsafe`; the
-rest is safe `rustix` (since 2026-11-24, issue #937): `pipe`, `read`/`write`,
-`poll`, `waitpid`, `kill_process`, and the child's `open("/dev/null")` +
-`dup2_stdout`, with the pipe ends `OwnedFd`s (a `File` by `File::from`), each
-closed exactly once by its drop. The invariant for the fork/child window is
-**single-threaded at fork** (asserted before `fork()`) and plain syscalls
-between `fork()` and the child's conversion.
+`latexml_contrib/src/script_bindings/{engine.rs,mod.rs}`: the `runtime-bindings` (Rhai) front-end re-mints `&`/`&mut`
+references to the in-flight whatsit, document and properties from raw pointers the core publishes on a thread-local
+context stack (`WHATSIT_CTX` and its siblings) for the duration of one hook body. The pointer is the only live
+reference for the call; a `mutable` flag, checked first, gates the `&mut` sites; a call outside a hook context returns
+an error, not undefined behaviour. Provenance and lifetime are argued at `mod.rs::with_doc` (the B1 re-entrancy
+soundness note), and modelled under Miri by the test-only `latexml_core/src/runtime_bindings_reentrancy_model.rs`
+(1 site).
 
-### H. Script-bindings whatsit-pointer bridge (5 sites)
+### I. Integration tests (17 sites)
 
-`latexml_contrib/src/script_bindings/{engine.rs,mod.rs}` — the `runtime-bindings`
-(Rhai) front-end re-mints `&`/`&mut` references to the in-flight whatsit / document
-/ properties from raw pointers the core publishes onto a thread-local
-active-context stack (`WHATSIT_CTX`) for the duration of a single hook body. The
-pointer is the sole live reference for the call; a `mutable` flag (checked first)
-gates the `&mut` sites; calling outside a hook context returns an error, not UB.
-Provenance + lifetime are documented in the `mod.rs::with_doc` *B1 SOUNDNESS
-CAVEAT*.
+`latexml_oxide/tests/`: `set_var`/`remove_var` of the variables a test switches (`117_post_2gib_handoff.rs`,
+`118_streaming_split_parity.rs`), `mallinfo2` (`112_fragment_yield.rs`), `wait4` with its `rusage`
+(`perfect_kernel_batch106t.rs`), and the exit-report harness's signal and process calls
+(`cortex_worker_exit_reports.rs`).
 
-**Ships on.** `runtime-bindings` is in `latexml`'s `default`, and `make_release.sh`
-keeps it while dropping `test-utils`.
+### Runtime bindings in the shipped binaries
 
-| Artifact | Build | These 5 sites |
+**Ships on.** `runtime-bindings` is `latexml`'s only default feature, and `make_release.sh` names it explicitly;
+`test-utils` is never on in a release build.
+
+| Artifact | Build | These 4 sites |
 |---|---|---|
 | GitHub-release binaries | `--no-default-features --features runtime-bindings` | **present** |
 | `cargo install latexml` | `default` | **present** |
@@ -309,7 +288,7 @@ beside an untrusted source executes on a plain conversion and, being first,
 *overrides* the compiled binding of the same name (`article.cls.rhai` shadows the
 built-in). See `script_bindings_plan.md` §7.
 
-**Also reachable from the host TeX tree (#345, 2026-07-22).** A `<pkg>.sty.rhai`
+**Also reachable from the host TeX tree (#345).** A `<pkg>.sty.rhai`
 distributed inside a texmf tree on `$TEXINPUTS` is loaded too, so the executable
 surface is not just the document's directory: it is every directory kpathsea
 searches, including `TEXMFHOME`/`TEXMFLOCAL` and anything an operator has put on
@@ -333,8 +312,8 @@ a Rhai error. Because a `.rhai` beside an untrusted source **auto-loads** (the
 "Reachable without a flag" note above), a bundled binding could otherwise run
 arbitrary commands: **any untrusted-input deployment that ships `--features
 runtime-bindings` MUST set `LATEXML_DISABLE_SHELL_ESCAPE`, or build without the
-feature.** (`cortex_worker` forbids runtime bindings at start, of its own accord, above, so no binding of its runs a command.) The command runs to completion (no artificial per-call timeout, like
-`system()`); the overall conversion wall-time is the outer bound.
+feature.** (`cortex_worker` forbids runtime bindings at start, as above, so no binding of its runs a command.) The
+command runs to completion (no per-call timeout, like `system()`); the conversion's wall-time limit is the outer bound.
 
 ---
 

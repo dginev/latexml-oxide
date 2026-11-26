@@ -1,3 +1,16 @@
+//! Bindings beyond Perl LaTeXML's tree, and the runtime (Rhai) bindings of latexml-oxide.
+//!
+//! The compiled bindings here cover packages and classes Perl LaTeXML does not ship (largely the ar5iv bindings:
+//! journal and conference classes and styles). [`BINDINGS`] lists them and [`dispatch`] loads one by file name; a
+//! conversion asks it before `latexml_package`. With the `runtime-bindings` feature (a default), `script_bindings`
+//! runs a binding written in [Rhai](https://rhai.rs) (`<pkg>.sty.rhai`, `<class>.cls.rhai`) found beside a document
+//! or on the search path, without a recompile; a `.rhai` beside the document wins over every compiled binding. It is
+//! the only module that embeds Rhai.
+//!
+//! Read next: the [Rhai guide](https://github.com/dginev/latexml-oxide/blob/main/docs/parity/RHAI_BINDINGS_GUIDE.md), the
+//! [cheat sheet](https://github.com/dginev/latexml-oxide/blob/main/latexml_contrib/src/script_bindings/CHEATSHEET.md), and
+//! [SUPPORTED_PACKAGES.md](https://github.com/dginev/latexml-oxide/blob/main/docs/SUPPORTED_PACKAGES.md).
+
 // `latexml_engine` carries the macro layer (`DefMacro!`, `LoadDefinitions!`,
 // `compile_*!`) since the engine extraction; latexml_package keeps the
 // prelude that adds `package::*` etc. (no #[macro_use] needed on

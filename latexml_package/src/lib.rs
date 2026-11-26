@@ -1,4 +1,12 @@
-//! Binding definitions for the `LaTeXML` converter, reimplemented in Rust
+//! The package and class bindings of latexml-oxide: one Rust module per Perl LaTeXML `Package/*.ltxml` binding,
+//! plus the bindings latexml-oxide adds.
+//!
+//! [`BINDINGS`] is the one list of compiled bindings (file name, extension, loader); [`dispatch`] loads one by file
+//! name, and [`binding_names`] lists them. The modules live under [`package`]; a binding imports [`prelude`].
+//! Packages and classes without a binding here (or in `latexml_contrib`) are read raw from their TeX sources.
+//!
+//! Read next: [SUPPORTED_PACKAGES.md](https://github.com/dginev/latexml-oxide/blob/main/docs/SUPPORTED_PACKAGES.md) and
+//! [ORGANIZATION.md](https://github.com/dginev/latexml-oxide/blob/main/docs/parity/ORGANIZATION.md).
 #![recursion_limit = "1024"]
 
 #[macro_use]

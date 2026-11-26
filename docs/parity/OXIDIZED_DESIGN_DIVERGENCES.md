@@ -19522,9 +19522,9 @@ Firefox too). Measured in Chrome and Firefox at 1280/768/375 px: a one-row equat
 152 px without scrolling, the tag visible (was 179 px, the tag behind the scroll); the accessibility tree is
 unchanged (playwright `ariaSnapshot`, Chrome's `LayoutTable` roles). A multi-row table (`align`, `gather`,
 `eqnarray`, `subequations`) keeps (1) alone, since its rows share columns: its rows are centred in the line less the
-tag column (-10 to -24 px at 16 px). Not reached: a formula plus its tag wider than a narrow box in the browser scrolls
-with the tag behind the scroll, where TeX would set the number on its own line (repro
-`alignment/equation_tag_hidden_in_a_narrow_minipage_red.tex`). Offered upstream. **Guards**:
+tag column (-10 to -24 px at 16 px). Not reached: a formula plus its tag wider than a narrow box widens the box (OD
+#1135 Grow: 138 → 152/155 px, the tag beside it), where TeX would set the number on its own line (repro
+`alignment/equation_tag_hidden_in_a_narrow_minipage_red.tex`; before Grow the tag was behind the box's scroll). Offered upstream. **Guards**:
 `cluster_cli::browser_render_eqn_tags::equation_tags_stay_beside` (Chrome, Firefox with `LATEXML_FIREFOX`; local),
 `xslt::witnessed_css_delta::equation_tag_and_mathjax_deltas_stay_present`.
 
@@ -24100,8 +24100,8 @@ page's whole head link sets), `cluster_xslt_split::urlstyle::*` (the parent page
 table touched (pitch 11 px, 13 outside; `\sum` limits over a `\frac` ran together). A row of one spanning cell
 (`\intertext`, `ltx:p` mode `ininalignment`, `colspan` 3+n; a constraint row has the same shape) is a block across the
 display, with its row group: CSS tables ignore `colspan`, so in the shared table it fell into the first column and
-wrapped word by word (54 px for one line, 108 with `leqno`). The span table itself is always the issue-533 block scroll
-box (`span.ltx_eqn_table`): in a note or a minipage (`ltx_inline-logical-block`) no `ltx_inline-block`/`ltx_td` boxes
+wrapped word by word (54 px for one line, 108 with `leqno`). The span table itself is always the issue-533 block
+(`span.ltx_eqn_table`): in a note or a minipage (`ltx_inline-logical-block`) no `ltx_inline-block`/`ltx_td` boxes
 it, and as a CSS table it put the `\intertext` row in its first column (a footnote's 44 px against 23 in Firefox).
 - Perl: the same HTML. In an inline context (`ltx:inline-block` of a `p{}`/`m{}`/`b{}` cell, `\parbox`, minipage, a
   note) `f:blockelement` (`LaTeXML-common.xsl`) writes the equation table, its tbodies, rows and cells as `span`s, and
@@ -24119,10 +24119,30 @@ it, and as a CSS table it put the `\intertext` row in its first column (a footno
   `leqno` tag's `rowspan` cell (`equation`+`aligned`/`split`) is in the first row only, so rows 2+ start one column
   left (`=` under the first row's left side); pre-existing, as each row was its own table before. An unaligned
   equation in a group (`colspan` = n) spans one column.
-- Upstream: offered to Perl as a patch (the CSS rules).
+- Grow (0.8.0): that block, in a cell or the span form, is no scroll container. One that scrolls in x scrolls in y too
+  (CSS Overflow 3, `overflow-x`/`overflow-y` computed value: `visible` beside a scrolling axis computes to `auto`), and
+  MathML tokens' text boxes reach past their ink (w3c/mathml-core#349), so Chrome drew a vertical scrollbar with
+  nothing to scroll on every in-cell display (the issue's longtable cell) and both engines clipped a lowered
+  `\raisebox`. A `p{}` cell, `\parbox`, minipage or inline logical block holding a display is at least the display's
+  `min-content` width, its centring pads (and a table cell's) `min-width:0`; a note is not widened: a
+  `.ltx_note_content` holding a display scrolls in x (its padding takes the text boxes' overhang: no vertical bar).
+  Mirrors ar5iv-css `342a531` with three differences, as base CSS has no `.ltx_table` scroll box: a `\parbox` table
+  float grows with its table (with `:not(.ltx_table)` its centred table ran 186 px off the page's left edge at 1280 px,
+  2001.00529 `A3.T2`), the note rule above is base-only, and the pads' rule is keyed on the boxes (minipage and
+  `\parbox` included), not on `span.ltx_eqn_table` (a span-form display outside a box
+  kept its 2em pads, 2001.11999 `S2.Ex1`).
+- Measured (Chrome and Firefox, 1280/375 px, the issue's MWE, synthetic cells, `\parbox`, minipage, footnotes, a
+  lowered `\raisebox`, and 1805.09247, 2001.00529, 2001.11999, 1805.00336, 2001.03096, 2001.04829, 2001.07938): of
+  68 displays in boxes, in-box scroll containers 52/33-35 (Chrome/Firefox) → 0, with a vertical bar 35/3-4 → 0,
+  clipped in y 3 → 0, over the next cell 0 → 0; the 424 displays outside boxes keep every box's geometry; the tables
+  of 2001.00529 (23 px at 1280, 44 at 375) and a cell's itemize in 2001.03096 (79/50 at 375) no longer reach past
+  the page's left edge (other content's left overflow unchanged). A grown table that passes the
+  screen widens the page, as a too-wide tabular already does in base CSS (2001.04829 at 375 px: 600 → 648 px). A
+  cell now outgrows TeX's width where TeX runs an overfull display into the next column.
 
 **Guards**: `cluster_cli::browser_render_eqn_rows_in_cells::display_rows_stack_and_align_in_cells` (opt-in, local),
-`latexml_post::xslt::witnessed_css_delta::equation_rows_in_inline_context_delta_stays_present` (CI).
+`latexml_post::xslt::witnessed_css_delta::{equation_rows_in_inline_context_delta_stays_present,
+constrained_equation_overflow_delta_stays_present}` (CI).
 
 ### 1136. LaTeXML's default frontmatter labels are spelled with `\lx@nobreakspace`, not `~` (MANFM2)
 
