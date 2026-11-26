@@ -962,11 +962,7 @@ pub(super) fn note_net_counted(words: &[String]) {
 }
 
 /// Note the words of `text`, read as the check reads them, that an Info counted (an MSC year `\lx@msc@infer` corrects).
-pub(crate) fn note_info_counted(text: &str) {
-  note_net_counted(&net_content_words(
-    &resolver::base_letters(text).to_lowercase(),
-  ));
-}
+pub(crate) fn note_info_counted(text: &str) { note_net_counted(&net_content_words(text)); }
 
 /// The document's frontmatter elements, whose text [`check_title_page_words`] reads first: the title page's words are
 /// mostly theirs. A pubnote's label is its `name` alone, which only the last, whole-document step reads otherwise

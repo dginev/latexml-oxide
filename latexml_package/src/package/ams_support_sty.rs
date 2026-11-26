@@ -295,11 +295,10 @@ LoadDefinitions!({
   // What the call (year, codes) does to `\subjclassname`: here nothing, the name following `\@subjclassyear`; the AMS
   // classes let it to the edition's, or to the one the codes support (`\lx@msc@infer`, `amsart_class_internals`),
   // which then names the scheme.
-  DefMacro!("\\lx@ams@subjclass@setname{}{}", "\\let\\lx@msc@edition\\@empty");
+  DefMacro!("\\lx@ams@subjclass@setname{}{}", "\\let\\lx@msc@edition\\lx@msc@empty");
   DefMacro!("\\lx@ams@subjclass[Default:\\lx@ams@subjclass@edition]{}",
     "\\ifx.#1.\\else\\xdef\\@subjclassyear{#1}\\fi\\lx@ams@subjclass@setname{#1}{#2}\\global\\let\\lx@ams@subjclass@given\\@empty\
-     \\ifx\\lx@msc@edition\\@empty\\def\\lx@ams@subjclass@year{#1}\\else\\let\\lx@ams@subjclass@year\\lx@msc@edition\\fi\
-     \\expandafter\\lx@ams@subjclass@add\\expandafter{\\lx@ams@subjclass@year}{#2}",
+     \\lx@msc@year{#1}\\lx@ams@subjclass@add{#2}",
     short => true);
   DefMacro!("\\lx@ams@subjclass@add{}{}",
     "\\lx@add@classification[scheme={#1 Mathematics Subject Classification},name={\\subjclassname:~}]{#2}");
@@ -604,7 +603,8 @@ pub fn ams_class_caption_format() -> Result<()> {
 ///   :556-562 each call lets `\subjclassname` be its edition's name, over one the preamble renewed (1501.02464,
 ///   2503.20773), or warns of an unknown edition and keeps it (`\subjclass[]`: 1001.1600, 1601.08172), where Perl's
 ///   name follows the last year given (KNOWN_PERL_ERRORS #1341); the edition the codes support where they refute the
-///   class's (`\lx@msc@infer`, OXIDIZED_DESIGN_DIVERGENCES #1168: 1501.02464's discarded renewal, 0904.0450).
+///   class's (`\lx@msc@infer`, OXIDIZED_DESIGN_DIVERGENCES #1168: 1501.02464's discarded renewal, 0904.0450), the
+///   scheme alone where the name kept is the author's (`[2011]` after a renewal).
 /// - :554, :564 `\@keywords` and `\@subjclass`, empty: `\keywords` and `\subjclass` give the frontmatter, so a
 ///   document's own print of them (2510.22858 `\ifx\@keywords\@empty\else…`) prints nothing twice, as `\@dedicatory`;
 ///   :114 `\@dateposted` and :710-711 `\@PII` alike (memo-l.cls:116-171's abstract-page notes read them: 2412.15928).
@@ -704,10 +704,10 @@ pub fn amsart_class_internals() -> Result<()> {
     \let\lx@ams@subjclass@let\subjclassname
   }%
   \lx@ams@subjclass@infer{#2}%
-  \ifx\lx@msc@edition\@empty\else
+  \ifx\lx@msc@edition\lx@msc@empty\else\ifx\subjclassname\lx@ams@subjclass@let
     \@xp\let\@xp\subjclassname\csname subjclassname@\lx@msc@edition\endcsname
     \let\lx@ams@subjclass@let\subjclassname
-  \fi}
+  \fi\fi}
 \@xp\let\@xp\subjclassname\csname subjclassname@2020\endcsname
 \let\lx@ams@subjclass@let\subjclassname
 \let\lx@ams@keywords@given\relax

@@ -216,6 +216,7 @@ pub enum Reason {
   ClassPrint,
   Era,
   Nearest,
+  Oldest,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -230,7 +231,7 @@ pub struct Inference {
 
 /// The edition the codes and the evidence support: the call's or the author's when the codes fit it, the one edition
 /// they fit, the class's print when they fit it (or none), else the edition current at the document's year when they fit
-/// it, else the fitting one nearest to that edition, or to the print for an undated document (the older on a tie).
+/// it, else the fitting one nearest to that edition (the older on a tie); undated, the oldest they fit (DG 2026-11-26).
 pub fn infer(codes: impl IntoIterator<Item = Code>, evidence: &Evidence) -> Inference {
   let (mut fits, mut known, mut unknown) = (Editions::ALL, false, Vec::new());
   for code in codes {
@@ -255,13 +256,14 @@ pub fn infer(codes: impl IntoIterator<Item = Code>, evidence: &Evidence) -> Infe
     (evidence.print, Reason::ClassPrint)
   } else if let Some(era) = era.filter(|era| fits.contains(*era)) {
     (era, Reason::Era)
-  } else {
-    let anchor = era.unwrap_or(evidence.print) as i8;
-    let distance = |e: &Edition| ((*e as i8 - anchor).abs(), *e);
+  } else if let Some(era) = era {
+    let distance = |e: &Edition| ((*e as i8 - era as i8).abs(), *e);
     (
       fits.iter().min_by_key(distance).unwrap_or(evidence.print),
       Reason::Nearest,
     )
+  } else {
+    (fits.iter().next().unwrap_or(evidence.print), Reason::Oldest)
   };
   Inference {
     edition,
@@ -280,20 +282,20 @@ impl Inference {
   /// The Info lines (name, text): one for a correction of the class's print, one per code in no edition.
   pub fn notes(&self, evidence: &Evidence) -> Vec<(&'static str, String)> {
     let mut notes = Vec::new();
-    if let Some(edition) = self.correction(evidence) {
-      let why = match self.reason {
-        Reason::Declared => "the edition the call names".to_string(),
-        Reason::AuthorLabel => "the edition of the author's own label".to_string(),
-        Reason::UniqueFit => "the only edition the codes are in".to_string(),
-        Reason::Era => format!(
-          "the edition current in the document's year {}",
-          evidence.dated().unwrap_or_default()
-        ),
-        Reason::Nearest | Reason::ClassPrint => match evidence.dated() {
-          Some(year) => format!("the codes' edition nearest the document's year {year}"),
-          None => "the codes' edition nearest the class's print, the source undated".to_string(),
-        },
-      };
+    let year = evidence.dated().unwrap_or_default();
+    let why = match self.reason {
+      Reason::Declared => Some("the edition the call names".to_string()),
+      Reason::AuthorLabel => Some("the edition of the author's own label".to_string()),
+      Reason::UniqueFit => Some("the only edition the codes are in".to_string()),
+      Reason::Era => Some(format!("the edition current in the document's year {year}")),
+      Reason::Nearest => Some(format!(
+        "the codes' edition nearest the document's year {year}"
+      )),
+      Reason::Oldest => Some("the codes' oldest edition, the source undated".to_string()),
+      // (the print stands)
+      Reason::ClassPrint => None,
+    };
+    if let (Some(edition), Some(why)) = (self.correction(evidence), why) {
       let text = format!(
         "MSC {} (the class's print) -> {edition}: {why} (codes fit {})",
         evidence.print, self.fits
@@ -404,6 +406,18 @@ mod tests {
     assert_eq!(years("35Q00"), "none");
   }
 
+  /// A drift guard: the codes of each edition, as published (ADV_MSCINFER_2026-11-26 §3).
+  #[test]
+  fn table_edition_totals() {
+    let totals = Edition::ALL.map(|e| {
+      table::ENTRIES
+        .iter()
+        .filter(|entry| Editions((*entry & 0xf) as u8).contains(e))
+        .count()
+    });
+    assert_eq!(totals, [4811, 5531, 6198, 6603]);
+  }
+
   fn evidence(
     print: u16,
     declared: Option<u16>,
@@ -488,18 +502,19 @@ mod tests {
       ),
       (2010, Nearest)
     );
-    // R-nearest, undated (the harness's 1980 too): nearest the print, 1204.4468 and 2211.06115 as arXiv sends them.
+    // R undated (the harness's 1980 too): the oldest edition the codes fit (DG 2026-11-26), 1204.4468 and 2211.06115
+    // as arXiv sends them.
     for year in [None, Some(1980)] {
       assert_eq!(
         stamp("35Q55, 35B51", evidence(2000, Some(2000), None, year)),
-        (2010, Nearest)
+        (2010, Oldest)
       );
       assert_eq!(
         stamp(
           "18E30, 14F05; 14M15",
           evidence(2020, Some(2020), None, year)
         ),
-        (2010, Nearest)
+        (1991, Oldest)
       );
     }
     // R-era where the nearest edition is another: 2022, `[2000]`, 2010/2020 codes.

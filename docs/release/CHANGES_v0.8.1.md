@@ -12,7 +12,8 @@ top of its group.
   - **The MSC edition of an AMS class's or amsppt's `\subjclass` follows its codes.** The call's year, or the
     author's own `\subjclassname` (or amsppt `\subjclassyear`) that the class discards, stands when every code is in
     that edition; codes that fit one edition name it; a printed year the codes refute gives the edition current at the
-    source's date, or the nearest one that fits. The name and the scheme follow; each correction is an
+    source's date, or the nearest one that fits (undated, the oldest). The name and the scheme follow, the scheme alone
+    where the class prints the author's own label (`\subjclass[2011]` after a renewal); each correction is an
     `Info:frontmatter:msc_edition`, each code in no edition an `Info:frontmatter:msc_unknown_code`. The table is the
     full list of MSC1991, 2000, 2010 and 2020 codes (identifiers only, with attribution). 1501.02464: 2020 → 2010 (its
     renewal); 0904.0450: 2020 → 2000; 2111.04526: 2010 → 2020 (57K12); 1204.4468: 2000 → 2010; dg-ga9604003:

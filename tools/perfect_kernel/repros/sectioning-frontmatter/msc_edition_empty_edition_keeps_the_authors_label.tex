@@ -1,0 +1,19 @@
+% `\subjclass[]` names no edition: amsart warns and keeps the author's renewed `\subjclassname` (amsart.cls:557-560),
+%   whose 2000 the codes refute (14T05 is MSC2010's alone): the name stays the author's whole label, the scheme alone
+%   follows the codes (`\lx@msc@infer`, OXIDIZED_DESIGN_DIVERGENCES #1168).
+% witness: synthetic (the shape of 1001.1600 and 1601.08172, whose labels fit their codes and stay unchanged)
+% oracle:  pdflatex (TL 2025) 0 errors, 1 class warning: "2000 Mathematics Subject Classification (MSC, revised). 14T05, 14M25."
+% engines: rust INT081AD = name the label's, scheme " Mathematics Subject Classification"; rust MSCINFER round 0 = name
+%          and scheme 2010 (the label lost); MSCINFER round 1 = name the label's, scheme 2010, Info msc_edition
+% expect:  0 errors, 1 warning, 1 Info msc_edition; <classification name="2000 Mathematics Subject Classification (MSC,
+%          revised): " scheme="2010 Mathematics Subject Classification">14T05, 14M25</classification>
+% status:  RED (MSCINFER round 0) -> GREEN (guard `perfect_kernel_batchmscinfer::mscinfer_rows`)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\renewcommand{\subjclassname}{\textup{2000} Mathematics Subject Classification (MSC, revised)}
+\begin{document}
+\title{T}\author{A. Author}
+\subjclass[]{14T05, 14M25}
+\maketitle
+x
+\end{document}

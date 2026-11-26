@@ -1,0 +1,20 @@
+% amsppt reads `\subjyear@` at `\endtopmatter` (amsppt.sty:403-411 `\noexpand\subjyear@`, :515), so a
+%   `\subjclassyear{2000}` after `\subjclass` is the edition printed; the codes refute it (14T05 is MSC2010's alone):
+%   the inference reads the same year, at `\endtopmatter` (`\lx@msc@infer`, OXIDIZED_DESIGN_DIVERGENCES #1168).
+% witness: synthetic (review of MSCINFER round 0)
+% oracle:  amstex (TL 2025) 0 errors: "2000 Mathematics Subject Classification. 14T05, 14M25."
+% engines: rust INT081AD = name and scheme 2000; rust MSCINFER round 0 = 2010, its Info naming the print 1991 (read
+%          at the call); MSCINFER round 1 = 2010, Info "MSC 2000 (the class's print) -> 2010"
+% expect:  0 errors, 0 warnings, 1 Info msc_edition; <classification name="2010 Mathematics Subject Classification. " scheme="2010 Mathematics Subject Classification">
+% status:  RED (MSCINFER round 0) -> GREEN (guard `perfect_kernel_batchmscinfer::mscinfer_rows`)
+\input amstex
+\documentstyle{amsppt}
+\topmatter
+\title Title Text\endtitle
+\author A. Author\endauthor
+\subjclass 14T05, 14M25\endsubjclass
+\subjclassyear{2000}
+\endtopmatter
+\document
+Body text.
+\enddocument

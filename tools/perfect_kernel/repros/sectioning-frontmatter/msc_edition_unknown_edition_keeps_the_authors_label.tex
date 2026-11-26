@@ -1,0 +1,19 @@
+% An edition the class does not know (`[2011]`) leaves the author's renewed `\subjclassname` in force, and TeX prints
+%   it (amsart.cls:557-560); the codes refute its 2010 (57K12 is MSC2020's alone): the name stays the author's whole
+%   label, the scheme alone follows the codes (`\lx@msc@infer`, OXIDIZED_DESIGN_DIVERGENCES #1168).
+% witness: synthetic (review of MSCINFER round 0; the `[]` shape: 1001.1600, 1601.08172, whose labels fit their codes)
+% oracle:  pdflatex (TL 2025) 0 errors, 1 class warning: "2010 Mathematics Subject Classification (MSC, revised). 57K12."
+% engines: rust INT081AD = name the label's, scheme "2011 Mathematics Subject Classification"; rust MSCINFER round 0 =
+%          name and scheme 2020 (the label lost); MSCINFER round 1 = name the label's, scheme 2020, Info msc_edition
+% expect:  0 errors, 1 warning, 1 Info msc_edition; <classification name="2010 Mathematics Subject Classification (MSC,
+%          revised): " scheme="2020 Mathematics Subject Classification">57K12</classification>
+% status:  RED (MSCINFER round 0) -> GREEN (guard `perfect_kernel_batchmscinfer::mscinfer_rows`)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\renewcommand{\subjclassname}{\textup{2010} Mathematics Subject Classification (MSC, revised)}
+\begin{document}
+\title{T}\author{A. Author}
+\subjclass[2011]{57K12}
+\maketitle
+x
+\end{document}

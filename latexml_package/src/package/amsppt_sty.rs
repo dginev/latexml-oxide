@@ -73,7 +73,6 @@ LoadDefinitions!({
   }
   // Specific front matter commands (Perl PR #2767; amsppt.sty:298-414, which amstex.tex leaves undefined)
   def_macro_noop("\\topmatter")?;
-  def_macro_noop("\\endtopmatter")?;
   DefMacro!("\\title Until:\\endtitle", "\\lx@add@title{#1}");
   Let!("\\endtitle", "\\relax");
   // amsppt.sty:322-326 `\author#1\endauthor` sets ONE centred box: a paper's authors are one name list there
@@ -240,7 +239,8 @@ LoadDefinitions!({
   // `\subjclassyear`: cs0201007, math0205233, math0209036; KNOWN_PERL_ERRORS #814). Guard
   // `perfect_kernel_batch68r::amsppt_subjclassyear_names_the_scheme`. The year the author gave is kept
   // (`\lx@ppt@subjyear@given`): the edition the codes are read against (`\lx@msc@infer`, OXIDIZED_DESIGN_DIVERGENCES
-  // #1168), declared when the style takes it, else the author's label it discards.
+  // #1168), declared when the style takes it, else the author's label it discards; read, as the year is, at
+  // `\endtopmatter` (:515), which sets `\thesubjclass@`.
   RawTeX!(r"\def\xci@{1991}
 \def\mm@{2000}
 \def\subjclassyear#1{%
@@ -252,15 +252,17 @@ LoadDefinitions!({
      \def\subjyear@{1991}%
    \fi\fi}
 \subjclassyear{1991}\def\lx@ppt@subjyear@given{}
-\def\lx@ppt@subjclass#1{%
-  \edef\lx@ppt@infer{\noexpand\lx@msc@infer{\subjyear@}%
+\def\lx@ppt@year{\subjyear@}
+\let\lx@ppt@subjclass@infer\relax
+\def\lx@ppt@subjclass#1{\xdef\lx@ppt@subjclass@infer{\noexpand\lx@ppt@infer{\unexpanded{#1}}}\lx@add@classification
+  [scheme={\lx@ppt@year\space Mathematics Subject Classification},name={\lx@ppt@year\space Mathematics Subject Classification.\space}]{#1}}
+\def\lx@ppt@infer#1{%
+  \edef\lx@ppt@infer@call{\noexpand\lx@msc@infer{\subjyear@}%
     {\ifx\subjyear@\lx@ppt@subjyear@given\subjyear@\fi}%
     {\ifx\subjyear@\lx@ppt@subjyear@given\else\lx@ppt@subjyear@given\fi}}%
-  \lx@ppt@infer{#1}%
-  \ifx\lx@msc@edition\empty\def\lx@ppt@year{\subjyear@}\else\let\lx@ppt@year\lx@msc@edition\fi
-  \expandafter\lx@ppt@subjclass@add\expandafter{\lx@ppt@year}{#1}}
-\def\lx@ppt@subjclass@add#1#2{\lx@add@classification
-  [scheme={#1\space Mathematics Subject Classification},name={#1\space Mathematics Subject Classification.\space}]{#2}}");
+  \lx@ppt@infer@call{#1}\expandafter\lx@msc@year\expandafter{\subjyear@}\lx@ppt@setyear}
+\def\lx@ppt@setyear#1{\gdef\lx@ppt@year{#1}}
+\def\endtopmatter{\lx@ppt@subjclass@infer\global\let\lx@ppt@subjclass@infer\relax}");
   // `\subjclass\nofrills …` (:411 `\nofrillscheck`, :80-83): the prefix is `\frills@`'s, which `\nofrills` eats, and the
   // author writes their own (0804.1078's `{{\rm 2000}{\it Mathematics Subject Classification}.\usualspace}`, 1107.2266's
   // `{\it Mathematics Subject Classification \rm(2000).}`): no scheme or name, which said "1991" above the author's
@@ -1094,9 +1096,8 @@ LoadDefinitions!({
 
   // Perl AmSTeX.pool L133-134: frontmatter bracket markers.
   // Rust amsppt handles frontmatter via \title/\author/\abstract
-  // directly, so the outer bracket is a no-op.
+  // directly, so the outer bracket is a no-op (`\endtopmatter` reads the MSC edition: `\lx@ppt@subjclass`).
   def_macro_noop("\\topmatter")?;
-  def_macro_noop("\\endtopmatter")?;
 
   // Perl L256-257: set-braces via \overbrace/\underbrace with the
   // "label" part from before `\to` as superscript/subscript.

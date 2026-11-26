@@ -346,6 +346,14 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     def.push(T_END!());
     unread(Tokens::new(def));
   });
+  // `\lx@msc@year{<year>}\cs` gives `\cs{<the inferred edition, else year>}`, the year frozen at the call; "none" is
+  // `\lx@msc@empty`, not `\empty`, which papers renew (`\def\empty{\emptyset}`).
+  DefMacro!("\\lx@msc@empty", "");
+  DefMacro!(
+    "\\lx@msc@year{}{}",
+    "\\ifx\\lx@msc@edition\\lx@msc@empty\\def\\lx@msc@year@{#1}\\else\\let\\lx@msc@year@\\lx@msc@edition\\fi\
+     \\expandafter#2\\expandafter{\\lx@msc@year@}"
+  );
   // To handle the above as environments
   // (the body's first token, `\lx@abstract@class@setters`, defines there the keywords setters a raw class's refused
   // abstract defines for its body: frontmatter_stores.rs, 68n — wiley-article 1706.00599, astlb 1202.2889, mtt

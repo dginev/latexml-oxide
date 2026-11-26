@@ -1,10 +1,11 @@
 //! Guards for MSCINFER: the MSC edition a classification is stamped with follows its codes (`util::msc`,
 //! `\lx@msc@infer`; OXIDIZED_DESIGN_DIVERGENCES #1168), under the amsart family's `\subjclass` and amsppt's. One row per
 //! case of the rule: the call's year (C1), the author's discarded label (C2), a single fitting edition (C3), the
-//! document's year and the nearest edition for a refuted year (R), the class's print, no codes, an edition the class
-//! does not know, one whose text names an edition (`[msc2010]`), a code in no edition, and amsppt's yearless and
-//! discarded years. A module of its own: the rows count Infos by name and convert dated sources, which the amsart MSC
-//! rows of `perfect_kernel_batchthmedpsres` do not.
+//! document's year, the nearest edition, or undated the oldest, for a refuted year (R), the class's print, no codes, an
+//! edition the class does not know, the author's label it keeps (`[2011]`, `[]`), one whose text names an edition
+//! (`[msc2010]`), a code in no edition, a renewed `\empty`, and amsppt's yearless, discarded and late (`\endtopmatter`)
+//! years. A module of its own: the rows count Infos by name and convert dated sources, which the amsart MSC rows of
+//! `perfect_kernel_batchthmedpsres` do not.
 
 use latexml::util::test::{
   assert_all_elements, convert_dated_files_with, convert_with, error_count, warning_count,
@@ -33,6 +34,8 @@ struct Row {
   edition: &'static str,
   sep:     &'static str,
   codes:   &'static str,
+  /// The author's label the class prints, where it stands with the scheme corrected.
+  label:   Option<&'static str>,
 }
 
 const ROWS: &[Row] = &[
@@ -44,6 +47,7 @@ const ROWS: &[Row] = &[
     edition: "2000",
     sep:     ":\u{a0}",
     codes:   "Primary 35Q55; Secondary 35B40",
+    label:   None,
   },
   Row {
     tex:     repro!("sectioning-frontmatter/msc_edition_author_label_fits.tex"),
@@ -55,6 +59,7 @@ const ROWS: &[Row] = &[
     edition: "2010",
     sep:     ":\u{a0}",
     codes:   "16R10; 17A70, 16R30",
+    label:   None,
   },
   Row {
     tex:     repro!("sectioning-frontmatter/msc_edition_codes_fit_one.tex"),
@@ -66,6 +71,7 @@ const ROWS: &[Row] = &[
     edition: "2020",
     sep:     ":\u{a0}",
     codes:   "57K12, 20F36",
+    label:   None,
   },
   Row {
     tex:     repro!("sectioning-frontmatter/msc_edition_refuted_year_takes_the_era.tex"),
@@ -77,17 +83,19 @@ const ROWS: &[Row] = &[
     edition: "2020",
     sep:     ":\u{a0}",
     codes:   "35Q55, 35B51",
+    label:   None,
   },
   Row {
     tex:     repro!("sectioning-frontmatter/msc_edition_refuted_year_takes_the_era.tex"),
     date:    None,
     counts:  (0, 0),
     infos:   &[
-      "msc_edition MSC 2000 (the class's print) -> 2010: the codes' edition nearest the class's print, the source undated (codes fit 2010/2020)",
+      "msc_edition MSC 2000 (the class's print) -> 2010: the codes' oldest edition, the source undated (codes fit 2010/2020)",
     ],
     edition: "2010",
     sep:     ":\u{a0}",
     codes:   "35Q55, 35B51",
+    label:   None,
   },
   Row {
     tex:     repro!("sectioning-frontmatter/msc_edition_refuted_year_takes_the_nearest.tex"),
@@ -99,6 +107,7 @@ const ROWS: &[Row] = &[
     edition: "2010",
     sep:     ":\u{a0}",
     codes:   "18E30, 14F05; 14M15",
+    label:   None,
   },
   Row {
     tex:     repro!("sectioning-frontmatter/msc_edition_class_print_fits.tex"),
@@ -108,6 +117,7 @@ const ROWS: &[Row] = &[
     edition: "2020",
     sep:     ":\u{a0}",
     codes:   "41A25, 94A12",
+    label:   None,
   },
   Row {
     tex:     repro!("sectioning-frontmatter/msc_edition_no_codes_acm.tex"),
@@ -117,6 +127,7 @@ const ROWS: &[Row] = &[
     edition: "2020",
     sep:     ":\u{a0}",
     codes:   "F.4.1, D.3.2",
+    label:   None,
   },
   // (the Warning is amsart's "Unknown edition (2011)")
   Row {
@@ -129,6 +140,7 @@ const ROWS: &[Row] = &[
     edition: "2010",
     sep:     ":\u{a0}",
     codes:   "14T05, 14M25",
+    label:   None,
   },
   // (the Warning is amsart's "Unknown edition (msc2010)"; the word `msc` is counted by the Info)
   Row {
@@ -141,6 +153,34 @@ const ROWS: &[Row] = &[
     edition: "2010",
     sep:     ":\u{a0}",
     codes:   "54H15, 54E50",
+    label:   None,
+  },
+  // (the Warnings are amsart's "Unknown edition (2011)" and "()"; the author's label stays, only the scheme follows)
+  Row {
+    tex:     repro!(
+      "sectioning-frontmatter/msc_edition_unknown_edition_keeps_the_authors_label.tex"
+    ),
+    date:    None,
+    counts:  (0, 1),
+    infos:   &[
+      "msc_edition MSC 2010 (the class's print) -> 2020: the only edition the codes are in (codes fit 2020)",
+    ],
+    edition: "2020",
+    sep:     ":\u{a0}",
+    codes:   "57K12",
+    label:   Some("2010 Mathematics Subject Classification (MSC, revised)"),
+  },
+  Row {
+    tex:     repro!("sectioning-frontmatter/msc_edition_empty_edition_keeps_the_authors_label.tex"),
+    date:    None,
+    counts:  (0, 1),
+    infos:   &[
+      "msc_edition MSC 2000 (the class's print) -> 2010: the only edition the codes are in (codes fit 2010)",
+    ],
+    edition: "2010",
+    sep:     ":\u{a0}",
+    codes:   "14T05, 14M25",
+    label:   Some("2000 Mathematics Subject Classification (MSC, revised)"),
   },
   Row {
     tex:     repro!("sectioning-frontmatter/msc_edition_unknown_code.tex"),
@@ -150,6 +190,7 @@ const ROWS: &[Row] = &[
     edition: "2010",
     sep:     ":\u{a0}",
     codes:   "35Q55, 35Q99, 35Z05",
+    label:   None,
   },
   Row {
     tex:     repro!("amstex/amsppt_msc_edition_yearless_2010_codes.tex"),
@@ -161,6 +202,7 @@ const ROWS: &[Row] = &[
     edition: "2010",
     sep:     ". ",
     codes:   "14T05, 14M25",
+    label:   None,
   },
   Row {
     tex:     repro!("amstex/amsppt_msc_edition_discarded_year.tex"),
@@ -172,6 +214,41 @@ const ROWS: &[Row] = &[
     edition: "2010",
     sep:     ". ",
     codes:   "16R10, 17A70",
+    label:   None,
+  },
+  // (a paper's `\def\empty{\emptyset}` is no correction: the year stays, in both callers of `\lx@msc@year`)
+  Row {
+    tex:     repro!("sectioning-frontmatter/msc_edition_renewed_empty_is_no_correction.tex"),
+    date:    None,
+    counts:  (0, 0),
+    infos:   &[],
+    edition: "2010",
+    sep:     ":\u{a0}",
+    codes:   "35Q55, 35B40",
+    label:   None,
+  },
+  Row {
+    tex:     repro!("amstex/amsppt_msc_edition_renewed_empty_is_no_correction.tex"),
+    date:    None,
+    counts:  (0, 0),
+    infos:   &[],
+    edition: "1991",
+    sep:     ". ",
+    codes:   "16R10, 17A70",
+    label:   None,
+  },
+  // (the year amsppt prints is the one in force at `\endtopmatter`, given after the codes)
+  Row {
+    tex:     repro!("amstex/amsppt_msc_edition_year_after_the_codes.tex"),
+    date:    None,
+    counts:  (0, 0),
+    infos:   &[
+      "msc_edition MSC 2000 (the class's print) -> 2010: the only edition the codes are in (codes fit 2010)",
+    ],
+    edition: "2010",
+    sep:     ". ",
+    codes:   "14T05, 14M25",
+    label:   None,
   },
 ];
 
@@ -196,8 +273,11 @@ fn mscinfer_rows() {
       .collect();
     assert_eq!(infos, row.infos, "{first}: the MSC Infos\n{log}");
     let (edition, sep, codes) = (row.edition, row.sep, row.codes);
+    let label = row
+      .label
+      .map_or_else(|| format!("{edition} {MSC}"), str::to_string);
     assert_all_elements(&xml, "classification", &[], &[format!(
-      "<classification name=\"{edition} {MSC}{sep}\" scheme=\"{edition} {MSC}\">{codes}</classification>"
+      "<classification name=\"{label}{sep}\" scheme=\"{edition} {MSC}\">{codes}</classification>"
     )]);
   }
 }

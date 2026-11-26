@@ -25086,8 +25086,9 @@ Principle: surpass-TeX by DG ruling (2026-11-26) — the edition label is metada
 the codes refute is provably wrong.
 **Rule**: the edition is the call's year or the author's own label when every known code is in it, else the one edition
 the codes fit, else the class's print when they fit it (or fit none); a print they refute gives the edition current at
-the source's date when they fit it, else the fitting edition nearest that date (the print's, undated). Each correction
-is an `Info:frontmatter:msc_edition`, each code-shaped word in no edition an `Info:frontmatter:msc_unknown_code`.
+the source's date when they fit it, else the fitting edition nearest that date, or for an undated source the oldest
+fitting edition (DG 2026-11-26). Each correction is an `Info:frontmatter:msc_edition`, each code-shaped word in no
+edition an `Info:frontmatter:msc_unknown_code`.
 **Perl behavior**: ams_support.sty.ltxml:131-137 stamps the year given, or 1991 (KNOWN_PERL_ERRORS #1337); amsppt has
 no `\subjclassyear` (KNOWN_PERL_ERRORS #814).
 **TeX source**: amsart.cls:555-563 (amsproc.cls:533, amsbook.cls:503) prints `\subjclassname@<year>`, 2020 for a call
@@ -25099,9 +25100,12 @@ drops any other `\subjclassyear`.
   2010/2000 AMS's lists; 1991 the Heriot-Watt copy), code scanning (`NN-NN`, `NNLNN`, `NNLxx`, `NN-XX`, any case; no
   list structure), `infer`, and the Info text.
 - One TeX entry point, `\lx@msc@infer{<print>}{<declared>}{<label>}{<codes>}` (frontmatter_fields.rs): it defines
-  `\lx@msc@edition` as the corrected year, else empty; the binding lets its name and scheme follow it. amsart's
-  `\lx@ams@subjclass@setname` passes the discarded `\subjclassname` when it is not the name the class last let; amsppt's
-  `\lx@ppt@subjclass` passes `\subjclassyear`'s argument, declared when the style takes it, a label when it drops it.
+  `\lx@msc@edition` as the corrected year, else empty; the binding lets its name and scheme follow it
+  (`\lx@msc@year{<year>}\cs`, the year frozen at the call). amsart's `\lx@ams@subjclass@setname` passes the discarded
+  `\subjclassname` when it is not the name the class last let; a name the class keeps (`[2011]`, `[]` after a renewal)
+  is the author's printed label and stays, the scheme alone following. amsppt's `\lx@ppt@subjclass` passes
+  `\subjclassyear`'s argument, declared when the style takes it, a label when it drops it, read at `\endtopmatter`
+  as amsppt.sty:515 reads `\subjyear@`.
 - No code-shaped word (ACM codes under LMCS/LIPIcs `\subjclass`) or a print the table lacks: no inference. A year the
   class does not know (`[2011]`) states nothing and the name in force is the print, but a call's text naming an edition
   is the call's (`[msc2000]`: 0808.2960, 1709.01977).
@@ -25112,7 +25116,7 @@ drops any other `\subjclassyear`.
 **Witnesses**: 1501.02464 (renewal 2010, codes in every edition: 2020 → 2010), 2503.20773 (renewal 2000: 2020 → 2000),
 1507.05660 (renewal 2000, 57M27 retired in 2020: 2020 → 2000), 0904.0450 (2000 only), dg-ga9604003 (1991 only),
 2111.04526 (`[2010]{57K12}`: 2020), 1204.4468 (`[2000]`, 2010/2020 codes, undated: 2010), 2211.06115 (`[2020]`,
-1991/2000/2010 codes: 2010); unchanged 1009.4045 (no fit), 2102.08651, 2012.14067, math0201109 and 1501.07845 (the
+1991/2000/2010 codes, undated: 1991); unchanged 1009.4045 (no fit), 2102.08651, 2012.14067, math0201109 and 1501.07845 (the
 class's 2020 fits; the era default of the paper's own amsart, 1991, waits for legacy-TL dumps).
 **Guards** `perfect_kernel_batchmscinfer::mscinfer_rows` (repros sectioning-frontmatter/msc_edition_*,
 amstex/amsppt_msc_edition_*), `latexml_core` `util::msc::tests`.

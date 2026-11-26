@@ -1,10 +1,10 @@
 % R: a year the codes refute, several editions fitting (35B51 is 2010's and 2020's), gives the edition current at the
-%   paper's date when it fits, else the fitting one nearest it, or nearest the class's print for an undated source
-%   (ruling DG 2026-11-26 (2); the date is the source's, `latexml::source_date`: a probe sets it with `touch -d`).
+%   paper's date when it fits, else the fitting one nearest it; an undated source takes the oldest one the codes fit
+%   (rulings DG 2026-11-26; the date is the source's, `latexml::source_date`: a probe sets it with `touch -d`).
 % witness: 1204.4468 (`\subjclass[2000]{35Q55, 35A01, 35B40}`, a single-file submission, undated: 2010)
 % oracle:  pdflatex (TL 2025) 0 errors: "2000 Mathematics Subject Classification. 35Q55, 35B51."
 % engines: rust INT081AD = name and scheme 2000; rust MSCINFER = 2020 dated 2022, 2010 undated, each with
-%          Info:frontmatter:msc_edition
+%          Info:frontmatter:msc_edition (round 0's undated one said "nearest the class's print", round 1's "oldest")
 % expect:  0 errors, 0 warnings, 1 Info msc_edition; dated 2022-06-01: <classification name="2020 Mathematics Subject Classification: "
 %          scheme="2020 Mathematics Subject Classification">; undated: name and scheme 2010
 % status:  RED (INT081AD) -> GREEN (MSCINFER; guard `perfect_kernel_batchmscinfer::mscinfer_rows`)
