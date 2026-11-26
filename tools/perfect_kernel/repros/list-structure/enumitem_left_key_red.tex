@@ -1,9 +1,10 @@
-% mechanism: enumitem.sty (3.6+) `left=<labelindent>[..<leftmargin>]` computes `\leftmargin` from `\labelindent`, the
-%   label's width and `\labelsep` (as `leftmargin=*`, `enumitem_computed_leftmargin_red.tex`); the binding reads only a
-%   stated `leftmargin`. `leftmargin=!` with the default `\labelindent` gives the class's margin, as ours (B).
-% witness: synthetic (QA14K2 review Q3)
-% oracle:  pdflatex 0 errors; "A 335.00122pt 9.99878pt", "B 319.99997pt 25.00003pt"
-% engines: rust INT081AA "345.0pt 0.0pt" both; QA14K2 "319.99997pt 25.00003pt" both
+% mechanism: enumitem.sty (3.6+) `left=<labelindent>[..<leftmargin>]` and `leftmargin=!` compute `\leftmargin` from
+%   `\labelindent`, the label's width and `\labelsep` (as `leftmargin=*`, `enumitem_computed_leftmargin_red.tex`); the
+%   binding reads only a stated `leftmargin` and keeps the class's `\leftmargini`. B agrees only because the computed
+%   margin is article's 25pt; C, at `\leftmargini` 1cm, keeps the class's.
+% witness: synthetic (QA14K2 review Q3, `ei.tex`)
+% oracle:  pdflatex 0 errors; "A 335.00122pt 9.99878pt", "B 319.99997pt 25.00003pt", "C 319.99997pt 25.00003pt"
+% engines: rust INT081AA "345.0pt 0.0pt" all three; QA14K2 A, B "319.99997pt 25.00003pt", C "316.54726pt 28.45274pt"
 % expect:  0 errors; the values pdflatex prints
 % status:  RED (QA14K2)
 % moves:   post-merge (enumitem's computed margins)
@@ -12,4 +13,6 @@
 \begin{document}
 \begin{itemize}[left=0pt]\item A \the\linewidth\space\the\leftmargin\end{itemize}
 \begin{itemize}[labelindent=0pt,leftmargin=!]\item B \the\linewidth\space\the\leftmargin\end{itemize}
+\setlength{\leftmargini}{1cm}
+\begin{itemize}[labelindent=0pt,leftmargin=!]\item C \the\linewidth\space\the\leftmargin\end{itemize}
 \end{document}
