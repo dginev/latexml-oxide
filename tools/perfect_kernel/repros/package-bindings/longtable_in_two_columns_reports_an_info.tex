@@ -1,0 +1,20 @@
+% mechanism: `\longtable`'s prefix (longtable.sty:94-103) reports a two-column document with `\LT@err`, an Error in
+%   TeX; the table converts whole here, and IEEEtran's binding keeps `\if@twocolumn` true under `onecolumn` (pdflatex
+%   clean there), so the binding's `\LT@err` is an Info until the severity is ruled. The error-boundary row beside
+%   `longtable_patched_at_its_lt_err.tex` (the preamble patch removes the check)
+% witness: synthetic (1503.02372's IEEEtran twocolumn without its patch)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 1 error ("Package longtable Error: longtable not in 1-column mode"):
+%   "Text before. A Text after."; Perl: 0 errors, no message
+% engines: INT081DF: 0 errors, 0 warnings, no message; EOFBIND: 0 errors, 0 warnings, the Info
+% expect:  0 errors, 0 warnings, "Info:latex:(longtable)  Package longtable Info: longtable not in 1-column mode";
+%   "Text before.", the table, "Text after."
+% status:  GREEN (EOFBIND)
+\documentclass[twocolumn]{article}
+\usepackage{longtable}
+\begin{document}
+Text before.
+\begin{longtable}{l}
+A\\
+\end{longtable}
+Text after.
+\end{document}

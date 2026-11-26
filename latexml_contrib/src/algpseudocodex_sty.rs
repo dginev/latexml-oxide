@@ -10,7 +10,7 @@
 //! and implements clean in-flow box wrappers.
 //!
 //! This binding (beyond-Perl surpass; see docs/parity/OXIDIZED_DESIGN_DIVERGENCES.md #214):
-//! 1. Loads `algpseudocode` (which loads `algorithmicx`).
+//! 1. Loads `algorithmicx`, as algpseudocodex.sty:25 does, and defines the keywords and blocks itself (:663-754).
 //! 2. Defensively guards against the path where old `algorithmic.sty` was loaded first
 //!    and `algorithmicx` bailed (witness: 2410.03000).
 //! 3. Honors `italicComments`, `rightComments`, `commentColor` (default `gray`),
@@ -103,7 +103,9 @@ LoadDefinitions!({
     return Ok(());
   }
 
-  RequirePackage!("algpseudocode");
+  // algpseudocodex.sty:25 loads algorithmicx, not algpseudocode, whose `\Call`/`\Procedure`/`\Function` test with
+  // ifthen's `\equal`: a nested `\Call` ran its `\@tempc` loop off the end (2512.12052, 2305.18534).
+  RequirePackage!("algorithmicx");
   RequirePackage!("etoolbox");
   RequirePackage!("tikz");
   RawTeX!(
@@ -183,14 +185,45 @@ LoadDefinitions!({
       \pretocmd{\algorithmic}{\algpx@firstLinetrue}{}{}
     \fi
 
+    % algpseudocodex.sty:68-69: its own language, so its commands are new beside algpseudocode's
+    \algnewlanguage{pseudocodex}
+    \alglanguage{pseudocodex}
+    \algnewcommand\algorithmicend{\textbf{end}}
+    \algnewcommand\algorithmicdo{\textbf{do}}
+    \algnewcommand\algorithmicwhile{\textbf{while}}
+    \algnewcommand\algorithmicfor{\textbf{for}}
+    \algnewcommand\algorithmicforall{\textbf{for all}}
+    \algnewcommand\algorithmicloop{\textbf{loop}}
+    \algnewcommand\algorithmicrepeat{\textbf{repeat}}
+    \algnewcommand\algorithmicuntil{\textbf{until}}
+    \algnewcommand\algorithmicprocedure{\textbf{procedure}}
+    \algnewcommand\algorithmicfunction{\textbf{function}}
+    \algnewcommand\algorithmicif{\textbf{if}}
+    \algnewcommand\algorithmicthen{\textbf{then}}
+    \algnewcommand\algorithmicelse{\textbf{else}}
+    \algnewcommand\algorithmicrequire{\textbf{Require:}}
+    \algnewcommand\algorithmicensure{\textbf{Ensure:}}
+    \algnewcommand\algorithmicreturn{\textbf{return}}
     \algnewcommand\algorithmicoutput{\textbf{output}}
     \algnewcommand\algorithmicstructure{\textbf{structure}}
     \algnewcommand\algorithmicclass{\textbf{class}}
     \algnewcommand\algorithmicproperties{\textbf{properties}}
     \algnewcommand\algorithmicmethods{\textbf{methods}}
-    \providecommand{\textstruc}{\textsc}
+    \algnewcommand\textproc{\textsc}
+    \algnewcommand\textstruc{\textsc}
 
+    % algpseudocodex.sty:691-754 without the drawing calls: the code box opens after `\State` only (below)
     \ifdefined\algdef
+      \algdef{SE}[WHILE]{While}{EndWhile}[1]{\algorithmicwhile\ #1\ \algorithmicdo}{\algorithmicend\ \algorithmicwhile}
+      \algdef{SE}[FOR]{For}{EndFor}[1]{\algorithmicfor\ #1\ \algorithmicdo}{\algorithmicend\ \algorithmicfor}
+      \algdef{S}[FOR]{ForAll}[1]{\algorithmicforall\ #1\ \algorithmicdo}
+      \algdef{SE}[LOOP]{Loop}{EndLoop}{\algorithmicloop}{\algorithmicend\ \algorithmicloop}
+      \algdef{SE}[REPEAT]{Repeat}{Until}{\algorithmicrepeat}[1]{\algorithmicuntil\ #1}
+      \algdef{SE}[IF]{If}{EndIf}[1]{\algorithmicif\ #1\ \algorithmicthen}{\algorithmicend\ \algorithmicif}
+      \algdef{C}[IF]{IF}{ElsIf}[1]{\algorithmicelse\ \algorithmicif\ #1\ \algorithmicthen}
+      \algdef{Ce}[ELSE]{IF}{Else}{EndIf}{\algorithmicelse}
+      \algdef{SE}[PROCEDURE]{Procedure}{EndProcedure}[2]{\algorithmicprocedure\ \textproc{#1}\ifstrempty{#2}{}{(#2)}}{\algorithmicend\ \algorithmicprocedure}
+      \algdef{SE}[FUNCTION]{Function}{EndFunction}[2]{\algorithmicfunction\ \textproc{#1}\ifstrempty{#2}{}{(#2)}}{\algorithmicend\ \algorithmicfunction}
       \algdef{SE}[STRUCTURE]{Structure}{EndStructure}[1]{\algorithmicstructure\ \textstruc{#1}}{\algorithmicend\ \algorithmicstructure}
       \algdef{SE}[CLASS]{Class}{EndClass}[1]{\algorithmicclass\ \textstruc{#1}}{\algorithmicend\ \algorithmicclass}
       \algdef{SE}[PROPERTIES]{Properties}{EndProperties}{\algorithmicproperties}{\algorithmicend\ \algorithmicproperties}
@@ -201,8 +234,8 @@ LoadDefinitions!({
     \algnewcommand\Output{\algorithmicoutput{} }
     \algnewcommand\Call[2]{\textproc{#1}\ifstrempty{#2}{}{(#2)}}
 
-    \ifdefined\algrenewcommand
-      \algrenewcommand\Require{%
+    \ifdefined\algnewcommand
+      \algnewcommand\Require{%
         \algpx@endCodeCommand%
         \ifalgpx@spaceRequire
           \ifalgpx@firstLine\else\medskip\fi
@@ -211,7 +244,7 @@ LoadDefinitions!({
         \item[\algorithmicrequire]%
         \algpx@startCodeCommand%
       }
-      \algrenewcommand\Ensure{%
+      \algnewcommand\Ensure{%
         \algpx@endCodeCommand%
         \algpx@firstLinefalse
         \item[\algorithmicensure]%

@@ -9,6 +9,15 @@ top of its group.
 
 ### Unreleased
 
+  - **Four bindings no longer read a delimited argument to the end of the file (`Fatal:Mouth:EoF`).** algpseudocodex
+    loads algorithmicx and its own `pseudocodex` language, as the package does, with its keywords and blocks, so a
+    nested `\Call` no longer runs ifthen's `\equal` loop off the end and its commands no longer give way to
+    algpseudocode's (2512.12052); amsppt's `\subheading` takes an optional `\nofrills` and one undelimited argument
+    (1412.5856, alg-geom9709005; KNOWN_PERL_ERRORS #1342); longtable's `\longtable` carries the real body's prefix and
+    an `\LT@output` is defined, so the "longtable in twocolumn" preamble patch finds the `\LT@err` and `\@outputpage`s
+    it splits at (1409.6572), and a two-column document's longtable logs longtable.sty's Error as an Info, the table
+    kept; jmlr's `\addr` text ends at the `}` of `{\addr …}` (2409.18592). Guard
+    `perfect_kernel_batcheofbind::eofbind_rows`.
   - **A Fatal during digestion keeps the text digested before it; the run stays Fatal.** A delimited argument that
     runs off the end of the input (`Fatal:Mouth:EoF`), an unbalanced definition (`Stomach:Misdefined`), a parameter or
     group Fatal, or a binding's own `Fatal()` wrote a 39-byte document, because a `document` environment is one

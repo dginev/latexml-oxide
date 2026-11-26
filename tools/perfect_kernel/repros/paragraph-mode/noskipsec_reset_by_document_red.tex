@@ -1,0 +1,14 @@
+% mechanism: latex.ltx:9509 `\document` sets `\@noskipsecfalse` (`\newif\if@noskipsec \@noskipsectrue` at load);
+%   LaTeXML's `\begin{document}` (Perl and Rust) leaves it true, so code testing it in the body (longtable.sty:93
+%   `\if@noskipsec\mbox{}\par\fi`, latex.ltx's `\@trivlist`) takes the run-in-heading branch
+% witness: synthetic (found porting longtable's `\longtable` prefix, EOFBIND)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Flag: clear."
+% engines: EOFBIND: 0 errors, "Flag: set."; Perl: the same (latex_base.pool.ltxml:235, no reset)
+% expect:  0 errors; "Flag: clear."
+% status:  RED
+% moves:   post-merge (the `\begin{document}` reset of latex.ltx:9500-9515)
+\documentclass{article}
+\makeatletter
+\begin{document}
+Flag: \if@noskipsec set\else clear\fi.
+\end{document}

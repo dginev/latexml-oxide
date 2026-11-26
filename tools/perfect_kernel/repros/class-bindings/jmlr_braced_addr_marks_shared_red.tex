@@ -1,0 +1,17 @@
+% mechanism: jmlr author blocks whose affiliations are `\textsuperscript{N}{\addr ..}` lines matched to the names'
+%   marks: the frontmatter gives each affiliation one owner, so a mark two names share (`1` of `1,2`) reaches only one
+% witness: 2409.18592 (two names, marks 1 and 1,2); found once EOFBIND let the braced `{\addr ..}` read to its group
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Lee1 and Bob Ray1,2 1 Place One 2 Place Two Body text."
+% engines: EOFBIND: 0 errors; Ann Lee: Place One; Bob Ray: Place Two
+% expect:  0 errors; Ann Lee: Place One; Bob Ray: Place One, Place Two
+% status:  RED
+% moves:   post-merge (the frontmatter's mark distribution)
+\documentclass{jmlr}
+\title{T}
+\author{\Name{Ann Lee}\textsuperscript{1} \and \Name{Bob Ray}\textsuperscript{1,2}\\
+\textsuperscript{1}{\addr Place One}\\
+\textsuperscript{2}{\addr Place Two}}
+\begin{document}
+\maketitle
+Body text.
+\end{document}

@@ -1,6 +1,33 @@
 //! Stub for jmlr.cls and clear2025.cls family.
 use latexml_package::prelude::*;
 
+/// jmlr.cls:337 makes `\addr` a font switch, so the text of a braced `{\addr One}` ends with its group: the end marker
+/// before that group's `}` ends the `Until:` read there (2409.18592, 2006.01035, 2101.03606, 2305.08723), where it read
+/// past the block's own marker to the end of the file.
+fn end_braced_addr(body: Tokens) -> Tokens {
+  let addr = T_CS!("\\addr");
+  let mut out = Vec::new();
+  let mut groups: Vec<bool> = Vec::new();
+  for t in body.unlist() {
+    match t.get_catcode() {
+      Catcode::BEGIN => groups.push(false),
+      Catcode::END => {
+        if groups.pop() == Some(true) {
+          out.push(T_CS!("\\lx@jmlr@endaddr"));
+        }
+      },
+      _ if t == addr => {
+        if let Some(has_addr) = groups.last_mut() {
+          *has_addr = true;
+        }
+      },
+      _ => {},
+    }
+    out.push(t);
+  }
+  Tokens::new(out)
+}
+
 LoadDefinitions!({
   LoadClass!("OmniBus");
   // jmlr.cls:46: a paper can rely on its calc (OXIDIZED_DESIGN #317).
@@ -64,7 +91,7 @@ LoadDefinitions!({
   let_i(&T_CS!("\\lx@jmlr@core@author"), &T_CS!("\\author"), None);
   DefMacro!("\\author[]{}", sub[(short, body)] {
     if body.to_string().contains("\\Name") {
-      Ok(Invocation!(T_CS!("\\lx@jmlr@structauthor"), vec![Some(body)]))
+      Ok(Invocation!(T_CS!("\\lx@jmlr@structauthor"), vec![Some(end_braced_addr(body))]))
     } else {
       Ok(Invocation!(T_CS!("\\lx@jmlr@core@author"), vec![short, Some(body)]))
     }

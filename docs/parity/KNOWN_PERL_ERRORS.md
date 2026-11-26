@@ -23072,3 +23072,29 @@ name `\maketitle` prints (0811.1789); the discarded renewal is the edition's evi
 `tools/perfect_kernel/repros/sectioning-frontmatter/` `amsart_subjclassname_renewed_before_subjclass.tex`,
 `amsart_subjclass_year_over_a_renewed_name.tex`, `amsart_subjclass_empty_edition_warns_and_keeps_the_name.tex`,
 `amsart_subjclass_unknown_edition_warns_and_keeps_the_name.tex`; guard `perfect_kernel_batchthmedpsres::thmedpsres_rows`.
+
+## 1342. Perl's amsppt `\subheading` reads to `\endsubheading` unless a `{` follows
+
+amsppt.sty.ltxml:125-133 dispatches `\subheading` on the next token: a `{` reads one argument, anything else
+`Until:\endsubheading`, a delimiter amsppt never defines, so the read runs to the end of the file. amsppt.sty:563-569
+peeks (`\FN@`, no space skipped) for an optional `\nofrills` and then takes ONE undelimited argument
+(`\subheading@#1#2{\subhead#1#2\endsubhead}`), as amstex prints it. Minimal trigger:
+
+```latex
+\input amstex
+\documentstyle{amsppt}
+\document
+\subheading\nofrills{Intro}
+Body one.
+\subheading 1 {\bf Second}.
+\subheading {Third}
+Body three.
+\enddocument
+```
+
+amstex (TL 2025): 0 errors, "IntroBody one. 1. Second. Third. Body three." (the title "1"; "Second." is body text).
+Perl (same host): 2 errors (the missing `\endsubheading`), the first two subsections untitled, "Intro" and "1" in
+their bodies, the third titled. Witnesses alg-geom9709005, 1412.5856, dg-ga9711007, math0404023, math9201259,
+math9201265, math9202206, math9204224, math9207209, math9808069. Fixed in Rust (`amsppt_sty.rs` `\subheading`,
+`\subheading@`); repro `tools/perfect_kernel/repros/amstex/amsppt_subheading_reads_one_argument.tex`; guard
+`perfect_kernel_batcheofbind::eofbind_rows`.

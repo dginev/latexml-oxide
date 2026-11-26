@@ -347,21 +347,22 @@ LoadDefinitions!({
     properties => sub[_args] { RefStepID!("subsection") });
   Let!("\\endsubhead", "\\relax");
 
-  // Perl amsppt.sty.ltxml L133-141: \subheading dispatches on next token.
+  // amsppt.sty:563-569: an optional `\nofrills` (`\FN@`, no space skipped), then ONE undelimited argument. Perl's
+  // `Until:\endsubheading` without a `{` next read to the end (KNOWN_PERL_ERRORS #1342; 1412.5856, alg-geom9709005).
   DefMacro!("\\subheading", sub[_args] {
     let next = read_token()?;
+    let nofrills = next == Some(T_CS!("\\nofrills"));
     if let Some(t) = next {
       unread(Tokens!(t));
-      if t.get_catcode() == Catcode::BEGIN {
-        return Ok(Tokens!(T_CS!("\\subheading@onearg")));
-      }
     }
-    Ok(Tokens!(T_CS!("\\subheading@env")))
+    if nofrills {
+      Ok(Tokens!(T_CS!("\\subheading@")))
+    } else {
+      // (amsppt.sty's `\empty@` first argument, an empty group here)
+      Ok(Tokens!(T_CS!("\\subheading@"), T_BEGIN!(), T_END!()))
+    }
   }, locked => true);
-
-  DefMacro!("\\subheading@onearg{}", "\\subhead#1\\endsubhead");
-  DefMacro!("\\subheading@env Until:\\endsubheading", "\\subhead#1\\endsubhead");
-  def_macro_noop("\\endsubheading")?;
+  DefMacro!("\\subheading@{}{}", "\\subhead#1#2\\endsubhead");
 
   DefConstructor!("\\subsubhead Until:\\endsubsubhead",
     "<ltx:subsubsection inlist='toc' xml:id='#id'>#tags<ltx:title>#1</ltx:title>",

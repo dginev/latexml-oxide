@@ -1,0 +1,22 @@
+% mechanism: amsppt's `\subheading` (amsppt.sty:563-569) takes an optional `\nofrills` and then ONE undelimited
+%   argument; the binding (from Perl amsppt.sty.ltxml:125-133) read `Until:\endsubheading` unless a `{` came next, so
+%   `\subheading\nofrills{..}`, `\subheading 1 {..}` and `\subheading {..}` ran to the end of the file
+% witness: alg-geom9709005, 1412.5856, dg-ga9711007, math0404023, math9201259, math9201265, math9202206,
+%   math9204224, math9207209, math9808069
+% oracle:  amstex (TL 2025) 0 errors: "IntroBody one. 1. Second. Body two. Third. Body three."
+% engines: INT081DF: 1 error, 1 fatal (Mouth:EoF Until:\endsubheading), no body; Perl: 2 errors
+% expect:  0 errors; subsections titled "Intro", "1", "Third"; "Second." and every body paragraph kept
+% status:  GREEN (EOFBIND)
+\input amstex
+\documentstyle{amsppt}
+\topmatter
+\title Title\endtitle
+\endtopmatter
+\document
+\subheading\nofrills{Intro}
+Body one.
+\subheading 1 {\bf Second}.
+Body two.
+\subheading {Third}
+Body three.
+\enddocument
