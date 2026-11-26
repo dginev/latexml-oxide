@@ -602,9 +602,8 @@ mod cli_css_resource_copy {
   }
 
   /// OD #1166, end to end on Unix: a `--css` copy whose own path in the destination passes a symbolic link out of it
-  /// is not made (red on round 0: `victim/main.css` overwritten), and an archive's `@import` through an in-archive link
-  /// then `..` names the file its URL does, inside the archive (red on round 0: the canary outside it copied into the
-  /// output). One Warning each.
+  /// is not made, and an archive's `@import` through an in-archive link then `..` names the file its URL does, inside
+  /// the archive. One Warning each.
   #[cfg(unix)]
   #[test]
   fn css_copies_follow_no_link_out() {

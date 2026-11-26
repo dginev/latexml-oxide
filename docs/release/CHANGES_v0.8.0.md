@@ -110,12 +110,14 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     inside the folder they were found in (the archive, the document's folder, a `--path` folder) and only into the
     destination (or site) folder. The check follows symbolic links, so a link cannot carry a read or a write outside.
     A copy that would leave is skipped with a Warning, an operator's own `--css` layout whose `@import` climbs above
-    the destination included; imports that stay inside, `../` ones too, are copied as before. A
-    `00README.json`/`00README.XXX` naming a main file that is absolute, has a `..`, is not a file or resolves outside
-    the source is ignored with a `Warning:archive:path`, for archives and local folders (`--whatsin=directory`) alike
-    and in `cortex_worker`, and the main file is found as without it (OXIDIZED_DESIGN_DIVERGENCES #1166). Guards
-    `xslt::css_copy_containment_tests`, `cli_css_resource_copy::{archive_css_imports_stay_inside_the_destination,
-    css_copies_follow_no_link_out}`, `whatsinout::archive_readme_main_outside_the_archive_is_ignored`,
+    the destination included; imports that stay inside, `../` ones too, are copied as before. A stylesheet the
+    document itself names by a path outside those folders is still read where it lies, as a document's `\input` is. A
+    `00README.json`/`00README.XXX` naming a main file that is absolute, has a `..` or resolves outside the source is
+    ignored with a `Warning:archive:path` (one that is not a file is passed over), for archives and local folders
+    (`--whatsin=directory`) alike and in `cortex_worker`, and the main file is found as without it
+    (OXIDIZED_DESIGN_DIVERGENCES #1166). Guards `xslt::css_copy_containment_tests`,
+    `cli_css_resource_copy::{archive_css_imports_stay_inside_the_destination, css_copies_follow_no_link_out}`,
+    `whatsinout::archive_readme_main_outside_the_archive_is_ignored`,
     `main_tex::tests::readme_entries_outside_the_source_directory_are_ignored`,
     `cortex_worker_ignores_a_readme_main_outside_the_source`.
 

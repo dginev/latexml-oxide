@@ -1449,7 +1449,7 @@ fn resolves_inside(path: &Path, root: &str) -> bool {
 }
 
 /// OD #1166: a stylesheet's `@import` copies stay in the destination and are read from inside the directory the
-/// stylesheet was found under, a symbolic link followed on either side; rows red on the round-0 binary are marked.
+/// stylesheet was found under, a symbolic link followed on either side.
 #[cfg(test)]
 mod css_copy_containment_tests {
   use std::{collections::HashSet, fs, path::Path};
@@ -1492,7 +1492,6 @@ mod css_copy_containment_tests {
     }];
     if cfg!(unix) {
       rows.extend([
-        // Red on round 0: written to victim/evil.css.
         Row {
           name:     "a link in the destination",
           css:      "@import url(\"L/evil.css\");\n",
@@ -1501,7 +1500,7 @@ mod css_copy_containment_tests {
           copied:   &[],
           warnings: 1,
         },
-        // Red on round 0: written to victim/evil.css; the URL names out/evil.css.
+        // The URL names out/evil.css.
         Row {
           name:     "a link then .. in the destination",
           css:      "@import url(\"L/../evil.css\");\n",
@@ -1510,7 +1509,6 @@ mod css_copy_containment_tests {
           copied:   &[("out/evil.css", "FROM-SRC\n")],
           warnings: 0,
         },
-        // Red on round 0: secret.txt copied to out/s.css.
         Row {
           name:     "an import that links to a host file",
           css:      "@import url(\"s.css\");\n",
@@ -1519,7 +1517,6 @@ mod css_copy_containment_tests {
           copied:   &[],
           warnings: 1,
         },
-        // Red on round 0: secret.txt copied to out/L/secret.txt.
         Row {
           name:     "an import through a folder link out of the source",
           css:      "@import url(\"L/secret.txt\");\n",
@@ -1528,8 +1525,7 @@ mod css_copy_containment_tests {
           copied:   &[],
           warnings: 1,
         },
-        // Red on round 0: secret.txt copied (a link inside the source, then `..` past it). The URL names
-        // src/secret.txt, which is missing.
+        // The URL names src/secret.txt, which is missing.
         Row {
           name:     "a link inside the source then ..",
           css:      "@import url(\"a/b/c/L/../../../../secret.txt\");\n",
@@ -1646,8 +1642,7 @@ mod css_copy_containment_tests {
     }
   }
 
-  /// The stylesheet itself: found under a search path only when it resolves inside it (red on round 0: the link to
-  /// a host file was found and copied as the paper's stylesheet).
+  /// The stylesheet itself: found under a search path only when it resolves inside it.
   #[test]
   fn a_found_stylesheet_resolves_inside_its_search_path() {
     let work = tempfile::tempdir().unwrap();

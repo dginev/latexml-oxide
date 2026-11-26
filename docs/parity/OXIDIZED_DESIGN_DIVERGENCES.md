@@ -24520,7 +24520,7 @@ a Warning naming it.
 **Why**: the archive and a local source folder are untrusted; a `00README`, a stylesheet or a symbolic link in either
 could otherwise make a host file the document, copy one into the output, or overwrite a file outside the destination.
 **Residual** (v0.8.1, the document read jail): a resource the document itself names (`\lxRequireResource` with an
-absolute or `../` path) is read where it lies, as in Perl.
+absolute or `../` path) is read where it lies, as a document's `\input` is.
 **Guards** `main_tex::tests::readme_entries_outside_the_source_directory_are_ignored`,
 `lsp_server::project::tests::detection_holds_no_readme_warnings`,
 `whatsinout::archive_readme_main_outside_the_archive_is_ignored`, `cortex_worker_ignores_a_readme_main_outside_the_source`,
