@@ -1,0 +1,28 @@
+% mechanism: a name showing two symbols (`{equal,lead,a}`) under a notice that stays whole gets one mark-only note
+%          `mark="*,†"`: the settle step joins a name's unanswered marks with a comma (insert.rs `settle_name_marks`,
+%          `marks.join(",")`), where icml prints each symbol as its own superscript, no comma (icml2026.sty:446-458,
+%          `\textsuperscript{\@icmlsymbol…}` per label)
+% witness: synthetic (re-review rerevDATEICML)
+% oracle:  pdflatex (-no-shell-escape, TL 2025, 2602.04557's icml2026.sty) 0 errors: "Ann Able * 1 Bob Baker * † 1",
+%          the footnote "Preliminary work. 1 Univ A. …"
+% engines: DATEICML: 0 errors; the notice whole, Ann a mark-only note `*`, Bob one mark-only note `mark="*,†"`
+% expect:  0 errors, 0 warnings; Bob's two marks as printed, `*` and `†`, no comma between them
+% status:  RED (DATEICML)
+% moves:   post-merge (a binding's declared name marks shown one per label: the settle step's join)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[preprint]{icml2026}
+\begin{document}
+\twocolumn[\icmltitle{Title}
+\icmlsetsymbol{equal}{*}
+\icmlsetsymbol{lead}{$\dagger$}
+\begin{icmlauthorlist}
+\icmlauthor{Ann Able}{equal,a}
+\icmlauthor{Bob Baker}{equal,lead,a}
+\end{icmlauthorlist}
+\icmlaffiliation{a}{Univ A}
+\icmlcorrespondingauthor{Ann Able}{ann@a.edu}
+\vskip 0.3in]
+\printAffiliationsAndNotice{Preliminary work.}
+Text.
+\end{document}

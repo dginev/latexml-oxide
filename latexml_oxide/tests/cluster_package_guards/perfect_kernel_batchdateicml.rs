@@ -121,10 +121,15 @@ fn note_at(xml: &str, open: &str) -> Option<String> {
 /// 4e31feeb990): an assignment (`\let\thefootnote\relax\footnotetext`: "Code at X." lost), a conditional
 /// (`\ifx\icmlEqualContribution`: `Error: \undefined`), a definition (`\def\x{Z}\x`: an Error, the wrong text), a
 /// footnote (copied to each name, 2 Warnings), the notice printed twice (two notes per name), a `\#` symbol's legend
-/// (2306.03504: left whole by the TeX-special filter, now the name's note). Ann's and Bob's elements whole, in order.
+/// (2306.03504: left whole by the TeX-special filter, now the name's note). Re-review rerevDATEICML (red on DATEICML
+/// c759b427346, the second legend inside the first, each `*` name's note): a marker after `\quad`, `\\` or `\protect`
+/// (not expanded after a control sequence), a mark in a group and a math mark stay whole; two markers back to back
+/// stay two legends (2202.03884). Ann's and Bob's elements whole, in order.
 #[test]
 fn icml_notice_read_by_meaning() {
   let ann_mark = r#"<creator role="author"> <personname>Ann Able</personname> <note mark="*" role="footnotemark" xml:id="id1"/> <contact name="Affiliation: " role="affiliation">Univ A</contact> <contact name="Correspondence to: " role="email">ann@a.edu</contact> </creator>"#;
+  // (Bob's two symbols one joined mark `*,†`, where icml prints two superscripts: RED
+  // icml_notice_whole_two_symbols_one_joined_mark_red, post-merge)
   let bob_marks = r#"<creator before=" " role="author"> <personname>Bob Baker</personname> <note mark="*,†" role="footnotemark" xml:id="id2"/> <contact name="Affiliation: " role="affiliation">Univ A</contact> </creator>"#;
   let ann_note = r#"<creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ A</contact> <contact name="Correspondence to: " role="email">ann@a.edu</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="*" role="thanks" xml:id="id1">Equal contribution</note> </creator>"#;
   let whole = |text: &str| {
@@ -132,7 +137,7 @@ fn icml_notice_read_by_meaning() {
       r#"<note role="affiliationnotice" xml:id="id3"><sup xml:id="id3.1">*</sup>{text}</note>"#
     ))
   };
-  let rows: [(&str, &str, [&str; 2], Option<String>); 6] = [
+  let rows: [(&str, &str, [&str; 2], Option<String>); 12] = [
     (
       "assignment",
       repro!("icml_notice_with_an_assignment_stays_whole"),
@@ -174,6 +179,47 @@ fn icml_notice_read_by_meaning() {
       [
         ann_note,
         r##"<creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ A</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="*" role="thanks" xml:id="id2">Equal contribution</note> <note class="ltx_note_frontmatter ltx_thanks_note" mark="#" role="thanks" xml:id="id3">Interns at Acme</note> </creator>"##,
+      ],
+      None,
+    ),
+    (
+      "a marker after \\quad",
+      repro!("icml_notice_marker_after_quad_stays_whole"),
+      [ann_mark, bob_marks],
+      whole(r#"Equal contribution <sup xml:id="id3.2">†</sup>Project lead"#),
+    ),
+    (
+      "a marker after \\\\",
+      repro!("icml_notice_marker_after_a_line_break_stays_whole"),
+      [ann_mark, bob_marks],
+      whole(r#"Equal contribution <break/><sup xml:id="id3.2">†</sup>Project lead"#),
+    ),
+    (
+      "a marker after \\protect",
+      repro!("icml_notice_marker_after_protect_stays_whole"),
+      [ann_mark, bob_marks],
+      whole(r#"Equal contribution <sup xml:id="id3.2">†</sup>Project lead"#),
+    ),
+    (
+      "a mark in a group",
+      repro!("icml_notice_mark_in_a_group_stays_whole"),
+      [ann_mark, bob_marks],
+      whole(
+        r#"Equal contribution <sup xml:id="id3.2"><text fontsize="90%" xml:id="id3.2.1">†</text></sup><text fontsize="90%" xml:id="id3.3">Project lead</text>"#,
+      ),
+    ),
+    (
+      "a math mark inside a legend",
+      repro!("icml_notice_math_mark_inside_a_legend_stays_whole"),
+      [ann_mark, bob_marks],
+      whole(r#"Equal contribution <sup xml:id="id3.2">†</sup>Project lead"#),
+    ),
+    (
+      "markers back to back",
+      repro!("icml_notice_back_to_back_markers_each_a_legend"),
+      [
+        ann_note,
+        r#"<creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ A</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="*" role="thanks" xml:id="id2">Equal contribution</note> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="†" role="thanks" xml:id="id3">Project lead</note> </creator>"#,
       ],
       None,
     ),

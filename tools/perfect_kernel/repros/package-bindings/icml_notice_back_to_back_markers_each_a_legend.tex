@@ -1,0 +1,29 @@
+% mechanism: two markers back to back (`\icmlEqualContribution\icmlLead`) are two legends: the first marker's body ends
+%          with a space (icml2026.sty:502), so the second follows no control sequence and is expanded, then cut
+%          (icml_support_sty.rs `legend_entries`); each is its names' note
+% witness: 2202.03884 (`\icmlEqualContribution \icmlEqualSecondContribution`); synthetic (re-review rerevDATEICML,
+%          probe t_b2b)
+% oracle:  pdflatex (-no-shell-escape, TL 2025, 2602.04557's icml2026.sty) 0 errors: "Ann Able * 1 Bob Baker * † 1",
+%          the footnote "*Equal contribution † Project lead 1 Univ A. …"
+% engines: INT081RC6: 0 errors, the notice whole, Ann and Bob mark-only notes; DATEICML c759b427346: Ann and Bob
+%          the note `*` "Equal contribution", Bob the note `†` "Project lead"
+% expect:  0 errors, 0 warnings; as DATEICML c759b427346
+% status:  GREEN; guard perfect_kernel_batchdateicml::icml_notice_read_by_meaning
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[preprint]{icml2026}
+\newcommand{\icmlLead}{\textsuperscript{\dag}Project lead}
+\begin{document}
+\twocolumn[\icmltitle{Title}
+\icmlsetsymbol{equal}{*}
+\icmlsetsymbol{lead}{$\dagger$}
+\begin{icmlauthorlist}
+\icmlauthor{Ann Able}{equal,a}
+\icmlauthor{Bob Baker}{equal,lead,a}
+\end{icmlauthorlist}
+\icmlaffiliation{a}{Univ A}
+\icmlcorrespondingauthor{Ann Able}{ann@a.edu}
+\vskip 0.3in]
+\printAffiliationsAndNotice{\icmlEqualContribution\icmlLead}
+Text.
+\end{document}

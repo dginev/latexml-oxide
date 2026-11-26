@@ -15,8 +15,9 @@ top of its group.
     the notice (`\icmlEqualContribution, \icmlProjectLead`) goes to the names whose `\icmlsetsymbol` mark it opens with,
     one naming an institution too ("†Work done during internship at AWS AI", 2310.02777), one of a symbol holding a TeX
     special too (`\icmlsetsymbol{interns}{\#}`, 2306.03504). A notice holding a mark no `\icmlsetsymbol` label
-    printed, or a conditional, an assignment or a footnote, stays whole, as before. `\icmlEqualContribution` ends with
-    the space every icml20xx.sty gives it ("Equal contribution First", 2502.09860). 2602.04557, 1904.07793 (the
+    printed, a second mark the cut cannot reach (after `\quad`, `\\` or `\protect`, in a group, in math), or a
+    conditional, an assignment or a footnote, stays whole, as before. `\icmlEqualContribution` ends with the space
+    every icml20xx.sty gives it ("Equal contribution First", 2502.09860). 2602.04557, 1904.07793 (the
     corresponding author's e-mail kept), 2106.09776 (OXIDIZED_DESIGN_DIVERGENCES #1063, #954). Guards
     `perfect_kernel_batchdateicml::{icml_notice_legends_are_the_marked_names_notes, icml_notice_read_by_meaning}`.
   - **The MSC edition of an AMS class's or amsppt's `\subjclass` follows its codes.** The call's year, or the

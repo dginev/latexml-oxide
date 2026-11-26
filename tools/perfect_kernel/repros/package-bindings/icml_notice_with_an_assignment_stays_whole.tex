@@ -1,6 +1,7 @@
 % mechanism: a notice making an assignment (`\let\thefootnote\relax`) stays whole, the block's note: its marker macro is
-%          expanded only where no control sequence takes it as an operand, and a notice holding an assignment, a
-%          conditional or a note is not cut into legends (icml_support_sty.rs `legend_entries`, `NOT_COPIED`)
+%          expanded only where it follows no control sequence (which may take it as an operand), and a notice
+%          holding an assignment, a conditional or a note is not cut into legends (icml_support_sty.rs
+%          `legend_entries`, `NOT_COPIED`)
 % witness: synthetic (review revDATEICML B1, probe n_letfn)
 % oracle:  pdflatex (-no-shell-escape, TL 2025, 2602.04557's icml2026.sty) 0 errors: "Ann Able * 1 Bob Baker * † 1",
 %          the footnote "*Equal contribution 1 Univ A. Correspondence to: …" (the nested footnotetext prints nowhere)

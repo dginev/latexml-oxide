@@ -529,6 +529,13 @@ fn legend_entries(notice: &Tokens) -> Result<Option<Vec<Token>>> {
     let Some(label) = label.filter(|_| !piece[open + close + 1..].iter().all(is_space)) else {
       return Ok(None);
     };
+    // (nor another mark: one in a group or in math, or a marker left unexpanded after `\quad`, `\\`, `\protect`;
+    // re-review rerevDATEICML)
+    if piece[open + close + 1..].iter().any(|t| {
+      *t == superscript || t.get_catcode() == Catcode::SUPER || marker_body(t, 0).is_some()
+    }) {
+      return Ok(None);
+    }
     // (the separator between two legends, `\icmlEqualContribution, \icmlProjectLead`, belongs to neither; nor does the
     // space a marker ends with, icml2026.sty:502)
     while piece.last().is_some_and(is_space) {
@@ -584,8 +591,8 @@ fn not_copied(token: &Token, names: &[Token]) -> bool {
 }
 
 /// A notice's tokens with its marker macros expanded, as it prints them: a parameterless macro whose body opens with a
-/// mark (`\icmlEqualContribution`'s `\textsuperscript{*}`, a paper's own `\icmlWorkDone`), at the top level and not the
-/// operand of a control sequence before it (`\let\icmlEqualContribution`, `\ifx\icmlEqualContribution`: review
+/// mark (`\icmlEqualContribution`'s `\textsuperscript{*}`, a paper's own `\icmlWorkDone`), at the top level and not
+/// after a control sequence, which may take it as an operand (`\let\icmlEqualContribution`, `\ifx…`: review
 /// revDATEICML B1). Every other token as written.
 fn expand_notice(notice: &Tokens) -> Vec<Token> {
   let mut pending: Vec<Token> = notice.unlist_ref().iter().rev().cloned().collect();

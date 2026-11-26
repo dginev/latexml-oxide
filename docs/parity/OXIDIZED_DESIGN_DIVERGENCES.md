@@ -20712,15 +20712,20 @@ behind it (`ltx_note_content`, shown on hovering the mark, after its "role: " la
   special as characters (2306.03504's `\icmlsetsymbol{interns}{\#}`); a symbol printing no one mark prints in the name.
   Two labels printing one glyph key it by the first, which the second's names request too: one legend, read once.
 - icml's notice (`\printAffiliationsAndNotice{#1}`, icml2026.sty:519-536; DATEICML, FIDELITY_CHARTER §4's mark rule):
-  its marker macros expanded (parameterless, the body opening with `\textsuperscript` or another marker; not where a
-  control sequence before takes it as an operand, `\let`/`\ifx`/`\string`), it is cut before each
-  `\textsuperscript{G}` it opens with; where every piece's G is the printed mark of a label the names showed, each
+  its marker macros expanded (parameterless, the body opening with `\textsuperscript` or another marker) at its top
+  level and never after a control sequence, which may take one as an operand (`\let`, `\ifx`, `\string`; so also after
+  `\quad`, `\\`, `\protect` or a marker whose body ends in one), it is cut before each top-level `\textsuperscript{G}`
+  it opens with; where every piece's G is the printed mark of a label the names showed, each
   piece is an entry under that label, as `\icmlaffiliation`'s, declared a legend (`_legend`, #954), so the Kind step
   makes it the names' note (`role=thanks`, its `mark` G; the comma between two legends neither's). An identical label
   and text is one entry (a notice printed twice). A notice with any other piece (a mark no label printed: 2402.05011's
-  `$^\dag$` typed in a name; text before its first mark) stays whole, the block's note above, and so does one holding,
-  by meaning, a conditional, an assignment or a note (`\let`, `\def`, `\stepcounter`, `\footnote`: given to each
-  name, a footnote is copied; review revDATEICML B1, S1). Perl drops the notice (icml_support.sty.ltxml:52).
+  `$^\dag$` typed in a name; text before its first mark; a piece holding, after its own mark, another mark — a
+  `\textsuperscript` in a group, a math `^`, a marker left unexpanded: re-review rerevDATEICML) stays whole, the
+  block's note above, and so does one holding, by meaning, a conditional, an assignment or a note (`\let`, `\def`,
+  `\stepcounter`, `\footnote`: given to each name, a footnote is copied; review revDATEICML B1, S1). A symbol `\_`,
+  `\$`, `\textasciitilde`, `\{` or `\}` keeps it whole too: the label reader drops `$`, `_` (`label_key`) and braces
+  (`clean_frontmatter_labels`) and reads `~` as spacing, so the symbol prints in the name and no legend answers it.
+  Perl drops the notice (icml_support.sty.ltxml:52).
 **Witnesses.** 2602.04557 (icml2026's notice "*Equal contribution", `†` before), 2405.13379 and 2603.01467
 (Interspeech's `\address`/`\email` notes), 2506.06941 (a `\footnotetext` in the abstract under `\fnsymbol`, the counter 0:
 pdflatex prints no mark), 2402.05011 (icml's "†Project lead").
@@ -20729,7 +20734,8 @@ an_unmarked_note_in_a_field_is_inline, a_date_note_and_an_abstract_thanks_invent
 a_document_level_note_shows_once_where_the_pdf_prints_it, a_note_in_a_heading_keeps_perls_note,
 icml_notice_daggers_print}`, `perfect_kernel_batchdateicml::{icml_notice_legends_are_the_marked_names_notes,
 icml_notice_read_by_meaning}`. RED:
-`icml_notice_legend_of_a_mark_typed_in_the_name_red`, `icml_copy_equal_contribution_text_is_the_copys_red`.
+`icml_notice_legend_of_a_mark_typed_in_the_name_red`, `icml_copy_equal_contribution_text_is_the_copys_red`,
+`icml_notice_whole_two_symbols_one_joined_mark_red` (a name's two symbols one mark `*,†`, the settle step's join).
 
 ### 1064. A label authblk prints on a name that no `\affil` explains shows on the name as its mark (DG 2026-11-16; INVDAG)
 

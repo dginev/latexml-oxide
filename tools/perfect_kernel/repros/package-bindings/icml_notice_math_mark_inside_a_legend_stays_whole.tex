@@ -1,0 +1,27 @@
+% mechanism: a notice whose second mark is math (`$^\dagger$`), not `\textsuperscript`, stays whole: the notice is cut
+%          only at its `\textsuperscript` marks, so the math mark stays inside the first legend (icml_support_sty.rs
+%          `legend_entries`)
+% witness: synthetic (DATEICML fix round 2, the sibling of re-review rerevDATEICML's `\quad` probe)
+% oracle:  pdflatex (-no-shell-escape, TL 2025, 2602.04557's icml2026.sty) 0 errors: "Ann Able * 1 Bob Baker * † 1",
+%          the footnote "*Equal contribution †Project lead 1 Univ A. …"
+% engines: INT081RC6: 0 errors, the notice whole, Ann and Bob mark-only notes; DATEICML c759b427346: each `*` name the
+%          note "Equal contribution <sup>†</sup>Project lead"
+% expect:  0 errors, 0 warnings; the notice whole "*Equal contribution †Project lead"
+% status:  RED (DATEICML c759b427346) -> GREEN; guard perfect_kernel_batchdateicml::icml_notice_read_by_meaning
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[preprint]{icml2026}
+\begin{document}
+\twocolumn[\icmltitle{Title}
+\icmlsetsymbol{equal}{*}
+\icmlsetsymbol{lead}{$\dagger$}
+\begin{icmlauthorlist}
+\icmlauthor{Ann Able}{equal,a}
+\icmlauthor{Bob Baker}{equal,lead,a}
+\end{icmlauthorlist}
+\icmlaffiliation{a}{Univ A}
+\icmlcorrespondingauthor{Ann Able}{ann@a.edu}
+\vskip 0.3in]
+\printAffiliationsAndNotice{\icmlEqualContribution $^\dagger$Project lead}
+Text.
+\end{document}
