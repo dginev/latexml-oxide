@@ -3765,6 +3765,27 @@ fn role_tag(text: &str) -> Option<(usize, String, Option<String>)> {
   })
 }
 
+/// Whether an affiliation line an entry continues with prints an `@` the frontmatter reads as no line of addresses: a
+/// mark in it, which the API cuts the line at (`entry_calls`), or neither the API's address-line reading
+/// ([`email_addresses`]) nor the Kind step's ([`address_line_cut`], the queued names spelling a spaced list's parts) reads
+/// its printed text ([`printed_address_text`]; a `\@` prints none, latex.ltx:9422). The displaced route's doubt
+/// (frontmatter_stores.rs `unread_address_continuation`: 2211.16869, 2408.10349, 2412.03107, 2212.12190).
+pub fn prints_an_unread_address(line: &Tokens) -> Result<bool> {
+  let text = printed_address_text(line);
+  if !text.contains('@') {
+    return Ok(false);
+  }
+  if author_mark_position(line).is_some() {
+    return Ok(true);
+  }
+  if email_addresses(line).is_some() {
+    return Ok(false);
+  }
+  let keys = queued_author_name_keys()?;
+  let spells = |local: &str| spelled_owner(&keys, &s!("{local}@x.org")).is_some();
+  Ok(address_line_cut(text.trim(), &spells, false).is_none())
+}
+
 /// [`address_line_cut_untagged`] of a line, a role tag after its addresses read apart ([`role_tag`]).
 pub(in crate::base_utilities) fn address_line_cut(
   text: &str,

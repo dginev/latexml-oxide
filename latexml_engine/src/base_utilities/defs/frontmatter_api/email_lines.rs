@@ -462,20 +462,3 @@ pub(in crate::base_utilities) fn addresses_in_order(
 /// misclassifies an address as an email. An `\@` prints no `@` (latex.ltx:9422
 /// `\spacefactor\@m{}`): 2408.10349's `\{chencen, …\}\@scut.edu.cn` is no address.
 pub fn line_is_email_list(line: &Tokens) -> bool { email_addresses(line).is_some() }
-
-/// Whether a line of an affiliation is read as a line of addresses where the frontmatter places them: the API's
-/// address-line test of a marked list's line (`entry_calls`: no mark, which it would cut the line at;
-/// [`line_is_email_list`]), or the Kind step's on its printed text (`insert::address_line_cut`, a spaced list's parts
-/// spelling the queued names, as `kind_address_lines` reads them: `a, b, c@x`, `[a, b]@x`, `Emails: \{a, b\}@x`).
-pub fn reads_as_address_line(line: &Tokens) -> Result<bool> {
-  if author_mark_position(line).is_some() {
-    return Ok(false);
-  }
-  if line_is_email_list(line) {
-    return Ok(true);
-  }
-  let keys = queued_author_name_keys()?;
-  let spells = |local: &str| spelled_owner(&keys, &s!("{local}@x.org")).is_some();
-  let text = printed_address_text(line);
-  Ok(address_line_cut(text.trim(), &spells, false).is_some())
-}

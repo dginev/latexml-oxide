@@ -14297,7 +14297,7 @@ bypassed under raw loading; the class's `\@maketitle` never runs under the locke
   (2212.00442, 2508.05165; 2109.09904's goes to its last name only, the kernel author tail's line of addresses closing
   the run: repro `aaailabel_author_tail_email_line_caps_the_institution_run_red`). An unlabelled line an entry
   continues with that prints an `@` the frontmatter reads as no line of addresses keeps the whole store the class's
-  text (`frontmatter_stores.rs unread_address_continuation`; `email_lines.rs reads_as_address_line`: a mark in it,
+  text (`frontmatter_stores.rs unread_address_continuation`; `insert.rs prints_an_unread_address`: a mark in it,
   which the API cuts the line at, or neither the API's `line_is_email_list` nor the Kind step's `address_line_cut`
   reading it — `{a, b} @x`, `\{a,b\}\@x`, whose `\@` prints no `@`, a nested brace list): routed, its text stayed
   in one label's affiliation or followed the mark inside it (2211.16869, 2408.10349, 2412.03107, 2212.12190). One the

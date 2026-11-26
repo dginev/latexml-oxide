@@ -3235,22 +3235,19 @@ fn displaced_in_doubt(entries: &[Tokens]) -> Result<bool> {
   Ok(false)
 }
 
-/// Does an unlabelled line an entry continues with ([`displaced_entries`]), or a paragraph of one, print an `@` that the
-/// frontmatter does not read as a line of addresses (`base_utilities::reads_as_address_line`)? Its text would stay in
-/// that entry's contact, or follow a mark inside it, on authors it names no one of (2211.16869, 2408.10349, 2412.03107,
-/// 2212.12190).
+/// Does an unlabelled line an entry continues with ([`displaced_entries`]), or a paragraph of one (2403.16883's blank
+/// line before its addresses), print an `@` that the frontmatter reads as no line of addresses
+/// (`base_utilities::prints_an_unread_address`)? Its text would stay in that entry's contact, or follow a mark inside it,
+/// on authors it names no one of (2211.16869, 2408.10349, 2412.03107, 2212.12190).
 fn unread_address_continuation(entries: &[Tokens]) -> Result<bool> {
-  use crate::base_utilities::{reads_as_address_line, split_top_level_lines};
-  let prints_at = |t: &Token| {
-    matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER) && t.with_str(|s| s == "@")
-  };
+  use crate::base_utilities::{prints_an_unread_address, split_top_level_lines};
   for entry in entries {
     for line in split_top_level_lines(entry.unlist_ref())
       .into_iter()
       .skip(1)
     {
       for part in line.split(|t| *t == T_CS!("\\par")) {
-        if part.iter().any(prints_at) && !reads_as_address_line(&Tokens::new(part.to_vec()))? {
+        if prints_an_unread_address(&Tokens::new(part.to_vec()))? {
           return Ok(true);
         }
       }
