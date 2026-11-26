@@ -1,0 +1,30 @@
+% mechanism: latex.ltx:15859 `\list` resets `\makelabel` after `\@list<depth>`, so a kernel `\list` or an enumitem
+%   `\newlist` enumerate inside a description labels with its own, not `\descriptionlabel`, and a document's global
+%   `\makelabel` never reaches a list's items; a `\newlist{…}{description}` list sets `\descriptionlabel` in its own
+%   setup (enumitem.sty:1470), at the top level and nested.
+% witness: synthetic (QA14K2 post-merge RED QA14K2-LIST; GN_QA14K2_DECIDE p4_makelabel_matrix)
+% oracle:  pdflatex 0 errors; "X" (no "-"), "M" in CMBX10, "D", "F", "G", "H" in CMBX10, both "(i)" in CMR10.
+% engines: rust INT081AA and QA14K2 707b5c4ba03: `<tag>X-</tag>`, `<tag>M-</tag>` (the global 2-argument `\makelabel`),
+%   bold "(i)" twice; Perl 0.8.8 the same (PERL-ORIGIN: its `\list`, latex_constructs.pool.ltxml:1649, resets no
+%   `\makelabel`).
+% expect:  0 errors, 0 warnings; `<tag>X</tag>`, bold "M", `<tag>(i)</tag>` twice, bold "H".
+% status:  RED (INT081AA, QA14K2 707b5c4ba03) -> GREEN (QA14K2 fix round 3)
+\documentclass{article}
+\usepackage{enumitem}
+\newlist{myenum}{enumerate}{2}
+\setlist[myenum]{label=(\roman*)}
+\newlist{mydesc}{description}{2}
+\renewcommand\makelabel[2]{#1-#2}
+\begin{document}
+\begin{list}{}{}
+\item[X] a list
+\end{list}
+\begin{mydesc}
+\item[M] a description list
+\end{mydesc}
+\begin{description}
+\item[D] \begin{list}{}{}\item[(i)] a list in it\end{list}
+\item[F] \begin{myenum}\item an enumerate list in it\end{myenum}
+\item[G] \begin{mydesc}\item[H] a description list in it\end{mydesc}
+\end{description}
+\end{document}

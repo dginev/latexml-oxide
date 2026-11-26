@@ -672,9 +672,12 @@ pub(crate) fn load() -> Result<()> {
     r"\list{}{}",
     r"\global\advance\@listdepth\@ne\lx@list@params\def\@itemlabel{#1}\let\@listctr\@empty\@nmbrlistfalse#2\relax\@trivlist\lx@list@margins"
   );
+  // latex.ltx:15854-15859: `\@list<depth>`, then `\let\makelabel\@mklab`, so neither a class's `\@list<depth>` label
+  // (tlp.cls `\makeRLlabel`, 1210.0368) nor an enclosing list's reaches the items; identity, as `\@mklab`'s `\hfil`
+  // would lead the tag.
   DefMacro!(
     r"\lx@list@params",
-    r"\rightmargin\z@\listparindent\z@\itemindent\z@\csname @list\romannumeral\the\@listdepth\endcsname"
+    r"\rightmargin\z@\listparindent\z@\itemindent\z@\csname @list\romannumeral\the\@listdepth\endcsname\let\makelabel\@firstofone"
   );
   DefMacro!(
     r"\lx@list@margins",

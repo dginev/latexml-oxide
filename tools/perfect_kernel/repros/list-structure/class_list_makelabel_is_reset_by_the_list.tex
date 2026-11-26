@@ -1,0 +1,45 @@
+% mechanism: latex.ltx:15854-15861 `\list`: `\@list<depth>`, then `\let\makelabel\@mklab` (:15859), then the list's own
+%   `#2`, so a class's `\@list<depth>` that sets `\makelabel` (tlp.cls:327-360 `\let\makelabel\makeRLlabel`, a q7-shaped
+%   bold one) never labels an itemize, enumerate, kernel `\list` or description item. `\lx@list@params` (sect06.rs)
+%   resets it after `\@list<depth>`; a description sets `\descriptionlabel` after (`begin_itemize`).
+% witness: 1210.0368 (tlp.cls, 67 bullets `<text width="0.0pt">`); synthetic (QA14K2 re-review q7)
+% oracle:  pdflatex 0 errors; "•", "1.", "Y", "X" in CMR10 (no 0-width box, not bold), "[Z]" (the list's own), "D" and
+%   "E" in CMBX10.
+% engines: rust INT081AA as expected (it ran no `\@list<depth>`); QA14K2 707b5c4ba03 `<text width="0.0pt">` "•", "1.",
+%   "X" and a bold "1.", "Y"; Perl 0.8.8 as expected.
+% expect:  0 errors, 0 warnings; `<tag>•</tag>`, `<tag>1.</tag>` (both), `<tag>Y</tag>`, `<tag>X</tag>`, `<tag>[Z]</tag>`,
+%   bold "D" and "E".
+% status:  RED (QA14K2 707b5c4ba03) -> GREEN (QA14K2 fix round 3)
+\documentclass{article}
+\makeatletter
+\newcommand\makeRLlabel[1]{\rlap{#1}\hss}
+\def\@listI{\leftmargin\leftmargini \let\makelabel\makeRLlabel}
+\let\@listi\@listI
+\def\@listii{\leftmargin\leftmarginii \def\makelabel##1{\textbf{##1}}}
+\makeatother
+\begin{document}
+\begin{itemize}
+\item a bullet
+\begin{enumerate}
+\item an enumerate in it
+\end{enumerate}
+\end{itemize}
+\begin{enumerate}
+\item numbered
+\begin{list}{}{}
+\item[Y] a list in it
+\end{list}
+\end{enumerate}
+\begin{list}{}{}
+\item[X] a list
+\end{list}
+\begin{list}{L}{\def\makelabel#1{[#1]}}
+\item[Z] its own label
+\end{list}
+\begin{description}
+\item[D] a description
+\begin{description}
+\item[E] nested
+\end{description}
+\end{description}
+\end{document}

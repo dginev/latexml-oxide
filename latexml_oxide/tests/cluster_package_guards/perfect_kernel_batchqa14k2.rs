@@ -46,9 +46,13 @@ type Case = (
 /// `\setlist*` storing `leftmargin` again after `wide`; 924919feffb) "345.0pt 0.0pt".
 /// note_and_cell_paragraphs_are_unspaced_in_a_list: a footnote and a `p` cell reset `\parskip`. Red (QA14K2
 /// eb92bd5ebc9): "4.0pt plus 2.0pt minus 1.0pt" (the list's `\parsep`).
+/// class_list_makelabel_is_reset_by_the_list: a class's `\@list<depth>` `\makelabel` is reset after it (latex.ltx:15859).
+/// Red (QA14K2 707b5c4ba03): `<text width="0.0pt">` "•", "1.", "X"; a bold "1.", "Y". Witness 1210.0368 (tlp.cls).
+/// makelabel_in_a_description_is_the_lists_own: a list in a description, a global `\makelabel`, a `\newlist`
+/// description. Red (INT081AA, QA14K2 707b5c4ba03): "X-", "M-", a bold "(i)" twice.
 #[test]
 fn list_registers_set_the_line_width() {
-  let cases: [Case; 11] = [
+  let cases: [Case; 13] = [
     (repro!("list-structure/list_narrows_the_line_width.tex"), &[
       (
         "p",
@@ -452,6 +456,66 @@ fn list_registers_set_the_line_width() {
           "p",
           "S0.I1.i2.p1.1.1.1.1.1",
           "<p xml:id=\"S0.I1.i2.p1.1.1.1.1.1\">C 0.0pt.</p>",
+        ),
+      ],
+    ),
+    (
+      repro!("list-structure/class_list_makelabel_is_reset_by_the_list.tex"),
+      &[
+        (
+          "item",
+          "S0.I1.i1",
+          "<item xml:id=\"S0.I1.i1\"><tags><tag>•</tag><tag role=\"typerefnum\">1st item</tag></tags><para xml:id=\"S0.I1.i1.p1\"><p xml:id=\"S0.I1.i1.p1.1\">a bullet</p><enumerate xml:id=\"S0.I1.i1.I1\"><item xml:id=\"S0.I1.i1.I1.i1\"><tags><tag>1.</tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">item\u{a0}1</tag></tags><para xml:id=\"S0.I1.i1.I1.i1.p1\"><p xml:id=\"S0.I1.i1.I1.i1.p1.1\">an enumerate in it</p></para></item></enumerate></para></item>",
+        ),
+        (
+          "item",
+          "S0.I2.i1",
+          "<item xml:id=\"S0.I2.i1\"><tags><tag>1.</tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">item\u{a0}1</tag></tags><para xml:id=\"S0.I2.i1.p1\"><p xml:id=\"S0.I2.i1.p1.1\">numbered</p><itemize xml:id=\"S0.I2.i1.p1.2\"><item xml:id=\"S0.I2.i1.I1.ix1\"><tags><tag>Y</tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">item Y</tag></tags><para xml:id=\"S0.I2.i1.I1.ix1.p1\"><p xml:id=\"S0.I2.i1.I1.ix1.p1.1\">a list in it</p></para></item></itemize></para></item>",
+        ),
+        (
+          "item",
+          "S0.I3.ix1",
+          "<item xml:id=\"S0.I3.ix1\"><tags><tag>X</tag><tag role=\"typerefnum\">item X</tag></tags><para xml:id=\"S0.I3.ix1.p1\"><p xml:id=\"S0.I3.ix1.p1.1\">a list</p></para></item>",
+        ),
+        (
+          "item",
+          "S0.I4.ix1",
+          "<item xml:id=\"S0.I4.ix1\"><tags><tag>[Z]</tag><tag role=\"typerefnum\">item Z</tag></tags><para xml:id=\"S0.I4.ix1.p1\"><p xml:id=\"S0.I4.ix1.p1.1\">its own label</p></para></item>",
+        ),
+        (
+          "item",
+          "S0.I5.ix1",
+          "<item xml:id=\"S0.I5.ix1\"><tags><tag><text font=\"bold\" xml:id=\"S0.I5.ix1.1\">D</text></tag><tag role=\"typerefnum\">item D</tag></tags><para xml:id=\"S0.I5.ix1.p1\"><p xml:id=\"S0.I5.ix1.p1.1\">a description</p><description xml:id=\"S0.I5.ix1.I1\"><item xml:id=\"S0.I5.ix1.I1.ix1\"><tags><tag><text font=\"bold\" xml:id=\"S0.I5.ix1.I1.ix1.1\">E</text></tag><tag role=\"typerefnum\">item E</tag></tags><para xml:id=\"S0.I5.ix1.I1.ix1.p1\"><p xml:id=\"S0.I5.ix1.I1.ix1.p1.1\">nested</p></para></item></description></para></item>",
+        ),
+      ],
+    ),
+    (
+      repro!("list-structure/makelabel_in_a_description_is_the_lists_own.tex"),
+      &[
+        (
+          "item",
+          "S0.I1.ix1",
+          "<item xml:id=\"S0.I1.ix1\"><tags><tag>X</tag><tag role=\"typerefnum\">item X</tag></tags><para xml:id=\"S0.I1.ix1.p1\"><p xml:id=\"S0.I1.ix1.p1.1\">a list</p></para></item>",
+        ),
+        (
+          "item",
+          "S0.I2.ix1",
+          "<item xml:id=\"S0.I2.ix1\"><tags><tag><text font=\"bold\" xml:id=\"S0.I2.ix1.1\">M</text></tag><tag role=\"typerefnum\">item M</tag></tags><para xml:id=\"S0.I2.ix1.p1\"><p xml:id=\"S0.I2.ix1.p1.1\">a description list</p></para></item>",
+        ),
+        (
+          "item",
+          "S0.I3.ix1",
+          "<item xml:id=\"S0.I3.ix1\"><tags><tag><text font=\"bold\" xml:id=\"S0.I3.ix1.1\">D</text></tag><tag role=\"typerefnum\">item D</tag></tags><para xml:id=\"S0.I3.ix1.p1\"><itemize xml:id=\"S0.I3.ix1.p1.1\"><item xml:id=\"S0.I3.ix1.I1.ix1\"><tags><tag>(i)</tag><tag role=\"typerefnum\">item (i)</tag></tags><para xml:id=\"S0.I3.ix1.I1.ix1.p1\"><p xml:id=\"S0.I3.ix1.I1.ix1.p1.1\">a list in it</p></para></item></itemize></para></item>",
+        ),
+        (
+          "item",
+          "S0.I3.ix2",
+          "<item xml:id=\"S0.I3.ix2\"><tags><tag><text font=\"bold\" xml:id=\"S0.I3.ix2.1\">F</text></tag><tag role=\"typerefnum\">item F</tag></tags><para xml:id=\"S0.I3.ix2.p1\"><enumerate xml:id=\"S0.I3.ix2.I2\"><item xml:id=\"S0.I3.ix2.I2.i1\"><tags><tag>(i)</tag><tag role=\"refnum\">(i)</tag></tags><para xml:id=\"S0.I3.ix2.I2.i1.p1\"><p xml:id=\"S0.I3.ix2.I2.i1.p1.1\">an enumerate list in it</p></para></item></enumerate></para></item>",
+        ),
+        (
+          "item",
+          "S0.I3.ix3",
+          "<item xml:id=\"S0.I3.ix3\"><tags><tag><text font=\"bold\" xml:id=\"S0.I3.ix3.1\">G</text></tag><tag role=\"typerefnum\">item G</tag></tags><para xml:id=\"S0.I3.ix3.p1\"><description xml:id=\"S0.I3.ix3.I3\"><item xml:id=\"S0.I3.ix3.I3.ix1\"><tags><tag><text font=\"bold\" xml:id=\"S0.I3.ix3.I3.ix1.1\">H</text></tag><tag role=\"typerefnum\">item H</tag></tags><para xml:id=\"S0.I3.ix3.I3.ix1.p1\"><p xml:id=\"S0.I3.ix3.I3.ix1.p1.1\">a description list in it</p></para></item></description></para></item>",
         ),
       ],
     ),

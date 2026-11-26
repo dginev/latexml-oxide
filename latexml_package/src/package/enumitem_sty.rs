@@ -105,8 +105,12 @@ fn begin_enum_itemize(
     opts.resume_star = Some(resume_star_toks.to_string());
   }
 
-  // The list's own margins, its `\list` setup after `\@list<depth>` (enumitem.sty:1383-1400 `\enit@preset`).
+  // The list's own margins, its `\list` setup after `\@list<depth>` (enumitem.sty:1383-1400 `\enit@preset`); a
+  // description-type list's label, `\newlist{…}{description}` too (:1470).
   let mut setup = Vec::new();
+  if enit_type == 2 {
+    setup.extend(TokenizeInternal!(r"\let\makelabel\descriptionlabel").unlist());
+  }
   for (register, value) in [
     ("\\leftmargin", stated_leftmargin(&hash)),
     ("\\rightmargin", stated_margin(&hash, "rightmargin")),

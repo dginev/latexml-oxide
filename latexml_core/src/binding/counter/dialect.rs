@@ -1880,11 +1880,15 @@ pub fn begin_itemize(
       .clone()
       .map(|s| s.unlist())
       .unwrap_or_default();
-    // article.cls:360-363 `{description}`: `\list{}{\labelwidth\z@ \itemindent-\leftmargin …}`.
+    // article.cls:360-363 `{description}`: `\list{}{\labelwidth\z@ \itemindent-\leftmargin \let\makelabel…}`, its
+    // label after `\list`'s reset (latex.ltx:15859).
     if itype == "description" {
       setup.splice(
         0..0,
-        mouth::tokenize_internal(r"\labelwidth\z@\itemindent-\leftmargin").unlist(),
+        mouth::tokenize_internal(
+          r"\labelwidth\z@\itemindent-\leftmargin\let\makelabel\descriptionlabel",
+        )
+        .unlist(),
       );
     }
     begin_list_registers(setup)?;
@@ -2317,8 +2321,8 @@ pub fn set_list_depth(depth: i64) -> Result<()> {
 }
 
 /// latex.ltx:15854-15861 `\list`'s parameters, in the current group: `\rightmargin`, `\listparindent` and
-/// `\itemindent` cleared, `\@list<depth>` run (the class's `\leftmargin` and spacing), then `setup`, the list's own
-/// second argument. `end_list_registers` then narrows the line.
+/// `\itemindent` cleared, `\@list<depth>` run (the class's `\leftmargin` and spacing), `\makelabel` reset (:15859),
+/// then `setup`, the list's own second argument (its `\makelabel`). `end_list_registers` then narrows the line.
 pub fn begin_list_registers(setup: Vec<Token>) -> Result<()> {
   let mut tokens = vec![T_CS!("\\lx@list@params")];
   tokens.extend(setup);
