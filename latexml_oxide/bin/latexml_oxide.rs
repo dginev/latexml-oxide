@@ -2623,7 +2623,7 @@ mod panic_sweep_tests {
     let lines: Vec<&str> = log.lines().collect();
     assert_eq!(lines[0], "(Processing content paper.tex... )", "{log}");
     assert!(
-      lines[1].starts_with("Fatal:panic:caught post at latexml_oxide/bin/latexml_oxide.rs:"),
+      lines[1].starts_with(&format!("Fatal:panic:caught post at {}:", file!())),
       "{log}"
     );
     assert_eq!(lines[2..], ["Status:conversion:3"], "{log}");

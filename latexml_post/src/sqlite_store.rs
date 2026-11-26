@@ -284,11 +284,21 @@ impl Drop for WalCheck {
     if !Path::new(&wal).exists() {
       return;
     }
+    // Windows: every SHARED lock first takes the PENDING byte, up to 3 tries `Sleep(1)` apart (`winLock`, a scheduler
+    // tick of up to 15.6 ms), so the processes' checks overlap far longer and keep failing each other's close: there the
+    // pause's spread doubles each try, to 128 ms (2 tries in 2-5 ms left a `-wal` in a fifth of the rounds of
+    // `simultaneous_closes_leave_no_side_files`).
+    let attempts = if cfg!(windows) { 8 } else { 2 };
     let random = std::collections::hash_map::RandomState::new();
-    for attempt in 0..2 {
+    for attempt in 0..attempts {
+      let spread = if cfg!(windows) {
+        4000 << attempt.min(5)
+      } else {
+        3000
+      };
       // The process id mixed in: forked processes share `RandomState`'s keys (`lsp_server/unix.rs`).
       std::thread::sleep(std::time::Duration::from_micros(
-        2000 + random.hash_one((std::process::id(), attempt)) % 3000,
+        2000 + random.hash_one((std::process::id(), attempt)) % spread,
       ));
       // Looked at again after the pause: a read of the file with no `-wal` would make one.
       if !Path::new(&wal).exists() {

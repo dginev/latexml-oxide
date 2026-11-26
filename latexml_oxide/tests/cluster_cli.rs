@@ -104,9 +104,13 @@ mod single_binary_smoke {
     let tail: Vec<&str> = log.lines().rev().take(3).collect();
     assert_eq!(tail[2], "Conversion complete: No obvious problems", "{log}");
     assert!(
-      tail[1].starts_with(
-        "Fatal:panic:caught LATEXML_INJECT_PANIC at the core's end at latexml_oxide/src/converter.rs:"
-      ),
+      tail[1].starts_with(&format!(
+        "Fatal:panic:caught LATEXML_INJECT_PANIC at the core's end at {}:",
+        Path::new("latexml_oxide")
+          .join("src")
+          .join("converter.rs")
+          .display()
+      )),
       "{log}"
     );
     assert_eq!(tail[0], "Status:conversion:3", "{log}");
