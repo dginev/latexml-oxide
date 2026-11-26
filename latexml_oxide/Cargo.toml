@@ -32,8 +32,9 @@ default-run = "latexml_oxide"
 # ~600 KB. `--dry-run` cannot catch this — it stops before the upload, so the size
 # limit is only ever enforced by the real publish.
 #
-# Safe to exclude: no explicit `[[test]]` targets (the 50 harnesses are auto-
-# discovered, so the packaged crate simply has none), and `build.rs` only wires git
+# Safe to exclude: the harnesses are auto-discovered, so the packaged crate has none; the
+# two explicit `[[test]]` targets below need `cortex`, and the release's `cargo publish
+# --dry-run` checks how cargo packages them. And `build.rs` only wires git
 # hooks and no-ops without a `.git`. Consumers get the library and binaries; the
 # corpus stays in git, which is where the suite is meant to run. The one `src/` unit
 # test that scans the corpus at RUN time (`exemption_audit`) locates it via
@@ -147,7 +148,7 @@ kpathsea-build-from-source = ["latexml_core/kpathsea-build-from-source"]
 # to latexml_contrib (the only crate that embeds Rhai). ON by default:
 # downstream consumers of the single-file binary customize bindings without
 # recompiling. Distribution builds use `--no-default-features --features
-# runtime-bindings` (drop test-utils, keep this).
+# runtime-bindings`: the default set, named explicitly (test-utils is never a default).
 runtime-bindings = ["latexml_contrib/runtime-bindings"]
 
 [dependencies]
