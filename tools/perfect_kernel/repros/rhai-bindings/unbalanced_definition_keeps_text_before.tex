@@ -1,0 +1,19 @@
+% mechanism: a definition whose expansion is unbalanced is `Fatal:Stomach:Misdefined` (Perl Expandable.pm:35); raised
+%   in the body it is no runaway box window, so the digestion salvage (`core_interface::finish_digestion_fatal`) keeps
+%   every level, as for any Fatal but the stomach's runaway guards, which drop the innermost (the document body)
+% witness: synthetic (the Stomach:Misdefined shape of 16 arXiv Fatals: 1311.6759, 1509.08999, 1807.06367; the binding
+%   lxubd.sty.rhai, lxubd.sty.ltxml for Perl, lxubd.sty for pdflatex)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "First paragraph. Before after. Second paragraph."; Perl 0.8.8:
+%   <p>First paragraph.</p> <p>Before </p>, 1 fatal error
+% engines: INT081RC6: a 39-byte document, 1 fatal error, status 3
+% expect:  1 fatal error, status 3; <p>First paragraph.</p> <p>Before </p> kept, "after." and "Second paragraph." not built
+% status:  RED (INT081RC6) -> GREEN (DIGFATAL)
+\documentclass{article}
+\usepackage{lxubd}
+\begin{document}
+First paragraph.
+
+Before \lxubd\ after.
+
+Second paragraph.
+\end{document}

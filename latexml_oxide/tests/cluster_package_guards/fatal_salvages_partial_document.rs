@@ -144,3 +144,108 @@ fn too_many_errors_keeps_the_already_digested_document() {
   assert!(xml.contains("<p>KEEPMEBEFOREMARKER prose.</p>"), "{xml}");
   assert!(!xml.contains("KEEPMEAFTERMARKER"), "{xml}");
 }
+
+type SalvageRow<'a> = (
+  &'a str,
+  &'a str,
+  &'a [(&'a str, &'a str)],
+  &'a str,
+  usize,
+  &'a [&'a str],
+);
+
+/// Every digestion Fatal but the resource and token-loop guards keeps the text digested before it, as Perl's
+/// `hardYankProcessing` (Common/Error.pm:336-338; `core_interface::finish_digestion_fatal`); the run stays Fatal and
+/// reads nothing past it. A `document` environment is one body, so a Fatal in it kept no text at all before DIGFATAL.
+/// (row, repro, its side files, the `Fatal:` line's head, `Error:` lines, every `<p>` of the output, whole)
+#[test]
+fn a_digestion_fatal_keeps_the_text_before_it() {
+  const KEPT: &[&str] = &["<p>First paragraph.</p>", "<p>Before </p>"];
+  let rows: &[SalvageRow] = &[
+    (
+      // a binding's own Fatal in a macro body (the RHODR shape)
+      "a binding's Fatal",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/rhai-bindings/digest_fatal_keeps_text_before.tex"
+      ),
+      &[(
+        "lxmbf.sty.rhai",
+        include_str!("../../../tools/perfect_kernel/repros/rhai-bindings/lxmbf.sty.rhai"),
+      )],
+      "Fatal:unexpected:Internal lxmbf gives up",
+      0,
+      KEPT,
+    ),
+    (
+      // TeX's emergency stop after "File ended while scanning use of \grab" (hep-th0008096, astro-ph0012068)
+      "Mouth:EoF",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/parameter-conditional/delimited_argument_at_end_of_input_keeps_the_text_before.tex"
+      ),
+      &[],
+      "Fatal:Mouth:EoF File ended while scanning use of a Until:\\stop argument",
+      1,
+      KEPT,
+    ),
+    (
+      // a Stomach-target Fatal that is no runaway guard keeps the innermost level too (1311.6759, 1509.08999)
+      "Stomach:Misdefined",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/rhai-bindings/unbalanced_definition_keeps_text_before.tex"
+      ),
+      &[(
+        "lxubd.sty.rhai",
+        include_str!("../../../tools/perfect_kernel/repros/rhai-bindings/lxubd.sty.rhai"),
+      )],
+      "Fatal:Stomach:Misdefined Expansion of '\\lxubdx' has unbalanced {}",
+      0,
+      KEPT,
+    ),
+    (
+      // the token-loop guards keep nothing: the salvage revived the loop in the build (2605.25400)
+      "Timeout:Recursion",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/expansion-primitives/expansion_loop_keeps_nothing.tex"
+      ),
+      &[],
+      "Fatal:Timeout:Recursion Infinite expansion loop: a window of 2 token(s) repeated 100+ times",
+      0,
+      &[],
+    ),
+    (
+      // the input-level limit is one of them (hep-th0409095, 1503.05624)
+      "Mouth:Recursion",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/expansion-primitives/scantokens_self_recursion_keeps_nothing.tex"
+      ),
+      &[],
+      "Fatal:Mouth:Recursion TeX capacity exceeded, sorry [text input levels=15]",
+      0,
+      &[],
+    ),
+  ];
+  let mut failures = Vec::new();
+  for (name, tex, files, fatal, want_errors, paras) in rows {
+    let (log, xml, status, code) = latexml::util::test::convert_files_with_status(tex, files, None);
+    let fatals: Vec<&str> = log.lines().filter(|l| l.starts_with("Fatal:")).collect();
+    let errors = log.lines().filter(|l| l.starts_with("Error:")).count();
+    let found = latexml::util::test::xml_elements(&xml, "p", &[]);
+    let want: Vec<String> = paras
+      .iter()
+      .map(|p| latexml::util::test::normalize_markup(p))
+      .collect();
+    if fatals.len() != 1
+      || !fatals[0].starts_with(fatal)
+      || errors != *want_errors
+      || code != 3
+      || !status.ends_with("1 fatal error")
+      || found != want
+    {
+      failures.push(format!(
+        "{name}: fatals {fatals:#?} (want one starting {fatal:?}), {errors} Error: lines (want {want_errors}), \
+         status {status:?} ({code}), paragraphs {found:#?} (want {want:#?})\n{xml}\n{log}"
+      ));
+    }
+  }
+  assert!(failures.is_empty(), "{}", failures.join("\n\n"));
+}

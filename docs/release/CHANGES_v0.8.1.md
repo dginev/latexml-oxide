@@ -9,6 +9,15 @@ top of its group.
 
 ### Unreleased
 
+  - **A Fatal during digestion keeps the text digested before it; the run stays Fatal.** A delimited argument that
+    runs off the end of the input (`Fatal:Mouth:EoF`), an unbalanced definition (`Stomach:Misdefined`), a parameter or
+    group Fatal, or a binding's own `Fatal()` wrote a 39-byte document, because a `document` environment is one
+    body; the paragraphs before it are now built, as Perl's `hardYankProcessing` keeps them, and the input after it
+    stays unread. The loop and resource guards are excluded: `Timeout:Recursion` and the input-level limit keep
+    nothing (2605.25400), the stomach's runaway guards drop the runaway level, and the resource Fatals still end the
+    run where they fire (OXIDIZED_DESIGN_DIVERGENCES #251). Guards:
+    `fatal_salvages_partial_document::a_digestion_fatal_keeps_the_text_before_it`,
+    `30_script_bindings::a_rhai_fatal_is_logged_once`.
   - **The MSC edition of an AMS class's or amsppt's `\subjclass` follows its codes.** The call's year, or the
     author's own `\subjclassname` (or amsppt `\subjclassyear`) that the class discards, stands when every code is in
     that edition; codes that fit one edition name it; a printed year the codes refute gives the edition current at the

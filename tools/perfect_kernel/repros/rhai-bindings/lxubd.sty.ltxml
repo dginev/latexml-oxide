@@ -1,0 +1,5 @@
+# Perl stand-in for lxubd.sty.rhai (the Perl run; Perl checks the balance of a Tokens expansion only, Expandable.pm:34).
+package LaTeXML::Package::Pool;
+use LaTeXML::Package;
+DefMacro('\lxubd', sub { DefMacro('\lxubdx', Tokens(T_BEGIN)); return Tokens(T_OTHER('X')); });
+1;

@@ -7,7 +7,8 @@
 %   1 fatal error, 1 `Fatal:` line (its `die` in \lxtwa's getter: \lxtwb's never runs)
 % engines: INT081Y (23ce8bc3c25): 2 `Fatal:` lines (\lxtwa's dropped, \lxtwb's caught one), the text kept
 %          RHODR round 1 (71745e52eed): 3 `Fatal:` lines (\lxtwa's printed again at its raise), a 39-byte document
-%          RHODR round 2: 2 `Fatal:` lines, status 3, a 39-byte document (digest_fatal_keeps_text_before_red.tex)
+%          RHODR round 2: 2 `Fatal:` lines, status 3, a 39-byte document
+%          DIGFATAL: 2 `Fatal:` lines, status 3, <p>Before </p> (digest_fatal_keeps_text_before.tex)
 % expect:  2 `Fatal:` lines: \lxtwa's once, then \lxtwb's caught one (the getter returns and the step goes on, where
 %   Perl's `die` stops at once)
 % status:  GREEN (RHODR round 2; guard 30_script_bindings::a_rhai_fatal_is_logged_once, row "a register getter, then a
