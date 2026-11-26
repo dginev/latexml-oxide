@@ -57,10 +57,16 @@ Rules that keep this file honest and mergeable:
   is tag `bb903363a6b`, published as a prerelease on 2026-11-25 UTC (release run 45533293760, 17 assets): #987-#1003
   (issue 995's resource cache, the CLI options, the CLI hardening, the cortex worker's runtime-binding refusal, the
   `unsafe` ratchet) and rust-libxml 0.3.27, which removes 0.3.25's 2.1x slowdown on deeply nested TikZ pictures.
-  **0.8.0-rc4** is cut from main on 2026-11-25: #1007 (a journal class's `\jyear{…}` printed as a body paragraph; ar5iv
-  issues 353 and 301), #1008 (issue 1006: split pages' navigation under `--sitedirectory`) and #1009 (a site
-  directory named through a symbolic link, every macOS temporary directory, was refused since rc3; KNOWN_PERL_ERRORS
-  #1334). rc2 was re-issued on the large-document perf work (DG 2026-11-21): #970 (STRMWARN,
+  **0.8.0-rc4** is tag `9fa31b9a7ad`, published as a prerelease on 2026-11-25 UTC (release run 45664468839, 17
+  assets): #1007 (a journal class's `\jyear{…}` printed as a body paragraph; ar5iv issues 353 and 301), #1008 (issue
+  1006: split pages' navigation under `--sitedirectory`) and #1009 (a site directory named through a symbolic link,
+  every macOS temporary directory, was refused since rc3; KNOWN_PERL_ERRORS #1334). **0.8.0-rc5** is cut from main on
+  2026-11-25: #1012 (a cache closing beside another left `-wal`/`-shm` side files), #1013 (a negative LaTeX argument
+  count exhausted memory; non-BMP characters kept), #1015 (issue 1011: books of thousands of `\input`/`\subimport`
+  files abort at the string arena's halved ceiling; a crash now leaves its log), #1014 (Windows: the first
+  conversion's format build off the `--timeout` clock; figure paths of 260+ characters) and #1016 (release builds
+  bundle ar5iv.css; a stylesheet already in the destination is used as-is, OD #1165).
+  rc2 was re-issued on the large-document perf work (DG 2026-11-21): #970 (STRMWARN,
   CORELEAK, POSTPERF, CHAPLINKS, ALLOCTRIM, BIGSPLIT, mimalloc 2.3.2) and SERSTREAM (the core result serialized to
   disk; issue 777's whole book converts, 1,549 s on main 4a5aae128b2 against lualatex's 3,523 s for two passes). Main stays the release line until 0.8.0
   final; the reviewed post-release branches (COPYROUTE, ENCURL) merge after it. The ar5iv sync of the run's bundles (every month, then a cache flush) is running.

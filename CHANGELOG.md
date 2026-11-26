@@ -127,6 +127,8 @@ The highlights since 0.7.6 (2026-08-23). Every change, with its guard tests and 
   never Errors, Fatals or the final verdict; the log keeps everything.
 - `--dest`, `--sitedirectory` and `--sourcedirectory` expand a leading `~` and resolve `./` and `..` before use, as
   latexmlc does (issue 1006).
+- `--timeout` no longer covers the one-time format build a TeX tree the bundled formats don't match needs; under a
+  non-zero `--timeout` that build has its own 10-minute bound.
 - A stylesheet or script already in the destination is used as-is; only a missing or empty one is written from the
   bundled copy. A reused output folder therefore keeps the `LaTeXML.css` an older version wrote: delete it to get the
   new one, which the box sizes above need.
