@@ -16518,7 +16518,7 @@ bare text run into the next paragraph, its heading lost (RED `sectioning-frontma
 `class=MSC` block, which prints no heading, shows the class key "MSC" as its `<h6>`; and, pre-existing, other bindings'
 classifications show a scheme the paper does not print — the AMS binding's default edition beside a class's own
 heading (`scheme="2020 Mathematics Subject Classification"`, 1991 before KNOWN_PERL_ERRORS #1337, `name="Mathematical subject classification (2010)"`:
-1310.5294, cedram-alco; m2an's 0811.1789, 1512.06935, 2407.04312, 2411.09498), and a bare "AMS"/"keywords" in
+1310.5294, cedram-alco; 1512.06935, cedram-aif; 2407.04312, cedram-sem; 2411.09498, m2an; and amsart's 0811.1789, whose printed name stays "2000 …"), and a bare "AMS"/"keywords" in
 tac_cls.rs:30 (2312.12356), sigma_cls.rs:98 (0705.3628), ejpecp_cls.rs:45-55 (2312.17406, its "Primary"/"Secondary"
 lost too) and siamart_cls.rs:93-171 (1707.06953) — a later batch, each binding's printed heading. Repros
 `sectioning-frontmatter/{imsart_keyword_blocks_footnote_option, imsart_keyword_blocks_in_the_box,
