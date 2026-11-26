@@ -1,3 +1,13 @@
+//! The math parser of latexml-oxide: it turns the token lists of each formula (`ltx:XMath`) into a parse tree,
+//! the work of Perl LaTeXML's `LaTeXML::MathParser`.
+//!
+//! Where Perl uses a Parse::RecDescent grammar, this crate uses a highly ambiguous Marpa grammar and prunes the
+//! parses in its semantic rules. [`MathGrammar`] is the grammar, built once and shared; [`MathParser`] parses the
+//! formulas of a document with it (`parse_math`).
+//!
+//! Read next: [MATH_PARSER_AND_ASF.md](https://github.com/dginev/latexml-oxide/blob/main/docs/math/MATH_PARSER_AND_ASF.md) and
+//! [OXIDIZED_DESIGN_MATH.md](https://github.com/dginev/latexml-oxide/blob/main/docs/math/OXIDIZED_DESIGN_MATH.md).
+
 // semantics/tree.rs is under active development and carries intentional
 // `todo!()` stubs for not-yet-handled XM node kinds. The workspace lint policy
 // warns on `todo!()` (denied in CI via -D warnings); scope an allow to this

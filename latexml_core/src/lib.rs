@@ -1,4 +1,14 @@
-//! The Core of latexml - roughly the equivalent of TeX conversion.
+//! The core of latexml-oxide: the TeX engine that reads a document and builds its XML, the port of Perl
+//! LaTeXML's `LaTeXML::Core`, `LaTeXML::Common` and the definers of `LaTeXML::Package`.
+//!
+//! A conversion runs through the stages Perl's does: the [`mouth`] turns characters into tokens, the [`gullet`]
+//! expands macros and reads arguments, the [`stomach`] digests tokens into boxes, and the [`document`] builds the XML
+//! from them. The global [`state`] holds every definition ([`definition`]) and value, thread-local per conversion.
+//! The [`binding`] module holds the definers and loaders (`DefMacro`, `DefConstructor`, `RequirePackage`, …) that
+//! the bindings in `latexml_engine` and `latexml_package` are written with.
+//!
+//! Most users want the `latexml` crate, which drives a whole conversion. For the Perl-to-Rust map, read
+//! [ORGANIZATION.md](https://github.com/dginev/latexml-oxide/blob/main/docs/parity/ORGANIZATION.md).
 #![feature(thread_local)]
 #![allow(missing_docs)]
 #![allow(clippy::invisible_characters)] // Font metrics contain real zero-width Unicode chars from TFM files

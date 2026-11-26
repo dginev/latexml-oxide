@@ -1,3 +1,14 @@
+//! Compile-time code generation for latexml-oxide: procedural derive macros that turn binding source into Rust at
+//! build time.
+//!
+//! They compile a definition's parameter prototype (`CompilePrototype`, `CompilePrototypeFor`), its TeX expansion
+//! (`CompileExpansion`, `CompileTokens`, `CompileTokensInternal`), a constructor's XML replacement
+//! (`CompileReplacement`), the RelaxNG schema (`LoadModel`), and the test-suite discovery of `.tex`/`.xml` fixture
+//! pairs (`GlobTeXTests`). Bindings do not use them directly: `latexml_engine`'s `compile_*!` and `load_model!`
+//! macros wrap them.
+//!
+//! Read next: [BINDING_DSL_ARCHITECTURE.md](https://github.com/dginev/latexml-oxide/blob/main/docs/parity/BINDING_DSL_ARCHITECTURE.md).
+
 #![recursion_limit = "100"]
 extern crate proc_macro; // workaround until proc_macro becomes available normally
 

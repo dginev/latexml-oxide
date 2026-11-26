@@ -1,14 +1,20 @@
-//! latexml_engine — TeX/LaTeX engine pool bindings (1:1 match with Perl
-//! `LaTeXML/Engine/*.pool.ltxml`). Split out of `latexml_package` to
-//! reduce CI compile-time RAM peaks and improve incremental rebuild
-//! locality. See `docs/SYNC_STATUS.md` "latexml_engine extraction" for
-//! the full motivation.
+//! The TeX and LaTeX engine definitions of latexml-oxide: one Rust module per Perl
+//! `LaTeXML/Engine/*.pool.ltxml`, defining the same control sequences in the same file.
 //!
-//! Loading hierarchy (mirrors Perl):
-//!   LaTeX.pool → TeX.pool → Base.pool → Base_*, TeX_*, eTeX, pdfTeX, Base_Deprecated
-//!     LoadFormat('plain') → plain_bootstrap → plain_base → plain_dump → plain_constructs →
-//! math_common     LoadFormat('latex') → latex_bootstrap → latex_base → latex_dump →
-//! latex_constructs
+//! Loading follows Perl. [`tex`] (`TeX.pool`) loads [`base`] (`Base.pool`: the `Base_*` and `TeX_*` pools, eTeX,
+//! pdfTeX) and then the plain format; [`latex`] (`LaTeX.pool`) loads `TeX.pool` and then the LaTeX format. Each format
+//! loads in one of two ways, never both (Perl `Package.pm` `LoadFormat`):
+//!
+//! - `bootstrap → dump → constructs` when a format dump built from this TeX tree is found (e.g. [`plain_bootstrap`],
+//!   [`plain_dump`], then `plain_constructs`, which also loads `math_common`), or
+//! - `bootstrap → base → constructs` otherwise (`plain_base`, [`latex_base`] in place of the dump).
+//!
+//! [`dump_paths`] and [`embedded_dumps`] find the dumps; [`lua_bridge`] runs `\directlua` in a sandboxed `texlua`.
+//! The definer macros (`DefMacro!`, `DefConstructor!`, …) live in `setup_binding_language` and reach binding modules
+//! through [`prelude`]. The crate is split from `latexml_package` to keep compile-time memory and rebuilds small.
+//!
+//! Read next: [ORGANIZATION.md](https://github.com/dginev/latexml-oxide/blob/main/docs/parity/ORGANIZATION.md) (the loading hierarchy) and
+//! [DUMP_DESIGN.md](https://github.com/dginev/latexml-oxide/blob/main/docs/parity/DUMP_DESIGN.md) (the dumps).
 
 #[macro_use]
 extern crate latexml_codegen;
