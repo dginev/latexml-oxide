@@ -7,7 +7,7 @@ Highlights since v0.7.6 in August:
 1. Improved to 98 % error-free conversion of the arXiv collection of nearly 3 million articles (up from 86 % with
    v0.7.6).
 2. New benchmark: error-free conversion of 1,592 of the 1,602 TeX Live 2025 package manuals that compile cleanly with
-   their original engine.
+   pdflatex, lualatex or xelatex.
 3. Raw interpretation of packages and classes is now enabled by default: latexml-oxide loads those without a binding
    from their own `.sty`/`.cls` sources.
 4. Adds bindings for 199 more packages and classes, including unicode-math, polyglossia, xeCJK, datatool, tagpdf, the
@@ -35,16 +35,16 @@ Highlights since v0.7.6 in August:
     this release, the main workhorse model was Claude Opus 5.5, with advice from Fable 5.2 and Gemini 4 Neon. As part
     of this workflow, we have grown the test suite substantially to guard against future regressions.
 
-This release has already converted the arXiv collection, and you can examine its results live in the
-[ar5iv Lab](https://ar5iv.labs.arxiv.org). Every change, with its guard tests and design references, is listed in
+This release's cutoff build has already converted the arXiv collection (98.1 % of 2,962,950 without an error), and
+you can examine its results live in the [ar5iv Lab](https://ar5iv.labs.arxiv.org). Every change, with its guard tests and design references, is listed in
 [`docs/release/CHANGES_v0.8.0.md`](docs/release/CHANGES_v0.8.0.md).
 
 <details>
 <summary><b>More highlights</b></summary>
 
 - **Bibliographies follow their style:** biblatex `.bbl` files and `.bbx`/`.cbx` styles are read.
-- **Untrusted input stays inside the job:** document Lua runs sandboxed, archives unpack and files copy only inside
-  their directories, and child processes end with their conversion
+- **Hardened for untrusted sources:** document Lua runs sandboxed, archives unpack and files copy only inside their
+  directories, child processes end with their conversion, and the cortex worker loads no runtime binding
   ([`docs/release/SAFETY.md`](docs/release/SAFETY.md)).
 - **Speed and memory** (against the 0.7.6 binary on the same machine): a 9,700-page split book converts 2.3× faster
   in 1.7× less memory; a 115,519-page book converts in 26 minutes, where 0.7.6 stopped at its memory ceiling (#777);
