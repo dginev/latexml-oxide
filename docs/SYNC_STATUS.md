@@ -67,9 +67,9 @@ Rules that keep this file honest and mergeable:
   conversion's format build off the `--timeout` clock; figure paths of 260+ characters) and #1016 (release builds
   bundle ar5iv.css; a stylesheet already in the destination is used as-is, OD #1165). It is tag `408aea99958`,
   published as a prerelease on 2026-11-26 UTC (release run 45764381757, 17 assets; platform check 45774240976), with
-  #1019 added (a `00README` main file and a stylesheet's copies stay inside their directories). **0.8.0** is rc5's
-  code plus documentation and comment-only changes, rebuilt and fully re-tested by the release pipeline (DG 2026-11-26:
-  one PR, full rebuild, no RC-input reuse). Before it: the rc1 → rc5 health A/B of the published binaries (10,536
+  #1019 added (a `00README` main file and a stylesheet's copies stay inside their directories). **0.8.0-rc6** is rc5's
+  code plus issue 972's Grow in the base LaTeXML.css, the bundled ar5iv-css 0.9.6 and the documentation pass; 0.8.0
+  then promotes rc6, reusing its build inputs (DG 2026-11-26: a change after an RC takes a new RC). Before it: the rc1 → rc5 health A/B of the published binaries (10,536
   arXiv papers, 1991–2026) found no content regression and fewer Errors, and the 2605 rerun on rc5 (run 417) matched
   rc4's run 415 on all 30,079 papers.
   rc2 was re-issued on the large-document perf work (DG 2026-11-21): #970 (STRMWARN,
