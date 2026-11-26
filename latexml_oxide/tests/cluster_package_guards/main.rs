@@ -422,6 +422,8 @@ mod perfect_kernel_batchabsfix;
 mod perfect_kernel_batchacmteaser;
 mod perfect_kernel_batchalgo397;
 mod perfect_kernel_batchamsppt;
+/// ARYDSHLN: arydshln's dashed rules are each border side's, drawn dashed in the HTML (upstream PR 2889); OD #1025.
+mod perfect_kernel_batcharydshln;
 mod perfect_kernel_batchaut1;
 mod perfect_kernel_batchbackmatter;
 mod perfect_kernel_batchbc1;

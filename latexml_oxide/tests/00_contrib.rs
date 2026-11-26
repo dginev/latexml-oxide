@@ -16,10 +16,18 @@
 // tree already uses it.
 use std::rc::Rc;
 
-use latexml::tex_tests;
+use latexml::{
+  tex_tests,
+  util::test::{RequirementTable, Requirements},
+};
+
+static REQUIRES: &RequirementTable = &[(
+  "arydshln",
+  Requirements::packages(&["arydshln.sty", "colortbl.sty"]),
+)];
 
 tex_tests!(
   "tests/contrib",
-  None,
+  Some(REQUIRES),
   Some(Rc::new(latexml_contrib::dispatch))
 );

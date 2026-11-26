@@ -208,12 +208,13 @@ fn normalize_overprint_spans(alignment: &mut Alignment) {
             .chars()
             .filter(|c| matches!(c, 'r' | 'R'))
             .collect();
-          let color = cells[end - 1]
+          let color = cells[last - 1]
             .border_color_at(BorderSpec::Right)
             .map(str::to_string);
+          let dashed = cells[last - 1].border_dashed_at(BorderSpec::Right);
           let spanning = &mut cells[j];
           spanning.border.retain(|c| !matches!(c, 'r' | 'R'));
-          spanning.add_border(&right, color.as_deref());
+          spanning.add_border(&right, color.as_deref(), dashed);
         }
         cells[j].colspan = Some(reach - j);
       }
@@ -421,6 +422,7 @@ pub fn normalize_mark_spans(alignment: &mut Alignment) -> Result<()> {
           let last_row_idx = ii - 1;
           let mut sborder = String::new();
           let mut scolor = None;
+          let mut sdashed = false;
           for jj in j..std::cmp::min(j + nc, alignment.rows[last_row_idx].get_columns().len()) {
             let cell = &alignment.rows[last_row_idx].get_columns()[jj];
             if sborder.is_empty() {
@@ -433,11 +435,12 @@ pub fn normalize_mark_spans(alignment: &mut Alignment) -> Result<()> {
               if !bottom_only.is_empty() {
                 sborder = bottom_only;
                 scolor = cell.border_color_at(BorderSpec::Bottom).map(str::to_string);
+                sdashed = cell.border_dashed_at(BorderSpec::Bottom);
               }
             }
           }
           if !sborder.is_empty() {
-            alignment.rows[i].get_columns_mut()[j].add_border(&sborder, scolor.as_deref());
+            alignment.rows[i].get_columns_mut()[j].add_border(&sborder, scolor.as_deref(), sdashed);
           }
         }
       }
@@ -582,18 +585,22 @@ pub fn normalize_prune_rows(alignment: &mut Alignment) -> Result<()> {
         let mut converted_border = Vec::new();
         let pruned_cell = &rows[i].get_columns()[j];
         for border_c in pruned_cell.border.chars() {
-          let color =
-            BorderSpec::of_letter(border_c).and_then(|side| pruned_cell.border_color_at(side));
+          let side = BorderSpec::of_letter(border_c);
+          let color = side.and_then(|side| pruned_cell.border_color_at(side));
+          let dashed = side.is_some_and(|side| pruned_cell.border_dashed_at(side));
           match border_c {
-            't' | 'b' => converted_border.push(('t', color.map(str::to_string))),
-            'T' | 'B' => converted_border.push(('T', color.map(str::to_string))),
+            't' | 'b' => converted_border.push(('t', color.map(str::to_string), dashed)),
+            'T' | 'B' => converted_border.push(('T', color.map(str::to_string), dashed)),
             _ => {},
           };
         }
         if j < rows[next_idx].get_columns().len() {
-          for (c, color) in converted_border {
-            rows[next_idx].get_columns_mut()[j]
-              .add_border(c.encode_utf8(&mut [0; 4]), color.as_deref());
+          for (c, color, dashed) in converted_border {
+            rows[next_idx].get_columns_mut()[j].add_border(
+              c.encode_utf8(&mut [0; 4]),
+              color.as_deref(),
+              dashed,
+            );
           }
         }
       }
@@ -634,11 +641,12 @@ pub fn normalize_prune_rows(alignment: &mut Alignment) -> Result<()> {
           let color = rows[i].get_columns()[j]
             .border_color_at(BorderSpec::Top)
             .map(str::to_string);
+          let dashed = rows[i].get_columns()[j].border_dashed_at(BorderSpec::Top);
           // Perl L790-792: follow rowspanned pointer
           let target = rows[prev_idx].get_columns()[j]
             .rowspanned
             .unwrap_or(prev_idx);
-          rows[target].get_columns_mut()[j].add_border(&converted_border, color.as_deref());
+          rows[target].get_columns_mut()[j].add_border(&converted_border, color.as_deref(), dashed);
         }
       }
       // Perl L794: save padding
@@ -748,12 +756,14 @@ pub fn normalize_prune_columns(alignment: &mut Alignment) -> Result<()> {
           // Perl L819-843: border handling
           let (thin, thick) = if j > 0 { ('r', 'R') } else { ('l', 'L') };
           for c in col.border.chars() {
-            let color = BorderSpec::of_letter(c)
+            let side = BorderSpec::of_letter(c);
+            let color = side
               .and_then(|side| col.border_color_at(side))
               .map(str::to_string);
+            let dashed = side.is_some_and(|side| col.border_dashed_at(side));
             match c {
-              'l' | 'r' => new_border.push((thin, color)),
-              'L' | 'R' => new_border.push((thick, color)),
+              'l' | 'r' => new_border.push((thin, color, dashed)),
+              'L' | 'R' => new_border.push((thick, color, dashed)),
               _ => {},
             }
           }
@@ -787,8 +797,8 @@ pub fn normalize_prune_columns(alignment: &mut Alignment) -> Result<()> {
             idx
           };
           if let Some(prev) = row.get_columns_mut().get_mut(prev_idx) {
-            for (c, color) in &new_border {
-              prev.add_border(c.encode_utf8(&mut [0; 4]), color.as_deref());
+            for (c, color, dashed) in &new_border {
+              prev.add_border(c.encode_utf8(&mut [0; 4]), color.as_deref(), *dashed);
             }
             // Perl L829-830: copy lspaces to prev's rspaces and update rpadding
             if let Some(ls) = lspaces_to_copy {
@@ -817,8 +827,8 @@ pub fn normalize_prune_columns(alignment: &mut Alignment) -> Result<()> {
         } else {
           // j==0: transfer to next column (now at index 0 after remove)
           if let Some(next) = row.get_columns_mut().get_mut(0) {
-            for (c, color) in &new_border {
-              next.add_border(c.encode_utf8(&mut [0; 4]), color.as_deref());
+            for (c, color, dashed) in &new_border {
+              next.add_border(c.encode_utf8(&mut [0; 4]), color.as_deref(), *dashed);
             }
             // Perl L840-842: copy boxes to next
             if !preserve.is_empty() {

@@ -327,7 +327,14 @@ impl Alignment {
   /// Perl: $alignment->normalizeAlignment
   pub fn normalize(&mut self) -> Result<()> { normalize_alignment(self) }
 
-  pub fn add_line(&mut self, border: &str, cols: Vec<usize>) {
+  pub fn add_line(&mut self, border: &str, cols: Vec<usize>) { self.add_rule(border, cols, false) }
+
+  /// [`Self::add_line`] for a dashed rule (arydshln's `\hdashline`, `\cdashline`): the sides it borders are dashed.
+  pub fn add_dashed_line(&mut self, border: &str, cols: Vec<usize>) {
+    self.add_rule(border, cols, true)
+  }
+
+  fn add_rule(&mut self, border: &str, cols: Vec<usize>, dashed: bool) {
     let color = take_rule_color();
     if let Some(row_idx) = self.current_row {
       let Some(row) = self.rows.get_mut(row_idx) else {
@@ -344,12 +351,12 @@ impl Alignment {
         // tabular's column count.
         for c in cols {
           if let Some(colspec) = row.get_column_mut(c) {
-            colspec.add_border(border, color.as_deref());
+            colspec.add_border(border, color.as_deref(), dashed);
           }
         }
       } else {
         for colspec in row.get_columns_mut() {
-          colspec.add_border(border, color.as_deref())
+          colspec.add_border(border, color.as_deref(), dashed)
         }
       }
     }
@@ -1004,6 +1011,7 @@ impl BoxOps for Alignment {
             post_absorb = cell.rspaces.take();
           }
         }
+        classes.splice(0..0, cell.border_dashed_classes());
         if let Some(ref cell_class) = cell.class {
           classes.insert(0, cell_class.clone());
         }
@@ -1356,6 +1364,19 @@ fn template_has_fill(tokens: &Option<Tokens>) -> bool {
   false
 }
 
+/// The mapping of the template tokens a binding's column rule puts between the columns besides `\vrule` (colortbl's
+/// paint, arydshln's `\lx@adl@vdashrule`), filled by [`declare_column_rule_token`].
+const COLUMN_RULE_TOKENS: &str = "COLUMN_RULE_TOKENS";
+
+/// Declares `cs` a token of a column rule, which the template scans skip as they skip `\vrule`.
+pub fn declare_column_rule_token(cs: &str) { assign_mapping(COLUMN_RULE_TOKENS, cs, Some(true)); }
+
+/// Whether a column template token draws (or paints) a column rule the cell-edge scan strips: `\vrule` or a token a
+/// binding declared ([`declare_column_rule_token`]).
+pub fn is_column_rule_token(name: &str) -> bool {
+  name == "\\vrule" || lookup_mapping_sym(crate::pin!("COLUMN_RULE_TOKENS"), name).is_some()
+}
+
 /// Check if \lx@intercol in the before tokens is reachable by the left-scan.
 /// The left-scan skips: isVerticalRule (\vrule), \relax, isFill (\hfil/\hfill),
 /// isSpace, isHorizontalRule, alignmentSkippable, Comment.
@@ -1370,13 +1391,12 @@ fn intercol_reachable_in_before(tokens: &Option<Tokens>) -> bool {
         return true;
       }
       // These are skippable by the left-scan in Perl's extractAlignmentColumn
-      if s == "\\vrule"
-        || s.starts_with("\\lx@CT@")
-        || s == "\\relax"
+      if s == "\\relax"
         || s == "\\hfil"
         || s == "\\hfill"
         || s == "\\hskip"
         || s == "\\lx@column@trimright"
+        || is_column_rule_token(&s)
       {
         continue;
       }

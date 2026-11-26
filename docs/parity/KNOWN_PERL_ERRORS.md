@@ -8348,6 +8348,9 @@ Rust (batch 56jx, `latexml_contrib/src/arydshln_sty.rs`): `;{}` adds the same da
 `:`; `\hdashline[]`, `\cdashline{}[]`, `\firsthdashline[]`, `\lasthdashline[]` read and drop the spec.
 Guard `regress_2605_clusters::arydshln_dash_spec_column_and_hdashline_option`; repro
 `tools/perfect_kernel/repros/alignment-bindings/arydshln_dash_spec_column.tex`.
+Upstream: the upstream LaTeXML PR 2889 by Christopher Smolen (open) gives Perl an arydshln binding of its own that
+reads `;{}` and the `[dash/gap]` options; ARYDSHLN ports it (the rules an empty `\lx@adl@vdashrule`, `\lx@adl@hdashline`,
+`\lx@adl@cdashline`) and draws them dashed (OXIDIZED_DESIGN_DIVERGENCES #1025).
 
 ## 292. A column type that takes an argument, at the template's end without one, reads on into the document (FIXED in Rust)
 

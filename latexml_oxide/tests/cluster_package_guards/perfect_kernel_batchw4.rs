@@ -11,7 +11,7 @@ fn squash(xml: &str) -> String { xml.split_whitespace().collect::<Vec<_>>().join
 /// Every repro's bordered cells, whole and in order; no other element carries a `cssstyle`.
 #[test]
 fn arrayrulecolor_colours_the_rules_drawn_under_it() {
-  let rows: [(&str, &str, &[&str]); 9] = [
+  let rows: [(&str, &str, &[&str]); 10] = [
     // the preamble's colour on every rule (#773's shape)
     (
       "borders",
@@ -142,6 +142,17 @@ fn arrayrulecolor_colours_the_rules_drawn_under_it() {
         r#"<XMCell border="t" cssstyle="border-top-color:#0000FF" xml:id="p1.m3.1.1.1.2"/>"#,
         r#"<XMCell align="center" border="b l r" cssstyle="border-bottom-color:#0000FF;border-left-color:#0000FF;border-right-color:#0000FF" xml:id="p1.m3.1.1.2.1">"#,
         r#"<XMCell align="center" border="b r" cssstyle="border-bottom-color:#0000FF;border-right-color:#0000FF" xml:id="p1.m3.1.1.2.2">"#,
+      ],
+    ),
+    // a capped `\Block{1-2}`'s right border is its last column's red `|`, colour and all (was the empty cell's none)
+    (
+      "capped-block",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/alignment-bindings/arrayrulecolor_capped_block_right_colour.tex"
+      ),
+      &[
+        r#"<td align="center" border="r" colspan="2" cssstyle="border-right-color:#FF0000" xml:id="p1.1.1.1">AB</td>"#,
+        r#"<td align="center" border="r" cssstyle="border-right-color:#FF0000" xml:id="p1.1.2.2">b</td>"#,
       ],
     ),
     // no `\arrayrulecolor`: the ambient text colour is no rule colour (the base's output)

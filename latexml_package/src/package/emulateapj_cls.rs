@@ -145,7 +145,11 @@ LoadDefinitions!({
             while al.rows().back().is_some_and(|row| row.is_pseudo()) && let Some(mut rule) = al.remove_row() {
               for (col, target) in rule.get_columns_mut().iter_mut().zip(current.get_columns_mut().iter_mut()) {
                 let top: String = col.border.chars().filter(|c| matches!(c, 't' | 'T')).collect();
-                target.add_border(&top, col.border_color_at(BorderSpec::Top));
+                target.add_border(
+                  &top,
+                  col.border_color_at(BorderSpec::Top),
+                  col.border_dashed_at(BorderSpec::Top),
+                );
                 col.border.retain(|c| !matches!(c, 't' | 'T'));
               }
               rules.push(rule);

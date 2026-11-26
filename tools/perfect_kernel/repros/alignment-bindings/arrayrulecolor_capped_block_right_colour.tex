@@ -1,0 +1,18 @@
+% issue #773: a nicematrix `\Block{1-2}` before an empty cell spans only its two columns (`overprint_columns`), its
+% right border the second column's red `|`; the colour was read from the empty third cell, whose `!{\vrule}` has none.
+% witness: synthetic (ARYDSHLN fix 1: normalize.rs's overprint span took the border from the last covered cell, its
+% colour from the run's end)
+% oracle:  pdflatex 0 errors: the `|` after "AB" red through both rows, the `!{\vrule}` black
+% engines: rust ARYDSHLN = 0 errors, AB's `border="r"` with no colour; Perl = no border colour
+% expect:  AB's cell `border="r"` `cssstyle="border-right-color:#FF0000"`
+% status:  RED (ARYDSHLN) -> GREEN (ARYDSHLN fix 1); guard perfect_kernel_batchw4::arrayrulecolor_colours_the_rules_drawn_under_it
+\documentclass{article}
+\usepackage{colortbl}
+\usepackage{nicematrix}
+\begin{document}
+\arrayrulecolor{red}
+\begin{NiceTabular}{cc|c!{\vrule}c}
+\Block{1-2}{AB} & & & y\\
+a & b & c & d\\
+\end{NiceTabular}
+\end{document}

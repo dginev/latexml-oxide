@@ -220,20 +220,8 @@ fn arydshln_views(raw: bool, mutation: &'static str) -> Vec<Option<View>> {
       let views = ARYDSHLN.iter().map(|cs| view_of(cs)).collect();
       latexml_core::reset_thread_engine();
       assert_eq!(error_count(&response.log), 0, "{}", response.log);
-      // The binding announces its stub: `Warning:missing_file:arydshln.sty … only minimally
-      // stubbed` (arydshln_sty.rs).
-      assert_eq!(
-        warning_count(&response.log),
-        usize::from(!raw),
-        "{}",
-        response.log
-      );
-      assert_eq!(
-        response.log.contains("Warning:missing_file:arydshln.sty"),
-        !raw,
-        "{}",
-        response.log
-      );
+      // Both sides are clean: the binding is no stub since ARYDSHLN (no `missing_file` warning).
+      assert_eq!(warning_count(&response.log), 0, "{}", response.log);
       views
     })
     .expect("spawn")
@@ -269,7 +257,7 @@ fn arydshln_binding_conforms_to_the_sty() {
     "the raw view is arydshln's own: {:?}",
     raw[0]
   );
-  // The binding side is the binding (`\\hdashline[]` → `\\hline`), not the real macros again.
+  // The binding side is the binding (`\\hdashline[]` → `\\lx@adl@hdashline`), not the real macros again.
   let binding_args: Vec<Vec<Arg>> = binding
     .iter()
     .map(|v| v.as_ref().unwrap().args.clone())
@@ -519,8 +507,8 @@ fn the_walker_reads_what_real_bodies_hand_on() {
 
 /// K13 stage 2: one package audited on both sides (`audit_package`, the driver's unit): arydshln's
 /// public macros read from its `.sty` and from the binding, each of the four stage-1 commands
-/// audited and conformant; no errors, and one warning — the binding announcing its stub
-/// (`Warning:missing_file:arydshln.sty … only minimally stubbed`, arydshln_sty.rs).
+/// audited and conformant; no errors and no warnings (the binding announced its stub with a
+/// `missing_file` warning until ARYDSHLN).
 #[test]
 fn a_package_audit_reads_both_sides() {
   let audit = latexml::conformance::audit_package("arydshln", "\\usepackage{array}");
@@ -531,7 +519,7 @@ fn a_package_audit_reads_both_sides() {
   );
   assert_eq!(
     (audit.raw_warnings, audit.binding_warnings),
-    (0, 1),
+    (0, 0),
     "{audit:?}"
   );
   for cs in ARYDSHLN {

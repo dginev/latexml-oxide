@@ -145,11 +145,11 @@ fn achemso_section_abstract_switches() {
   assert_eq!(xml.matches("<section ").count(), 1, "{xml}");
 }
 
-/// arydshln.sty:697-715: `{Tabular}` is a tabular with dashed lines. Repro
-/// stub-dependencies/arydshln_shorthand_environments.
+/// arydshln.sty:697-715: `{Tabular}` is a tabular with dashed lines (centred `c`, `r` and `b` borders dashed since
+/// ARYDSHLN; no stub warning). Repro stub-dependencies/arydshln_shorthand_environments.
 #[test]
 fn arydshln_shorthand_environments() {
-  let xml = convert_with_stub_warnings(repro!("arydshln_shorthand_environments"), 1);
+  let xml = convert_with_stub_warnings(repro!("arydshln_shorthand_environments"), 0);
   assert_element(
     &xml,
     "tabular",
@@ -157,8 +157,8 @@ fn arydshln_shorthand_environments() {
     r#"<tabular vattach="middle" xml:id="p1.1">
       <tbody>
         <tr xml:id="p1.1.1">
-          <td align="right" border="b" class="ltx_border_r_dashed" xml:id="p1.1.1.1">a</td>
-          <td align="center" border="b" xml:id="p1.1.1.2">b</td>
+          <td align="center" border="b r" class="ltx_border_b_dashed ltx_border_r_dashed" xml:id="p1.1.1.1">a</td>
+          <td align="center" border="b" class="ltx_border_b_dashed" xml:id="p1.1.1.2">b</td>
         </tr>
       </tbody>
     </tabular>"#,
@@ -341,12 +341,12 @@ fn pnas_new_show_matmethods_acknow() {
 /// stub-dependencies/arydshln_longtable_shorthand.
 #[test]
 fn arydshln_longtable_shorthand() {
-  let xml = convert_with_stub_warnings(repro!("arydshln_longtable_shorthand"), 1);
+  let xml = convert_with_stub_warnings(repro!("arydshln_longtable_shorthand"), 0);
   assert_element(
     &xml,
     "tabular",
     &[],
-    r#"<tabular xml:id="S0.T1.1"><tr xml:id="S0.T1.1.1"><td align="right" class="ltx_border_r_dashed" xml:id="S0.T1.1.1.1">a</td><td align="center" xml:id="S0.T1.1.1.2">b</td></tr></tabular>"#,
+    r#"<tabular xml:id="S0.T1.1"><tr xml:id="S0.T1.1.1"><td align="right" border="r" class="ltx_border_r_dashed" xml:id="S0.T1.1.1.1">a</td><td align="center" xml:id="S0.T1.1.1.2">b</td></tr></tabular>"#,
   );
   assert_eq!(xml.matches("<tabular ").count(), 1, "{xml}");
 }

@@ -590,12 +590,10 @@ fn arydshln_dash_spec_column_and_hdashline_option() {
   );
   let (stderr, xml) = convert_with(tex, Some("ar5iv.sty"));
   assert_eq!(error_count(&stderr), 0, "{stderr}");
-  // The binding's own "minimally stubbed" notice is the one warning.
-  assert_eq!(warning_count(&stderr), 1, "{stderr}");
-  // `align="right"` `thead="row"` on a `c` column is shared with Perl's `:`
-  // (its right-to-left cell scan stops at the class command); pdflatex centres
-  // the column. The cells are trimmed as Perl's `s/\s+$//` trims them (56jy,
-  // repro kernel-alignment/cell_trim_unicode_space.tex).
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  // The `;` rule is the first column's right border, dashed (an empty `\lx@adl@vdashrule`, as upstream PR 2889):
+  // the `c` column stays centred as pdflatex has it (was `align="right"` `thead="row"`, the scan stopping at the old
+  // `\@ADDCLASS`), and the dashed rules' tops are dashed too.
   latexml::util::test::assert_element(
     &xml,
     "tabular",
@@ -603,18 +601,18 @@ fn arydshln_dash_spec_column_and_hdashline_option() {
     r#"<tabular class="ltx_guessed_headers" vattach="middle" xml:id="p1.1">
       <thead>
         <tr xml:id="p1.1.1">
-          <td align="right" class="ltx_border_r_dashed" thead="column row" xml:id="p1.1.1.1">a</td>
+          <td align="center" border="r" class="ltx_border_r_dashed" thead="column" xml:id="p1.1.1.1">a</td>
           <td align="center" thead="column" xml:id="p1.1.1.2">b</td>
         </tr>
       </thead>
       <tbody>
         <tr xml:id="p1.1.2">
-          <td align="right" border="t" class="ltx_border_r_dashed" thead="row" xml:id="p1.1.2.1">c</td>
-          <td align="center" border="t" xml:id="p1.1.2.2">d</td>
+          <td align="center" border="r t" class="ltx_border_r_dashed ltx_border_t_dashed" xml:id="p1.1.2.1">c</td>
+          <td align="center" border="t" class="ltx_border_t_dashed" xml:id="p1.1.2.2">d</td>
         </tr>
         <tr xml:id="p1.1.3">
-          <td align="right" border="t" class="ltx_border_r_dashed" thead="row" xml:id="p1.1.3.1">e</td>
-          <td align="center" border="t" xml:id="p1.1.3.2">f</td>
+          <td align="center" border="r t" class="ltx_border_r_dashed ltx_border_t_dashed" xml:id="p1.1.3.1">e</td>
+          <td align="center" border="t" class="ltx_border_t_dashed" xml:id="p1.1.3.2">f</td>
         </tr>
       </tbody>
     </tabular>"#,
@@ -638,7 +636,7 @@ fn tabular_template_missing_argument_stays_in_the_template() {
   for (column, package, warnings) in [
     ("p", "", 0),
     ("@", "", 0),
-    (";", "\\usepackage{arydshln}\n", 1),
+    (";", "\\usepackage{arydshln}\n", 0),
   ] {
     let source = tex.replace("{cp}", &format!("{{c{column}}}")).replace(
       "\\begin{document}",
@@ -646,7 +644,6 @@ fn tabular_template_missing_argument_stays_in_the_template() {
     );
     let (stderr, xml) = convert_with(&source, Some("ar5iv.sty"));
     assert_eq!(error_count(&stderr), 1, "{column}: {stderr}");
-    // arydshln's own "minimally stubbed" notice.
     assert_eq!(warning_count(&stderr), warnings, "{column}: {stderr}");
     // Reported at the template's line in the document, not in the template's
     // own mouth.

@@ -1,0 +1,16 @@
+% A rule between a math array's rows (`\hline`, arydshln's `\hdashline`) is an empty row of its own in the XMArray,
+% its cells carrying `border="t"`, where the text alignment moves the border onto the next row and prunes the row: Perl
+% keeps every inner row of a math alignment (Alignment.pm:768-769 "don't remove inner rows from math EXCEPT last row"),
+% so the parse reads `Array[[1, 2, 3], [, , ], [4, 5, 6]]`, a row pdflatex never prints.
+% witness: synthetic (upstream LaTeXML PR 2889's own arydshln.xml golden, its math array; ARYDSHLN review)
+% oracle:  pdflatex 0 errors: a 2-row matrix, a dashed rule between the rows
+% engines: rust ARYDSHLN = 0 errors, three XMRows, the middle one empty; Perl = the same (KNOWN design)
+% expect:  two XMRows, the second row's cells `border="t"` (with `ltx_border_t_dashed` for `\hdashline`)
+% status:  RED
+% moves:   post-merge (a math alignment's row pruning, Perl's own design; every `\hline` in an array moves with it)
+\documentclass{article}
+\usepackage{arydshln}
+\begin{document}
+\[ \left[\begin{array}{cc:c} 1 & 2 & 3\\ \hdashline 4 & 5 & 6 \end{array}\right] \]
+\[ \begin{array}{cc} 1 & 2\\ \hline 3 & 4 \end{array} \]
+\end{document}

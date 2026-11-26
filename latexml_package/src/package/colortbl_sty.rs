@@ -262,12 +262,8 @@ LoadDefinitions!({
   // into the preamble (array.sty:54) as it is built, a `\multicolumn`'s too; an unset `\CT@arc@` (`\relax`) stays,
   // read as the rule is drawn. A `!{\vrule}` or a typed `\vline` keeps the default ink.
   DefColumnType!("|", {
-    let arc = T_CS!("\\CT@arc@");
-    let rule = if arc.defined_as(&T_RELAX!()) {
-      vec![T_CS!("\\vrule"), T_CS!("\\lx@CT@paint@live")]
-    } else {
-      vec![T_CS!("\\vrule"), T_CS!("\\lx@CT@paint"), frozen_arc(&arc)]
-    };
+    let mut rule = vec![T_CS!("\\vrule")];
+    rule.extend(rule_paint());
     with_building_template(|template| template.add_between_column(rule));
   });
   // The `|` rule is the template's own `\vrule`, so a cell's reversion trims it (`tex_tables.rs` `trim_column_template`);
@@ -278,6 +274,8 @@ LoadDefinitions!({
   DefPrimitive!("\\lx@CT@paint@live", sub[_args] {
     paint_rule(&T_CS!("\\CT@arc@"))
   });
+  alignment::declare_column_rule_token("\\lx@CT@paint");
+  alignment::declare_column_rule_token("\\lx@CT@paint@live");
 
   // Perl L93: \minrowclearance
   DefRegister!("\\minrowclearance", Dimension::new(0));
@@ -300,6 +298,17 @@ LoadDefinitions!({
   );
 });
 
+/// The tokens that paint the column rule a template has just drawn in `\CT@arc@`'s colour: `\lx@CT@paint` and the
+/// colour frozen as the preamble is read, or `\lx@CT@paint@live` when `\CT@arc@` is unset (arydshln's `:` too).
+pub fn rule_paint() -> Vec<Token> {
+  let arc = T_CS!("\\CT@arc@");
+  if arc.defined_as(&T_RELAX!()) {
+    vec![T_CS!("\\lx@CT@paint@live")]
+  } else {
+    vec![T_CS!("\\lx@CT@paint"), frozen_arc(&arc)]
+  }
+}
+
 /// The global copy of `arc`'s colour a preamble freezes (array.sty:54 `\xdef`), one per distinct body.
 fn frozen_arc(arc: &Token) -> Token {
   let body = match lookup_meaning(arc) {
@@ -317,6 +326,7 @@ fn frozen_arc(arc: &Token) -> Token {
   assign_value("lx@CT@arc@frozen", n, Some(Scope::Global));
   let frozen = T_CS!(s!("\\lx@CT@arc@{n}"));
   let_i(&frozen, arc, Some(Scope::Global));
+  alignment::declare_column_rule_token(&frozen.to_string());
   if let Some(key) = key {
     assign_value(&key, Stored::Token(frozen), Some(Scope::Global));
   }

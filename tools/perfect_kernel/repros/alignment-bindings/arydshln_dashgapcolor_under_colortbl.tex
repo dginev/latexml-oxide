@@ -1,0 +1,18 @@
+% Under colortbl (loaded first), arydshln's `\dashgapcolor[<model>]{<colour>}` and `\nodashgapcolor` set the colour of
+% a dashed rule's gaps (arydshln.sty:1121, :1125): no CSS form, so read and dropped, the table untouched.
+% witness: synthetic (ARYDSHLN review S3)
+% oracle:  pdflatex 0 errors: "a b", red gaps between the black dashes
+% engines: rust ARYDSHLN = 0 errors; Perl = no arydshln binding
+% expect:  0 errors, 0 warnings; no "[rgb]" or "1,0,0" text
+% status:  GREEN; guard perfect_kernel_batcharydshln::arydshln_colortbl_rows
+\documentclass{article}
+\usepackage{colortbl}
+\usepackage{arydshln}
+\begin{document}
+\dashgapcolor[rgb]{1,0,0}
+\begin{tabular}{c:c}
+\hdashline
+a & b\\ \hdashline
+\end{tabular}
+\nodashgapcolor
+\end{document}
