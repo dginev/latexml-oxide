@@ -12,10 +12,11 @@ top of its group.
   - **A Fatal during digestion keeps the text digested before it; the run stays Fatal.** A delimited argument that
     runs off the end of the input (`Fatal:Mouth:EoF`), an unbalanced definition (`Stomach:Misdefined`), a parameter or
     group Fatal, or a binding's own `Fatal()` wrote a 39-byte document, because a `document` environment is one
-    body; the paragraphs before it are now built, as Perl's `hardYankProcessing` keeps them, and the input after it
-    stays unread. The loop and resource guards are excluded: `Timeout:Recursion` and the input-level limit keep
-    nothing (2605.25400), the stomach's runaway guards drop the runaway level, and the resource Fatals still end the
-    run where they fire (OXIDIZED_DESIGN_DIVERGENCES #251). Guards:
+    body; the boxes of every level pending at the Fatal are now built, and the input after it stays unread. The
+    levels are kept, not closed: an unfinished footnote, `\author{…}`, formula or list leaves its text in the running
+    paragraph. The loop and resource guards are excluded: `Timeout:Recursion` and the input-level limit keep nothing
+    (2605.25400), the stomach's runaway guards drop the runaway level, and the resource Fatals still end the run where
+    they fire (OXIDIZED_DESIGN_DIVERGENCES #251). Guards:
     `fatal_salvages_partial_document::a_digestion_fatal_keeps_the_text_before_it`,
     `30_script_bindings::a_rhai_fatal_is_logged_once`.
   - **The MSC edition of an AMS class's or amsppt's `\subjclass` follows its codes.** The call's year, or the

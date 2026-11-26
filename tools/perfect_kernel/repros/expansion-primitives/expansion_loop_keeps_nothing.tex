@@ -1,6 +1,6 @@
 % mechanism: the gullet's cycle guard (`Fatal:Timeout:Recursion`, gullet.rs) is a loop guard: the digestion salvage
 %   (`core_interface::finish_digestion_fatal`) keeps nothing for it, where it keeps the text before every other
-%   digestion Fatal; Perl keeps the text for every Fatal (Common/Error.pm:336-338), but has no such guard
+%   digestion Fatal; Perl rescues the innermost list for every Fatal (Common/Error.pm:336-338) and has no such guard
 % witness: 2605.25400 (a salvage of this guard revived the loop in the build: an 8.7 s Fatal became a 2 m 12 s timeout
 %   writing a zero-byte file; the paper no longer reaches the guard on INT081RC6)
 % oracle:  pdflatex (TL 2025, -no-shell-escape) loops without end (killed at 20 s, no `!` line, no PDF)

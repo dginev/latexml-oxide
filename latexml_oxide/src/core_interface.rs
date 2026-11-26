@@ -351,9 +351,9 @@ fn digest_step_guarded(boxes: &mut Vec<Digested>) -> Result<bool> {
   }
 }
 
-/// A Fatal that ended digestion: logged and latched, the boxes digested before it added to `boxes`, as Perl's
-/// `hardYankProcessing` rescues `@LaTeXML::LIST` for every Fatal (Common/Error.pm:336-338) and `finishDigestion`
-/// builds it (LaTeXML.pm:251-259, Core.pm:222-224); the input after it stays unread. `Err` re-raises a resource Fatal.
+/// A Fatal that ended digestion: logged and latched, the boxes of every pending level added to `boxes` (Perl's
+/// `hardYankProcessing` rescues the innermost `@LaTeXML::LIST`, Common/Error.pm:336-338, and `finishDigestion` builds
+/// it, LaTeXML.pm:251-259; OD #251); the input after it stays unread. `Err` re-raises a resource Fatal.
 /// Shared by every digestion loop: the eager steps, a Fatal stashed in the last step, streaming pass 1.
 fn finish_digestion_fatal(e: Error, boxes: &mut Vec<Digested>) -> Result<()> {
   use latexml_core::common::error::ErrorCategory;
@@ -2020,7 +2020,9 @@ impl DigestionAPI for Core {
       && let Err(e) = finish_digestion_fatal(fatal, &mut boxes)
     {
       disarm(armed_here);
-      hard_yank_processing(boxes);
+      if !matches!(e.category, ErrorCategory::StreamingRestart) {
+        hard_yank_processing(boxes);
+      }
       return Err(e);
     }
     disarm(armed_here);
@@ -2097,7 +2099,9 @@ impl DigestionAPI for Core {
     if let Some(fatal) = stomach::take_stashed_fatal()
       && let Err(e) = finish_digestion_fatal(fatal, &mut boxes)
     {
-      hard_yank_processing(boxes);
+      if !matches!(e.category, ErrorCategory::StreamingRestart) {
+        hard_yank_processing(boxes);
+      }
       return Err(e);
     }
     gullet::flush();

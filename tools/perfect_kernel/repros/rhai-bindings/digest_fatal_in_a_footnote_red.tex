@@ -1,0 +1,21 @@
+% mechanism: the digestion salvage (`core_interface::finish_digestion_fatal`, `stomach::salvage_pending_box_lists`) keeps
+%   every pending level but closes none: a Fatal inside `\footnote` splices the note's partial text into the running
+%   paragraph, with no `ltx:note` (the "close or wrap the salvaged levels" mechanism, as
+%   digest_fatal_in_an_unfinished_list_red.tex)
+% witness: synthetic (review of DIGFATAL; the binding lxmbf.sty.rhai, lxmbf.sty.ltxml for Perl, lxmbf.sty for pdflatex)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "First paragraph. Before1 after. Second paragraph.",
+%   footnote "1 Note text more."; Perl 0.8.8: 1 fatal error, <p>Note text </p> only (the innermost list)
+% engines: INT081RC6: a 39-byte document, 1 fatal error; DIGFATAL: 1 fatal error, W=0,
+%   <p>First paragraph.</p> <p>BeforeNote text </p> (the note's text fused into "Before")
+% expect:  1 fatal error; <p>First paragraph.</p> <p>Before<note role="footnote" mark="1">Note text </note></p>
+% status:  RED (DIGFATAL)
+% moves:   post-merge (close the salvaged levels as their constructs would, or wrap them by the schema model)
+\documentclass{article}
+\usepackage{lxmbf}
+\begin{document}
+First paragraph.
+
+Before\footnote{Note text \lxmbf\ more.} after.
+
+Second paragraph.
+\end{document}

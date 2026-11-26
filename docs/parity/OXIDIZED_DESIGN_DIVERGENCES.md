@@ -6165,24 +6165,36 @@ the pipeline Perl-shaped rather than by admitting more post-Fatal messages:
    `rescued_boxes`) and `gullet::flush()`es the input; the converter's salvage
    pass re-collects the rescue and reads nothing more.
    **Every other digestion Fatal keeps the text digested before it**
-   (`finish_digestion_fatal`, DG 2026-11-26): the pending box lists
-   (`stomach::salvage_pending_box_lists`, Perl's `@LaTeXML::LIST`, Error.pm:336-338)
-   are built, the input after the Fatal stays unread and the status stays Fatal.
-   Rule: keep what Perl keeps, except where the Fatal is one of our loop or
-   resource guards (Perl has none of them), whose salvage would feed the loop:
-   - the resource Fatals keep only the completed bodies;
-   - the token-loop guards (`Timeout:Recursion`, the input-level limit
-     `Mouth:Recursion`) keep no pending level: on 2605.25400 the salvage revived
-     the loop in the build, an 8.7 s Fatal became a 2 m 12 s timeout writing a
-     zero-byte file;
-   - the stomach's runaway guards (`Stomach:{Recursion,MemoryBudget}`) drop the
-     innermost level, the repeating box window (2508.07407);
+   (`finish_digestion_fatal`, DG 2026-11-26): the boxes of every pending level
+   (`stomach::salvage_pending_box_lists`, outermost first) are built, the input
+   after the Fatal stays unread and the status stays Fatal. That keeps more than
+   Perl: `hardYankProcessing` rescues `@LaTeXML::LIST` (Error.pm:336-338), the
+   innermost list, which `digestNextBody` and `digest` bind afresh
+   (Stomach.pm:92-97, :146), so for a Fatal inside `\footnote` Perl keeps
+   `<p>Note text </p>` alone and we also keep the paragraphs before it. The levels
+   are kept, not closed: an unfinished footnote, `\author{…}`, formula or list
+   leaves its boxes in the running paragraph (`rhai-bindings/digest_fatal_in_*_red.tex`,
+   post-merge). Perl's guards and ours:
+   - Perl's `TOKEN_LIMIT` and `PUSHBACK_LIMIT` (Gullet.pm:301-306) and its wall
+     clock (`timedout`, Error.pm:579), our `Timeout:{TokenLimit,PushbackLimit,Convert}`,
+     and our RSS fuse (`Timeout:MemoryBudget`) are re-raised: only the completed
+     bodies are kept, where Perl keeps the innermost list;
+   - Perl's `IF_LIMIT` (Conditional.pm:63), our `Timeout:IfLimit`, keeps every
+     level, as any other Fatal (2006.14937);
+   - Perl's `MAXSTACK` (Stomach.pm:175, `internal:<recursion>`), our
+     `Stomach:Recursion`, and our own box-window cycle guard and box ceilings
+     (`Stomach:{Recursion,MemoryBudget}`) drop the innermost level, the repeating
+     window (2508.07407), and keep the outer ones, where Perl keeps the innermost;
+   - our token-loop guards, which Perl lacks, keep nothing: the gullet's cycle
+     guard (`Timeout:Recursion`) and the input-level limit (`Mouth:Recursion`,
+     TeX's `max_in_open`); on 2605.25400 the salvage revived the loop in the
+     build, an 8.7 s Fatal became a 2 m 12 s timeout writing a zero-byte file;
    - a salvage of `STOMACH_CYCLE_ACTIVATE` boxes or more is refused.
-   `TooManyErrors`, `Timeout:IfLimit` (2006.14937), `Mouth:EoF`
-   (hep-th9308151, astro-ph0012068), `Stomach:Misdefined`, `ParamSpec:Expected`,
-   `TargetUnexpected:Endgroup` and a binding's own Fatal keep it all. One helper
-   serves every digestion loop: the eager steps, a Fatal stashed in the last
-   step (`digest_adaptive`, `digest_internal`) and streaming pass 1.
+   `TooManyErrors`, `Mouth:EoF` (hep-th9308151, astro-ph0012068),
+   `Stomach:Misdefined`, `ParamSpec:Expected`, `TargetUnexpected:Endgroup` and a
+   binding's own Fatal keep every level. One helper serves every digestion loop:
+   the eager steps, a Fatal stashed in the last step (`digest_adaptive`,
+   `digest_internal`) and streaming pass 1.
 2. **`Fatal!` / `fatal!` write their `Fatal:` line at the raise** (Perl L312);
    `Error::log_fatal` at the converter/post sinks is idempotent per fatal.
    Before, only the sink logged, so a binding swallowing the `Err`
@@ -19427,7 +19439,7 @@ and drops its own with a discard, and the core's end drops one no step raised, s
 in the rewrite phase ends the rewrites and keeps the document, which is finalized and post-processed, status 3, as Perl
 dies out of the rule loop (Core.pm:282-287) and post-processes the rescued document (LaTeXML.pm:277-283, 327-336);
 unlike Perl the math is still parsed and the siblings after a failed `replace` stay
-(`rewrite_fatal_keeps_the_document.tex`). A digestion Fatal keeps the text before it, as Perl's (#251,
+(`rewrite_fatal_keeps_the_document.tex`). A digestion Fatal keeps the text before it (#251,
 `digest_fatal_keeps_text_before.tex`).
 **Guard**: `30_script_bindings::a_rhai_fatal_is_logged_once` (the caught-then-thrown, `fontTest`, `set_node`, setter and
 getter rows, every `<p>` whole; the rewrite rows post-processed).
