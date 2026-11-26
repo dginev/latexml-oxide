@@ -16551,7 +16551,8 @@ default edition, 2020 (amsart.cls:789; Perl's 1991, KNOWN_PERL_ERRORS #1337; no 
 `sectioning-frontmatter/amsart_document_subjclass_copy_default_edition`, guard
 `perfect_kernel_batchthmedpsres::thmedpsres_rows`). The binding's own `\subjclass` under the AMS classes lets
 `\subjclassname` be its edition's name at the call, over a preamble renewal, or warns of an edition the class does not
-know and keeps it, as amsart.cls:555-563 does (Perl keeps the renewal: KNOWN_PERL_ERRORS #1341). Residuals of
+know and keeps it, as amsart.cls:555-563 does (Perl keeps the renewal: KNOWN_PERL_ERRORS #1341), the edition being
+the one the codes support where they refute it (#1168). Residuals of
 the 86a r2 re-review: an imsart block on a supplement's own title page, the frontmatter sealed, is kept in place as
 bare text run into the next paragraph, its heading lost (RED `sectioning-frontmatter/imsart_supplement_keyword_block_keeps_its_heading`;
 85a lost the words; OmniBus's sealed `{keyword}` after a `\section*` is still dropped; no corpus paper); arxbj's
@@ -25077,3 +25078,46 @@ halign_on_every_route_out_of_a_picture, align_lines_and_nested_matrices_stay_svg
 `perfect_kernel_batchpanic397::a_nested_ooalign_in_node_math_reverts`,
 `perfect_kernel_batch76a::cryptocode_pseudocode_in_a_tikz_node_numbers_every_line`.
 **Upstream**: Perl accepts the same change (KNOWN_PERL_ERRORS #1340); no patch offered (DG 2026-11-25).
+
+### 1168. The MSC edition a classification is stamped with follows its codes (MSCINFER, DG 2026-11-26)
+
+Related: #902 (the VTeX classes' MSC keyword blocks; searched: subjclass, Subject Classification, MSC, subjclassname).
+Principle: surpass-TeX by DG ruling (2026-11-26) — the edition label is metadata about the codes, and a printed year
+the codes refute is provably wrong.
+**Rule**: the edition is the call's year or the author's own label when every known code is in it, else the one edition
+the codes fit, else the class's print when they fit it (or fit none); a print they refute gives the edition current at
+the source's date when they fit it, else the fitting edition nearest that date, or for an undated source the oldest
+fitting edition (DG 2026-11-26). Each correction is an `Info:frontmatter:msc_edition`, each code-shaped word in no
+edition an `Info:frontmatter:msc_unknown_code`.
+**Perl behavior**: ams_support.sty.ltxml:131-137 stamps the year given, or 1991 (KNOWN_PERL_ERRORS #1337); amsppt has
+no `\subjclassyear` (KNOWN_PERL_ERRORS #814).
+**TeX source**: amsart.cls:555-563 (amsproc.cls:533, amsbook.cls:503) prints `\subjclassname@<year>`, 2020 for a call
+without one (:789), and discards a renewed `\subjclassname`; amsppt.sty:391-411 prints 1991 or 2000, and reports and
+drops any other `\subjclassyear`.
+- One helper, `latexml_core::util::msc`: the full identifier table of MSC1991, 2000, 2010 and 2020 (7,202 codes, each
+  with its set of editions; 14.4 KB, generated from the published lists by `util::msc::tests::regenerate_table`,
+  `@generated` `util/msc/table.rs` with its attribution: MSC2020 © zbMATH Open and AMS Mathematical Reviews, CC BY-NC-SA;
+  2010/2000 AMS's lists; 1991 the Heriot-Watt copy), code scanning (`NN-NN`, `NNLNN`, `NNLxx`, `NN-XX`, any case; no
+  list structure), `infer`, and the Info text.
+- One TeX entry point, `\lx@msc@infer{<print>}{<declared>}{<label>}{<codes>}` (frontmatter_fields.rs): it defines
+  `\lx@msc@edition` as the corrected year, else empty; the binding lets its name and scheme follow it
+  (`\lx@msc@year{<year>}\cs`, the year frozen at the call). amsart's `\lx@ams@subjclass@setname` passes the discarded
+  `\subjclassname` when it is not the name the class last let; a name the class keeps (`[2011]`, `[]` after a renewal)
+  is the author's printed label and stays, the scheme alone following. amsppt's `\lx@ppt@subjclass` passes
+  `\subjclassyear`'s argument, declared when the style takes it, a label when it drops it, read at `\endtopmatter`
+  as amsppt.sty:515 reads `\subjyear@`.
+- No code-shaped word (ACM codes under LMCS/LIPIcs `\subjclass`) or a print the table lacks: no inference. A year the
+  class does not know (`[2011]`) states nothing and the name in force is the print, but a call's text naming an edition
+  is the call's (`[msc2000]`: 0808.2960, 1709.01977).
+- The date is the source's (`state::source_date_epoch`, `latexml::source_date`), not `\year`: arXiv's single-file
+  submissions carry none (zip entries at 1980-01-01; a year before 1991 counts as none).
+- The years a correction replaces (the print's, the call's) are counted by its Info for the unclaimed-words check
+  (`note_info_counted`), whose counted words are claimed in its first, cheap step.
+**Witnesses**: 1501.02464 (renewal 2010, codes in every edition: 2020 → 2010), 2503.20773 (renewal 2000: 2020 → 2000),
+1507.05660 (renewal 2000, 57M27 retired in 2020: 2020 → 2000), 0904.0450 (2000 only), dg-ga9604003 (1991 only),
+2111.04526 (`[2010]{57K12}`: 2020), 1204.4468 (`[2000]`, 2010/2020 codes, undated: 2010), 2211.06115 (`[2020]`,
+1991/2000/2010 codes, undated: 1991); unchanged 1009.4045 (no fit), 2102.08651, 2012.14067, math0201109 and 1501.07845 (the
+class's 2020 fits; the era default of the paper's own amsart, 1991, waits for legacy-TL dumps).
+**Guards** `perfect_kernel_batchmscinfer::mscinfer_rows` (repros sectioning-frontmatter/msc_edition_*,
+amstex/amsppt_msc_edition_*), `latexml_core` `util::msc::tests`.
+**Upstream**: Rust-only (DG 2026-11-25: no Perl patches for now).

@@ -1,0 +1,16 @@
+% R-nearest: a year the codes refute, the edition current at the paper's date refuted too (18E30 and 14F05 left
+%   MSC2020), gives the fitting edition nearest it (ruling DG 2026-11-26 (2)).
+% witness: 2211.06115 (`\subjclass[2020]{18E30, 14F05; 14M15, 18A05}`, 2022; undated, as arXiv sends it: 1991, the oldest)
+% oracle:  pdflatex (TL 2025) 0 errors: "2020 Mathematics Subject Classification. 18E30, 14F05; 14M15."
+% engines: rust INT081AD = name and scheme 2020; rust MSCINFER = 2010, Info:frontmatter:msc_edition
+% expect:  0 errors, 0 warnings, 1 Info msc_edition; dated 2022-06-01: <classification name="2010 Mathematics Subject Classification: "
+%          scheme="2010 Mathematics Subject Classification">
+% status:  RED (INT081AD) -> GREEN (MSCINFER; guard `perfect_kernel_batchmscinfer::mscinfer_rows`)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\begin{document}
+\title{T}\author{A. Author}
+\subjclass[2020]{18E30, 14F05; 14M15}
+\maketitle
+x
+\end{document}

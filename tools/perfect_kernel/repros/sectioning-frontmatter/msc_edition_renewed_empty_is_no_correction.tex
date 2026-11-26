@@ -1,0 +1,17 @@
+% A paper's own `\def\empty{\emptyset}` is not the inference's "no correction": the call's year fits its codes, so the
+%   name and scheme stay 2010, no Info (`\lx@msc@year` tests the private `\lx@msc@empty`, OXIDIZED_DESIGN_DIVERGENCES #1168).
+% witness: synthetic (second opinion on MSCINFER round 1, GN_MSCINFER_REVIEW_2026-11-26 Q4.1; math papers renew \empty)
+% oracle:  pdflatex (TL 2025) 0 errors: "2010 Mathematics Subject Classification. 35Q55, 35B40."
+% engines: rust INT081AD = name and scheme 2010; a round-1 draft testing `\empty` = scheme " Mathematics Subject
+%          Classification" (the year lost); MSCINFER round 1 = 2010
+% expect:  0 errors, 0 warnings, no Info msc_edition; <classification name="2010 Mathematics Subject Classification: " scheme="2010 Mathematics Subject Classification">
+% status:  GREEN (guard `perfect_kernel_batchmscinfer::mscinfer_rows`)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\def\empty{\emptyset}
+\begin{document}
+\title{T}\author{A. Author}
+\subjclass[2010]{35Q55, 35B40}
+\maketitle
+x
+\end{document}

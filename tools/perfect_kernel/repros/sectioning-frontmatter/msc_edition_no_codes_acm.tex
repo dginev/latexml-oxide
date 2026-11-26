@@ -1,0 +1,14 @@
+% No code-shaped word (ACM codes, as LMCS and LIPIcs give `\subjclass`): no inference, no Info.
+% witness: synthetic
+% oracle:  pdflatex (TL 2025) 0 errors: "2020 Mathematics Subject Classification. F.4.1, D.3.2."
+% engines: rust INT081AD = name and scheme 2020; rust MSCINFER the same, no Info
+% expect:  0 errors, 0 warnings, 0 Info; <classification name="2020 Mathematics Subject Classification: " scheme="2020 Mathematics Subject Classification">
+% status:  GREEN (safe side; guard `perfect_kernel_batchmscinfer::mscinfer_rows`)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\begin{document}
+\title{T}\author{A. Author}
+\subjclass{F.4.1, D.3.2}
+\maketitle
+x
+\end{document}

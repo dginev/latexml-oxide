@@ -1,0 +1,16 @@
+% amsppt's `\subjclass` without `\subjclassyear` prints 1991 (amsppt.sty:401); codes of MSC2010 alone (14T05) name it.
+% witness: synthetic (9 of 40 yearless amsppt census papers refute 1991, ADV_MSCINFER_2026-11-26 §2)
+% oracle:  amstex (TL 2025) 0 errors: "1991 Mathematics Subject Classification. 14T05, 14M25."
+% engines: rust INT081AD = name and scheme 1991; rust MSCINFER = 2010, Info:frontmatter:msc_edition
+% expect:  0 errors, 0 warnings, 1 Info msc_edition; <classification name="2010 Mathematics Subject Classification. " scheme="2010 Mathematics Subject Classification">
+% status:  RED (INT081AD) -> GREEN (MSCINFER; guard `perfect_kernel_batchmscinfer::mscinfer_rows`)
+\input amstex
+\documentstyle{amsppt}
+\topmatter
+\title Title Text\endtitle
+\author A. Author\endauthor
+\subjclass 14T05, 14M25\endsubjclass
+\endtopmatter
+\document
+Body text.
+\enddocument

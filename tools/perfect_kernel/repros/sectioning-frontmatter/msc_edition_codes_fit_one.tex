@@ -1,0 +1,14 @@
+% C3: codes that fit one edition only name it, over the call's year they refute (57K12 is MSC2020's alone).
+% witness: 2111.04526 (`\subjclass[2010]{57K12}`); 0904.0450 (yearless, 2000 only), dg-ga9604003 (1991 only)
+% oracle:  pdflatex (TL 2025) 0 errors: "2010 Mathematics Subject Classification. 57K12, 20F36."
+% engines: rust INT081AD = name and scheme 2010; rust MSCINFER = 2020, Info:frontmatter:msc_edition
+% expect:  0 errors, 0 warnings, 1 Info msc_edition; <classification name="2020 Mathematics Subject Classification: " scheme="2020 Mathematics Subject Classification">
+% status:  RED (INT081AD) -> GREEN (MSCINFER; guard `perfect_kernel_batchmscinfer::mscinfer_rows`)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\begin{document}
+\title{T}\author{A. Author}
+\subjclass[2010]{57K12, 20F36}
+\maketitle
+x
+\end{document}

@@ -1,0 +1,18 @@
+% A call's year the class does not know but whose text names an edition (`[msc2010]`): amsart warns and keeps the
+%   name in force, 2020 (amsart.cls:557-560); the call names 2010, which the codes fit, so the name and scheme are 2010,
+%   and the call's words, no longer in the output, are counted by the Info (OXIDIZED_DESIGN_DIVERGENCES #1168).
+% witness: 0808.2960 (`[msc2000]`), 1709.01977 (`[msc2010]`)
+% oracle:  pdflatex (TL 2025) 0 errors, 1 class warning: "2020 Mathematics Subject Classification. 54H15, 54E50."
+% engines: rust INT081AD = 1 warning, name 2020, scheme "msc2010 Mathematics Subject Classification"; rust MSCINFER
+%          round 1 = name and scheme 2010, 2 warnings (the unclaimed word "msc"); MSCINFER = 1 warning
+% expect:  0 errors, 1 warning, 1 Info msc_edition; <classification name="2010 Mathematics Subject Classification: "
+%          scheme="2010 Mathematics Subject Classification">
+% status:  RED (INT081AD) -> GREEN (MSCINFER; guard `perfect_kernel_batchmscinfer::mscinfer_rows`)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\begin{document}
+\title{T}\author{A. Author}
+\subjclass[msc2010]{54H15, 54E50}
+\maketitle
+x
+\end{document}

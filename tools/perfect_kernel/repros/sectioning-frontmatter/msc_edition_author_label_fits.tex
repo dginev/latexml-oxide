@@ -1,0 +1,17 @@
+% C2: a `\subjclassname` the preamble renewed, which amsart's `\subjclass` discards (amsart.cls:556-562), names the
+%   edition when the codes fit it (all four editions here): the author's label, over the class's 2020 (ruling DG
+%   2026-11-26 (3); OXIDIZED_DESIGN_DIVERGENCES #1168).
+% witness: 1501.02464 (codes 16R10; 17A70, 16R30, 16R50, valid in every edition; the renewal names 2010)
+% oracle:  pdflatex (TL 2025) 0 errors: "2020 Mathematics Subject Classification. 16R10; 17A70, 16R30."
+% engines: rust INT081AD = name and scheme 2020; rust MSCINFER = 2010, Info:frontmatter:msc_edition
+% expect:  0 errors, 0 warnings, 1 Info msc_edition; <classification name="2010 Mathematics Subject Classification: " scheme="2010 Mathematics Subject Classification">
+% status:  RED (INT081AD) -> GREEN (MSCINFER; guard `perfect_kernel_batchmscinfer::mscinfer_rows`)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\renewcommand{\subjclassname}{\textup{2010} Mathematics Subject Classification}
+\begin{document}
+\title{T}\author{A. Author}
+\subjclass{16R10; 17A70, 16R30}
+\maketitle
+x
+\end{document}

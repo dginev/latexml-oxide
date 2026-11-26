@@ -1,6 +1,8 @@
 //! `LoadDefinitions!` part 3: the frontmatter field macros (author markup, field marks, abstract, keywords, contacts,
 //! ORCID, thanks, notes).
 
+use latexml_core::util::msc;
+
 use super::*;
 
 mod contacts;
@@ -313,6 +315,44 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   DefMacro!(
     "\\lx@add@classification[]{}",
     "\\lx@add@frontmatter{ltx:classification}[#1]{#2}"
+  );
+  // `\lx@msc@infer{<print>}{<declared>}{<label>}{<codes>}`: the MSC edition the codes support, from the texts of the
+  // class's print, the call's year (`msc2000` names 2000, `2011` none), and the author's label the class discards
+  // (`util::msc`, OXIDIZED_DESIGN_DIVERGENCES #1168). `\lx@msc@edition` is that edition where it corrects the print, else
+  // empty.
+  DefPrimitive!("\\lx@msc@infer{}{}{}{}", sub[(print, declared, label, codes)] {
+    let declared = declared.untex();
+    let mut def = vec![T_CS!("\\def"), T_CS!("\\lx@msc@edition"), T_BEGIN!()];
+    if let Some(print) = msc::Edition::named_in(&print.untex()) {
+      let year = source_date_epoch()
+        .and_then(|epoch| chrono::DateTime::from_timestamp(epoch, 0))
+        .and_then(|date| u16::try_from(chrono::Datelike::year(&date)).ok());
+      let evidence = msc::Evidence {
+        print,
+        declared: msc::Edition::named_in(&declared),
+        label: msc::Edition::named_in(&label.untex()),
+        year,
+      };
+      let inference = msc::infer(msc::codes(&codes.untex()), &evidence);
+      for (name, text) in inference.notes(&evidence) {
+        Info!("frontmatter", name, text);
+      }
+      if let Some(e) = inference.correction(&evidence) {
+        // (the class's year and the call's, no longer in the output, are counted by the Info)
+        note_info_counted(&format!("{print} {declared}"));
+        def.extend(Explode!(e.year()));
+      }
+    }
+    def.push(T_END!());
+    unread(Tokens::new(def));
+  });
+  // `\lx@msc@year{<year>}\cs` gives `\cs{<the inferred edition, else year>}`, the year frozen at the call; "none" is
+  // `\lx@msc@empty`, not `\empty`, which papers renew (`\def\empty{\emptyset}`).
+  DefMacro!("\\lx@msc@empty", "");
+  DefMacro!(
+    "\\lx@msc@year{}{}",
+    "\\ifx\\lx@msc@edition\\lx@msc@empty\\def\\lx@msc@year@{#1}\\else\\let\\lx@msc@year@\\lx@msc@edition\\fi\
+     \\expandafter#2\\expandafter{\\lx@msc@year@}"
   );
   // To handle the above as environments
   // (the body's first token, `\lx@abstract@class@setters`, defines there the keywords setters a raw class's refused

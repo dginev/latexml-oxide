@@ -1,0 +1,15 @@
+% C1: the call's year fits every code, so it stands, even where the document's year names a later edition
+%   (OXIDIZED_DESIGN_DIVERGENCES #1168; ruling DG 2026-11-26).
+% witness: synthetic (the study's 1,397 amsart C1 papers, ADV_MSCINFER_2026-11-26)
+% oracle:  pdflatex (TL 2025) 0 errors: "2000 Mathematics Subject Classification. Primary 35Q55; Secondary 35B40."
+% engines: rust INT081AD = name and scheme 2000; rust MSCINFER the same, no Info
+% expect:  0 errors, 0 warnings, 0 Info; <classification name="2000 Mathematics Subject Classification: " scheme="2000 Mathematics Subject Classification">
+% status:  GREEN (safe side; guard `perfect_kernel_batchmscinfer::mscinfer_rows`)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\begin{document}
+\title{T}\author{A. Author}
+\subjclass[2000]{Primary 35Q55; Secondary 35B40}
+\maketitle
+x
+\end{document}

@@ -1,0 +1,19 @@
+% A paper's own `\def\empty{\emptyset}` is not the inference's "no correction": the codes fit amsppt's 1991, so the
+%   name and scheme stay 1991, no Info (`\lx@msc@year` tests the private `\lx@msc@empty`, OXIDIZED_DESIGN_DIVERGENCES #1168).
+% witness: synthetic (second opinion on MSCINFER round 1, GN_MSCINFER_REVIEW_2026-11-26 Q4.1)
+% oracle:  amstex (TL 2025) 0 errors: "1991 Mathematics Subject Classification. 16R10, 17A70."
+% engines: rust INT081AD = name and scheme 1991; rust MSCINFER round 0 = name " Mathematics Subject Classification. ",
+%          scheme " Mathematics Subject Classification" (the year lost); MSCINFER round 1 = 1991
+% expect:  0 errors, 0 warnings, no Info msc_edition; <classification name="1991 Mathematics Subject Classification. " scheme="1991 Mathematics Subject Classification">
+% status:  RED (MSCINFER round 0) -> GREEN (guard `perfect_kernel_batchmscinfer::mscinfer_rows`)
+\input amstex
+\documentstyle{amsppt}
+\def\empty{\emptyset}
+\topmatter
+\title Title Text\endtitle
+\author A. Author\endauthor
+\subjclass 16R10, 17A70\endsubjclass
+\endtopmatter
+\document
+Body text.
+\enddocument
