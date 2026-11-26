@@ -1,0 +1,29 @@
+% mechanism: enumitem.sty:1470-1480: a description's `font`/`format` is set inside `\descriptionlabel`, after its
+%   `\normalfont\bfseries`, and every label goes through `\makelabel` (a bare `\item` as `\makelabel{}`, its
+%   `\@itemlabel` empty). Ours wraps the key around the whole label from outside (`\fnum@font@<ctr>`): a `\newlist`
+%   description with a key keeps identity as `\makelabel` (not bold), a bare `\item` prints its number, and a
+%   `{description}`'s `\normalfont` undoes the key.
+% witness: 1810.05092 (`font=\stepcounter…`), 2609.31516 (`font=\normalfont\itshape`), 2212.04966 (bare `\item`s,
+%   `format=\preitem\bfseries`, `\preitem` a bullet); synthetic (QA14K2 fix round 3)
+% oracle:  pdflatex 0 errors; "Sans" in CMSSBX10, a bold "•" and no number, "Plain" in CMSSBX10.
+% engines: rust INT081AA "Sans" sans-serif not bold, `• <text font="bold">1</text>`, a bold "Plain"; QA14K2 707b5c4ba03
+%   and fix round 3 the same but an empty `<text/>` before "Plain".
+% expect:  0 errors, 0 warnings; `font="sansserif bold"` "Sans", a bold "•" with no number, `font="sansserif bold"` "Plain".
+% status:  RED (INT081AA, QA14K2 fix round 3); moves: post-merge
+\documentclass{article}
+\usepackage{enumitem}
+\newlist{sfdesc}{description}{1}
+\setlist[sfdesc]{font=\textsf}
+\newlist{bullets}{description}{1}
+\setlist[bullets]{format=\textbullet\space\bfseries}
+\begin{document}
+\begin{sfdesc}
+\item[Sans] a sans label
+\end{sfdesc}
+\begin{bullets}
+\item a bare item
+\end{bullets}
+\begin{description}[font=\sffamily]
+\item[Plain] a sans label
+\end{description}
+\end{document}

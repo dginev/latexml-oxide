@@ -1630,16 +1630,6 @@ pub fn label_calls_fnum(counter: &str, label: &[Token]) -> bool {
   label.contains(&fnum)
 }
 
-/// The macro an `\item[…]` label of a list on `counter` is set by: a description's (`@desc`) `\descriptionlabel`, any
-/// other list's `\makelabel`.
-pub fn item_label_formatter(counter: &str) -> Token {
-  if counter.starts_with("@desc") {
-    T_CS!("\\descriptionlabel")
-  } else {
-    T_CS!("\\makelabel")
-  }
-}
-
 /// Create id, and tags for an itemize type \item
 pub fn ref_step_item_counter(tag_opt: Option<&Tokens>) -> Result<HashMap<Stored>> {
   let counter = lookup_string("itemcounter");
@@ -1661,7 +1651,11 @@ pub fn ref_step_item_counter(tag_opt: Option<&Tokens>) -> Result<HashMap<Stored>
       return Ok(props);
     }
     let description = counter.starts_with("@desc");
-    let formatter = item_label_formatter(&counter);
+    let formatter = if description {
+      T_CS!("\\descriptionlabel")
+    } else {
+      T_CS!("\\makelabel")
+    };
     let counter_name = s!("\\{counter}name");
     let typename = if is_defined(&counter_name) {
       T_CS!(counter_name)

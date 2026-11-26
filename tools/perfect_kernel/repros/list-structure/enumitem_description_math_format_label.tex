@@ -1,0 +1,20 @@
+% mechanism: enumitem.sty:1470-1480: a description-type list's `\makelabel` is `\descriptionlabel{\enit@format{#1}}`.
+%   Ours sets a `\newlist{…}{description}` list's `\makelabel` to `\descriptionlabel` only with no `font`/`format` key
+%   (`begin_enum_itemize`), so a format that is math stays math, not inside a bold `\normalfont\bfseries` (which put
+%   `\bfdefault` in math).
+% witness: 1809.03101 (`\newlist{rules}{description}{2}\setlist[rules]{format={\Rule}}`, `\Rule` a `\mathsf`)
+% oracle:  pdflatex 0 errors; "Step" in CMSS10 (math, not bold).
+% engines: rust INT081AA `\mathsf` "Step"; QA14K2 7e7a159fee6 a bold `<XMTok>` "Step" and 1 W (`\bfdefault` invalid in
+%   math mode).
+% expect:  0 errors, 0 warnings; "Step" a `\mathsf` `<Math>`, `font="sansserif"`.
+% status:  RED (QA14K2 7e7a159fee6) -> GREEN (QA14K2 fix round 3)
+\documentclass{article}
+\usepackage{enumitem}
+\newcommand\Rule[1]{\ensuremath{\mathsf{#1}}}
+\newlist{rules}{description}{1}
+\setlist[rules]{format=\Rule}
+\begin{document}
+\begin{rules}
+\item[Step] a rule
+\end{rules}
+\end{document}

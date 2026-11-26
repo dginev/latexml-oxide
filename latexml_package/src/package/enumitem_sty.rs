@@ -106,37 +106,16 @@ fn begin_enum_itemize(
   }
 
   // The list's own margins, its `\list` setup after `\@list<depth>` (enumitem.sty:1383-1400 `\enit@preset`); a
-  // description-type list's label, `\newlist{…}{description}` too: `\descriptionlabel`, around the `font`/`format`
-  // (:1470-1480 `\enit@svlabel{\enit@format{##1}}`; 1809.03101's `format={\Rule}`) where its items are `\makelabel`'s.
+  // description-type list's label, `\newlist{…}{description}` too (:1470). Not with a `font`/`format`, which enumitem
+  // sets inside it (:1474-1480) but ours wraps every label, a bare `\item`'s too, from outside (1809.03101, 2212.04966;
+  // RED enumitem_description_format_inside_the_label_red).
   let label_format = hash
     .get("font")
     .or_else(|| hash.get("format"))
     .and_then(argwrap_to_tokens);
-  let format_in_label = enit_type == 2
-    && label_format.is_some()
-    && item_label_formatter(counter_str) == T_CS!("\\makelabel");
   let mut setup = Vec::new();
-  if enit_type == 2 {
+  if enit_type == 2 && label_format.is_none() {
     setup.extend(TokenizeInternal!(r"\let\makelabel\descriptionlabel").unlist());
-  }
-  if format_in_label && let Some(format) = &label_format {
-    setup.extend(TokenizeInternal!(r"\def\makelabel").unlist());
-    setup.extend([
-      T_PARAM!(),
-      T_OTHER!("1"),
-      T_BEGIN!(),
-      T_CS!("\\descriptionlabel"),
-      T_BEGIN!(),
-    ]);
-    setup.extend(format.clone().unlist());
-    setup.extend([
-      T_BEGIN!(),
-      T_PARAM!(),
-      T_OTHER!("1"),
-      T_END!(),
-      T_END!(),
-      T_END!(),
-    ]);
   }
   for (register, value) in [
     ("\\leftmargin", stated_leftmargin(&hash)),
@@ -220,8 +199,8 @@ fn begin_enum_itemize(
     def_macro(T_CS!(the_cs), None, rref, None)?;
   }
 
-  // font / format — Perl L110-111 (a description's set inside its label, above)
-  if let Some(font_toks) = label_format.filter(|_| !format_in_label) {
+  // font / format — Perl L110-111
+  if let Some(font_toks) = label_format {
     def_macro(T_CS!(s!("\\fnum@font@{usecounter}")), None, font_toks, None)?;
   }
 
