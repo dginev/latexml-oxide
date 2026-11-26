@@ -1,0 +1,20 @@
+% mechanism: amsart's `\subjclass[#1]` lets `\subjclassname` to its edition locally (amsart.cls:556-562), and
+%   `\maketitle` reads the name later; a call inside a group (here an `abstract`) loses both its `\let` and its
+%   `\@subjclass` at the group's end, so TeX prints no classification. The binding keeps the codes, and since
+%   MSCLET (11ee5f108c2) labels them with the name in force outside the group: "2020 …" over 2010 codes
+% witness: synthetic (review of MSCLET round 0); no corpus paper puts `\subjclass` in a group (scan of 3.9k AMS-class
+%   papers in 1503 and 2001; none of the 617 A/B papers)
+% oracle:  pdflatex TL 2025, 0 errors, no classification printed
+% engines: rust 11ee5f108c2: `<classification name="2020 Mathematics Subject Classification: "
+%   scheme="2010 Mathematics Subject Classification">11A`; base 37b9c971896: name "2010 …"; 0 Errors on both
+% expect:  the codes kept (content first) under the call's own edition name, scheme and name agreeing: a `\global`
+%   `\let` in the hook, or the call's year carried with the stored codes
+% status:  RED (11ee5f108c2)
+% moves:   post-merge
+\documentclass{amsart}
+\begin{document}
+\title{T}\author{A}
+\begin{abstract}Abs. \subjclass[2010]{11A}\end{abstract}
+\maketitle
+x
+\end{document}
