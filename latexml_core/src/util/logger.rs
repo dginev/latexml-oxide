@@ -225,6 +225,11 @@ pub fn bind_log() { *LOG_BUFFER.borrow_mut() = Some(String::new()); }
 /// Flush and return the captured log output, stopping capture (Perl: flush_log).
 pub fn flush_log() -> String { LOG_BUFFER.borrow_mut().take().unwrap_or_default() }
 
+/// The log captured so far, unflushed, for a panic hook: `None` when no log is bound or the panic holds the buffer.
+pub fn try_with_log_text<R>(f: impl FnOnce(&str) -> R) -> Option<R> {
+  LOG_BUFFER.try_borrow().ok()?.as_deref().map(f)
+}
+
 /// Append a progress note to the captured log (`.latexml.log`) only — the LOG
 /// half of Perl `Note`/`NoteLog` (`Common/Error.pm`: `print $LOG _freshline($LOG),
 /// strip_ansi($message), "\n" if $LOG`). ANSI is stripped and the note lands on

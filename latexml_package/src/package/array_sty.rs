@@ -109,7 +109,7 @@ LoadDefinitions!({
   //     return AddToPreamble(T_CS('\newcolumntype'), $char, $nargs, $opt, $replacement); });
   DefPrimitive!("\\newcolumntype{}[Number][]{}", sub[(ch, nargs, opt, replacement)] {
     let ch_str = ch.to_string();
-    let nargs_val = nargs.value_of() as usize;
+    let nargs_val = nargs.value_of();
     let opt_clone = opt.clone();
     let replacement_toks: Tokens = replacement.revert().into();
     // Define \NC@rewrite@<char> as a macro with the replacement

@@ -2614,26 +2614,30 @@ pub fn decode_string(string: SymStr, encoding_opt: Option<&str>, implicit: bool)
     for c in str.chars() {
       if implicit {
         if let Some(ref map_ref) = map {
-          let code = c as u16; // u16, so that Unicode chars get cast correctly
-          if code < 128 {
-            // Check multi-char override first
-            if let Some(ref mc) = multichar_map
-              && let Some(mc_str) = mc.get(&(code as u8).to_string())
-            {
-              result_string.push_str(mc_str);
-              continue;
-            }
-            if let Some(Some(mapc_val)) = map_ref.get(code as usize) {
-              push_fontmap_char(&mut result_string, *mapc_val, code as u8);
-            }
-          } else {
-            result_string.push(c);
+          // The whole code point is compared, so U+20041 is not slot 0x41 (Perl Package.pm:2913 `$_ < $map_max`).
+          match u8::try_from(c) {
+            Ok(code) if code < 128 => {
+              // Check multi-char override first
+              if let Some(ref mc) = multichar_map
+                && let Some(mc_str) = mc.get(&code.to_string())
+              {
+                result_string.push_str(mc_str);
+                continue;
+              }
+              if let Some(Some(mapc_val)) = map_ref.get(code as usize) {
+                push_fontmap_char(&mut result_string, *mapc_val, code);
+              }
+            },
+            _ => result_string.push(c),
           }
         } else {
           result_string.push(c)
         }
       } else if let Some(ref map_ref) = map {
-        let code = c as u8;
+        // A code point past the 256-slot map decodes to nothing (Perl's undef `$$map[$_]`, Package.pm:2914).
+        let Ok(code) = u8::try_from(c) else {
+          continue;
+        };
         // Check multi-char override first
         if let Some(ref mc) = multichar_map
           && let Some(mc_str) = mc.get(&code.to_string())

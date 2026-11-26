@@ -19,18 +19,18 @@ LoadDefinitions!({
         }
         return Ok(vec![]);
       }
-      define_twoopt(&cs, nargs.value_of() as usize, opt1, opt2, body)?;
+      define_twoopt(&cs, nargs.value_of(), opt1, opt2, body)?;
     });
 
   DefPrimitive!("\\renewcommandtwoopt OptionalMatch:* DefToken [Number][][]{}",
     sub[(_star, cs, nargs, opt1, opt2, body)] {
-      define_twoopt(&cs, nargs.value_of() as usize, opt1, opt2, body)?;
+      define_twoopt(&cs, nargs.value_of(), opt1, opt2, body)?;
     });
 
   DefPrimitive!("\\providecommandtwoopt OptionalMatch:* DefToken [Number][][]{}",
     sub[(_star, cs, nargs, opt1, opt2, body)] {
       if !IsDefinable!(&cs) { return Ok(vec![]); }
-      define_twoopt(&cs, nargs.value_of() as usize, opt1, opt2, body)?;
+      define_twoopt(&cs, nargs.value_of(), opt1, opt2, body)?;
     });
 });
 
@@ -38,7 +38,7 @@ LoadDefinitions!({
 /// internal `\\cs` here reads both optional arguments and the rest itself (sect08.rs `define_optional_internal`).
 fn define_twoopt(
   cs: &Token,
-  nargs: usize,
+  nargs: i64,
   opt1: Option<Tokens>,
   opt2: Option<Tokens>,
   body: Tokens,

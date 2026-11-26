@@ -576,3 +576,38 @@ mod multichar_slot_paths {
     );
   }
 }
+
+mod non_bmp_characters {
+  //! A character past the BMP is never a font-map slot: its whole code point is compared, where its low 16 bits read
+  //! U+20041 as OT1's `A`, U+10000 as `Γ` and U+30021 as `!` (Perl Package.pm:2913 `$_ < $map_max`; xelatex keeps
+  //! them). Repro `tools/perfect_kernel/repros/fonts-nfss/fontmap_keeps_non_bmp_characters.tex`.
+  use latexml::util::test::{assert_element, convert_files_with, error_count, warning_count};
+
+  #[test]
+  fn non_bmp_characters_are_not_font_map_slots() {
+    let (log, xml) = convert_files_with(
+      include_str!(
+        "../../tools/perfect_kernel/repros/fonts-nfss/fontmap_keeps_non_bmp_characters.tex"
+      ),
+      &[],
+      Some("ar5iv.sty"),
+    );
+    assert_eq!(
+      (
+        error_count(&log),
+        warning_count(&log),
+        log.contains("Fatal:")
+      ),
+      (0, 0, false),
+      "{log}"
+    );
+    assert_element(
+      &xml,
+      "p",
+      &["xml:id=\"p1.1\""],
+      "<p xml:id=\"p1.1\">A[\u{20041}] B[\u{10000}] C[\u{30021}] D[<text font=\"typewriter\" \
+       xml:id=\"p1.1.1\">\u{20041}</text>] E[<text font=\"sansserif\" xml:id=\"p1.1.2\">\u{10000}</text><text \
+       font=\"bold\" xml:id=\"p1.1.3\">\u{30021}</text>]</p>",
+    );
+  }
+}

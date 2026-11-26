@@ -43,8 +43,82 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
 
 ## Changes
 
+### 0.8.0-rc5
+
+  - **The first conversion's format build no longer counts towards `--timeout`.** On a TeX tree the bundled formats
+    don't match, the first conversion builds them once. That build ran on the conversion's clock: on a busy host a slow
+    build was killed (exit 124), and two such runs marked the format failed for a day, so every later conversion fell
+    back to the slower, degraded path. The build now runs off the clock in the CLI, `cortex_worker`, the editor server
+    and the library; under a non-zero `--timeout` it has its own 10-minute bound (under `--timeout=0`, none). Guards
+    `dump_gate_init::a_dump_built_from_another_tree_is_not_used`,
+    `watchdog::tests::a_setup_moves_the_breach_back_and_runs_under_its_own_bound`.
+  - **On Windows, a figure whose full path reaches 260 characters converts like any other.** ImageMagick, mutool and
+    Ghostscript cannot open such a path, so the figure was lost. It is now read through a short temporary link (or copy)
+    in the system temporary folder, never written into your project, and removed afterwards. Other platforms are
+    unchanged. Guards `graphics::tests::a_figure_path_past_max_path_is_reached_through_a_short_alias`,
+    `shared_figure_parallel_render::a_long_figure_name_converts_as_a_short_one`.
+  - **The release binaries bundle `ar5iv.css`.** `--css=ar5iv.css --nodefaultresources` writes the ar5iv-css
+    stylesheet beside the page, from the binary, as its only stylesheet; with the defaults kept, LaTeXML.css still
+    comes first and its unlayered rules win over ar5iv.css's layered ones. The copy is ar5iv-css 0.9.5
+    (`dist/ar5iv.min.css` at commit `cf36205fde48`), pinned with its SHA-256 in `tools/ar5iv-css.pin`, fetched by the
+    release pipeline only and never committed, with its MIT notice prepended (THIRD-PARTY-NOTICES 2.4). A build from
+    source does not have it: `--css=ar5iv.css` there gives one Warning, "ar5iv.css is bundled only in release builds;
+    pass a path to a local copy". Only the bare name `ar5iv.css` asks for the bundled copy: a path
+    (`nosuch/ar5iv.css`, `./ar5iv.css`) names the user's own file. Default output is unchanged. Guards:
+    `split_css_links::{bundled_ar5iv_css_follows_latexml_css, css_already_in_place_is_used_as_is}`,
+    `build_rerun::tests::tracks_only_what_exists`, and the `tools/release_smoke.sh` check on every release leg.
+
+  - **A stylesheet or script already in the destination is used as-is; only a missing or empty one is written from the
+    bundled copy.** Before, any file with a bundled name in the destination (e.g. your own `LaTeXML.css`, also at a
+    `--sitedirectory` root) was rewritten from the binary with no Warning
+    (a 41-byte user `LaTeXML.css` became 48,707 bytes). This holds for all 18 bundled CSS/JS names and `ar5iv.css`,
+    with or without `--split`/`--sitedirectory`; issue 312's empty leftover is still repaired. A user's file next to
+    the `.tex` is still copied into a separate destination, with its local `@import`s. The trade-off: after an upgrade,
+    a reused output folder keeps the `LaTeXML.css`/`ar5iv.css` an older version wrote; delete the file to get the new
+    one. Guards: `split_css_links::{css_already_in_place_is_used_as_is, css_in_a_separate_destination_is_used_as_is}`,
+    `stale_css_overwrite::empty_css_in_dest_is_overwritten_with_bundled`, `tools/release_smoke.sh`.
+
+  - **Books of thousands of `\input`/`\subimport` files convert again (issue 1011).** Since rc1 every file read as
+    content re-stored the whole list of the document's content files (the list the title-page check reads), so the run's
+    strings grew with the square of the number of files: 1.5 GB for 5,000 files, and a 26,000-page book aborted with
+    "the string arena's buffer reached 2 GiB" and no log. Each file's path is now stored once (5,000 files: 3 MB of
+    strings, peak memory 3.6 → 2.1 GB). The string arena holds ~4 GiB again, as in 0.7.6 (rc1 had halved it), with no
+    silent symbol wrap past it; a run beyond it says it "interned about 4 GiB of distinct strings". Any crash now writes
+    the log so far, ending in a `Fatal:panic:caught` line that names where it happened and `Status:conversion:3`, and
+    prints where that log is, also in the release build that aborts.
+  - **A conversion closing its `LaTeXML-oxide.cache` at the same moment as another no longer leaves
+    `LaTeXML-oxide.cache-wal`/`-shm` behind,** also when the destination is reached through a symbolic link, as every
+    macOS temporary folder is. SQLite removes them only when one close gets the file's exclusive lock on its single try;
+    a cache whose `-wal` is still there after a short pause is now read and closed again, at most twice, by its folder
+    resolved and its own name as written (the name is never followed, and nothing is created). Seen on macOS CI run
+    45645721304 (the issue 995 guard). Guards: `sqlite_store::tests::{simultaneous_closes_leave_no_side_files,
+    a_close_check_removes_a_leftover_and_makes_no_file}`.
+  - **A negative argument count no longer exhausts memory.** `\newcommand\foo[-1]{x}` read its count as an unsigned
+    number, so it wrapped to 2^64 and the conversion died with `Fatal:oom:alloc_failed` (or took the machine's memory
+    without a limit). Every declarator taking a LaTeX argument count (`\newcommand`, `\renewcommand`,
+    `\providecommand`, `\DeclareRobustCommand`, `\newenvironment`, `\renewenvironment`, `\DeclareTextCommand`,
+    etoolbox's `\newrobustcmd`, twoopt's `\newcommandtwoopt`, mathtools' `\DeclarePairedDelimiterX`, listings'
+    `\lstnewenvironment`, array's `\newcolumntype`, tcolorbox's `\newtcbinputlisting`, `\lxDefMath`) now checks it
+    in one place: a count outside 0 to 9 is TeX's "You already have nine parameters", reported as an Error, and then
+    read as 0 (a negative count, as Perl) or as nine plain arguments (`[10]`; Perl took ten; TeX keeps nine and runs
+    away) (KNOWN_PERL_ERRORS #1336). xargs' `\newcommandx` still parses its own count (row R).
+  - **A character beyond the Basic Multilingual Plane is kept as itself in text.** The font-map lookup compared only
+    the low 16 bits of a code point, so U+20041 (a CJK Extension B ideograph) printed as `A`, U+10000 as `Γ` and
+    U+30021 as `!`, in `\texttt` and every other font alike. The whole code point is now compared, as Perl and XeTeX
+    do; characters in the Basic Multilingual Plane are unchanged.
+
 ### 0.8.0-rc4
 
+  - **A `--sitedirectory` named through a symbolic link is accepted again.** rc3 (#1001) took Perl's check that the
+    destination lies in the site directory, and with it Perl's flaw: a relative destination is completed from the
+    working directory as the OS reports it, links followed, while the site directory stays as written. So
+    `--sitedirectory=/tmp/site` run from `/tmp/site/book` on macOS (`/tmp` is `/private/tmp`, every temporary directory
+    alike), or any site named through a link, ended in "Fatal: The destination directory (.) must be within the
+    siteDirectory" with no pages; rc1 and rc2 converted. The destination is now inside when it is so as written or with
+    both sides resolved, so only one outside the site in both forms is refused (KNOWN_PERL_ERRORS #1334; Perl refuses
+    the same way). The same mix renamed a figure kept at its own path to `x1.png` beside a second copy; it keeps its
+    name again. Found by macOS CI on the issue 1006 guard, whose temporary directories are under `/var`. Stylesheet
+    URLs from a site named through a link are still spelled through it (`../../link/LaTeXML.css`), as in rc1.
   - **Split pages keep their navigation under `--sitedirectory` and a `./`-spelled `--dest`.** With a relative
     `--dest=index.htm` and an ancestor `--sitedirectory`, rc3's chapter up/prev links read `../index.htm` and the
     root's next `./Ch1.htm` (issue 1006). Split named its pages `./Ch1.htm` beside the root, so the two spellings of one folder

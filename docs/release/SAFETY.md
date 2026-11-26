@@ -182,7 +182,9 @@ In `latexml_core/src/common/arena.rs`, the private `buffer_text()` that every le
 `Symbol → &str` lookup on the arena's buffer, under the lend's shared `RefCell` borrow.
 
 The safety invariant is **append-only buffer, never grown under a lend**: every symbol below the overflow base
-(`1 << 31`) comes from the buffer's `get_or_intern` of a valid `&str`, symbols are never invalidated between `reset`s, and an
+(`u32::MAX - 2^24`; the page takes the top 2^24 symbols) comes from the buffer's `get_or_intern` of a valid `&str` at its
+true offset (string-interner casts the offset `as u32` unchecked, so `push` refuses a string that would end past the base,
+before the buffer takes it; issue 1011), symbols are never invalidated between `reset`s, and an
 overflow symbol never reaches the unchecked lookup (it resolves to the overflow page's own `Rc<str>`). A string interned
 while a lend is live goes to the overflow page instead of the buffer, so the buffer cannot move under a lent `&str`;
 `reset` inside any lend, an overflow symbol's included, panics (its `try_borrow_mut` fails). Miri checks the arena tests

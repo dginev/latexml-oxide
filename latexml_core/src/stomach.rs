@@ -4,7 +4,7 @@ use std::{
   collections::VecDeque,
   rc::Rc,
   sync::LazyLock,
-  time::Instant,
+  time::{Duration, Instant},
 };
 
 use crate::{digested::DigestedData, pin};
@@ -30,18 +30,20 @@ pub(crate) static TRACE_FRAMES: LazyLock<bool> =
 static TRACE_TERMINAL: LazyLock<bool> =
   LazyLock::new(|| std::env::var("LXML_TRACE_TERMINAL").is_ok());
 
-// Conversion timeout: thread-local deadline. When set, digest loops check it.
+// Conversion timeout: thread-local deadline, with the setup time kept off the clock when it was set
+// (`watchdog::off_the_clock`). When set, digest loops check it.
 thread_local! {
-  static CONVERSION_DEADLINE: Cell<Option<Instant>> = const { Cell::new(None) };
+  static CONVERSION_DEADLINE: Cell<Option<(Instant, Duration)>> = const { Cell::new(None) };
 }
 
 /// Set a conversion timeout (seconds from now). 0 = no timeout.
 pub fn set_timeout(seconds: u64) {
   if seconds > 0 {
     CONVERSION_DEADLINE.with(|d| {
-      d.set(Some(
-        Instant::now() + std::time::Duration::from_secs(seconds),
-      ))
+      d.set(Some((
+        Instant::now() + Duration::from_secs(seconds),
+        crate::watchdog::time_off_the_clock(),
+      )))
     });
   } else {
     CONVERSION_DEADLINE.with(|d| d.set(None));
@@ -93,7 +95,10 @@ pub(crate) fn restore_stashed_fatal(outer: Option<Error>, keep_scope: bool) {
 /// Whether the conversion's deadline ([`set_timeout`]) has passed — for a reader that may never return to a digestion
 /// loop (the gullet's token reads).
 pub fn conversion_deadline_passed() -> bool {
-  CONVERSION_DEADLINE.with(|d| d.get().is_some_and(|deadline| Instant::now() > deadline))
+  CONVERSION_DEADLINE.with(|d| {
+    d.get()
+      .is_some_and(|(deadline, off)| crate::watchdog::deadline_passed(deadline, off))
+  })
 }
 
 // Explicit override for the cooperative soft-RSS budget (bytes). When set it
@@ -488,14 +493,9 @@ pub fn check_timeout() -> Result<()> {
       message: msg,
     }));
   }
-  CONVERSION_DEADLINE.with(|d| {
-    if let Some(deadline) = d.get()
-      && Instant::now() > deadline
-    {
-      fatal!(Timeout, Convert, "Conversion timed out!");
-    }
-    Ok(())
-  })?;
+  if conversion_deadline_passed() {
+    fatal!(Timeout, Convert, "Conversion timed out!");
+  }
   // Soft memory budget: every ~1024 calls, peek at our own RSS.
   // 1024-call cadence keeps overhead negligible on the hot path
   // (each call reads /proc/self/statm — a single syscall).

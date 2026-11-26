@@ -291,6 +291,29 @@ text, so all five binaries embed the exact same bytes. Every leg builds with
 `--profile maxperf` (`release.yml`), so each platform's download is one
 optimized, self-contained artifact.
 
+**The bundled ar5iv.css.** Release binaries also embed ar5iv-css's
+`dist/ar5iv.min.css` as `ar5iv.css` (`--css=ar5iv.css --nodefaultresources`). Like
+the dumps it is never committed: the one tracked input is the pin
+`tools/ar5iv-css.pin` (tag, commit, SHA-256 of the file). `prepare` fetches it once
+at the pinned commit with `tools/fetch_ar5iv_css.sh`, fails the release on a
+SHA-256 mismatch, records the three values in `BUILD-INPUTS`, and hands it to the
+five build legs and the CLI image as the `ar5iv-css` artifact (not `build-inputs`,
+which the CI test legs also download), into the gitignored `resources/ar5iv-css/`;
+`make_release.sh` verifies it again and `latexml_post/build.rs` embeds it behind an
+MIT banner naming the release. `tools/release_smoke.sh` checks the written file
+on every leg. A final reusing an RC's inputs refetches the same commit and falls
+back to the full pipeline unless the RC's recorded SHA-256 equals the pin's (a pin
+change is a `tools/` change, so it rules out reuse anyway). **To bump it**, after
+an ar5iv-css release: set the three lines of `tools/ar5iv-css.pin` to its tag, the
+tag's commit (`git -C ar5iv-css rev-parse <tag>^{commit}`) and
+`git -C ar5iv-css show <tag>:dist/ar5iv.min.css | sha256sum`, then cut a new RC.
+Dev and CI builds fetch nothing and lack it (`--css=ar5iv.css` there warns); a
+local `make_release.sh` fetches it itself and leaves it in the checkout's
+gitignored `resources/ar5iv-css/`, so later builds of that checkout embed it too
+(harmless: it is used only on request). The pinned 0.9.5's LICENSE still reads
+"2021"; latexml-oxide's banner and notices say 2021-2027, as upstream's LICENSE
+does from `2bed2f5`, so the next pin bump brings the upstream text into line.
+
 **Design requirement — portability.** A conversion must not *read* any of
 latexml_oxide's *own* resources from disk during its main operation: the
 binary carries them all and serves them from memory (XSLT/CSS/JS/schema via
@@ -622,6 +645,15 @@ settings.
    fleet, no abandoned fleet and no Error. The fleet otherwise runs only in Linux
    measurements and in CI tests. If a platform fails, default the fleet to serial
    there before the final tag.
+
+8. **After a final ships, remove its candidates' Release entries; keep their tags.**
+   Once `X.Y.Z` is published, delete each `X.Y.Z-rcN` Release (`gh release delete
+   X.Y.Z-rcN --yes`, without `--cleanup-tag`): the Releases page then lists finals and
+   the current cycle's candidates only, while the tags keep the history the docs and
+   workflow comments name (DG 2026-11-25; done for 0.7.5-rc2/rc3 and 0.7.6-rc1/rc2).
+   Never before the final is out: `release-prepare.yml` builds the final from the
+   last RC's `Cargo.lock` and `BUILD-INPUTS` Release assets
+   (`tools/check_rc_reuse.sh --fetch-release-inputs`), and testers download the RCs.
 
 ## Failure recovery
 

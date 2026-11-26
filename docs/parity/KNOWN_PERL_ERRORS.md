@@ -22868,6 +22868,31 @@ its rows were empty (a first head of its caption alone, the caption row dropped,
 `LONGTABLE_HEAD` set. Synthetic (row R LTCAPDUP); guard
 `perfect_kernel_batchga5::batchga5_meaning_rows` row `longtable_continued_caption_stays_out_of_the_foot`.
 
+## 1334. Perl's siteDirectory check refuses a site directory named through a symbolic link
+
+`Post.pm` L698-706 (`Post::Document::new_internal`) Fatals unless `pathname_is_contained($destinationDirectory,
+$siteDirectory)`. `pathname_is_contained` (Util/Pathname.pm L179-186) makes both absolute with `pathname_absolute`,
+which completes a relative destination from `pathname_cwd` (`Cwd::cwd()`, the working directory as the OS reports it,
+with links followed), while an absolute `--sitedirectory` stays as written. When the site directory's spelling goes
+through a link, the two forms never agree and a destination inside the site is refused. On macOS this is every
+temporary directory (`/var` and `/tmp` are links to `/private/var` and `/private/tmp`). Minimal trigger (any OS):
+
+```sh
+mkdir -p real/book && ln -s "$PWD/real" link && cd link/book    # index.tex: any \documentclass{book} document
+latexmlc --splitat=section --format=html5 --sitedirectory="$(dirname "$PWD")" --dest=index.html index.tex
+```
+
+Perl (same host): `The destination directory (.) must be within the siteDirectory (…/link)`, exit 255, no pages.
+The Rust port took the same check in 0.8.0-rc3 (#1001) and refused the same way; 0.8.0-rc1/rc2 had no check and
+converted. Fixed in Rust by accepting a destination the site contains either as written (Perl's test) or with both
+sides resolved (`pathname::resolved`), so the check refuses only a destination outside the site in both forms.
+The same mix renamed an image the site keeps at its own path (`pic.png` became `x1.png`, a second copy written):
+`latexml_post` `graphics.rs` `kept_path` takes the same either-form test. Guard: `cluster_xslt_split`
+`split_nav_relations::split_navigation_ignores_an_ancestor_site_directory` (its site-through-a-link rows on Unix,
+which compare page links and image references with the run without a link; on macOS every ancestor row of the
+guard takes this path). Stylesheet URLs from such a site are still spelled through the link (`../../link/LaTeXML.css`,
+rc1 alike): row R PATHFAMILY.
+
 ## 1335. Perl reads `\item[label]` in `{thebibliography}` as an unlabelled `\bibitem`: the label printed twice
 
 latex.ltx's `\@item[#1]` prints `\makelabel{#1}` as the item's label and steps no counter (only `\@noitemargtrue` does);
@@ -22887,3 +22912,30 @@ pdflatex prints "See [2]. [A1] First. [1] Second. [2] Third."; Perl 0.8.8 (same 
 as latex.ltx's `\item`, then `\lx@bibitem@item`, whose tags are Perl's for any list's `\item[label]`,
 latex_constructs.pool.ltxml:1380-1395: `\makelabel{label}`, no refnum, `RefStepID`). Witnesses 1005.4193, 0705.0395
 (asl.cls), 1211.3435 (backref); guard `perfect_kernel_batchga1::ROWS` row `item_label_in_thebibliography_is_the_entry_tag`.
+
+## 1336. Perl accepts a LaTeX argument count outside 0 to 9 without an error
+
+`convertLaTeXArgs` (Package.pm:240-251) builds one plain parameter per `1 .. $nargs`, so `\newcommand\foo[10]{…}`
+takes ten arguments and `\newcommand\foo[-1]{x}` none, both silently. latex.ltx:1276-1283 `\@yargd@f` writes the
+parameter text `#1`…`#9` followed by `#` and the count, so any count outside 0 to 9 is tex.web §476's "You already
+have nine parameters": TeX keeps nine parameters and drops the `#` and the count's first digit, so the ninth is
+delimited by the count's last digit (`\show`: `#1#2#3#4#5#6#7#8#90->`); a negative count also keeps nine.
+Minimal trigger:
+
+```latex
+\documentclass{article}
+\newcommand\foo[10]{(#1#9)}
+\begin{document}
+A[\foo abcdefghij] B
+\end{document}
+```
+
+pdflatex: "! You already have nine parameters.", then a runaway `\foo`. Perl (same host): 0 errors, "A[(ai)] B". The
+Rust port read the count as `usize`, so `[-1]` wrapped and exhausted memory (`Fatal:oom:alloc_failed`). Fixed in
+Rust: `content.rs` `latex_arg_count`, the one check the LaTeX declarators' counts go through (`convert_latex_args`,
+`convert_twoopt_args`, mathtools, listings, tcolorbox, `\lxDefMath`; not yet xargs' `\newcommandx`, which parses its
+own count, post-merge RED `package-bindings/xargs_argument_count_unparsed_red.tex`), raises the Error and recovers:
+`[10]` reads nine plain arguments and `[-1]` none, as Perl (TeX's own result is a runaway with no output to match).
+Repros
+`tools/perfect_kernel/repros/macro-state/newcommand_{negative_argument_count,argument_count_above_nine,nine_arguments}.tex`
+and `argument_count_out_of_range_every_declarator.tex`; guard rows in `error_boundary::perfect_kernel_error_boundary`.

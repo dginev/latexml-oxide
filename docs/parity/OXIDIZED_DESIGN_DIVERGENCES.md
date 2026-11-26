@@ -24750,7 +24750,13 @@ the third run). `--nocache` (Perl's
 option, in memory from the start) skips nothing: its names restart at `x1` each run and overwrite, as Perl's do; (11) Perl's `--whatsout=math` unlinks
 `LaTeXML.cache` relative to the working directory after packing (`Util/Pack.pm` L343), which misses a cache in another
 destination directory; not ported: a math-only run keeps its cache, as every run does. The run closes the cache when post ends (checkpointed, no
-`-wal`/`-shm` left), before anything is packed, and packages skip it and its side files by name (`pack.rs`
+`-wal`/`-shm` left: a close removes them only when its one try for the file's exclusive lock succeeds,
+`sqlite3WalClose`, so runs closing together can all leave them, and a store whose `-wal` is still there after a pause
+reads the file and closes it again, twice at most, `sqlite_store.rs` `WalCheck`, by its folder resolved and its own
+name as written, since `SQLITE_OPEN_NOFOLLOW` refuses a link anywhere in the path (`unixFullPathname`; macOS temporary
+folders are under `/var` → `/private/var`); a run still using the file keeps them; 8 processes × 200 rounds on Linux
+leave 162-282 side files with no check, 214-248 with an open and close that does not read, 0 with the check, through a
+linked folder too), before anything is packed, and packages skip it and its side files by name (`pack.rs`
 `is_excluded_archive_entry`, the EPUB manifest; a killed process's side files included). The parallel render's
 ObjectDB snapshot is a separate file, `LaTeXML-render.db` in the private spill directory (a read-only per-run
 snapshot; Perl keeps ObjectDB and `LaTeXML.cache` apart too).
@@ -24786,7 +24792,8 @@ a_store_in_memory_skips_files_on_disk, a_counter_with_no_next_counts_again,
 concurrent_tables_on_one_file_never_share_a_name}`,
 `sqlite_store::tests::{another_version_is_left_alone, simultaneous_opens_of_a_new_file_all_use_it,
 a_failed_transaction_runs_again_told_it_is_in_memory, a_failure_in_memory_gives_nothing,
-a_file_locked_against_readers_falls_back_without_its_entries, a_link_is_never_followed}`,
+a_file_locked_against_readers_falls_back_without_its_entries, a_link_is_never_followed,
+simultaneous_closes_leave_no_side_files, a_close_check_removes_a_leftover_and_makes_no_file}`,
 `graphics::tests::process_coalesces_only_matching_conversion_options` (two widths, one file), `pack::tests` (the side files),
 `pathname::tests::is_contained_is_underneath_only`.
 
@@ -24923,3 +24930,21 @@ boundary table), `split_nav_relations::split_label_names_follow_perls_relative_s
 `split-navigation/{split_labelrelative_unlabelled_page_strips_parent_id, split_label_names_collide,
 split_label_leaves_the_destination, split_label_names_collide_in_document_order,
 split_labelrelative_page_climbs_out_of_its_folder}`, `epub/split_label_collides_with_root`.
+
+### 1165. A bundled stylesheet or script already in the destination is kept if non-empty; no date comparison (AR5IVCSS, DG 2026-11-25)
+
+**Perl behavior**: `copyResource` (XSLT.pm L117-118) copies a resource found on its search path with `pathname_copy`
+(Pathname.pm L266), which writes only when the destination is missing or OLDER than the source: a user's edited
+`LaTeXML.css` in the output folder survives until the next LaTeXML install makes the source newer, then is replaced.
+**Rust behavior**: the bundled resources are embedded, so they have no file date. `writer::needs_write` decides both
+branches of `xslt.rs` `copy_resource`: the embedded bytes are written only where the destination is missing or an
+empty regular file (issue 312's truncated leftover); a non-empty file there — the user's own, an edited copy, or an
+older version's — is used as-is, in every layout (`--dest`, `--split`, a `--sitedirectory` root) and for every bundled
+name (16 CSS, 2 JS, and the release-only `ar5iv.css`). A user's file found on the search path (next to the `.tex`, on
+`--path`) is still copied over the destination's, unchanged from Perl except that the date is not compared.
+**Why**: DG 2026-11-25. Comparing against the executable's date would replace a user's edit at the first run after an
+upgrade, and a zip unpacked west of UTC can date the binary hours ahead; keeping the file never loses a user's work.
+The cost: a reused output folder keeps an older version's `LaTeXML.css` until the user deletes it (USAGE, CHANGELOG
+"Upgrading from 0.7.6"). **Guards** `split_css_links::{css_already_in_place_is_used_as_is,
+css_in_a_separate_destination_is_used_as_is}`, `stale_css_overwrite::empty_css_in_dest_is_overwritten_with_bundled`,
+`tools/release_smoke.sh`.

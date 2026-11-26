@@ -44,6 +44,9 @@ latexml_package/src/engine/*_dump.rs
 # .github/workflows/release-dumps.yml; dev/CI generate the ambient year
 # via tools/make_formats.sh. Everything in this dir is local-only.
 resources/dumps/*
+# The bundled ar5iv.css is release-only too: tools/fetch_ar5iv_css.sh places the pinned ar5iv-css release here
+# (tools/ar5iv-css.pin) and latexml_post/build.rs embeds whatever is present.
+resources/ar5iv-css/
 
 # Local-dev scratch: arxiv-examples conversion fixtures, sandbox
 # conversion logs, ad-hoc notes. None belong in the repo.

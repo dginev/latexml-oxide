@@ -60,7 +60,7 @@ pub(crate) fn load() -> Result<()> {
   // not recorded, as in Perl). Witness 1001.1670; guards `scanner_status::a_starred_*`.
   DefPrimitive!("\\newcommand OptionalMatch:* SkipSpaces LaTeXDefToken [Number][]{}",
   sub[(star,cs_token,nargs,opt,body)] {
-    let nargs = nargs.value_of() as usize;
+    let nargs = nargs.value_of();
     let (definable, plain_origin) = is_definable_latex(&cs_token)?;
     // (a stand-in's copy declares a text default LaTeXML predefined, which the real class defines itself:
     // `state::copy_provides_text_default_yields`)
@@ -84,7 +84,7 @@ pub(crate) fn load() -> Result<()> {
         // raw `\def` leaves (state.rs `<cs>:redefined@nargs`).
         let redefined_nargs = s!("{}:redefined@nargs", cs_token.to_string());
         note_redefined(&cs_token);
-        AssignValue!(&redefined_nargs => Number::new(nargs as i64), Some(Scope::Global));
+        AssignValue!(&redefined_nargs => Number::new(nargs), Some(Scope::Global));
         // …and the dropped definition itself, as `\lx@dropped@<name>` (the same
         // record `install_definition` keeps for a dropped `\def`/`\renewcommand`).
         let dropped = T_CS!(s!("\\lx@dropped@{}", cs_token.to_string().trim_start_matches('\\')));
@@ -105,7 +105,7 @@ pub(crate) fn load() -> Result<()> {
 
   DefPrimitive!("\\renewcommand OptionalMatch:* DefToken [Number][]{}",
   sub[(star, cs, nargs_num, opt, body)] {
-    let nargs = nargs_num.value_of() as usize;
+    let nargs = nargs_num.value_of();
     let macro_args = optional_command_args(&cs, nargs, opt, &body, star.is_some())?;
     DefMacro!(cs, macro_args, body, tex_declared => { star.is_some() && nargs > 0 });
   });
@@ -114,11 +114,11 @@ pub(crate) fn load() -> Result<()> {
   // and robustness upgrades are often realized via redefining \l@ngrel@x
   // Perl latex_constructs.pool.ltxml L2591-2604
   DefPrimitive!("\\@argdef DefToken [Number]{}", sub[(cs, nargs, body)] {
-    let macro_args = convert_latex_args(nargs.value_of() as usize, None)?;
+    let macro_args = convert_latex_args(nargs.value_of(), None)?;
     DefMacro!(cs, macro_args, body);
   });
   DefPrimitive!("\\@xargdef DefToken [Number][]{}", sub[(cs, nargs, opt, body)] {
-    let macro_args = convert_latex_args(nargs.value_of() as usize, opt)?;
+    let macro_args = convert_latex_args(nargs.value_of(), opt)?;
     DefMacro!(cs, macro_args, body);
   });
   // Perl L2597-2602: \@yargdef checks if arg2 equals \tw@ (2) for optional arg type.
@@ -128,7 +128,7 @@ pub(crate) fn load() -> Result<()> {
   // never met in a number scan before its outer macro runs, so the flag is inert.
   DefPrimitive!("\\@yargdef DefToken DefToken {}{}", sub[(cs, type_tok, nargs_toks, body)] {
     let nargs_str = nargs_toks.to_string();
-    let nargs: usize = nargs_str.trim().parse().unwrap_or(0);
+    let nargs: i64 = nargs_str.trim().parse().unwrap_or(0);
     let has_optional = type_tok.with_str(|s| s.contains('2'))
       || x_equals(&type_tok, &T_CS!("\\tw@"));
     let opt = if has_optional { Some(Tokens!()) } else { None };
@@ -136,7 +136,7 @@ pub(crate) fn load() -> Result<()> {
     DefMacro!(cs, macro_args, body);
   });
   DefPrimitive!("\\@reargdef DefToken [Number]{}", sub[(cs, nargs, body)] {
-    let macro_args = convert_latex_args(nargs.value_of() as usize, None)?;
+    let macro_args = convert_latex_args(nargs.value_of(), None)?;
     DefMacro!(cs, macro_args, body);
   });
 
@@ -153,7 +153,7 @@ pub(crate) fn load() -> Result<()> {
     let locked_guess = fallback_meaning_origin(&cs) == Some(definition::origin::DefinitionOrigin::Fallback)
       && lookup_bool(&s!("{}:locked", cs.to_string()));
     if !locked_guess && is_definable_latex(&cs)?.0 {
-      let nargs = nargs.value_of() as usize;
+      let nargs = nargs.value_of();
       let cs_args = optional_command_args(&cs, nargs, opt, &body, star.is_some())?;
       DefMacro!(cs, cs_args, body, tex_declared => { star.is_some() && nargs > 0 });
     }
@@ -162,7 +162,7 @@ pub(crate) fn load() -> Result<()> {
   // Crazy; define \cs in terms of \cs[space] !!!
   DefPrimitive!("\\DeclareRobustCommand OptionalMatch:* SkipSpaces DefToken [Number][]{}",
   sub[(star,cs,nargs,opt,body)] {
-    let nargs = nargs.value_of() as usize;
+    let nargs = nargs.value_of();
     // (the inner `\cs␣` is `\@protected@testopt\cs␣\\cs␣{<default>}`, :1412-1428)
     let cs_args = if cs.get_catcode() == Catcode::CS {
       optional_command_args(&T_CS!(cs.with_str(|cstr| s!("{cstr} "))), nargs, opt, &body, star.is_some())?
@@ -246,7 +246,7 @@ pub(crate) fn load() -> Result<()> {
   DefPrimitive!("\\DeclareTextCommand DefToken {}[Number][]{}",
   sub[(cs, encoding, nargs, opts, expansion)] {
     let cs_str = cs.to_string();
-    let nargs = nargs.value_of() as usize;
+    let nargs = nargs.value_of();
     let encoding_str = Expand!(encoding).to_string();
     let ecs = T_CS!(s!("\\{encoding_str}{cs_str}"));
     if let Some(glyph) = bound_text_symbol(&cs_str).filter(|_| reading_encoding_file(&encoding_str)) {
@@ -268,7 +268,7 @@ pub(crate) fn load() -> Result<()> {
   DefPrimitive!("\\ProvideTextCommand DefToken {}[Number][]{}",
   sub[(cs, encoding, nargs, opts, expansion)] {
     let cs_str = cs.to_string();
-    let nargs = nargs.value_of() as usize;
+    let nargs = nargs.value_of();
     let encoding_str = Expand!(encoding).to_string();
     let ecs = T_CS!(s!("\\{encoding_str}{cs_str}"));
     if !IsDefined!(&ecs) { // If not already defined...
@@ -1413,7 +1413,7 @@ pub(crate) fn load() -> Result<()> {
         // and replay (`replay_class_begin_code`, sect05.rs). Nothing else runs it.
         let dropped = T_CS!(s!("\\lx@dropped@{name}"));
         let dropped_end = T_CS!(s!("\\lx@dropped@end{name}"));
-        let converted_args = convert_latex_args(nargs.value_of() as usize, opt.clone())?;
+        let converted_args = convert_latex_args(nargs.value_of(), opt.clone())?;
         DefMacro!(dropped, converted_args, begin.clone(), scope => Some(Scope::Global));
         DefMacro!(dropped_end, None, end.clone(), scope => Some(Scope::Global));
         if let Some(default) = opt {
@@ -1423,7 +1423,7 @@ pub(crate) fn load() -> Result<()> {
       }
     } else {
       // TODO: can we convince DefMacro! this is not a second mutable borrow of state::
-      let nargs = nargs.value_of() as usize;
+      let nargs = nargs.value_of();
       let converted_args = optional_command_args(&name_cs, nargs, opt, &begin, star.is_some())?;
       let end_name_cs = T_CS!(s!("\\end{}",name));
       // latex.ltx `\newenvironment` → `\@star@or@long`: starred, the begin macro is not `\long`.
@@ -1448,7 +1448,7 @@ pub(crate) fn load() -> Result<()> {
     if !is_locked {
       let name_cs = T_CS!(s!("\\{}",name));
       let end_name_cs = T_CS!(s!("\\end{}",name));
-      let nargs = nargs.value_of() as usize;
+      let nargs = nargs.value_of();
       let converted_args = optional_command_args(&name_cs, nargs, opt, &begin, star.is_some())?;
 
       DefMacro!(name_cs, converted_args, begin, tex_declared => { star.is_some() && nargs > 0 });
@@ -1464,7 +1464,7 @@ pub(crate) fn load() -> Result<()> {
       // replays for its effects (sect05.rs `replay_class_begin_code`; 1508.06756). Nothing else runs them.
       let dropped = T_CS!(s!("\\lx@dropped@{name}"));
       let dropped_end = T_CS!(s!("\\lx@dropped@end{name}"));
-      let converted_args = convert_latex_args(nargs.value_of() as usize, opt.clone())?;
+      let converted_args = convert_latex_args(nargs.value_of(), opt.clone())?;
       DefMacro!(dropped, converted_args, begin.clone(), scope => Some(Scope::Global));
       DefMacro!(dropped_end, None, end.clone(), scope => Some(Scope::Global));
       if let Some(default) = opt {
@@ -2001,11 +2001,13 @@ fn counter_format(format: Option<Tokens>) -> Vec<Token> {
 /// hyperref_pdf_string_gobbles_testopt_and_let`).
 fn optional_command_args(
   cs: &Token,
-  nargs: usize,
+  nargs: i64,
   opt: Option<Tokens>,
   body: &Tokens,
   star: bool,
 ) -> Result<Option<Parameters>> {
+  // (checked once for the two conversions below)
+  let nargs = latex_arg_count(nargs)? as i64;
   let internal = match opt {
     Some(_) => define_optional_internal(
       cs,
