@@ -1,0 +1,41 @@
+% mechanism: a paper's icml copy that edits `\icmlEqualContribution` (the notice's legend text) is not followed: the
+%          binding's own `\textsuperscript{*}Equal contribution` (icml_support_sty.rs) prints instead, an invented
+%          legend, now the starred names' note (DATEICML). (Its sibling, the trailing space every distributed copy has,
+%          icml2017.sty … icml2026.sty:502 `Equal contribution `, is the binding's too since the DATEICML fix round:
+%          2502.09860's `\icmlEqualContribution First authorship …` prints "Equal contribution First")
+% witness: 2305.19982 (`Work done during internship at Microsoft Research Asia`), 2402.12048 (`… Tencent YouTu Lab.`),
+%          2502.12320 (`\newcommand{\icmlEqualContribution}{}`), 1709.06716, 2202.03884, 2307.14354, 2403.04893,
+%          2508.00264, 2502.09860; copies dropping the trailing space: 2105.04030, 2402.05011, 2307.14354 ("Equal
+%          contribution."), whose notices now read "Equal contribution ," / "Equal contribution ."
+% oracle:  pdflatex (-no-shell-escape, TL 2025, the filecontents copy) 0 errors: "Ann Able* Bob Baker*" and the
+%          footnote "*Work done during an internship at Acme"
+% engines: DATEICML: 0 errors; Ann and Bob a thanks note `*` "Equal contribution"
+% expect:  0 errors, 0 warnings; Ann and Bob a thanks note `*` "Work done during an internship at Acme"
+% status:  RED (DATEICML)
+% moves:   post-merge (the binding's marker macros follow the copy's `\newcommand`, as its notice strings do,
+%          `copy_definition`)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{icml2024.sty}
+\ProvidesPackage{icml2024}
+\newcommand{\icmltitle}[1]{{\Large #1\par}}
+\newcommand{\icmlsetsymbol}[2]{\expandafter\gdef\csname @icmlsymbol#1\endcsname{#2}}
+\newcommand{\icmlauthor}[2]{#1\@for\theaffil:=#2\do{\ifcsname @icmlsymbol\theaffil\endcsname
+  \textsuperscript{\csname @icmlsymbol\theaffil\endcsname}\fi}\quad}
+\newenvironment{icmlauthorlist}{\par\centering}{\par}
+\newcommand{\icmlaffiliation}[2]{}
+\newcommand{\printAffiliationsAndNotice}[1]{{\let\thefootnote\relax\footnotetext{#1}}}
+\newcommand{\icmlEqualContribution}{\textsuperscript{*}Work done during an internship at Acme }
+\end{filecontents*}
+\documentclass{article}
+\usepackage{icml2024}
+\begin{document}
+\icmltitle{Title}
+\icmlsetsymbol{equal}{*}
+\begin{icmlauthorlist}
+\icmlauthor{Ann Able}{equal,a}
+\icmlauthor{Bob Baker}{equal,a}
+\end{icmlauthorlist}
+\icmlaffiliation{a}{Univ A}
+\printAffiliationsAndNotice{\icmlEqualContribution}
+Text.
+\end{document}

@@ -1,0 +1,28 @@
+% mechanism: a notice printed twice gives each name its legend once (icml_support_sty.rs `legend_entries`,
+%          `LEGENDS_GIVEN`: an identical label and text is one entry)
+% witness: synthetic (review revDATEICML S2, probe j_twice)
+% oracle:  pdflatex (-no-shell-escape, TL 2025, 2602.04557's icml2026.sty) 0 errors: "Ann Able * 1 Bob Baker * † 1",
+%          two footnotes "*Equal contribution 1 Univ A. …"
+% engines: INT081RC6: 0 errors, the notice whole, Ann `*` and Bob `*`, `†` mark-only notes, twice; DATEICML 4e31feeb990:
+%          two identical notes per name (1 Warning)
+% expect:  0 errors, 0 warnings; Ann and Bob each one thanks note `*` "Equal contribution", Bob's `†` mark-only
+% status:  RED (DATEICML 4e31feeb990) -> GREEN; guard perfect_kernel_batchdateicml::icml_notice_read_by_meaning
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[preprint]{icml2026}
+
+\begin{document}
+\twocolumn[\icmltitle{Title}
+\icmlsetsymbol{equal}{*}
+\icmlsetsymbol{lead}{$\dagger$}
+\begin{icmlauthorlist}
+\icmlauthor{Ann Able}{equal,a}
+\icmlauthor{Bob Baker}{equal,lead,a}
+\end{icmlauthorlist}
+\icmlaffiliation{a}{Univ A}
+\icmlcorrespondingauthor{Ann Able}{ann@a.edu}
+\vskip 0.3in]
+\printAffiliationsAndNotice{\icmlEqualContribution}
+\printAffiliationsAndNotice{\icmlEqualContribution}
+Text.
+\end{document}

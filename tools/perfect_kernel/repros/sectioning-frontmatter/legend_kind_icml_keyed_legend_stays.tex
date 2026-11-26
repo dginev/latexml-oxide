@@ -9,9 +9,10 @@
 %          <ann@a.org>."
 % engines: rust int130a = both lines affiliations of their authors; rust 103c r2 = "Work done during an internship" a
 %          note mark="intern"
-% expect:  0 errors, 0 warnings; Ann Able: Univ A and "Work done during an internship" as affiliations, her e-mail, her `*`;
-%          Bob Baker: Univ A, his `*`; no note of theirs; the notice "*Equal contribution" (OD #1063)
-% status:  RED (103c r2) -> GREEN (103c r3)
+% expect:  0 errors, 0 warnings; Ann Able: Univ A and "Work done during an internship" as affiliations, her e-mail;
+%          Bob Baker: Univ A; each the notice's legend, a thanks note `*` "Equal contribution" (DATEICML; before, a
+%          mark-only `*` each and the notice a note no creator held, OD #1063)
+% status:  RED (103c r2) -> GREEN (103c r3); the notice its names' note since DATEICML
 % preload: ar5iv.sty
 \documentclass{article}
 \usepackage[accepted]{icml2021}

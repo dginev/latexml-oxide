@@ -56,11 +56,13 @@ fn html_element<'a>(html: &'a str, open: &str) -> &'a str {
   }
 }
 
-/// icml's notice (`\printAffiliationsAndNotice{\icmlEqualContribution}`), a note of the document's own level with no mark
-/// (2602.04557; pdflatex prints it as a footnote with no mark, `\let\thefootnote\relax`, icml2026.sty:521): a block line,
-/// `div.ltx_note_unmarked` with no "role: " label (none printed), its `*` (icml2026.sty:502) kept, no `†`; the equal
-/// authors' names show the `*` their
-/// `\icmlsetsymbol` label prints (icml2026.sty:446-458), a mark of the creator, not of its name, so Ann's e-mail is
+/// icml's notice (`\printAffiliationsAndNotice{\icmlEqualContribution\textsuperscript{\#}Interns at Acme}`, 2306.03504's
+/// shape), a note of the document's own level with no mark (2602.04557; pdflatex prints it as a footnote with no mark,
+/// `\let\thefootnote\relax`, icml2026.sty:521), whole: no `\icmlsetsymbol` here prints `#`, so that legend answers no
+/// name's mark (DATEICML: one whose every legend a name answers is those names' notes, as 2306.03504's own
+/// `\icmlsetsymbol{interns}{\#}` is: `perfect_kernel_batchdateicml`). A block line, `div.ltx_note_unmarked`
+/// with no "role: " label (none printed), its `*` (icml2026.sty:502) kept, no `†`; the equal authors' names show the `*`
+/// their `\icmlsetsymbol` label prints (icml2026.sty:446-458), a mark of the creator, not of its name, so Ann's e-mail is
 /// still hers where Cy Able shares her surname (1904.07793: a `*` in the name lost Xiaosen Wang's), Cy none. The block
 /// path of the unmarked-note template;
 /// Interspeech's `\address`/`\email` notes (2405.13379, 2603.01467) take it too. Repro
@@ -80,12 +82,12 @@ fn an_unmarked_document_level_note_is_a_block_line() {
   ]);
   assert_eq!(
     html_element(&xml, "<note role=\"affiliationnotice\""),
-    r#"<note role="affiliationnotice" xml:id="id3"><sup xml:id="id3.1">*</sup>Equal contribution</note>"#
+    r#"<note role="affiliationnotice" xml:id="id3"><sup xml:id="id3.1">*</sup>Equal contribution <sup xml:id="id3.2">#</sup>Interns at Acme</note>"#
   );
   let html = post_with(&xml, "resources/XSLT/LaTeXML-html5.xsl");
   assert_eq!(
     html_element(&html, "<div id=\"id3\""),
-    r#"<div id="id3" class="ltx_note ltx_role_affiliationnotice ltx_note_unmarked"><sup id="id3.1" class="ltx_sup">*</sup>Equal contribution</div>"#
+    r#"<div id="id3" class="ltx_note ltx_role_affiliationnotice ltx_note_unmarked"><sup id="id3.1" class="ltx_sup">*</sup>Equal contribution <sup id="id3.2" class="ltx_sup">#</sup>Interns at Acme</div>"#
   );
   // (the page's marks are the two names' `*`, no `†` anywhere and nothing hidden behind a mark)
   assert_eq!(html.matches("ltx_note_mark").count(), 2, "{html}");
@@ -295,19 +297,21 @@ fn icml_notice_daggers_print() {
   let xml = convert_clean(repro!("icml_notice_dagger_markers_print_their_dagger"));
   assert_eq!(
     html_element(&xml, "<note role=\"affiliationnotice\""),
-    r##"<note role="affiliationnotice" xml:id="id3"><sup xml:id="id3.1">*</sup>Equal contribution, <sup xml:id="id3.2">†</sup>Project lead</note>"##
+    r##"<note role="affiliationnotice" xml:id="id3"><sup xml:id="id3.1">*</sup>Equal contribution , <sup xml:id="id3.2">†</sup>Project lead</note>"##
   );
 }
 
-/// An `\icmlsetsymbol` glyph holding a TeX special (`\%`) is not re-tokenized as a mark-only note, where it commented out
-/// the note's markup (101 Errors, a creator lost; revINVDAGb B1): it prints in the name, both creators kept. Repro
+/// An `\icmlsetsymbol` glyph holding a TeX special (`\%`) is never re-tokenized, where it commented out the note's markup
+/// (101 Errors, a creator lost; revINVDAGb B1): the name's mark as characters (DATEICML, review revDATEICML B2), which
+/// the notice's `*` legend does not answer, so Ann shows it. Repro
 /// sectioning-frontmatter/icml_symbol_with_a_tex_special_prints_in_the_name.
 #[test]
 fn an_icml_symbol_with_a_tex_special_prints_in_the_name() {
   let xml = convert_clean(repro!("icml_symbol_with_a_tex_special_prints_in_the_name"));
-  assert_eq!(xml.matches("<creator ").count(), 2, "{xml}");
-  assert!(xml.contains("Cy Dee"), "{xml}");
-  assert!(!xml.contains("role=\"footnotemark\" mark=\"%\""), "{xml}");
+  assert_eq!(creators(&xml), [
+    row(&["Ann Able", "mark=%", "affiliation=Univ A"]),
+    row(&["Cy Dee", "affiliation=Univ A"]),
+  ]);
 }
 
 /// `element` with the whitespace between its tags folded.

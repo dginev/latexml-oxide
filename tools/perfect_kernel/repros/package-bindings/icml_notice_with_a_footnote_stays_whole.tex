@@ -1,0 +1,27 @@
+% mechanism: a notice holding a note of its own (`\footnote`) stays whole: a legend is given to each name showing its
+%          mark, which would copy the footnote to each (icml_support_sty.rs `legend_entries`, `NOT_COPIED`)
+% witness: synthetic (review revDATEICML S1, probe l_footnote)
+% oracle:  pdflatex (-no-shell-escape, TL 2025, 2602.04557's icml2026.sty) 0 errors: "Ann Able * 1 Bob Baker * † 1",
+%          the footnote "*Equal contribution 1 Univ A. …" (the inner footnote's mark only)
+% engines: INT081RC6: 0 errors, the notice whole, Ann `*` and Bob `*`, `†` mark-only notes; DATEICML 4e31feeb990: "inner
+%          fn" a footnote of each name (2 Warnings)
+% expect:  0 errors, 0 warnings; the notice whole "*Equal contribution", "inner fn" once
+% status:  RED (DATEICML 4e31feeb990) -> GREEN; guard perfect_kernel_batchdateicml::icml_notice_read_by_meaning
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[preprint]{icml2026}
+
+\begin{document}
+\twocolumn[\icmltitle{Title}
+\icmlsetsymbol{equal}{*}
+\icmlsetsymbol{lead}{$\dagger$}
+\begin{icmlauthorlist}
+\icmlauthor{Ann Able}{equal,a}
+\icmlauthor{Bob Baker}{equal,lead,a}
+\end{icmlauthorlist}
+\icmlaffiliation{a}{Univ A}
+\icmlcorrespondingauthor{Ann Able}{ann@a.edu}
+\vskip 0.3in]
+\printAffiliationsAndNotice{\icmlEqualContribution\footnote{inner fn}}
+Text.
+\end{document}

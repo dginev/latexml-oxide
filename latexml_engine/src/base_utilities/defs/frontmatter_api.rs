@@ -27,6 +27,11 @@ pub(in crate::base_utilities) use line_marks::*;
 /// binding's key (icml's `\icmlaffiliation{intern}{…}`) is none.
 pub(in crate::base_utilities) const LABEL_PRINTS: &str = "_labelprints";
 
+/// The attribute (and `\lx@add@contact` option, a declared `Frontmatter` key) of a contact its binding reads as a legend
+/// of the names' marks, never an institution: icml's notice (icml2026.sty:519-536), whose affiliations it numbers apart.
+/// The Kind step for a legend makes it the names' note whatever its words (`insert::kind_legend_contacts`; 2310.02777).
+pub(in crate::base_utilities) const LEGEND_ENTRY: &str = "_legend";
+
 /// The attribute (and option, a declared `Frontmatter` key) holding the label that prints, of an entry the frontmatter
 /// emitter wrote, which the reading placed by its own label: the call's `label=` its binding prints ([`LABEL_PRINTS`],
 /// the writer's `rekeyed`: authblk's `\affil[*]`, 2605.31330), or the first mark the entry's content printed
@@ -262,6 +267,8 @@ pub(crate) const FRONTMATTER_INTERNAL_KEYS: &[(&str, &str)] = &[
   ("_net", "Semiverbatim"),
   // a contact whose label its binding prints with the line (authblk's `\affil[x]`, `LABEL_PRINTS`; OD #961)
   ("_labelprints", ""),
+  // a contact its binding reads as a legend of the names' marks (icml's notice, `LEGEND_ENTRY`; OD #954, #1063)
+  ("_legend", ""),
   // the emitter's: the label that prints (`PRINTED_LABEL`, OD #980), the block's own creator (`BLOCK_CREATOR`), the
   // corresponding author (`CORRESPONDING`), an entry its run's stopgap alone gave (`STOPGAP_ENTRY`)
   ("_printedlabel", ""),

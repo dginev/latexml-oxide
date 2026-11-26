@@ -1,0 +1,28 @@
+% mechanism: a notice making a definition (`\def\x{Z}\x`) stays whole: the macro `\def` names is not expanded, nor
+%          cut (icml_support_sty.rs `legend_entries`)
+% witness: synthetic (review revDATEICML B1, probe i_selfdef)
+% oracle:  pdflatex (-no-shell-escape, TL 2025, 2602.04557's icml2026.sty) 0 errors: "Ann Able * 1 Bob Baker * † 1",
+%          the footnote "*Equal contribution Z † Lead 1 Univ A. …"
+% engines: INT081RC6: 0 errors, the notice whole, Ann `*` and Bob `*`, `†` mark-only notes; DATEICML 4e31feeb990:
+%          `Error: Missing control sequence`, "Equal contributionY" (the `\x` before)
+% expect:  0 errors, 0 warnings; the notice whole "*Equal contribution Z †Lead"
+% status:  RED (DATEICML 4e31feeb990) -> GREEN; guard perfect_kernel_batchdateicml::icml_notice_read_by_meaning
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[preprint]{icml2026}
+\def\x{Y}\def\mymark{\textsuperscript{\dag}Lead}
+
+\begin{document}
+\twocolumn[\icmltitle{Title}
+\icmlsetsymbol{equal}{*}
+\icmlsetsymbol{lead}{$\dagger$}
+\begin{icmlauthorlist}
+\icmlauthor{Ann Able}{equal,a}
+\icmlauthor{Bob Baker}{equal,lead,a}
+\end{icmlauthorlist}
+\icmlaffiliation{a}{Univ A}
+\icmlcorrespondingauthor{Ann Able}{ann@a.edu}
+\vskip 0.3in]
+\printAffiliationsAndNotice{\icmlEqualContribution\def\x{Z}\x\ \mymark}
+Text.
+\end{document}

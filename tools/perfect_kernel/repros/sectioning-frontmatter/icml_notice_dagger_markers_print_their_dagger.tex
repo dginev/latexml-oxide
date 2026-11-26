@@ -6,7 +6,9 @@
 % oracle:   pdflatex (with 2402.05011's icml2024.sty) 0 errors; "Ann Able * 1 Bob Baker † 1", the notice "*Equal
 %   contribution, †Project lead, 1 Univ A. Correspondence to: Ann Able <ann@x.org>."
 % engines:  rust INVDAG = the notice "*Equal contribution, Project lead" (2026-11-17)
-% expect:   0 errors, 0 warnings; the notice a div.ltx_note_unmarked "*Equal contribution, †Project lead"
+% expect:   0 errors, 0 warnings; the notice a div.ltx_note_unmarked "*Equal contribution , †Project lead" (the space
+%   the distributed copies end `\icmlEqualContribution` with; 2402.05011's copy drops it, a copy's edit not followed:
+%   package-bindings/icml_copy_equal_contribution_text_is_the_copys_red)
 % status:   GREEN
 % preload:  ar5iv.sty
 \documentclass{article}

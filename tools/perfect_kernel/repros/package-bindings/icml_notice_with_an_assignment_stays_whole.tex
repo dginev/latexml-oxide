@@ -1,0 +1,30 @@
+% mechanism: a notice making an assignment (`\let\thefootnote\relax`) stays whole, the block's note: its marker macro is
+%          expanded only where it follows no control sequence (which may take it as an operand), and a notice
+%          holding an assignment, a conditional or a note is not cut into legends (icml_support_sty.rs
+%          `legend_entries`, `NOT_COPIED`)
+% witness: synthetic (review revDATEICML B1, probe n_letfn)
+% oracle:  pdflatex (-no-shell-escape, TL 2025, 2602.04557's icml2026.sty) 0 errors: "Ann Able * 1 Bob Baker * † 1",
+%          the footnote "*Equal contribution 1 Univ A. Correspondence to: …" (the nested footnotetext prints nowhere)
+% engines: INT081RC6: 0 errors, the notice whole, Ann `*` and Bob `*`, `†` mark-only notes; DATEICML 4e31feeb990: both
+%          names "Equal contributionfootnote", "Code at X." lost (1 Warning)
+% expect:  0 errors, 0 warnings; the notice whole "*Equal contribution" holding the footnotetext "Code at X."; Ann a
+%          mark-only `*`, Bob `*,†`
+% status:  RED (DATEICML 4e31feeb990) -> GREEN; guard perfect_kernel_batchdateicml::icml_notice_read_by_meaning
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[preprint]{icml2026}
+
+\begin{document}
+\twocolumn[\icmltitle{Title}
+\icmlsetsymbol{equal}{*}
+\icmlsetsymbol{lead}{$\dagger$}
+\begin{icmlauthorlist}
+\icmlauthor{Ann Able}{equal,a}
+\icmlauthor{Bob Baker}{equal,lead,a}
+\end{icmlauthorlist}
+\icmlaffiliation{a}{Univ A}
+\icmlcorrespondingauthor{Ann Able}{ann@a.edu}
+\vskip 0.3in]
+\printAffiliationsAndNotice{\icmlEqualContribution\let\thefootnote\relax\footnotetext{Code at X.}}
+Text\footnote{body fn}.
+\end{document}

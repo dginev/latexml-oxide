@@ -1,0 +1,30 @@
+% mechanism: a notice legend whose mark a name types itself (`\icmlauthor{Kai Wang$^\dag$}{a}`), no `\icmlsetsymbol`
+%          label, answers no mark the binding recorded (icml_support_sty.rs `legend_entries` reads only the names'
+%          symbol labels), so the whole notice stays the block's note and the typed `†` a mark-only note
+% witness: 2402.05011 (`\icmlauthor{Kai Wang$^\dag$}{yyy}`, `\printAffiliationsAndNotice{\icmlEqualContribution,
+%          \icmlProjectLead}`, its copy's `\textsuperscript{\dag}Project lead,`)
+% oracle:  pdflatex (-no-shell-escape, TL 2025, 2602.04557's icml2026.sty) 0 errors: "Ann Able * 1 Bob Baker * 1
+%          Kai Wang † 1" and the footnote "*Equal contribution , †Project lead 1 Univ A. …"
+% engines: DATEICML: 0 errors; the notice a top-level `<note role="affiliationnotice">` with both legends, Ann and Bob
+%          mark-only `*`, Kai a mark-only `†`
+% expect:  0 errors, 0 warnings; Ann and Bob a thanks note `*` "Equal contribution", Kai a thanks note `†` "Project
+%          lead"; no top-level affiliationnotice note
+% status:  RED (DATEICML)
+% moves:   post-merge (a legend answering a mark typed in a name: the name's `\lx@frontmatter@symbolmark` request)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[preprint]{icml2026}
+\begin{document}
+\twocolumn[\icmltitle{Title}
+\icmlsetsymbol{equal}{*}
+\begin{icmlauthorlist}
+\icmlauthor{Ann Able}{equal,a}
+\icmlauthor{Bob Baker}{equal,a}
+\icmlauthor{Kai Wang$^\dag$}{a}
+\end{icmlauthorlist}
+\icmlaffiliation{a}{Univ A}
+\icmlcorrespondingauthor{Ann Able}{ann@a.edu}
+\vskip 0.3in]
+\printAffiliationsAndNotice{\icmlEqualContribution, \textsuperscript{\dag}Project lead}
+Text.
+\end{document}

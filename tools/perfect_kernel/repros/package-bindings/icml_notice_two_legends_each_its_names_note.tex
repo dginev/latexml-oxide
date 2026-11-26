@@ -1,0 +1,34 @@
+% mechanism: a notice of two legends (`\icmlEqualContribution, \textsuperscript{\dag}…`) is cut before each leading
+%          `\textsuperscript{G}`, each piece the note of the names whose symbol prints G — `\icmlsetsymbol{lead}{$\dagger$}`
+%          and the notice's `\dag` are one mark, as printed (`printed_label_pieces`); the comma between the legends is
+%          neither's; a legend the binding declares (`_legend`) is a note whatever its words, "Interns at Acme Corp"
+%          naming an institution included (insert.rs `kind_legend_contacts`) (DATEICML)
+% witness: 2402.05011 (`\icmlsetsymbol{lead}{$\dagger$}`, `\printAffiliationsAndNotice{\icmlEqualContribution,
+%          \icmlProjectLead}`); 2310.02777 (`†Work done during internship at AWS AI`), 2302.14260 (`*This work is not
+%          associated with Amazon.`), 2603.01068, 2302.02213
+% oracle:  pdflatex (-no-shell-escape, TL 2025, 2602.04557's icml2026.sty) 0 errors: "Ann Able * 1 Bob Baker * † 1
+%          Cat Cole † 1" and the footnote "*Equal contribution, †Interns at Acme Corp 1Univ A. Correspondence to: Ann Able
+%          <ann@a.edu>. Preprint. <date>."
+% engines: INT081RC6 (42eb2c85eb5): 0 errors; mark-only notes `*` (Ann, Bob) and `†` (Bob, Cat), the notice a top-level
+%          `<note role="affiliationnotice">` no creator holds
+% expect:  0 errors, 0 warnings; Ann a thanks note `*` "Equal contribution", Bob that and a thanks note `†` "Interns at
+%          Acme Corp", Cat the `†` one; no mark-only note, no affiliation but Univ A, no top-level affiliationnotice note
+% status:  RED (INT081RC6) -> GREEN (DATEICML); guard perfect_kernel_batchdateicml::icml_notice_legends_are_the_marked_names_notes
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[preprint]{icml2026}
+\begin{document}
+\twocolumn[\icmltitle{Title}
+\icmlsetsymbol{equal}{*}
+\icmlsetsymbol{lead}{$\dagger$}
+\begin{icmlauthorlist}
+\icmlauthor{Ann Able}{equal,a}
+\icmlauthor{Bob Baker}{equal,lead,a}
+\icmlauthor{Cat Cole}{lead,a}
+\end{icmlauthorlist}
+\icmlaffiliation{a}{Univ A}
+\icmlcorrespondingauthor{Ann Able}{ann@a.edu}
+\vskip 0.3in]
+\printAffiliationsAndNotice{\icmlEqualContribution, \textsuperscript{\dag}Interns at Acme Corp}
+Text.
+\end{document}

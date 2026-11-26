@@ -3,7 +3,7 @@
 use super::*;
 use crate::{
   base_utilities::defs::{
-    frontmatter_api::{CORRESPONDING, LABEL_PRINTS, PRINTED_LABEL, STOPGAP_ENTRY},
+    frontmatter_api::{CORRESPONDING, LABEL_PRINTS, LEGEND_ENTRY, PRINTED_LABEL, STOPGAP_ENTRY},
     frontmatter_fields::TITLE_NOTE_VALUES,
   },
   latex_constructs::{FOOTNOTE_GIVEN, FOOTNOTE_VALUE, title_numbers_faithful},
@@ -628,14 +628,14 @@ fn keep_unclaimed_net_notes(document: &mut Document) -> Result<()> {
 /// (IEEEtran's `\IEEEauthorrefmark{4}`'s `4`), that a printed mark gave, or that its binding prints ([`LABEL_PRINTS`]:
 /// authblk's `*`); a binding's key (icml's `intern`, 2106.09776) or an entry's place ([`SEQUENCE_LABEL`]: svjour's
 /// `affiliation:2`, 1507.04774) is no mark (review rev103c2 B-A). Its carriers stay the contact's, and so do the
-/// e-mails its line printed (2409.05386's `ago@`, the author's e-mail contact as before). Left as they are: a legend
-/// that prints no mark
-/// (`\affil[ ]{Corresponding author: …}`, 2412.14916, 2305.02090: a note shows its text only behind its mark, so an
-/// unmarked one is unreachable on the rendered page; review rev103c B1), a contact the class names otherwise than an
-/// affiliation (a `name` but the role's default), an institution named with a legend's words ("Department of Equal
-/// Contribution Studies, Univ C"), a mixed line (`Facebook (work done while at JHU/APL)`, 1702.02684; `DeepAuto.ai († :
-/// Equal advising)`, 2609.34327; "Equal contribution, Google DeepMind", a name no carrier has). Guards
-/// `perfect_kernel_batch103c`.
+/// e-mails its line printed (2409.05386's `ago@`, the author's e-mail contact as before). A legend its binding declares
+/// one ([`LEGEND_ENTRY`]: icml's notice, 2310.02777, 2302.14260) is a note whatever its words. Left as they are: a
+/// legend that prints no mark (`\affil[ ]{Corresponding author: …}`, 2412.14916, 2305.02090: a note shows its text only
+/// behind its mark, so an unmarked one is unreachable on the rendered page; review rev103c B1), a contact the class
+/// names otherwise than an affiliation (a `name` but the role's default), an institution named with a legend's words
+/// ("Department of Equal Contribution Studies, Univ C"), a mixed line (`Facebook (work done while at JHU/APL)`,
+/// 1702.02684; `DeepAuto.ai († : Equal advising)`, 2609.34327; "Equal contribution, Google DeepMind", a name no carrier
+/// has). Guards `perfect_kernel_batch103c`.
 fn kind_legend_contacts(document: &mut Document) -> Result<()> {
   let contacts = document.findnodes("//ltx:creator/ltx:contact[@role='affiliation']", None);
   if contacts.is_empty() {
@@ -691,10 +691,15 @@ fn kind_legend_contacts(document: &mut Document) -> Result<()> {
     }
     // (or a dedication's words behind a name's mark, which the Kind step for a dedication leaves to it: the carriers'
     // note, as "Deceased" is — `$^\dagger$In memory of Bob Baker, …` under Bob Baker$^{1,\dagger}$, review rev107c S1)
-    let Some(kind) = *kinds.entry(text.as_str()).or_insert_with(|| {
-      entry_legend_kind(text, &carriers[text.as_str()])
-        .or_else(|| opens_a_dedication(text).then_some("note"))
-    }) else {
+    // (a legend its binding declares, `LEGEND_ENTRY`, is the carriers' note whatever its words: icml's notice)
+    let Some(kind) = kinds
+      .entry(text.as_str())
+      .or_insert_with(|| {
+        entry_legend_kind(text, &carriers[text.as_str()])
+          .or_else(|| opens_a_dedication(text).then_some("note"))
+      })
+      .or_else(|| contact.get_attribute(LEGEND_ENTRY).map(|_| "note"))
+    else {
       continue;
     };
     DebugFeature!(

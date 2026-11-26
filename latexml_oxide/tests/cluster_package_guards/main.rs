@@ -475,6 +475,7 @@ mod perfect_kernel_batchcrash397b;
 mod perfect_kernel_batchcyclewin;
 /// INVDAG: the frontmatter invents no glyph — an unmarked note outside the creators shows its content with none, an authblk
 /// label no `\affil` explains shows on its name (OD #1063, #1064).
+mod perfect_kernel_batchdateicml;
 mod perfect_kernel_batchdateleg;
 mod perfect_kernel_batchdel3;
 mod perfect_kernel_batchdtl1;
