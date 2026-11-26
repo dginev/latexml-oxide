@@ -1,0 +1,37 @@
+% AAAI's closing `\affiliations` line (aaai25.sty:72) is the whole block's (frontmatter_stores.rs `displaced_entries`);
+%   the Link step places its addresses by spelling, then one per author where every spelled one agrees with its place,
+%   else the block (owners.rs `entry_address_owners`). `cy@b.edu` first, spelled by no one, before the two spelled
+%   addresses: no order holds, and the chain has no elimination step (owners.rs `owners_by_elimination`, OD #805's
+%   one-left rule: one address and one name left), so it goes to the block, not to Cy Cole.
+% witness: synthetic (the shape of aaailabel_bracket_address_continuation_line_stays_routed, 2211.08824)
+% oracle:  pdflatex 0 errors: "Ann Able1, Bob Baker1, Cy Cole2", "1Univ A", "2Univ B", "cy@b.edu, ann@a.edu, bob@a.edu"
+% engines: rust INT081RC6 = 0 errors, the three lines a logical-block; 66558570ce3 = cy@b.edu Cy Cole's (label 2's
+%          only author); AAAILABEL fix 2 = cy@b.edu the block's
+% expect:  cy@b.edu Cy Cole's, the one address and the one name left (OD #805's elimination)
+% status:  RED (AAAILABEL fix 2)
+% moves:   post-merge (DG: elimination in the entry Link step's chain)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{aaai25.sty}
+\ProvidesPackage{aaai25}[2025/05/08 AAAI 2025 Submission format]
+\def\showauthors@on{T}
+\DeclareOption{submission}{\gdef\showauthors@on{}}
+\ProcessOptions\relax
+\def\maketitle{\par\begingroup\def\thefootnote{\fnsymbol{footnote}}\twocolumn[\@maketitle]\@thanks\endgroup
+  \setcounter{footnote}{0}\let\maketitle\relax\let\@maketitle\relax
+  \gdef\@thanks{}\gdef\@author{}\gdef\@title{}\let\thanks\relax}
+\long\gdef\affiliations #1{ \def \affiliations_{\if T\showauthors@on#1\fi}}%
+\def\@maketitle{\def\theauthors{\if T\showauthors@on\@author\else Anonymous submission\fi}%
+  \vbox{\hsize\textwidth\linewidth\hsize\centering
+    {\LARGE\bf \@title \par}\vskip 0.1in
+    {\Large{\textbf{\theauthors\ifhmode\\\fi}}}\vskip .2em
+    {\normalsize \affiliations_\ifhmode\\\fi}\vskip .5em}}
+\end{filecontents*}
+\documentclass[letterpaper]{article}
+\usepackage{aaai25}
+\title{A Title}
+\author{Ann Able\textsuperscript{\rm 1}, Bob Baker\textsuperscript{\rm 1}, Cy Cole\textsuperscript{\rm 2}}
+\affiliations{\textsuperscript{\rm 1}Univ A\\ \textsuperscript{\rm 2}Univ B\\ cy@b.edu, ann@a.edu, bob@a.edu}
+\begin{document}
+\maketitle
+Body.
+\end{document}

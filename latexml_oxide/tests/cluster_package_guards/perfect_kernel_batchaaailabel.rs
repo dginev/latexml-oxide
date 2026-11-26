@@ -5,15 +5,18 @@
 //! and the title page's sentinel runs keep the store's delimiter and its own test of `\showauthors@on`
 //! (`frontmatter_stores::displaced_frame`). One row per path: labelled lines by the names' marks (2501.02471,
 //! 2511.12066), one unlabelled institution every author's (2212.00442, 2508.05165), an anonymous `[submission]` copy
-//! whose title page prints no affiliation; a continuation line printing an `@` the frontmatter reads as no line of
-//! addresses, unread or holding a mark, keeps the class's lines (`frontmatter_stores::unread_address_continuation`:
-//! 2211.16869, 2212.12190), one the Kind step reads stays routed (2211.08824), an address in a labelled line too
-//! (2303.13269); the store's take-out when empty, never set or set after `\maketitle`.
+//! whose title page prints no affiliation; a line printing an `@` the frontmatter reads as no line of addresses,
+//! unread or holding a mark, keeps the class's lines wherever it stands but a labelled entry's lead — a continuation
+//! line, a paragraph of a labelled line, an unlabelled lead line, a store with no label, a document macro's text
+//! (`frontmatter_stores::displaced_entries`: 2211.16869, 2212.12190); one the Kind step reads stays routed
+//! (2211.08824), an address in a labelled line too (2303.13269); a line of addresses after the last labelled line is
+//! the whole block's, never that label's (2404.14949, 2511.11817), also as a macro's text, while a city line stays
+//! with its entry; the store's take-out when empty, never set or set after `\maketitle`.
 use latexml::util::test::convert_with;
 
 use super::{
   perfect_kernel_batch46::{error_count, warning_count},
-  perfect_kernel_batch84b::creators,
+  perfect_kernel_batch84b::{creators, text},
 };
 
 macro_rules! repro {
@@ -33,7 +36,8 @@ struct Row {
   warnings: usize,
   /// Each creator: its name, then each contact as `role=text`, in order.
   creators: &'static [&'static [&'static str]],
-  /// The class's lines its title page's `logical-block` keeps, each once; with none, no "Univ" outside the creators.
+  /// The text of each `<p>` of the class's lines its title page's `logical-block` keeps, in order; with none, no
+  /// `logical-block` and no "Univ" outside the creators.
   block:    &'static [&'static str],
 }
 
@@ -85,7 +89,7 @@ const ROWS: &[Row] = &[
     creators: &[&["Ann Able", "mark=1"], &["Bob Baker", "mark=1"], &[
       "Cy Cole", "mark=2",
     ]],
-    block:    &["Univ A</p>", "Univ B</p>", ">ann, bob @a.edu, cy@b.edu</p>"],
+    block:    &["1 Univ A", "2 Univ B", "ann, bob @a.edu, cy@b.edu"],
   },
   // (red on 842364fc86c: every author "Univ A, Town", cy@a.edu a nameless creator's)
   Row {
@@ -93,9 +97,11 @@ const ROWS: &[Row] = &[
     tex:      repro!("aaailabel_mark_inside_address_continuation_line_keeps_the_classs_lines"),
     warnings: 0,
     creators: &[&["Ann Able"], &["Bob Baker"], &["Cy Cole", "mark=1"]],
-    block:    &[">Univ A, Town</p>", "cy}@a.edu, bob@b.edu</p>"],
+    block:    &["Univ A, Town", "{ann, 1 cy}@a.edu, bob@b.edu"],
   },
-  // (red on the fix's first candidate, `line_is_email_list` alone: the three lines the class's block again)
+  // (red on the fix's first candidate, `line_is_email_list` alone: the three lines the class's block again; fix 2: the
+  // closing line is the block's, no longer label 2's, so `cy@b.edu`, spelled by no one and out of author order, is the
+  // block's — the Link step's chain has no elimination, RED aaailabel_trailing_address_line_one_left_out_of_order_red)
   Row {
     repro:    "aaailabel_bracket_address_continuation_line_stays_routed",
     tex:      repro!("aaailabel_bracket_address_continuation_line_stays_routed"),
@@ -103,7 +109,8 @@ const ROWS: &[Row] = &[
     creators: &[
       &["Ann Able", "affiliation=1 Univ A", "email=ann@a.edu"],
       &["Bob Baker", "affiliation=1 Univ A", "email=bob@a.edu"],
-      &["Cy Cole", "affiliation=2 Univ B", "email=cy@b.edu"],
+      &["Cy Cole", "affiliation=2 Univ B"],
+      &["email=cy@b.edu"],
     ],
     block:    &[],
   },
@@ -117,6 +124,91 @@ const ROWS: &[Row] = &[
       &["Cy Cole", "affiliation=2 Univ B {first.last}@b.edu"],
     ],
     block:    &[],
+  },
+  // (red on 66558570ce3: 12345@b.edu Bob Baker's, label 2's only author; spelled by no one, two addresses for three
+  // names, two names spelling none: the block's, OD #805)
+  Row {
+    repro:    "aaailabel_trailing_address_line_is_the_blocks",
+    tex:      repro!("aaailabel_trailing_address_line_is_the_blocks"),
+    warnings: 0,
+    creators: &[
+      &["Ann Able", "affiliation=1 Univ A", "email=ann.able@a.edu"],
+      &["Dan Dorn", "affiliation=1 Univ A"],
+      &["Bob Baker", "affiliation=2 Univ B"],
+      &["email=12345@b.edu"],
+    ],
+    block:    &[],
+  },
+  // (red on 66558570ce3: 12345@b.edu Dan Dorn's, label 2's only author)
+  Row {
+    repro:    "aaailabel_trailing_address_line_position_decides_nothing",
+    tex:      repro!("aaailabel_trailing_address_line_position_decides_nothing"),
+    warnings: 0,
+    creators: &[
+      &["Ann Able", "affiliation=1 Univ A", "email=ann.able@a.edu"],
+      &["Dan Dorn", "affiliation=2 Univ B"],
+      &["Bob Baker", "affiliation=1 Univ A"],
+      &["email=12345@b.edu"],
+    ],
+    block:    &[],
+  },
+  Row {
+    repro:    "aaailabel_city_continuation_line_stays_with_its_entry",
+    tex:      repro!("aaailabel_city_continuation_line_stays_with_its_entry"),
+    warnings: 0,
+    creators: &[&["Ann Able", "affiliation=1 Univ A", "email=ann@a.edu"], &[
+      "Bob Baker",
+      "affiliation=2 Univ B Springfield, USA",
+      "email=bob@b.edu",
+    ]],
+    block:    &[],
+  },
+  // (red on 66558570ce3: Ann's affiliation "1 Univ A ann, bob @a.edu")
+  Row {
+    repro:    "aaailabel_unread_address_paragraph_of_a_labelled_line_keeps_the_classs_lines",
+    tex:      repro!(
+      "aaailabel_unread_address_paragraph_of_a_labelled_line_keeps_the_classs_lines"
+    ),
+    warnings: 0,
+    creators: &[&["Ann Able", "mark=1"], &["Bob Baker", "mark=2"]],
+    block:    &["1 Univ A", "ann, bob @a.edu", "2 Univ B"],
+  },
+  // (red on 66558570ce3: "ann, bob @a.edu" an affiliation of both authors)
+  Row {
+    repro:    "aaailabel_unread_address_lead_line_keeps_the_classs_lines",
+    tex:      repro!("aaailabel_unread_address_lead_line_keeps_the_classs_lines"),
+    warnings: 0,
+    creators: &[&["Ann Able", "mark=1"], &["Bob Baker", "mark=2"]],
+    block:    &["ann, bob @a.edu", "1 Univ A", "2 Univ B"],
+  },
+  // (red on 66558570ce3: "ann, bob @a.edu Univ A" an affiliation of both authors)
+  Row {
+    repro:    "aaailabel_unread_address_line_of_an_unlabelled_store_keeps_the_classs_lines",
+    tex:      repro!("aaailabel_unread_address_line_of_an_unlabelled_store_keeps_the_classs_lines"),
+    warnings: 0,
+    creators: &[&["Ann Able"], &["Bob Baker"]],
+    block:    &["ann, bob @a.edu", "Univ A"],
+  },
+  // (red on 66558570ce3: 12345@b.edu Bob Baker's)
+  Row {
+    repro:    "aaailabel_address_macro_line_is_read_as_it_typesets",
+    tex:      repro!("aaailabel_address_macro_line_is_read_as_it_typesets"),
+    warnings: 0,
+    creators: &[
+      &["Ann Able", "affiliation=1 Univ A", "email=ann.able@a.edu"],
+      &["Dan Dorn", "affiliation=1 Univ A"],
+      &["Bob Baker", "affiliation=2 Univ B"],
+      &["email=12345@b.edu"],
+    ],
+    block:    &[],
+  },
+  // (red on 66558570ce3: Bob's affiliation "2 Univ B ann, bob @a.edu")
+  Row {
+    repro:    "aaailabel_unread_address_macro_line_keeps_the_classs_lines",
+    tex:      repro!("aaailabel_unread_address_macro_line_keeps_the_classs_lines"),
+    warnings: 0,
+    creators: &[&["Ann Able", "mark=1"], &["Bob Baker", "mark=2"]],
+    block:    &["1 Univ A", "2 Univ B", "ann, bob @a.edu"],
   },
   Row {
     repro:    "aaailabel_empty_affiliations_print_nothing",
@@ -142,7 +234,7 @@ const ROWS: &[Row] = &[
 ];
 
 /// Each row converts clean with its Warnings, its creators whole, and no "Univ" outside them (no title-page block left)
-/// unless the class's lines stay its block (`Row::block`).
+/// unless the class's lines stay its block, each line's text in order (`Row::block`).
 #[test]
 fn aaai_affiliations_rows() {
   let mut wrong = Vec::new();
@@ -161,15 +253,24 @@ fn aaai_affiliations_rows() {
       .iter()
       .map(|c| c.iter().map(|s| (*s).to_string()).collect())
       .collect();
+    // (each `<p>` of the title page's `logical-block`, in order)
+    let paragraphs: Vec<String> = rest
+      .find("<logical-block")
+      .map(|start| {
+        let block = &rest[start..start + rest[start..].find("</logical-block>").expect("closed")];
+        block
+          .match_indices("<p ")
+          .map(|(at, _)| text(&block[at..at + block[at..].find("</p>").expect("closed p")]))
+          .collect()
+      })
+      .unwrap_or_default();
     let block = match row.block {
-      [] => !rest.contains("Univ"),
-      lines => {
-        rest.contains("<logical-block") && lines.iter().all(|l| rest.matches(l).count() == 1)
-      },
+      [] => paragraphs.is_empty() && !rest.contains("Univ"),
+      lines => paragraphs == lines,
     };
     if counts != (0, row.warnings) || unclaimed != row.warnings || found != want || !block {
       wrong.push(format!(
-        "{}: E/W {counts:?} (unclaimed {unclaimed}), creators {found:?}\n{xml}\n{log}",
+        "{}: E/W {counts:?} (unclaimed {unclaimed}), creators {found:?}, block {paragraphs:?}\n{xml}\n{log}",
         row.repro
       ));
     }

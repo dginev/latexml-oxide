@@ -5544,6 +5544,15 @@ pub(crate) fn title_page_probe_run(tokens: Tokens, isolated: bool) -> Result<Spe
   })
 }
 
+/// [`title_page_probe_run`] isolated, no title page's: a run over budget is no part of the check's, so it notes none.
+/// What a few lines of a displaced store typeset (frontmatter_stores.rs `typeset_pieces`).
+pub(crate) fn speculative_text_run(tokens: Tokens) -> Result<SpeculativeRun> {
+  Ok(match checks_run(tokens, true, &[(ink_text, None)])? {
+    Ok(mut texts) => SpeculativeRun::Printed(texts.swap_remove(0)),
+    Err(run) => run,
+  })
+}
+
 /// [`title_page_probe_run`] isolated, its text read with where its words end ([`ink_word_text`], each `\insert`'s material
 /// after an [`INK_INSERT`]), the field ledger put back as [`note_title_page_print`] puts it back: what an argument a
 /// binding's frontmatter command never digests prints (`base_utilities::frontmatter::title_page_check`

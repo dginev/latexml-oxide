@@ -1,0 +1,34 @@
+% AAAI's closing `\affiliations` line of e-mails (aaai25.sty:72) gives no address to the label it follows: with the
+%   names' labels swapped, label 2's only author Dan Dorn gets no `12345@b.edu` either (spelled by no one; two
+%   addresses, three names; two names spell none: the block's, frontmatter_stores.rs `displaced_entries`, OD #805).
+% witness: 2404.14949, 2511.11817; synthetic stand-in
+% oracle:  pdflatex 0 errors: "Ann Able1, Dan Dorn2, Bob Baker1", "1Univ A", "2Univ B", "ann.able@a.edu, 12345@b.edu"
+% engines: rust INT081RC6 = 0 errors, the three lines a logical-block; 66558570ce3 = 12345@b.edu Dan Dorn's
+% expect:  0 errors, 0 warnings; Ann "1Univ A" and ann.able@a.edu, Dan "2Univ B", Bob "1Univ A", 12345@b.edu the
+%          block's creator's
+% status:  RED (66558570ce3) -> GREEN (AAAILABEL fix 2: perfect_kernel_batchaaailabel::aaai_affiliations_rows)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{aaai25.sty}
+\ProvidesPackage{aaai25}[2025/05/08 AAAI 2025 Submission format]
+\def\showauthors@on{T}
+\DeclareOption{submission}{\gdef\showauthors@on{}}
+\ProcessOptions\relax
+\def\maketitle{\par\begingroup\def\thefootnote{\fnsymbol{footnote}}\twocolumn[\@maketitle]\@thanks\endgroup
+  \setcounter{footnote}{0}\let\maketitle\relax\let\@maketitle\relax
+  \gdef\@thanks{}\gdef\@author{}\gdef\@title{}\let\thanks\relax}
+\long\gdef\affiliations #1{ \def \affiliations_{\if T\showauthors@on#1\fi}}%
+\def\@maketitle{\def\theauthors{\if T\showauthors@on\@author\else Anonymous submission\fi}%
+  \vbox{\hsize\textwidth\linewidth\hsize\centering
+    {\LARGE\bf \@title \par}\vskip 0.1in
+    {\Large{\textbf{\theauthors\ifhmode\\\fi}}}\vskip .2em
+    {\normalsize \affiliations_\ifhmode\\\fi}\vskip .5em}}
+\end{filecontents*}
+\documentclass[letterpaper]{article}
+\usepackage{aaai25}
+\title{A Title}
+\author{Ann Able\textsuperscript{\rm 1}, Dan Dorn\textsuperscript{\rm 2}, Bob Baker\textsuperscript{\rm 1}}
+\affiliations{\textsuperscript{\rm 1}Univ A\\ \textsuperscript{\rm 2}Univ B\\ ann.able@a.edu, 12345@b.edu}
+\begin{document}
+\maketitle
+Body.
+\end{document}

@@ -14295,17 +14295,25 @@ bypassed under raw loading; the class's `\@maketitle` never runs under the locke
   (`frontmatter_stores.rs displaced_frame`), so aaai's `[submission]`, whose `\showauthors@on` is empty, prints none.
   aaai's labelled lines go by the names' marks (2501.02471, 2511.12066), one unlabelled institution to every author
   (2212.00442, 2508.05165; 2109.09904's goes to its last name only, the kernel author tail's line of addresses closing
-  the run: repro `aaailabel_author_tail_email_line_caps_the_institution_run_red`). An unlabelled line an entry
-  continues with that prints an `@` the frontmatter reads as no line of addresses keeps the whole store the class's
-  text (`frontmatter_stores.rs unread_address_continuation`; `insert.rs prints_an_unread_address`: a mark in it,
-  which the API cuts the line at, or neither the API's `line_is_email_list` nor the Kind step's `address_line_cut`
-  reading it — `{a, b} @x`, `\{a,b\}\@x`, whose `\@` prints no `@`, a nested brace list): routed, its text stayed
-  in one label's affiliation or followed the mark inside it (2211.16869, 2408.10349, 2412.03107, 2212.12190). One the
-  Kind step reads stays routed (`[a, b]@x`, `a, b, c@x`, `Emails: \{a, b\}@x`, `\{a@x, b@y\}`: 2211.08824,
-  2212.13819, 2501.16509, 2511.11817, 2403.16883), as does an address inside a labelled line, that label's
-  (2303.13269). Guard `perfect_kernel_batchaaailabel::aaai_affiliations_rows`. Cost: the
+  the run: repro `aaailabel_author_tail_email_line_caps_the_institution_run_red`). The entries are read
+  piece by piece — each line (`\\`) and each paragraph of one (`\par`), all but a labelled entry's lead — on their
+  printed text, or, where their tokens print no `@`, on the text they typeset (a document macro holding the addresses:
+  one isolated speculative run of the pieces, `frontmatter_stores.rs typeset_pieces`; `insert.rs address_line_reading`).
+  A piece printing an `@` the frontmatter reads as no line of addresses (a mark in it, which the API cuts the line at,
+  or neither `email_addresses` nor the Kind step's `address_line_cut` reading it: `{a, b} @x`, a nested brace list)
+  keeps the whole store the class's text: routed, its text stayed in one label's affiliation or followed the mark
+  inside it (2211.16869, 2412.03107, 2212.12190). A line printing no `@` is no address to any reader: `\{a,b\}\@x`
+  prints none (latex.ltx:9422), so it goes on with its entry as a city line does (RED
+  `aaailabel_no_at_brace_address_line_reads_as_a_city_line_red`). A piece of the last labelled entry past its lead that
+  is a line of addresses (`[a, b]@x`, `a, b, c@x`, `Emails: \{a, b\}@x`, `\{a@x, b@y\}`: 2211.08824, 2212.13819,
+  2501.16509, 2511.11817, 2403.16883) is no line of that label: aaai's closing line of everyone's e-mails is an
+  unlabelled entry of the whole block after the rest (`displaced_entries`), whose addresses the Link step places by
+  spelling, else one per author where every spelled one agrees with its place (OD #805's order), else the block —
+  never the label's only author by position (2404.14949, 2511.11817); a city line there stays with its entry. An
+  address inside a labelled line stays that label's (2303.13269). Guard `perfect_kernel_batchaaailabel::aaai_affiliations_rows`. Cost: the
   route's two speculative title-page runs, +1.88 % `instructions:u` on 2508.01473 (best of 3, one core: 4,997,745,205
-  → 5,091,730,716); a plain article and an aaai copy without `\affiliations` +0.01 % each (DG to accept).
+  → 5,091,730,716), and the pieces' typeset run +0.06 % more (5,091,434,100 → 5,094,581,229); a plain article and an
+  aaai copy without `\affiliations` +0.01 % each (DG to accept).
 - *A store no creator carries*: a rerouted store that annotates a creator, at a `\maketitle` with none, is not handed
   on; its value joins the title-page check's third source, so its words are counted as a raw setter's are
   (`title_page_check.rs note_uncarried_store_value`; naverlabseurope.cls's `\affiliations` beside its own `\authors`,

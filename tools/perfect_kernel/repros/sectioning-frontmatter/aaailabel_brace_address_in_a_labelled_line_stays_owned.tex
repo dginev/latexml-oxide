@@ -1,6 +1,6 @@
 % An address the API leaves unread inside a labelled AAAI `\affiliations` line (`\texttt{\{first.last\}@b.edu}` after
 %   `\textsuperscript{\rm 2}Univ B`, aaai25.sty:72) is that label's line, not a continuation line: the store stays
-%   routed (frontmatter_stores.rs `unread_address_continuation` reads continuation lines only).
+%   routed (frontmatter_stores.rs `displaced_entries` reads every piece but a labelled entry's lead).
 % witness: 2303.13269; synthetic stand-in
 % oracle:  pdflatex 0 errors: "Ann Able1, Bob Baker1, Cy Cole2", "1Univ A {ann, bob}@a.edu",
 %          "2Univ B {first.last}@b.edu"

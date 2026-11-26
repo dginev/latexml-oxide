@@ -1,12 +1,15 @@
 % An unlabelled AAAI `\affiliations` line the API's own address-line test does not read (`cy@b.edu, [ann, bob]@a.edu`,
 %   aaai25.sty:72) but the Kind step does (insert.rs `address_line_cut`, through `resolver::address_runs`) is a line of
-%   addresses: the store stays routed (`prints_an_unread_address`; the same for a spaced list `a, b, c@x`, an `Emails:`
+%   addresses: the store stays routed (`address_line_reading`; the same for a spaced list `a, b, c@x`, an `Emails:`
 %   label, a brace group of full addresses).
 % witness: 2211.08824 (2212.13819, 2501.16509, 2511.11817, 2403.16883 the sibling shapes); synthetic stand-in
 % oracle:  pdflatex 0 errors: "Ann Able1, Bob Baker1, Cy Cole2", "1Univ A", "2Univ B", "cy@b.edu, [ann, bob]@a.edu"
-% engines: rust INT081RC6 = 0 errors, the three lines a logical-block; 842364fc86c = as expected; AAAILABEL fix 1's
-%          first candidate (`line_is_email_list` alone) = the three lines a logical-block again
-% expect:  0 errors, 0 warnings; Ann "1Univ A" and ann@a.edu, Bob "1Univ A" and bob@a.edu, Cy "2Univ B" and cy@b.edu
+% engines: rust INT081RC6 = 0 errors, the three lines a logical-block; 842364fc86c, 66558570ce3 = cy@b.edu Cy Cole's
+%          (label 2's only author); AAAILABEL fix 1's first candidate (`line_is_email_list` alone) = the three lines a
+%          logical-block again
+% expect:  0 errors, 0 warnings; Ann "1Univ A" and ann@a.edu, Bob "1Univ A" and bob@a.edu, Cy "2Univ B"; cy@b.edu the
+%          block's (AAAILABEL fix 2: the closing line is the whole block's; spelled by no one and out of author order,
+%          the Link step places it nowhere: RED aaailabel_trailing_address_line_one_left_out_of_order_red)
 % status:  RED (INT081RC6; the fix's first candidate) -> GREEN (842364fc86c, AAAILABEL fix 1:
 %          perfect_kernel_batchaaailabel::aaai_affiliations_rows)
 % preload: ar5iv.sty

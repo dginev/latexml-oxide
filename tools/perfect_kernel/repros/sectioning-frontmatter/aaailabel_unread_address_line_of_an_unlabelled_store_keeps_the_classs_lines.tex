@@ -1,0 +1,34 @@
+% An AAAI `\affiliations` no line of which is labelled (aaai25.sty:72) is one entry, every line of it read: one printing
+%   an `@` the frontmatter reads as no line of addresses keeps the store the class's text (frontmatter_stores.rs
+%   `displaced_entries`).
+% witness: synthetic
+% oracle:  pdflatex 0 errors: "Ann Able, Bob Baker", "ann, bob @a.edu", "Univ A"
+% engines: rust INT081RC6 = 0 errors, the two lines a logical-block; 66558570ce3 = "ann, bob @a.edu Univ A" an
+%          affiliation of both authors
+% expect:  0 errors, 0 warnings; as INT081RC6: the lines one block, the names with no contact
+% status:  RED (66558570ce3) -> GREEN (AAAILABEL fix 2: perfect_kernel_batchaaailabel::aaai_affiliations_rows)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{aaai25.sty}
+\ProvidesPackage{aaai25}[2025/05/08 AAAI 2025 Submission format]
+\def\showauthors@on{T}
+\DeclareOption{submission}{\gdef\showauthors@on{}}
+\ProcessOptions\relax
+\def\maketitle{\par\begingroup\def\thefootnote{\fnsymbol{footnote}}\twocolumn[\@maketitle]\@thanks\endgroup
+  \setcounter{footnote}{0}\let\maketitle\relax\let\@maketitle\relax
+  \gdef\@thanks{}\gdef\@author{}\gdef\@title{}\let\thanks\relax}
+\long\gdef\affiliations #1{ \def \affiliations_{\if T\showauthors@on#1\fi}}%
+\def\@maketitle{\def\theauthors{\if T\showauthors@on\@author\else Anonymous submission\fi}%
+  \vbox{\hsize\textwidth\linewidth\hsize\centering
+    {\LARGE\bf \@title \par}\vskip 0.1in
+    {\Large{\textbf{\theauthors\ifhmode\\\fi}}}\vskip .2em
+    {\normalsize \affiliations_\ifhmode\\\fi}\vskip .5em}}
+\end{filecontents*}
+\documentclass[letterpaper]{article}
+\usepackage{aaai25}
+\title{A Title}
+\author{Ann Able, Bob Baker}
+\affiliations{{ann, bob} @a.edu\\ Univ A}
+\begin{document}
+\maketitle
+Body.
+\end{document}

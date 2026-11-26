@@ -2004,9 +2004,11 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // (MANFM2, 532 -> 533: no new read — `prints_default_name_before` already read the default label's body spelling; its
   // filter to the character tokens, past the label's `\lx@nobreakspace` (OD #1136), puts a `get_catcode()` on the line)
   // (AAAILABEL fix 1, 533 -> 534: a displaced store's unlabelled continuation line, read before it is digested as the
-  // whole displaced route reads its records, is split at `\par` (2403.16883's blank line before its addresses); what
-  // decides is the Kind step's reading of its printed text, `insert.rs prints_an_unread_address`, which adds no read)
-  ("frontmatter_stores", 534),
+  // whole displaced route reads its records, is split at `\par` (2403.16883's blank line before its addresses); fix 2,
+  // 534 -> 533: the split is `split_tokens_delimited`'s. The decision still reads tokens, through `insert.rs
+  // address_line_reading`'s `printed_address_text` and `author_mark_position`, as the sibling `displaced_in_doubt` does,
+  // or the text the pieces typeset where their tokens print no `@` (`typeset_pieces`))
+  ("frontmatter_stores", 533),
   ("gretsi_cls.rs", 14),
   // (CR10a, 119 -> 128: the class's author body is read as tokens before it is digested, as `author_block_body` reads it —
   // a names block nested in another's spliced in (`unnested_name_blocks`, 1511.03982), the alias `\authorblockN`'s grades,

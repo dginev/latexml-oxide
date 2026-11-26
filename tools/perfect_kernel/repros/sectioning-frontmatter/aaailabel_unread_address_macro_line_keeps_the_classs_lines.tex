@@ -1,0 +1,35 @@
+% A closing AAAI `\affiliations` line held in a document macro (aaai25.sty:72) whose typeset text prints an `@` the
+%   frontmatter reads as no line of addresses (`{ann, bob} @a.edu`) keeps the store the class's text, as written in
+%   the line would (frontmatter_stores.rs `typeset_pieces`; `insert.rs address_line_reading`).
+% witness: synthetic
+% oracle:  pdflatex 0 errors: "Ann Able1, Bob Baker2", "1Univ A", "2Univ B", "ann, bob @a.edu"
+% engines: rust INT081RC6 = 0 errors, the three lines a logical-block; 66558570ce3 = Bob's affiliation "2Univ B ann, bob
+%          @a.edu"
+% expect:  0 errors, 0 warnings; as INT081RC6: the lines one block, the names with their marks only
+% status:  RED (66558570ce3) -> GREEN (AAAILABEL fix 2: perfect_kernel_batchaaailabel::aaai_affiliations_rows)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{aaai25.sty}
+\ProvidesPackage{aaai25}[2025/05/08 AAAI 2025 Submission format]
+\def\showauthors@on{T}
+\DeclareOption{submission}{\gdef\showauthors@on{}}
+\ProcessOptions\relax
+\def\maketitle{\par\begingroup\def\thefootnote{\fnsymbol{footnote}}\twocolumn[\@maketitle]\@thanks\endgroup
+  \setcounter{footnote}{0}\let\maketitle\relax\let\@maketitle\relax
+  \gdef\@thanks{}\gdef\@author{}\gdef\@title{}\let\thanks\relax}
+\long\gdef\affiliations #1{ \def \affiliations_{\if T\showauthors@on#1\fi}}%
+\def\@maketitle{\def\theauthors{\if T\showauthors@on\@author\else Anonymous submission\fi}%
+  \vbox{\hsize\textwidth\linewidth\hsize\centering
+    {\LARGE\bf \@title \par}\vskip 0.1in
+    {\Large{\textbf{\theauthors\ifhmode\\\fi}}}\vskip .2em
+    {\normalsize \affiliations_\ifhmode\\\fi}\vskip .5em}}
+\end{filecontents*}
+\documentclass[letterpaper]{article}
+\usepackage{aaai25}
+\title{A Title}
+\newcommand\myemails{{ann, bob} @a.edu}
+\author{Ann Able\textsuperscript{\rm 1}, Bob Baker\textsuperscript{\rm 2}}
+\affiliations{\textsuperscript{\rm 1}Univ A\\ \textsuperscript{\rm 2}Univ B\\ \myemails}
+\begin{document}
+\maketitle
+Body.
+\end{document}
