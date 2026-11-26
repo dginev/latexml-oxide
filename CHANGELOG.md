@@ -36,8 +36,8 @@ Highlights since v0.7.6 in August:
     of this workflow, we have grown the test suite substantially to guard against future regressions.
 
 This release's cutoff build has already converted the arXiv collection (98.1 % of 2,962,950 without an error), and
-you can examine its results live in the [ar5iv Lab](https://ar5iv.labs.arxiv.org). Every change, with its guard tests and design references, is listed in
-[`docs/release/CHANGES_v0.8.0.md`](docs/release/CHANGES_v0.8.0.md).
+you can examine its results live in the [ar5iv Lab](https://ar5iv.labs.arxiv.org). Every change, with its guard tests
+and design references, is listed in [`docs/release/CHANGES_v0.8.0.md`](docs/release/CHANGES_v0.8.0.md).
 
 <details>
 <summary><b>More highlights</b></summary>
