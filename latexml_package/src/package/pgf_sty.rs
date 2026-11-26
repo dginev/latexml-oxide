@@ -57,8 +57,9 @@ LoadDefinitions!({
   );
 
 
-  // Perl L46-48: wrap pgfpicture/endpgfpicture with lxSVG@picture
+  // Perl L46-48: wrap pgfpicture/endpgfpicture with lxSVG@picture; text leaving a picture takes TeX's `\halign` back
+  // (`\lxSVG@uninstallcommands`, appended as pgfplots appends to `\pgfinterruptpicture`).
   at_begin_document(TokenizeInternal!(
-    r"\expandafter\def\expandafter\pgfpicture\expandafter{\expandafter\lxSVG@picture\pgfpicture}\expandafter\def\expandafter\endpgfpicture\expandafter{\endpgfpicture\endlxSVG@picture}"
+    r"\expandafter\def\expandafter\pgfpicture\expandafter{\expandafter\lxSVG@picture\pgfpicture}\expandafter\def\expandafter\endpgfpicture\expandafter{\endpgfpicture\endlxSVG@picture}\expandafter\def\expandafter\pgfinterruptpicture\expandafter{\pgfinterruptpicture\lxSVG@uninstallcommands}"
   ))?;
 });

@@ -1,0 +1,19 @@
+% witness: synthetic (the routes by which text leaves a picture, each through `\pgfinterruptpicture`,
+%          pgfcorescopes.code.tex:742-759: `\pgftext` :161-183, a node and its label and pin tikz.code.tex:3871-3874,
+%          an edge node, a node part :4300-4302)
+% oracle:  pdflatex 0 errors: T, L, N, P, E, U, V, each followed by a over b
+% engines: rust INT081AB 0 errors, six SVG matrices hoisted beside their text; perl 6 errors (`svg:g` in `ltx:block`)
+% expect:  0 errors; six tabulars, each in its text's foreignObject
+% status:  RED (INT081AB) -> GREEN (HALIGNINT, OXIDIZED_DESIGN_DIVERGENCES #1167)
+\documentclass{article}
+\usepackage{tikz}
+\usetikzlibrary{shapes.multipart}
+\newcommand{\st}{\vtop{\halign{##\cr a\cr b\cr}}}
+\begin{document}
+\begin{tikzpicture}
+\pgftext[at={\pgfpoint{0cm}{0cm}}]{T\st}
+\node[label=above:{L\st}, pin=right:{P\st}] (n) at (3,0) {N};
+\draw (0,-1) -- node[midway, above] {E\st} (3,-1);
+\node[rectangle split, rectangle split parts=2, draw] at (0,-3) {U\st \nodepart{two} V\st};
+\end{tikzpicture}
+\end{document}

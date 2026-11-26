@@ -30,6 +30,11 @@ LoadDefinitions!({
   DefMacro!("\\tikzparentnode", "tikzparentnode");
   DefMacro!("\\tikzchildnode", "tikzchildnode");
   InputDefinitions!("tikz", noltxml => true, extension => Some(Cow::Borrowed("sty")));
+  // An `align=` node's lines stay the SVG matrix (tikz.code.tex:4253), though its text has TeX's `\halign` back
+  // (`\lxSVG@uninstallcommands`; OXIDIZED_DESIGN_DIVERGENCES #1167).
+  if !substitute_in_macro("\\tikz@align@end@check", "\\halign", "\\lxSVG@halign")? {
+    Info!("unexpected", "\\tikz@align@end@check", "No \\halign in tikz's align= line code; its lines are a tabular");
+  }
   // `\path`, `\node`, `\draw`, … exist only inside a `tikzpicture` (tikz.code.tex:1730 `\tikz@installcommands`): the
   // `\maketitle` replay gate reads a `tikzpicture` in a class's title body as one unit
   // (sect05.rs `defined_environment_span`; uantwerpenletter.cls:285-292).

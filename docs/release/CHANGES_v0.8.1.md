@@ -15,6 +15,17 @@ top of its group.
     `\subjclass[1985]`) keeps the name in force with the class's Warning "Unknown edition (…)" (1001.1600,
     1601.08172). A renewal after the call is still the name `\maketitle` prints (0811.1789). KNOWN_PERL_ERRORS #1341;
     guard `perfect_kernel_batchthmedpsres::thmedpsres_rows`.
+  - **An `\halign` in a TikZ node's text or formula is set as outside a picture: a Young diagram or an `\ooalign`
+    symbol in a tikz-cd cell or label keeps its place.** Inside a picture `\halign` was the SVG matrix everywhere, so
+    ytableau's `\vtop{…\halign…}` or an `\ooalign` in a node's text opened SVG groups in the node's content: the
+    formula lost the alignment, or closed early with malformed-markup Errors (2604.27868 reached the error limit, a
+    Fatal, and lost more than half its text).
+    Text leaving a picture (`\pgfinterruptpicture`: nodes, labels, pins, edge nodes, node parts, `\pgftext`) now has
+    TeX's `\halign` back, as tikz uninstalls its own commands there; tikz's `align=` lines and pgf matrices keep the SVG
+    matrix, and `\lxSVG@halign` reverts as `\halign`. 1502.07025: 147 Errors → 1; 1901.06584: 57 → 0; 2604.27868: 1001
+    Errors and a Fatal → 0; 2409.06632: 28 → 0; 2409.04903: 20 → 0 (OXIDIZED_DESIGN_DIVERGENCES #1167,
+    KNOWN_PERL_ERRORS #1340). Guards `perfect_kernel_batchhalignint::text_leaving_a_picture_sets_halign_as_tex`,
+    `perfect_kernel_batchpanic397::a_nested_ooalign_in_node_math_reverts`.
   - **thmtools' list filters, edpsmath's keywords, amsart's default MSC edition, and an `\item[…]` label that steps
     its own counter.** Under thmtools, thm-listof's `\showtheorems`, `\ignoretheorems`, `\onlynamedtheorems` and
     `\setlisttheoremstyle` are defined and `\listoftheorems[…]` reads its keys (`ignoreall`, `show`, `ignore`,

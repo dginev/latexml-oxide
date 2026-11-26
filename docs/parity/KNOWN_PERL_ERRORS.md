@@ -23015,6 +23015,34 @@ Warning: a theorem's `inlist` does not record its name (RED
 `tools/perfect_kernel/repros/package-bindings/thmtools_onlynamedtheorems_lists_named_only_red.tex`). Repro
 `package-bindings/thmtools_listoftheorems_filters.tex`; guard `perfect_kernel_batchthmedpsres::thmedpsres_rows`.
 
+## 1340. Perl sets an `\halign` in a picture's text as SVG matrix groups LaTeXML content cannot hold
+
+Inside a picture `installPGFCommands` lets `\halign` to `\lxSVG@halign` (pgfsys-latexml.def.ltxml:52-59) and never
+undoes it, so a node's text or formula sets its `\halign` with `openTikzAlignment` (:952-974), opening `svg:g` groups in
+LaTeXML content: a `\vtop{…\halign…}` (ytableau.sty:190-206, a plain `\halign`), an `\ooalign` or `\oalign`
+(latex.ltx:632-635, an `\halign` in a `\vtop`). `insertBlock` (TeX_Box.pool.ltxml:513-517) finds no block candidate for
+the `\vtop`'s capture and renames it `ltx:block`, where `svg:g` is not allowed. Minimal trigger:
+
+```latex
+\documentclass{article}
+\usepackage{tikz}
+\begin{document}
+\begin{tikzpicture}
+\node {$x_{\vtop{\halign{#\cr a\cr b\cr}}}$};
+\end{tikzpicture}
+\end{document}
+```
+
+pdflatex: 0 errors, x subscripted by the two-row alignment. Perl (same host): 1 Error (`<svg:g> isn't allowed in
+<ltx:block>`), 1 Warning (no block-like candidate in `ltx:XMText`); an `\ooalign` symbol in a tikz-cd label 1 Error; the
+same `\vtop` after `\pgftext`, in a node, its label and pin, an edge node and a node part 6 Errors. Fixed in Rust:
+`\pgfinterruptpicture`, which every route of text out of a picture opens (pgfcorescopes.code.tex:742-759), gives
+`\halign` back (`\lxSVG@uninstallcommands`), while tikz's `align=` lines and pgf matrices keep the SVG matrix
+(OXIDIZED_DESIGN_DIVERGENCES #1167). Perl accepts the same change; no upstream patch (DG 2026-11-25). Repros
+graphics-tikz/halign_in_node_math_is_an_array, ooalign_in_a_tikzcd_label_is_an_alignment,
+halign_on_every_route_out_of_a_picture; guard
+`perfect_kernel_batchhalignint::text_leaving_a_picture_sets_halign_as_tex`.
+
 ## 1341. Perl's `\subjclass` keeps a `\subjclassname` renewed before it, and names an unknown edition
 
 ams_support.sty.ltxml:133-137 makes `\subjclassname` `\textup{\@subjclassyear} …` and `\subjclass` only `\xdef`s the

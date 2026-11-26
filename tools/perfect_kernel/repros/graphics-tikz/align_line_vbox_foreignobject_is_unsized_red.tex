@@ -1,0 +1,15 @@
+% witness: synthetic (HALIGNINT brief; a `\vbox` alone on an `align=` line)
+% oracle:  pdflatex 0 errors: n3 above ha above hb
+% engines: rust INT081AB and HALIGNINT 0 errors, the `\vbox`'s foreignObject 0x0 (`fobj_get_size`, tex_box.rs, reads
+%          only a declared or cached size; the `\vbox` is busy in its own absorption, so it cannot be measured there)
+%          and overprinting the line above; perl 0 errors
+% expect:  0 errors; the foreignObject sized by the box (pdflatex: 10.83336pt wide, 18.94444pt high, 0pt deep)
+% status:  RED (the box measured before its absorption, not in `fobj_get_size`)
+% moves:   post-merge
+\documentclass{article}
+\usepackage{tikz}
+\begin{document}
+\begin{tikzpicture}
+\node[align=left]{n3\\ \vbox{\hbox{ha}\hbox{hb}}};
+\end{tikzpicture}
+\end{document}

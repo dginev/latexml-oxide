@@ -1,0 +1,13 @@
+% witness: synthetic (KNOWN_PERL_ERRORS #1340's trigger; the shape of 1502.07025's tableaux)
+% oracle:  pdflatex 0 errors: x subscripted by a over b
+% engines: rust INT081AB 0 errors, the subscript silently empty (`text="x _ []"`, no `tex`), the matrix hoisted to the
+%          picture's group; perl 1 error (`svg:g` in `ltx:block`)
+% expect:  0 errors; the subscript an XMArray of a and b, `tex` the source
+% status:  RED (INT081AB) -> GREEN (HALIGNINT, OXIDIZED_DESIGN_DIVERGENCES #1167)
+\documentclass{article}
+\usepackage{tikz}
+\begin{document}
+\begin{tikzpicture}
+\node {$x_{\vtop{\halign{#\cr a\cr b\cr}}}$};
+\end{tikzpicture}
+\end{document}

@@ -3,8 +3,9 @@
 % engines: rust MAIN911 = Fatal:panic whatsit.rs:344 "RefCell already mutably borrowed": the inner math's malformed
 %          close (svg:g left open in ltx:XMath) closes the outer ltx:Math, whose `tex` reverts the outer `\halign`
 %          while it is absorbed; perl: 2 errors (svg:g in ltx:block), the alignment reverted whole
-% expect:  no panic; 3 errors (the pre-existing malformed recovery), 3 warnings (2 of them the reversion's)
-% status:  RED (MAIN911) -> GREEN (PANIC397)
+% expect:  no panic; 0 errors, 0 warnings: since HALIGNINT the node's text has TeX's `\halign`, so both alignments are
+%          tabulars as outside a picture (PANIC397 had 3 errors, 3 warnings: the malformed recovery and 2 reversions)
+% status:  RED (MAIN911) -> GREEN (PANIC397) -> GREEN (HALIGNINT, OXIDIZED_DESIGN_DIVERGENCES #1167)
 \documentclass{article}
 \usepackage{tikz}
 \begin{document}

@@ -309,9 +309,10 @@ fn halign_redefinition_material_before_a_tabular_is_kept() {
   );
 }
 
-/// A pseudocode in a TikZ node: inside the picture `\halign` is the primitive's SVG stand-in `\lxSVG@halign`
-/// (`\lxSVG@installcommands`), which cryptocode saves as `\@pc@halign`; the prelude ends with it all the same (witness
-/// 2107.05054, 11 errors → 0). pdflatex: "1: first line 2: second line", 0 errors.
+/// A pseudocode in a TikZ node: cryptocode saves the node text's `\halign` as `\@pc@halign` and the prelude ends with
+/// it. That was the SVG stand-in `\lxSVG@halign` until HALIGNINT gave the node's text TeX's `\halign` back
+/// (`\lxSVG@uninstallcommands`, OXIDIZED_DESIGN_DIVERGENCES #1167); output unchanged (witness 2107.05054, 11 errors → 0).
+/// pdflatex: "1: first line 2: second line", 0 errors.
 #[test]
 fn cryptocode_pseudocode_in_a_tikz_node_numbers_every_line() {
   if !check_requirements(&["cryptocode.sty"]) {

@@ -1,0 +1,21 @@
+% witness: 1502.07025 (ytableau diagrams in tikz-cd cells, 147 errors), 2604.27868 (288 `\ydiagram`s in TikZ nodes,
+%          1001 errors + Fatal)
+% oracle:  pdflatex 0 errors: a 2+1 Young diagram -> B; a 1+1 diagram beside x in a matrix of math nodes
+% engines: rust INT081AB 4 errors (`svg:g` closed over an open `_CaptureBlock_`): ytableau.sty:190-206's
+%          `\vtop{…\halign…}` was the SVG matrix; perl 1 error (`\ydiagram` unbound)
+% expect:  0 errors; each diagram a tabular in its cell's foreignObject, as outside a picture
+% status:  RED (INT081AB) -> GREEN (HALIGNINT, OXIDIZED_DESIGN_DIVERGENCES #1167)
+\documentclass{article}
+\usepackage{tikz-cd}
+\usepackage{ytableau}
+\begin{document}
+\begin{tikzcd}
+\ydiagram{2,1} \arrow[r] & B
+\end{tikzcd}
+
+\begin{tikzpicture}
+\matrix[matrix of math nodes] {
+\ydiagram{1,1} & x \\
+};
+\end{tikzpicture}
+\end{document}

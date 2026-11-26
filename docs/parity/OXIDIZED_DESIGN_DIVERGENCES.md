@@ -14013,8 +14013,8 @@ the alignment already being built. latex.ltx's `tabbing` builds its lines from b
 alignment carries `ALIGNMENT_WITHOUT_HALIGN` (latex_constructs `tabbing_bindings`) and runs no prelude. Only the
 conservative shape runs: a parameterless macro whose expansion ends with a token meaning the primitive — a constructor
 declared `halign_primitive` (core `Constructor::halign_primitive`): the primitive itself under any name (cryptocode.sty:950
-`\let\@pc@halign\halign`) or, inside a pgf picture, its SVG stand-in `\lxSVG@halign`, which `\lxSVG@installcommands` lets
-`\halign` to. A redefinition that does not end with the primitive, reaches it only through another macro (one macro
+`\let\@pc@halign\halign`) or, in a pgf picture's own body, its SVG stand-in `\lxSVG@halign`, which
+`\lxSVG@installcommands` lets `\halign` to (a node's text has the primitive back, #1167). A redefinition that does not end with the primitive, reaches it only through another macro (one macro
 level only; pdflatex runs the two-level shape — a deliberate limit, guard
 `halign_redefinition_not_ending_with_the_primitive_is_not_run`), or reaches it in mid-expansion is not run at all. Global
 side effects of a redefinition run once per binding alignment, against TeX's measure-then-set: amsmath's measured
@@ -24993,3 +24993,49 @@ absolute or `../` path) is read where it lies, as a document's `\input` is.
 `whatsinout::archive_readme_main_outside_the_archive_is_ignored`, `cortex_worker_ignores_a_readme_main_outside_the_source`,
 `xslt::css_copy_containment_tests::{css_imports_stay_inside_their_roots, a_found_stylesheet_resolves_inside_its_search_path}`,
 `cli_css_resource_copy::{archive_css_imports_stay_inside_the_destination, css_copies_follow_no_link_out}`.
+
+### 1167. Text leaving a pgf picture sets `\halign` as TeX's; `align=` lines and pgf matrices stay the SVG matrix (HALIGNINT)
+
+Related: #760 (a document's `\halign` macro ends with the primitive or its SVG stand-in), #1138 (pgf output in a
+picture's LaTeXML content). Principle: real TeX — a picture's commands are the picture's, and text leaving it is set as
+outside one.
+**Rule**: `\lxSVG@installcommands` keeps the `\halign` it replaces, and `\pgfinterruptpicture` gives it back
+(`\lxSVG@uninstallcommands`); the two `\halign`s pgf sets as drawings keep the SVG matrix.
+**Perl behavior**: `installPGFCommands` lets `\halign` to `\lxSVG@halign` for the whole picture and never undoes it
+(pgfsys-latexml.def.ltxml:52-59), so an `\halign` in a node's text or formula (`\ooalign`, ytableau's
+`\vtop{…\halign…}`) opens SVG matrix groups in LaTeXML content: `<svg:g> isn't allowed in <ltx:block>`
+(KNOWN_PERL_ERRORS #1340).
+**TeX source**: every route by which text leaves a picture opens `\pgfinterruptpicture`
+(pgfcorescopes.code.tex:742-759): `\pgftext` (:161-183), `\pgfnode` (pgfmoduleshapes.code.tex:187-197), a tikz node,
+label, pin or edge node (tikz.code.tex:3871-3874) and a node part (:4300-4302); tikz uninstalls its own picture commands
+there (:3904).
+**Rust behavior**:
+- `\lxSVG@installcommands` saves `\halign` as `\lxSVG@TeX@halign` unless it already means `\lxSVG@halign` (a picture
+  nested without an interruption inherits the install, so the save is TeX's). `\lxSVG@uninstallcommands` lets `\halign`
+  back only when it means `\lxSVG@halign` and a save exists (a `\pgfinterruptpicture` outside any picture changes
+  nothing). Both are local: the picture's and the interruption's groups end them.
+- pgf_sty.rs appends `\lxSVG@uninstallcommands` to `\pgfinterruptpicture` at `\begin{document}`, as pgfplots appends to
+  it (pgfplots.paths.code.tex:34).
+- The SVG matrix stays for pgf's matrices (pgfmodulematrix.code.tex:191-193, set in the picture, not in an interruption)
+  and for an `align=` node's lines: tikz_sty.rs substitutes `\lxSVG@halign` for the `\halign` of `\tikz@align@end@check`
+  (tikz.code.tex:4253, run inside the node's interruption); where a tikz has none it logs an Info and the lines are a
+  tabular. A picture nested in a node's text installs again.
+- `\ignorespaces` stays the picture's `\lx@inpgf@ignorespaces` in the text, as in Perl (its reversion is empty,
+  pgfsys-latexml.def.ltxml:60-63); restoring it is a separate change.
+- `\lxSVG@halign` reverts as `\halign spec {template\cr rows}` (Perl :899-904, `alignment_primitive_reversion`); an
+  alignment reverted during its own absorption is counted by a Warning (`self_referential_alignment`).
+**Residual**: an unmeasured `\vbox` alone on an `align=` line gets a 0×0 foreignObject (RED
+graphics-tikz/align_line_vbox_foreignobject_is_unsized_red, post-merge). A Young diagram set in a node now renders as
+the same diagram in running text, whose boxes measure 21.86×25.32 against pdflatex's 15.53×15.6: 2509.03390 Figs. 1–2
+and 1909.01257 Fig. 1.2 overlap their labels (content kept; the ytableau binding batch owns it). No guard now reaches
+an alignment reverted during its own absorption (`self_referential_alignment`, tex_tables.rs ~933-941; the old
+panic-recovery path, whatsit.rs ~355-362): a shape that still does is owed (row R HALIGNREVERT).
+**Witnesses**: 1502.07025 (147 Errors → 1, the other an undefined `{preliminary}`), 1901.06584 (57 → 0), 2604.27868
+(1001 Errors and a Fatal → 0), 2409.06632 (28 → 0), 2409.04903 (20 → 0), 2103.05078 (2 → 0); 2107.05054 and 2004.10048
+byte-identical.
+**Guards** `perfect_kernel_batchhalignint::text_leaving_a_picture_sets_halign_as_tex` (repros graphics-tikz/
+ooalign_in_a_tikzcd_label_is_an_alignment, ydiagram_in_a_tikzcd_cell_and_a_math_matrix, halign_in_node_math_is_an_array,
+halign_on_every_route_out_of_a_picture, align_lines_and_nested_matrices_stay_svg),
+`perfect_kernel_batchpanic397::a_nested_ooalign_in_node_math_reverts`,
+`perfect_kernel_batch76a::cryptocode_pseudocode_in_a_tikz_node_numbers_every_line`.
+**Upstream**: Perl accepts the same change (KNOWN_PERL_ERRORS #1340); no patch offered (DG 2026-11-25).
