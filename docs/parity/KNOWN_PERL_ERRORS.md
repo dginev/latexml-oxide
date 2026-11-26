@@ -22939,3 +22939,76 @@ own count, post-merge RED `package-bindings/xargs_argument_count_unparsed_red.te
 Repros
 `tools/perfect_kernel/repros/macro-state/newcommand_{negative_argument_count,argument_count_above_nine,nine_arguments}.tex`
 and `argument_count_out_of_range_every_declarator.tex`; guard rows in `error_boundary::perfect_kernel_error_boundary`.
+
+## 1337. Perl's `\subjclass` names the 1991 edition by default, and each call by the last year given
+
+ams_support.sty.ltxml:131-136 defaults `\@subjclassyear` to `1991`, `\xdef`s it to each call's year and names every
+call `\subjclassname`, read when the frontmatter is built. amsart.cls:555-563 (amsproc.cls:533, amsbook.cls:503
+alike) is `\newcommand*\subjclass[2][2020]`: a call without a year names the 2020 edition (:787-789), at each call.
+Minimal trigger:
+
+```latex
+\documentclass{amsart}
+\begin{document}
+\title{T}\author{A. Author}
+\subjclass[2000]{Primary 05C10}
+\subjclass{Primary 31B05}
+\maketitle
+\end{document}
+```
+
+pdflatex (TL 2025): "2020 Mathematics Subject Classification. Primary 31B05." Perl (same host): both classifications
+named "2000 Mathematics Subject Classification"; with the yearless call alone, "1991 Mathematics Subject
+Classification". Fixed in Rust under the AMS classes (`ams_support_sty.rs` `amsart_class_internals`: the default
+edition 2020; `\lx@ams@subjclass` reads the scheme and the name at the call); under other classes the binding keeps
+Perl's default. Repros `tools/perfect_kernel/repros/sectioning-frontmatter/amsart_subjclass_without_a_year_names_the_class_edition.tex`,
+`amsart_document_subjclass_copy_default_edition.tex`; guard
+`perfect_kernel_batchthmedpsres::thmedpsres_rows`.
+
+## 1338. Perl recurses without end on an `\item[…]` label that steps its own list's counter
+
+RefStepItemCounter (latex_constructs.pool.ltxml:1370-1397) digests an `\item[<label>]`'s tags with
+`\fnum@<counter>` defined as `\makelabel{<label>}`; a `\refstepcounter{\@listctr}` inside the label makes the tags of
+the same counter (Package.pm:756-781 `RefStepCounter`), which read `\fnum@<counter>` and so the label again. TeX
+typesets the label once. Minimal trigger:
+
+```latex
+\documentclass{article}
+\begin{document}
+\begin{enumerate}
+\item[\refstepcounter{enumi}X)] One.
+\end{enumerate}
+\end{document}
+```
+
+pdflatex: "X) One." Perl (same host): `Fatal:perl:deep_recursion`. Fixed in Rust: a step inside the digestion of its
+own type's tags makes no tags (`counter/dialect.rs` `making_tags`); witness 1704.06431 (a `\mylabel` macro in
+`\item[…]`, `Fatal:Stomach:Recursion` before). Repro
+`tools/perfect_kernel/repros/lists/item_label_refsteps_its_own_counter.tex`; guard
+`perfect_kernel_batchthmedpsres::thmedpsres_rows`.
+
+## 1339. Perl's thmtools leaves thm-listof's filters undefined, and `\listoftheorems[ignoreall]` lists the contents
+
+thmtools.sty loads thm-listof.sty, which defines `\showtheorems`, `\ignoretheorems`, `\onlynamedtheorems` and
+`\setlisttheoremstyle` (thm-listof.sty:78-87, :165-184). thmtools.sty.ltxml defines none of them and reads only the
+`ignoreall` and `show` keys of `\listoftheorems`; with `ignoreall` alone its `lists` is empty, and CrossRef.pm:221-225
+then lists the table of contents. Minimal trigger:
+
+```latex
+\documentclass{article}
+\usepackage{amsthm,thmtools}
+\newtheorem{theorem}{Theorem}
+\ignoretheorems{theorem}
+\begin{document}
+\listoftheorems[ignoreall]
+\section{Sec}
+\begin{theorem}T\end{theorem}
+\end{document}
+```
+
+pdflatex: an empty "List of Theorems". Perl (same host): `Error:undefined:\ignoretheorems`, and the list holds
+"1 Sec". Fixed in Rust (`thmtools_sty.rs`: thm-listof's commands and keys, `listed_theorems`); witness 2408.09583
+(`\listoftheorems[ignoreall, show={model}]`). `\onlynamedtheorems` is read but lists every theorem of the set, with a
+Warning: a theorem's `inlist` does not record its name (RED
+`tools/perfect_kernel/repros/package-bindings/thmtools_onlynamedtheorems_lists_named_only_red.tex`). Repro
+`package-bindings/thmtools_listoftheorems_filters.tex`; guard `perfect_kernel_batchthmedpsres::thmedpsres_rows`.

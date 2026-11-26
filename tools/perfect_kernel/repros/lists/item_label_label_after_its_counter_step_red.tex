@@ -1,0 +1,15 @@
+% A `\label` an `\item[…]` label makes right after stepping its list's counter takes that step's `\@currentlabel`,
+% the counter's number, not the item's label.
+% witness: synthetic (the sibling of lists/item_label_refsteps_its_own_counter.tex, 1704.06431)
+% oracle:  pdflatex 0 errors: "B) Other. See 1."
+% engines: rust THMEDPSRES = "See B)." (the item's own label: `\the<ctr>` is empty in its tags, Perl
+%          latex_constructs.pool.ltxml:1383); perl = Fatal:perl:deep_recursion
+% expect:  0 errors, 0 warnings; "See 1."
+% status:  RED (moves: ITEMTHEBLANK, the ruling on `\item[…]`'s empty `\the<ctr>`)
+\documentclass{article}
+\begin{document}
+\begin{enumerate}
+\item[\refstepcounter{enumi}\label{it:b}B)] Other.
+\end{enumerate}
+See \ref{it:b}.
+\end{document}

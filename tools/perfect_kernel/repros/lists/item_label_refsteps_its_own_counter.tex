@@ -1,0 +1,19 @@
+% An `\item[…]` label that steps its own list's counter (`\refstepcounter{\@listctr}`) to set `\@currentlabel`
+% for a `\label`: typeset once in TeX, it was formatted again in each tag its step made (`\lx@make@tags` reading the
+% item's `\fnum@enumi`, which steps again), without end.
+% witness: 1704.06431 (`\newcommand{\mylabel}[2]{\addtocounter{\@listctr}{-1}\refstepcounter{\@listctr}#2…\label{#1}}`,
+%          `\item[\mylabel{it:ma}{MA)}]`, under enumitem)
+% oracle:  pdflatex 0 errors: "MA) For some alpha. See MA)."
+% engines: rust INT081Z = Fatal:Stomach:Recursion; perl = Fatal:perl:deep_recursion (KNOWN_PERL_ERRORS)
+% expect:  0 errors, 0 warnings; the item tagged "MA)", labelled it:ma; "See MA)."
+% status:  RED (INT081Z) -> GREEN (THMEDPSRES)
+\documentclass{article}
+\makeatletter
+\newcommand{\mylabel}[2]{\addtocounter{\@listctr}{-1}\refstepcounter{\@listctr}#2\def\@currentlabel{#2}\label{#1}}
+\makeatother
+\begin{document}
+\begin{enumerate}
+\item[\mylabel{it:ma}{MA)}] For some alpha.
+\end{enumerate}
+See \ref{it:ma}.
+\end{document}

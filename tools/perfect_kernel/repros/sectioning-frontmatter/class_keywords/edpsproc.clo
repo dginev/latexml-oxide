@@ -1,0 +1,3 @@
+% Synthetic stand-in for edpsproc.clo: the proceedings option prints no keywords.
+\ProvidesFile{edpsproc.clo}[2024/01/01 synthetic]
+\AtEndOfClass{\def\@setkeywords{}}

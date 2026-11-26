@@ -314,17 +314,100 @@ continuing\fi\ from p.\,\pageref{#1}}");
   // Perl is clean). The clean thm-restate `\newenvironment` builds
   // `\csname #3\endcsname` (catcode-agnostic) and never typesets `#3`.
 
-  // \listtheoremname
-  DefMacro!("\\listtheoremname", "List of Theorems");
+  // thm-listof.sty, which this binding stands in for: what `\listoftheorems` lists. Each theorem declared after thmtools
+  // is recorded and listed (:123-156, from thm-patch's `\thmt@newtheorem@predefinition`, which `define_new_theorem`
+  // runs); the filters (:165-184), the list's keys (:78-100) and its group (:45-49) are the package's. The entry layout
+  // (`\ll@<env>`, `numwidth`, `swapnumber`) is the TOC's. Perl reads only `ignoreall` and `show` (thmtools.sty.ltxml),
+  // the commands undefined (KNOWN_PERL_ERRORS #1339; 2408.09583; 1811.07060 ships thm-listof.sty).
+  RawTeX!(r"\providecommand\listtheoremname{List of Theorems}
+\def\thmt@allenvs{\@gobble}
+\newcommand\thmt@recordenvname{\edef\thmt@allenvs{\thmt@allenvs,\thmt@envname}}
+\newcommand\thmt@mklistcmd{\expandafter\gdef\csname thmt@contentsline@\thmt@envname\endcsname{\thmt@contentslineShow}}
+\def\thmt@newtheorem@predefinition{\thmt@mklistcmd\thmt@recordenvname}
+\newcommand\listoftheorems[1][]{\begingroup\setlisttheoremstyle{#1}\lx@thmt@listoftheorems\endgroup}
+\newcommand\setlisttheoremstyle[1]{\kvsetkeys{thmt-listof}{#1}}
+\define@key{thmt-listof}{numwidth}{\def\thmt@listnumwidth{#1}}
+\define@key{thmt-listof}{ignore}[\thmt@allenvs]{\ignoretheorems{#1}}
+\define@key{thmt-listof}{onlynamed}[\thmt@allenvs]{\onlynamedtheorems{#1}}
+\define@key{thmt-listof}{show}[\thmt@allenvs]{\showtheorems{#1}}
+\define@key{thmt-listof}{ignoreall}[true]{\ignoretheorems{\thmt@allenvs}}
+\define@key{thmt-listof}{showall}[true]{\showtheorems{\thmt@allenvs}}
+\define@key{thmt-listof}{title}{\def\listtheoremname{#1}}
+\newif\ifthmt@listswap
+\def\thmt@TRUE{true}
+\def\thmt@FALSE{false}
+\define@key{thmt-listof}{swapnumber}[true]{\def\thmt@tmp{#1}%
+  \ifx\thmt@tmp\thmt@TRUE\thmt@listswaptrue\else\ifx\thmt@tmp\thmt@FALSE\thmt@listswapfalse
+  \else\PackageError{thmtools}{Unknown value `#1' to key swapnumber}{}\fi\fi}
+\providecommand*\thmt@listnumwidth{2.3em}
+\providecommand\thmtformatoptarg[1]{ (#1)}
+\newcommand\showtheorems[1]{\@for\thmt@thm:=#1\do{\typeout{showing \thmt@thm}%
+  \expandafter\let\csname thmt@contentsline@\thmt@thm\endcsname=\thmt@contentslineShow}}
+\newcommand\ignoretheorems[1]{\@for\thmt@thm:=#1\do{%
+  \expandafter\let\csname thmt@contentsline@\thmt@thm\endcsname=\thmt@contentslineIgnore}}
+\newcommand\onlynamedtheorems[1]{\@for\thmt@thm:=#1\do{%
+  \global\expandafter\let\csname thmt@contentsline@\thmt@thm\endcsname=\thmt@contentslineIfNamed}}
+\let\thmt@hygobble\@empty
+\def\thmt@contentslineIgnore#1#2#3{\thmt@hygobble}
+\def\thmt@contentslineShow{\thmt@contentsline}
+\def\thmt@contentslineIfNamed#1#2#3{\thmt@ifhasoptname #2\thmtformatoptarg\@nil{\thmt@contentslineShow{#1}{#2}{#3}}%
+  {\thmt@contentslineIgnore{#1}{#2}{#3}}}
+\def\thmt@ifhasoptname #1\thmtformatoptarg#2\@nil{\ifx\@nil#2\@nil\expandafter\@secondoftwo\else
+  \expandafter\@firstoftwo\fi}");
 
-  // \listoftheorems
-  // Perl: DefConstructor('\listoftheorems OptionalKeyVals', ...)
-  // Simplified: the Perl version reads ignoreall/show keyvals for filtering
-  DefConstructor!("\\listoftheorems[]",
+  // Perl: DefConstructor('\listoftheorems OptionalKeyVals', ...), after the keys ran in the list's group: every theorem
+  // ("thm") while none is filtered out, else the listed environments' lists.
+  DefConstructor!("\\lx@thmt@listoftheorems",
     "<ltx:TOC lists='#lists' scope='global'><ltx:title>#name</ltx:title></ltx:TOC>",
     properties => sub[_args] {
       let title = Stored::from(digest_in_group(T_CS!("\\listtheoremname"))?);
-      let lists = String::from("thm");
-      Ok(stored_map!("name" => title, "lists" => lists))
+      Ok(stored_map!("name" => title, "lists" => listed_theorems()?))
     });
 });
+
+/// The `lists` of `\listoftheorems`: the recorded environments (`\thmt@allenvs`) whose `\thmt@contentsline@<env>` is
+/// not thm-listof's `\thmt@contentslineIgnore`, or `thm` when that is all of them. One under `\onlynamedtheorems`
+/// (`\thmt@contentslineIfNamed`) is listed whole, with a Warning: a theorem's `inlist` does not record its name.
+fn listed_theorems() -> Result<String> {
+  let envs = match lookup_definition(&T_CS!("\\thmt@allenvs"))? {
+    Some(defn) => match defn.get_expansion() {
+      Some(ExpansionBody::Tokens(body)) => body.to_string(),
+      _ => String::new(),
+    },
+    None => String::new(),
+  };
+  let (ignore, if_named) = (
+    T_CS!("\\thmt@contentslineIgnore"),
+    T_CS!("\\thmt@contentslineIfNamed"),
+  );
+  let mut listed = Vec::new();
+  let mut filtered = false;
+  for env in envs
+    .split(',')
+    .filter(|env| !env.is_empty() && *env != "\\@gobble")
+  {
+    let filter = T_CS!(s!("\\thmt@contentsline@{env}"));
+    if x_equals(&filter, &ignore) {
+      filtered = true;
+      continue;
+    }
+    if x_equals(&filter, &if_named) {
+      Warn!(
+        "unsupported",
+        "\\onlynamedtheorems",
+        s!(
+          "The list of theorems lists every {env}, named or not: a theorem's name is not recorded for its list"
+        )
+      );
+    }
+    listed.push(theorem_list_name(env));
+  }
+  // (none listed: a list name no theorem carries, as an empty one would read as the table of contents)
+  Ok(if !filtered {
+    String::from("thm")
+  } else if listed.is_empty() {
+    String::from("theorem:")
+  } else {
+    listed.join(" ")
+  })
+}

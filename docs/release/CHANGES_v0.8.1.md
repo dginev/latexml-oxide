@@ -9,6 +9,17 @@ top of its group.
 
 ### Unreleased
 
+  - **thmtools' list filters, edpsmath's keywords, amsart's default MSC edition, and an `\item[…]` label that steps
+    its own counter.** Under thmtools, thm-listof's `\showtheorems`, `\ignoretheorems`, `\onlynamedtheorems` and
+    `\setlisttheoremstyle` are defined and `\listoftheorems[…]` reads its keys (`ignoreall`, `show`, `ignore`,
+    `showall`, `onlynamed`, `title`), so a list holds only the theorems it names (2408.09583's "List of Models" listed
+    every theorem); `\onlynamedtheorems` lists the whole set, with a Warning. edpsmath's `\keywords` (EDP Sciences,
+    shipped with the paper) is the frontmatter's keywords, named "Keywords and phrases.": they were a footnote of the
+    body (1901.04804) or, under `[proc]`, which prints none, lost silently (1110.0287; FIDELITY_CHARTER §2). Under the
+    AMS classes a `\subjclass` without a year names the 2020 edition, as amsart.cls does, at each call (was 1991, or
+    the year an earlier call gave; KNOWN_PERL_ERRORS #1337). `\item[\refstepcounter{\@listctr}…]`, which made its
+    tags from itself without end, converts (1704.06431: `Fatal:Stomach:Recursion`, now 0 errors; KNOWN_PERL_ERRORS
+    #1338). Guard: `perfect_kernel_batchthmedpsres::thmedpsres_rows`.
   - **Rhai bindings: a register getter's or a `fontTest`'s `Fatal()` stops the conversion, a rewrite's keeps the
     document, and ligature code may assign values.** A getter's Fatal was logged but dropped (the register read unset
     and the whole document was built), and so was a `fontTest`'s Fatal raised while a `\footnote` closed the text before

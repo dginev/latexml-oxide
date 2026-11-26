@@ -1,0 +1,17 @@
+% witness: synthetic (thm-listof.sty:179-184, :202-217: `\onlynamedtheorems{<envs>}` lists only the theorems given a
+%          name in their optional argument; no census paper calls it: 1811.07060 ships thm-listof.sty, unused)
+% oracle:  pdflatex 0 errors: the list holds "1 Theorem (Named)" only
+% engines: rust THMEDPSRES = `<TOC lists="thm">`, every theorem listed, one Warning counting it;
+%          perl = `\onlynamedtheorems` undefined
+% expect:  0 errors; the list holds the named theorem only
+% status:  RED (a theorem's `inlist` does not record its name; moves: post-merge)
+\documentclass{article}
+\usepackage{amsthm}
+\usepackage{thmtools}
+\newtheorem{theorem}{Theorem}
+\onlynamedtheorems{theorem}
+\begin{document}
+\listoftheorems
+\begin{theorem}[Named]A\end{theorem}
+\begin{theorem}B\end{theorem}
+\end{document}

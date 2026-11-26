@@ -1,0 +1,17 @@
+% amsart's `\subjclass[2][2020]` (amsart.cls:555; amsproc.cls:533, amsbook.cls:503 alike): a `\subjclass` without a
+% year names the 2020 edition, each call (the default is no earlier call's year).
+% witness: synthetic; Perl ams_support.sty.ltxml:131 `\@subjclassyear` 1991, kept by `\xdef` for the next call
+% oracle:  pdflatex 0 errors: "2020 Mathematics Subject Classification. Primary 31B05." (the last call's store)
+% engines: rust INT081Z = <classification scheme="1991 Mathematics Subject Classification">; perl the same
+% expect:  0 errors, 0 warnings; <classification scheme="2020 Mathematics Subject Classification"
+%          name="2020 Mathematics Subject Classification: ">Primary 31B05</classification>, after the `[2000]` one
+% status:  RED (INT081Z) -> GREEN (THMEDPSRES)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\begin{document}
+\title{T}\author{A. Author}
+\subjclass[2000]{Primary 05C10}
+\subjclass{Primary 31B05}
+\maketitle
+Body.
+\end{document}

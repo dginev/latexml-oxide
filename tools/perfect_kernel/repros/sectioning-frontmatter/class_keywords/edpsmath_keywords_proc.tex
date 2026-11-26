@@ -1,0 +1,16 @@
+% Under edpsmath's `[proc]` option the class prints no keywords (edpsproc.clo:8 `\def\@setkeywords{}`), but they are
+% the author's text: kept as the frontmatter's keywords (FIDELITY_CHARTER §2, "Authored text is kept, even where the
+% class or the PDF discards it").
+% witness: 1110.0287 (`\documentclass[proc]{edpsmath}`, `\keywords{lattice Boltzmann schemes, …}`: lost)
+% oracle:  pdflatex (edpsmath.cls, edpsproc.clo beside it) 0 errors: no keywords printed
+% engines: rust INT081Z = the keywords lost, silently
+% expect:  0 errors, 0 warnings; <keywords name="Keywords and phrases. "> "alpha, beta"
+% status:  RED (INT081Z) -> GREEN (THMEDPSRES: edpsmath_cls.rs)
+% preload: ar5iv.sty
+\documentclass[proc]{edpsmath}
+\begin{document}
+\title{T}\author{A. Author}
+\keywords{alpha, beta}
+\maketitle
+Body.
+\end{document}

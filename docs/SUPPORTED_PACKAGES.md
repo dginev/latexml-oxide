@@ -31,7 +31,7 @@ still loaded. A class with no binding is read raw under `INCLUDE_CLASSES` (the s
 `localrawclasses`; off under `norawclasses`), else it falls back to OmniBus. A compiled binding is never displaced by
 raw mode.
 
-## Classes (228)
+## Classes (229)
 
 | Name | Kind | Support | Note |
 |---|---|---|---|
@@ -99,6 +99,7 @@ raw mode.
 | `Definitions/mdpi` | `.cls` | contributed | *alias of* `mdpi.cls`; Stub for MDPI journal class (Definitions/mdpi.cls, bundled by users). |
 | `dmtcs-episciences` | `.cls` | contributed | Stub for dmtcs-episciences.cls (Discrete Mathematics & Theoretical Computer Science journal class, Episciences platform). |
 | `ecai` | `.cls` | contributed |  |
+| `edpsmath` | `.cls` | contributed, raw + overrides |  |
 | `egpubl` | `.cls` | contributed | Stub for egpubl.cls (Eurographics conference proceedings). |
 | `ejpecp` | `.cls` | contributed | Stub for ejpecp.cls (Electronic Journal of Probability / Communications in Probability). |
 | `elife` | `.cls` | contributed | Stub for elife.cls (eLife journal class). |

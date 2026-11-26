@@ -140,6 +140,7 @@ pub mod usenix_sty;
 // ed_sty: consolidated into latexml_package (Perl Package/ed.sty.ltxml)
 pub mod bfhlayout_sty;
 pub mod brief_cls;
+pub mod edpsmath_cls;
 pub mod egpubl_cls;
 pub mod ejpecp_cls;
 pub mod elife_cls;
@@ -787,6 +788,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("tac", "cls", tac_cls::load_definitions),
   ("uiucthesis", "cls", uiucthesis_cls::load_definitions),
   ("ecai", "cls", ecai_cls::load_definitions),
+  ("edpsmath", "cls", edpsmath_cls::load_definitions),
   ("egpubl", "cls", egpubl_cls::load_definitions),
   ("ejpecp", "cls", ejpecp_cls::load_definitions),
   ("elife", "cls", elife_cls::load_definitions),

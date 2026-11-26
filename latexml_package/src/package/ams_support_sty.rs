@@ -304,9 +304,14 @@ LoadDefinitions!({
   // rule). Driver paper: arXiv:1902.09816
   // (`\subjclass{{\sc AMS Subject Classification:} 06B05}`).
   DefMacro!("\\subjclass", sub[_args] { post_title_topmatter("\\lx@ams@subjclass") });
-  DefMacro!("\\lx@ams@subjclass[Default:\\@subjclassyear]{}",
+  // The edition a `\subjclass` without one names: Perl's, the last given, unless the class has its own
+  // (`amsart_class_internals`). The scheme and the name are read at the call, as amsart prints each call's
+  // `\subjclassname` (amsart.cls:555-563), not the edition a later call gave.
+  DefMacro!("\\lx@ams@subjclass@edition", None, "\\@subjclassyear");
+  DefMacro!("\\lx@ams@subjclass[Default:\\lx@ams@subjclass@edition]{}",
     "\\ifx.#1.\\else\\xdef\\@subjclassyear{#1}\\fi\\global\\let\\lx@ams@subjclass@given\\@empty\
-     \\lx@add@classification[scheme={#1 Mathematics Subject Classification},name={\\subjclassname:~}]{#2}",
+     \\protected@edef\\lx@ams@subjclass@add{\\noexpand\\lx@add@classification[scheme={\\ifx.#1.\\else\\@subjclassyear\\fi\
+     \\space Mathematics Subject Classification},name={\\subjclassname:\\noexpand~}]}\\lx@ams@subjclass@add{#2}",
     short => true);
 
   // amsart.cls:723-725 `\@setcopyright` prints the copyright only with a year (`\ifx\@empty\copyrightyear\else`; and
@@ -603,6 +608,8 @@ pub fn ams_class_caption_format() -> Result<()> {
 /// - :75-96 `\except`, `\for`, `\forany` over the `\newswitch` switches, with the switches the class declares,
 ///   `runhead` (:305) and `toc`/`lof`/`lot` (:1143-1145): `\section{\for{toc}{<short>}\except{toc}{<long>}}` keeps the
 ///   long title in the body (run-347 inventory 89 + 73 papers; 1304.2934, 1601.05128, 1912.08145).
+/// - :555, :789 the edition a `\subjclass` without one names, 2020 at each call (`\subjclass[2][2020]`), where Perl's
+///   binding names 1991, or the last given (ams_support.sty.ltxml:131-136; KNOWN_PERL_ERRORS #1337).
 /// - :554, :564 `\@keywords` and `\@subjclass`, empty: `\keywords` and `\subjclass` give the frontmatter, so a
 ///   document's own print of them (2510.22858 `\ifx\@keywords\@empty\else…`) prints nothing twice, as `\@dedicatory`;
 ///   :114 `\@dateposted` and :710-711 `\@PII` alike (memo-l.cls:116-171's abstract-page notes read them: 2412.15928).
@@ -687,6 +694,8 @@ pub fn amsart_class_internals() -> Result<()> {
 \newswitch{lot}
 \let\@keywords=\@empty
 \let\@subjclass=\@empty
+\def\@subjclassyear{2020}
+\def\lx@ams@subjclass@edition{2020}
 \let\lx@ams@keywords@given\relax
 \let\lx@ams@subjclass@given\relax
 \def\lx@ams@stored@topmatter{%

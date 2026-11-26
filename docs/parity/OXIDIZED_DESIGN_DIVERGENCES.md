@@ -16508,15 +16508,16 @@ class's `\keywords` store (`\iflx@ams@keywords@rerouted`: a class wrapping acmar
 the AMS binding, also one whose title page never prints `\@subjclass`: CSML.cls's `\@maketitle` (:292-299) prints only
 `\@ACMCCS`, `\@amsclass` and `\@keywords`, so its papers' unprinted `\subjclass` codes (1504.03919, 1510.01752,
 1602.00476, 1608.04592) are a classification, kept by FIDELITY_CHARTER §2 (authored text is kept, even where the class
-discards it). Residual (RED, no guard): a document's `\subjclass` copy that stores `\@subjclass` but sets no
-`\subjclassname` takes the binding's default edition, 1991 (Perl's `\@subjclassyear`), where amsart.cls prints 2020
-(:789); no corpus paper (`sectioning-frontmatter/amsart_document_subjclass_copy_default_edition`). Residuals of
+discards it). A document's `\subjclass` copy that stores `\@subjclass` but sets no `\subjclassname` takes the class's
+default edition, 2020 (amsart.cls:789; Perl's 1991, KNOWN_PERL_ERRORS #1337; no corpus paper,
+`sectioning-frontmatter/amsart_document_subjclass_copy_default_edition`, guard
+`perfect_kernel_batchthmedpsres::thmedpsres_rows`). Residuals of
 the 86a r2 re-review: an imsart block on a supplement's own title page, the frontmatter sealed, is kept in place as
 bare text run into the next paragraph, its heading lost (RED `sectioning-frontmatter/imsart_supplement_keyword_block_keeps_its_heading`;
 85a lost the words; OmniBus's sealed `{keyword}` after a `\section*` is still dropped; no corpus paper); arxbj's
 `class=MSC` block, which prints no heading, shows the class key "MSC" as its `<h6>`; and, pre-existing, other bindings'
 classifications show a scheme the paper does not print — the AMS binding's default edition beside a class's own
-heading (`scheme="1991 Mathematics Subject Classification"`, `name="Mathematical subject classification (2010)"`:
+heading (`scheme="2020 Mathematics Subject Classification"`, 1991 before KNOWN_PERL_ERRORS #1337, `name="Mathematical subject classification (2010)"`:
 1310.5294, cedram-alco; m2an's 0811.1789, 1512.06935, 2407.04312, 2411.09498), and a bare "AMS"/"keywords" in
 tac_cls.rs:30 (2312.12356), sigma_cls.rs:98 (0705.3628), ejpecp_cls.rs:45-55 (2312.17406, its "Primary"/"Secondary"
 lost too) and siamart_cls.rs:93-171 (1707.06953) — a later batch, each binding's printed heading. Repros

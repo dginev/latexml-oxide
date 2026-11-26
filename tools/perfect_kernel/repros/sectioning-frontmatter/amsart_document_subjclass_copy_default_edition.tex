@@ -1,13 +1,14 @@
 % mechanism: a document's own `\subjclass` that stores `\@subjclass` but leaves `\subjclassname` alone is handed over at
 %   the `\maketitle` (`\lx@ams@stored@topmatter`, ams_support_sty.rs) under the binding's `\subjclassname`, whose
-%   edition is the binding's default `\@subjclassyear` (1991, Perl's), where amsart.cls defaults to 2020 (:789
-%   `\@xp\let\@xp\subjclassname\csname subjclassname@2020\endcsname`).
+%   edition is the class's default `\@subjclassyear`, 2020 (amsart.cls:789
+%   `\@xp\let\@xp\subjclassname\csname subjclassname@2020\endcsname`; Perl's 1991, KNOWN_PERL_ERRORS #1337).
 % witness: 86a review round 1 (probe p1); no corpus paper: the copies in 2004.06211, 1009.1929 and 2412.04516 set the name
 % oracle:  pdflatex 0 errors: "2020 Mathematics Subject Classification. Primary 31B05."
 % engines: rust 86a = 0 errors, <classification name="1991 Mathematics Subject Classification: "> (the edition wrong,
 %          the codes kept); rust 85a loses the classification, as Perl's binding does (OD #902)
 % expect:  0 errors, 0 warnings; <classification scheme="2020 Mathematics Subject Classification"> with "Primary 31B05"
-% status:  RED (OXIDIZED_DESIGN_DIVERGENCES #902 residual; no guard)
+% status:  RED (OXIDIZED_DESIGN_DIVERGENCES #902 residual) -> GREEN (THMEDPSRES; guard
+%          `perfect_kernel_batchthmedpsres::thmedpsres_rows`)
 % preload: ar5iv.sty
 \documentclass{amsart}
 \makeatletter

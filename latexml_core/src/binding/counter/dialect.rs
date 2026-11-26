@@ -1096,10 +1096,15 @@ pub fn label_stepped_counter(ctype: &str, ctr: &str) -> Result<HashMap<Stored>> 
 
   let digest_label = || -> Result<(crate::Digested, crate::Digested)> {
     let refnum = digest_text(Tokens!(T_CS!(&the_ctr)))?;
-    let invocation = build_invocation(T_CS!("\\lx@make@tags"), vec![Some(Tokens!(T_OTHER!(
-      ctype
-    )))])?;
-    Ok((refnum, stomach::digest(invocation)?))
+    // (a step inside the text of its own type's tags makes none: [`making_tags`])
+    let invocation = if tags_in_progress(ctype) {
+      Tokens!()
+    } else {
+      build_invocation(T_CS!("\\lx@make@tags"), vec![Some(Tokens!(T_OTHER!(
+        ctype
+      )))])?
+    };
+    Ok((refnum, making_tags(ctype, || stomach::digest(invocation))?))
   };
   // TeX keeps the label unexpanded (`\@currentlabel`, latex.ltx:14963-14967) and typesets it only where `\ref`
   // prints it; Perl digests it as text here (Package.pm:770 `DigestText`). A step made in math whose label text
@@ -1628,6 +1633,32 @@ pub fn label_calls_fnum(counter: &str, label: &[Token]) -> bool {
   label.contains(&fnum)
 }
 
+/// The counter types whose tags are being digested now, innermost last ([`making_tags`]).
+const TAGS_IN_PROGRESS: &str = "lx_tags_in_progress";
+
+/// Whether the tags of counter type `ctype` are being digested ([`making_tags`]).
+fn tags_in_progress(ctype: &str) -> bool {
+  lookup_string(TAGS_IN_PROGRESS)
+    .split(',')
+    .any(|t| t == ctype)
+}
+
+/// Digest the tags of `ctype` with `digest`. A step of the same type inside them, which TeX typesets once and LaTeXML
+/// formats again in each tag it makes, makes no tags of its own: an `\item[\refstepcounter{\@listctr}…]` label read
+/// itself in `\fnum@enumi` without end (witness 1704.06431; Perl's deep recursion, KNOWN_PERL_ERRORS #1338).
+fn making_tags<T>(ctype: &str, digest: impl FnOnce() -> Result<T>) -> Result<T> {
+  let before = lookup_string(TAGS_IN_PROGRESS);
+  let now = if before.is_empty() {
+    ctype.to_string()
+  } else {
+    s!("{before},{ctype}")
+  };
+  assign_value(TAGS_IN_PROGRESS, now, Some(Scope::Global));
+  let digested = digest();
+  assign_value(TAGS_IN_PROGRESS, before, Some(Scope::Global));
+  digested
+}
+
 /// Create id, and tags for an itemize type \item
 pub fn ref_step_item_counter(tag_opt: Option<&Tokens>) -> Result<HashMap<Stored>> {
   let counter = lookup_string("itemcounter");
@@ -1729,13 +1760,13 @@ pub fn ref_step_item_counter(tag_opt: Option<&Tokens>) -> Result<HashMap<Stored>
     tag_tokens.push(T_END!());
     tag_tokens.extend(
       build_invocation(T_CS!("\\lx@make@tags"), vec![Some(Tokens!(T_OTHER!(
-        counter
+        &counter
       )))])?
       .unlist(),
     );
     tag_tokens.push(T_END!());
 
-    let tags = stomach::digest(tag_tokens)?;
+    let tags = making_tags(&counter, || stomach::digest(tag_tokens))?;
     if !tags.is_empty()? {
       props.insert("tags", tags.into());
     }

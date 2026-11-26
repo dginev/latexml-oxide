@@ -1,0 +1,16 @@
+% edpsmath's `\keywords` sets a box its `\@maketitle` prints in a footnote (`\@setkeywords`): the frontmatter's
+% keywords, named by the class's label, and no footnote of them in the body.
+% witness: 1901.04804 (`\documentclass[mmnp]{edpsmath}`: the keywords a footnote of the body); edpsmath.cls:212-215
+%          (synthetic copy beside it)
+% oracle:  pdflatex (edpsmath.cls beside it) 0 errors: footnote "Keywords and phrases. alpha, beta"
+% engines: rust INT081Z = the keywords a `<note role="footnote">` in the body, no `<keywords>`
+% expect:  0 errors, 0 warnings; <keywords name="Keywords and phrases. "> "alpha, beta"; no footnote
+% status:  RED (INT081Z) -> GREEN (THMEDPSRES: edpsmath_cls.rs)
+% preload: ar5iv.sty
+\documentclass{edpsmath}
+\begin{document}
+\title{T}\author{A. Author}
+\keywords{alpha, beta}
+\maketitle
+Body.
+\end{document}

@@ -1,0 +1,22 @@
+% An `\item[…]` label in a nested list that steps its counter and sets `\@currentlabel` itself (1704.06431's
+% `\mylabel`): TeX's `\label` reads the author's `\@currentlabel`.
+% witness: synthetic (the nested sibling of lists/item_label_refsteps_its_own_counter.tex)
+% oracle:  pdflatex 0 errors: "1. First. (x) Inner. See (x)."
+% engines: rust THMEDPSRES = "See 1." (the enclosing item's label, batch 77u); rust INT081Z = Fatal:Stomach:Recursion
+% expect:  0 errors, 0 warnings; "See (x)."
+% status:  RED (moves: SYNC_STATUS 77u residual, reading an author-set `\@currentlabel`, deferred by the ruling of
+%          2026-10-20)
+\documentclass{article}
+\usepackage{enumitem}
+\makeatletter
+\newcommand{\mylabel}[2]{\addtocounter{\@listctr}{-1}\refstepcounter{\@listctr}#2\def\@currentlabel{#2}\label{#1}}
+\makeatother
+\begin{document}
+\begin{enumerate}
+\item First.
+\begin{enumerate}
+\item[\mylabel{it:in}{(x)}] Inner.
+\end{enumerate}
+\end{enumerate}
+See \ref{it:in}.
+\end{document}

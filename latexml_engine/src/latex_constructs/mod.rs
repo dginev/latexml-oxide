@@ -4186,6 +4186,16 @@ pub fn clear_theorem_within_display() {
 /// Read where a theorem is declared ([`define_new_theorem`]). Global.
 pub const THEOREM_UNNUMBERED_STEPS: &str = "lx@theorem@unnumbered@steps";
 
+/// The list a theorem set's theorems are in (`inlist`), which `\\listoftheorems` names: `theorem:<set>`, spaces
+/// dropped and `'`, `?`, `#` spelled out (Perl latex_constructs.pool.ltxml:2893).
+pub fn theorem_list_name(thmset: &str) -> String {
+  let mut ln = s!("theorem:{thmset}");
+  ln.retain(|c| !c.is_whitespace());
+  ln.replace('\'', "prime")
+    .replace('?', "question")
+    .replace('#', "hash")
+}
+
 pub fn define_new_theorem(
   flag: Option<Tokens>,
   thmset: Tokens,
@@ -4201,14 +4211,15 @@ pub fn define_new_theorem(
 ) -> Result<()> {
   let thmset_str = thmset.to_string();
   let classname = clean_class_name(&thmset_str);
-  let listname = {
-    let mut ln = s!("theorem:{thmset_str}");
-    ln.retain(|c| !c.is_whitespace());
-    ln = ln.replace('\'', "prime");
-    ln = ln.replace('?', "question");
-    ln = ln.replace('#', "hash");
-    ln
-  };
+  let listname = theorem_list_name(&thmset_str);
+  // thm-patch.sty:71-82: thmtools runs `\thmt@newtheorem@predefinition` before each theorem it declares, with
+  // `\thmt@envname` its name (thm-listof records the theorem for `\listoftheorems` there; thmtools_sty.rs).
+  if is_defined("\\thmt@newtheorem@predefinition") {
+    let mut hook = vec![T_CS!("\\def"), T_CS!("\\thmt@envname"), T_BEGIN!()];
+    hook.extend(thmset.clone().unlist());
+    hook.extend([T_END!(), T_CS!("\\thmt@newtheorem@predefinition")]);
+    digest(Tokens::new(hook))?;
+  }
   // The shared counter is a name read through `\csname`, so a macro naming it expands to that name: latex.ltx
   // :17190-17195 `\@othm` tests `\@ifundefined{c@#2}` and defines `\the#1` as `\@nameuse{the#2}`. smfthm.sty:52-56
   // `\gdef\smf@thm{smfthm}` `\newtheorem{theo}[\smf@thm]{\theoname}` (witnesses 1711.11547, 1902.02049, 2108.12000)

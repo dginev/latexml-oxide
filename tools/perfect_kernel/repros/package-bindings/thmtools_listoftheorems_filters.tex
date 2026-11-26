@@ -1,0 +1,28 @@
+% witness: 2408.09583 (`\listoftheorems[ignoreall, show={model}]` and `[ignoreall, show={theorem,…,procedure,}]`:
+%          the list of models listed every theorem); thm-listof.sty:78-87, :165-184 (`\setlisttheoremstyle`,
+%          `\showtheorems`, `\ignoretheorems`); `\usepackage{thmtools}\ignoretheorems{x}` (1811.07060 ships the file)
+% oracle:  pdflatex 0 errors: "List of Models" lists "1 Model"; "Main results" lists "1 Theorem" and "1 Lemma",
+%          not "1 Remark" (`\ignoretheorems{remark}`) nor the models
+% engines: rust INT081Z = `\ignoretheorems`, `\showtheorems`, `\setlisttheoremstyle` undefined (3 errors) and both
+%          lists `lists="thm"`; perl = the same commands undefined, the keys `ignoreall`, `show` read
+% expect:  0 errors, 0 warnings; `<TOC lists="theorem:model">` titled "List of Models" and
+%          `<TOC lists="theorem:theorem theorem:lemma">` titled "Main results"
+% status:  RED (INT081Z) -> GREEN (THMEDPSRES: thmtools_sty.rs ports thm-listof's filters)
+\documentclass{article}
+\usepackage{amsthm}
+\usepackage{thmtools}
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\declaretheorem{remark}
+\newtheorem{model}{Model}
+\ignoretheorems{remark}
+\setlisttheoremstyle{numwidth=3em}
+\begin{document}
+\listoftheorems[ignoreall, show={model}, title={List of Models}]
+\showtheorems{lemma}
+\listoftheorems[ignore={model}, title={Main results}]
+\begin{theorem}T\end{theorem}
+\begin{lemma}L\end{lemma}
+\begin{remark}R\end{remark}
+\begin{model}M\end{model}
+\end{document}
