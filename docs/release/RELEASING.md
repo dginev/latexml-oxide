@@ -87,7 +87,10 @@ prerelease: ${{ contains(github.ref_name, '-') }}
   (revision <sha>)`), and `containers` (pinned to the same nightly and
   `Cargo.lock`) still run. **Discipline:** any code or
   dependency change after an RC means cutting a new `-rc(N+1)` rather than
-  shipping untested changes straight to a final tag. Any non-version diff or reuse error
+  shipping untested changes straight to a final tag. Finish documentation work that lives
+  outside `CHANGELOG.md`, `README.md` and `docs/**` (crate `//!`/`///` docs, code comments,
+  `CLAUDE.md`, the doc copies inside crates) before cutting the last RC: after it, such an edit
+  turns the final into a full rebuild (0.8.0 was one for this reason). Any non-version diff or reuse error
   falls back automatically to fresh build inputs and the full pipeline.
 * **Dry-run `prepare` before pushing a tag.** The job lives in
   `.github/workflows/release-prepare.yml`, which `release.yml` calls and which also
