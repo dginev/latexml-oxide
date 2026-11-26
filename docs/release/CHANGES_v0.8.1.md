@@ -22,7 +22,10 @@ top of its group.
     a footnote's or a `p` cell's paragraphs in a list are unspaced. An A/B of 212 papers that use lists with `\linewidth` or `{adjustwidth}`
     moved 22, with equal errors, warnings and words: 19 in widths, heights, `panelwidth`/`panelline` and SVG geometry
     only; 1703.00699's figure is one row, as in the PDF; 2306.09542 sets one more line mark in a narrower list item;
-    1508.03599's proof heads lose a leading space. Guard `perfect_kernel_batchqa14k2::list_registers_set_the_line_width`
+    1508.03599's proof heads lose a leading space. With 39 enumitem `wide` users and the witnesses, 252 papers moved 51,
+    errors and words equal: the 22 above as they were, 2605.07451 unchanged, 27 `wide` users' lists
+    `--ltx-enum-leftmargin:0pt` (2503.04577's description heads also without a leading en space), 2404.15303's
+    table heights, 1907.01194's blank `\item[~]` labels dropped as an `\item[]`'s. Guard `perfect_kernel_batchqa14k2::list_registers_set_the_line_width`
     (OXIDIZED_DESIGN_DIVERGENCES #29).
   - **Rhai bindings: a register getter's or a `fontTest`'s `Fatal()` stops the conversion, a rewrite's keeps the
     document, and ligature code may assign values.** A getter's Fatal was logged but dropped (the register read unset
