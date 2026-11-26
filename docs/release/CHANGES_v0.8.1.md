@@ -19,6 +19,18 @@ top of its group.
     they fire (OXIDIZED_DESIGN_DIVERGENCES #251). Guards:
     `fatal_salvages_partial_document::a_digestion_fatal_keeps_the_text_before_it`,
     `30_script_bindings::a_rhai_fatal_is_logged_once`.
+  - **arydshln's dashed rules are drawn dashed.** A translation of upstream LaTeXML PR 2889 by Christopher Smolen:
+    `\hdashline`, `\firsthdashline`, `\lasthdashline`, `\cdashline{a-b}` and the `:` and `;{dash/gap}` column rules
+    are borders of the cells they rule, as `\hline`, `\cline` and `|` are, and each dashed side also gets the class
+    `ltx_border_<side>_dashed`, which LaTeXML.css draws dashed (a side with a solid rule too stays solid). A `c`
+    column before `:` is centred (was right-aligned, its cell a header guess), a leading `:` is the first column's
+    left border with no gap left as text, a math array's `tex=` is its source (it held `\lx@add@cssclass`), and
+    colortbl's `\arrayrulecolor` colours the dashed rules and is no longer undone when arydshln loads after colortbl
+    (1909.02323's grey rules); `\dashgapcolor` and `\nodashgapcolor` exist, as in the package, only under colortbl;
+    `\xleaders` stays TeX's after arydshln, and the binding is no longer reported as a stub
+    (OXIDIZED_DESIGN_DIVERGENCES #1025, KNOWN_PERL_ERRORS #291). Guards
+    `perfect_kernel_batcharydshln::{arydshln_dashed_borders_reach_the_html, arydshln_colortbl_rows}`, the
+    `contrib/arydshln` golden.
   - **The MSC edition of an AMS class's or amsppt's `\subjclass` follows its codes.** The call's year, or the
     author's own `\subjclassname` (or amsppt `\subjclassyear`) that the class discards, stands when every code is in
     that edition; codes that fit one edition name it; a printed year the codes refute gives the edition current at the

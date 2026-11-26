@@ -1767,6 +1767,30 @@ mod witnessed_css_delta {
   }
 
   #[test]
+  fn dashed_border_delta_follows_the_border_rules() {
+    // arydshln's dashed rules (`ltx_border_<side>_dashed`, OD #1025) set only the style, after every border shorthand
+    // (`.ltx_border_tt` and the light `.ltx_border_T` reset it), so the width and a `cssstyle` rule colour stay.
+    let css = bundled_latexml_css();
+    let last_shorthand = css
+      .find(".ltx_border_L  {")
+      .expect("the light left border rule");
+    for rule in [
+      ".ltx_border_t_dashed { border-top-style:dashed; }",
+      ".ltx_border_r_dashed { border-right-style:dashed; }",
+      ".ltx_border_b_dashed { border-bottom-style:dashed; }",
+      ".ltx_border_l_dashed { border-left-style:dashed; }",
+    ] {
+      let at = css
+        .find(rule)
+        .unwrap_or_else(|| panic!("LaTeXML.css lost the dashed border rule `{rule}`"));
+      assert!(
+        at > last_shorthand,
+        "`{rule}` must follow the border shorthands"
+      );
+    }
+  }
+
+  #[test]
   fn author_line_delta_stays_present() {
     // Issue #783 (OXIDIZED_DESIGN_DIVERGENCES #1051): an author whose contacts are all lines of the author block
     // (`ltx_author_line`) or notes shows the lines under the name, not behind the starred pop-up; a note keeps the star

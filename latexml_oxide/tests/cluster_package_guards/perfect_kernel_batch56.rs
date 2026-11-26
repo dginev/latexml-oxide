@@ -11663,8 +11663,8 @@ fn fontawesome_icons_read_their_optional() {
 }
 
 /// 57i (K13 stage-2 finding): arydshln's `\ADLdrawingmode` reads its mode number
-/// (`\def\ADLdrawingmode#1`, arydshln.sty:677); the digit was printed. The binding announces its
-/// stub (one warning).
+/// (`\def\ADLdrawingmode#1`, arydshln.sty:677); the digit was printed. The binding is no stub
+/// since ARYDSHLN (no `missing_file` warning).
 #[test]
 fn adldrawingmode_reads_its_mode() {
   let (stderr, xml) = convert_with(
@@ -11674,11 +11674,7 @@ fn adldrawingmode_reads_its_mode() {
     None,
   );
   assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert_eq!(warning_count(&stderr), 1, "{stderr}");
-  assert!(
-    stderr.contains("Warning:missing_file:arydshln.sty"),
-    "{stderr}"
-  );
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
   latexml::util::test::assert_element(
     &xml,
     "para",

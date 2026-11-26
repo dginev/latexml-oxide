@@ -1,0 +1,17 @@
+% arydshln defines `\dashgapcolor` and `\nodashgapcolor` only when colortbl came first (arydshln.sty:1053-1054
+% `\@ifpackageloaded{colortbl}`, :1121, :1125), as it does `\arrayrulecolor`: without colortbl each is undefined.
+% witness: synthetic (ARYDSHLN review S3)
+% oracle:  pdflatex 2 errors ("Undefined control sequence" at l.11 and l.16), "[rgb]1,0,0 a b"
+% engines: rust ARYDSHLN = 0 errors (both defined as no-ops); Perl = no arydshln binding
+% expect:  2 errors, one per command; the text "[rgb]1,0,0" kept
+% status:  RED (ARYDSHLN) -> GREEN (ARYDSHLN fix 1); guard perfect_kernel_batcharydshln::arydshln_colortbl_rows
+\documentclass{article}
+\usepackage{arydshln}
+\begin{document}
+\dashgapcolor[rgb]{1,0,0}
+\begin{tabular}{c:c}
+\hdashline
+a & b\\ \hdashline
+\end{tabular}
+\nodashgapcolor
+\end{document}

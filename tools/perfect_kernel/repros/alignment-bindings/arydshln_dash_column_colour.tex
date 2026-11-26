@@ -1,0 +1,19 @@
+% Under colortbl, `\arrayrulecolor` colours arydshln's dashed rules as it does the solid ones, the `:` column rule
+% included (arydshln.sty:282-284 `\adl@vlineL{\CT@arc@}`; its manual, arydshln.dtx:818-827): ours paints `:` as
+% colortbl's `|` (`colortbl_sty::rule_paint`).
+% witness: synthetic (ARYDSHLN; its review measured the PDF)
+% oracle:  pdflatex 0 errors: every rule red, the `:` too (`mutool clean -d`: `1 0 0 rg 1 0 0 RG` before its dashes)
+% engines: rust ARYDSHLN = 0 errors, every rule red; Perl = no arydshln binding
+% expect:  0 errors; a's cell `border="r t"` dashed, `border-right-color:#FF0000`
+% status:  GREEN; guard perfect_kernel_batcharydshln::arydshln_colortbl_rows
+\documentclass{article}
+\usepackage{colortbl}
+\usepackage{arydshln}
+\begin{document}
+\arrayrulecolor{red}
+\begin{tabular}{c:c|c}
+\hdashline
+a & b & c\\ \hline
+d & e & f\\ \hdashline
+\end{tabular}
+\end{document}

@@ -19217,7 +19217,7 @@ scoped to its enclosing unit's id (`current` outside any unit), to `\etocsetnext
 
 ### 1024. → #105 (caption's `justification=` and skips are the caption's `text-align` and margins (W2b, issue #787))
 
-### 1025. colortbl's rule colour is each border side's, taken as the rule is drawn (W4, #773)
+### 1025. A rule's colour and dash are each border side's, taken as the rule is drawn: colortbl's colour (W4, #773), arydshln's dashes (ARYDSHLN)
 
 **TeX.** colortbl.sty:156-192 stores `\arrayrulecolor[model]{colour}` as `\gdef\CT@arc@{\color[model]{colour}}` and
 draws every rule as `{\CT@arc@ <rule>}`: `\hline`, `\@cline`, the preamble's `|` (`\@arrayrule`, set as each row is),
@@ -19232,7 +19232,8 @@ started; a colour never drawn is never evaluated (1910.02206's unbraced `\arrayr
 side (`border_color`, `Cell::add_border`): `add_line` takes the colour of the horizontal rule being drawn
 (`alignment::RULE_COLOR`/`take_rule_color`, local to the rule's `\noalign`), and the `|` extraction (tex_tables.rs
 `extract_alignment_column`) reads a vertical rule box's own `border_color`, the last one drawn on each side; every
-border move (normalize.rs's spans and pruned rows and columns, emulateapj's head rule) carries its side's colour. The
+border move (normalize.rs's spans and pruned rows and columns, emulateapj's head rule) carries its side's colour (a
+capped nicematrix `\Block` span's right side the last covered cell's, letters and colour alike). The
 `<td>`/`<XMCell>` carries the coloured sides its `border` keeps as `cssstyle="border-top-color:#BFBFBF;…"`; black,
 the stylesheet's colour (LaTeXML.css `.ltx_border_t`), adds nothing. The binding stores `\CT@arc@` as colortbl does
 and evaluates it as each rule is drawn (`\lx@CT@arc@draw`, ahead of `\@@alignment@hline`, `\lx@cline` — `\hhline`
@@ -19259,6 +19260,27 @@ current colour. Residual (post-merge): `\hhline`'s `>{…}` colour codes stay sk
 (`arrayrulecolor_bang_rule_own_colour_red.tex`). **Guards**: `perfect_kernel_batchw4::arrayrulecolor_colours_the_rules_drawn_under_it`
 (repros `alignment-bindings/arrayrulecolor_*`), `perfect_kernel_batch69a::arrayrulecolor_reads_to_the_brace`,
 `perfect_kernel_batch60::colortbl_noalign_idiom`, the `alignment/colortbls` golden.
+
+**arydshln (ARYDSHLN).** arydshln.sty draws `\hdashline`, `\firsthdashline`, `\lasthdashline`, `\cdashline{a-b}`
+(:432-491) and the `:`/`;{dash/gap}` column rules (:198, :236, :270-288) dashed, in `\CT@arc@` under colortbl
+(:1083-1112, :282-284). **Perl** has no arydshln binding; upstream LaTeXML PR 2889 by Christopher Smolen (open)
+records the horizontal ones as solid borders and marks a `:`/`;` cell `ltx_border_<l|r>_dashed`. **Rust.** The same
+core `Cell` keeps a dash per side beside its colour (`border_dashed`): `Alignment::add_dashed_line` (the binding's
+`\lx@adl@hdashline`, `\lx@adl@cdashline`, its columns `\cline`'s `cline_columns`) and the `:` rule box
+(`\lx@adl@vdashrule`, empty, `isVerticalRule` with `border_dashed`, which the cell-edge scan turns into the `l`/`r`
+letter as for `|`) set it, every border move carries it, and a side is dashed only when every rule on it is (so
+`\hline\hdashline` stays a solid double, `::` a dashed one). The `<td>`/`<XMCell>` gets the class
+`ltx_border_<side>_dashed` per dashed side its `border` keeps; LaTeXML.css's `border-<side>-style:dashed` rules follow
+the border shorthands, so the width and a `cssstyle` colour stay. The dashed rules take colortbl's colour as `\hline`,
+`\cline` and `|` do (`\lx@CT@arc@draw`, `colortbl_sty::rule_paint`), the `:` too, as pdflatex draws it. The dash and
+gap lengths are read and dropped; `\dashgapcolor`/`\nodashgapcolor` (defined, as in the sty, only under colortbl,
+:1053-1125) are read and dropped. The template scans that skip a column rule's tokens (`alignment::
+is_column_rule_token`) know `\vrule` and the tokens a binding declares (`declare_column_rule_token`: colortbl's paint,
+arydshln's `\lx@adl@vdashrule`), so a rule-drawing binding needs no edit in core.
+**Guards**: `perfect_kernel_batcharydshln::arydshln_dashed_borders_reach_the_html`,
+`perfect_kernel_batcharydshln::arydshln_colortbl_rows`, the `contrib/arydshln` golden,
+`regress_2605_clusters::arydshln_dash_spec_column_and_hdashline_option`, `latexml_post::xslt::witnessed_css_delta::
+dashed_border_delta_follows_the_border_rules`.
 
 ### 1029. A file `\input` under a set `\everyeof` is read as a token list, never answered by a binding (WIN1, WIN1F)
 

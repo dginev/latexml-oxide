@@ -3234,7 +3234,8 @@ const KERNEL_TOKEN_SPELLINGS: &[(&str, usize)] = &[
   // (F14: today's counts, over-approximate as `TOKEN_READS`'s; GA0 read ~60 sites by hand, 12 of them decisions where TeX
   // acts on the meaning, finding 10)
   // (W4F2, +1 each here and in tex_tables.rs: the template skip lists read colortbl's `|` tokens by their `\lx@CT@` prefix)
-  ("latexml_core/src/alignment.rs", 16),
+  // (ARYDSHLN, 16 -> 15 here and 35 -> 33 in tex_tables.rs: both template skip lists read `is_column_rule_token`)
+  ("latexml_core/src/alignment.rs", 15),
   ("latexml_core/src/alignment/cell.rs", 1),
   ("latexml_core/src/alignment/normalize.rs", 1),
   // (int/regfix6, 45 -> 46: `defined_names` skips an expansion primitive after a `\def` in a file's source text — a regex
@@ -3395,7 +3396,7 @@ const KERNEL_TOKEN_SPELLINGS: &[(&str, usize)] = &[
   ("latexml_engine/src/tex_registers.rs", 5),
   // (GA4, 38 -> 34: the longtable keys and the `\noalign\\` spelling left the kernel alignment)
   // (W4F2, 34 -> 35: colortbl's `|` tokens, `\lx@CT@`, in `template_after_fill_defeated`)
-  ("latexml_engine/src/tex_tables.rs", 35),
+  ("latexml_engine/src/tex_tables.rs", 33),
 ];
 
 #[test]

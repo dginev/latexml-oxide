@@ -89,7 +89,7 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (437 items on 2026-11-26 on `int/towards_v0_8_1`: 437 open, weight 957, 40 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (437 items on 2026-11-26 on `int/towards_v0_8_1`: 437 open, weight 956, 40 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
 
 
   - ODR6 — OD ruling 12 (recorded in OD #449): `dump_reader.rs`'s "add-only" docstrings (:365, :574) corrected, then a removal trial of the skip lists against CLAUDE.md rule 2; 1
@@ -620,11 +620,10 @@ Rules that keep this file honest and mergeable:
     of modern aaai). Two gates keep aaai off the displaced-setter route (OD #955): `affiliations` is not in
     `STORE_SETTERS`, and the copies' `_`-delimited self-redefining store is skipped by `assigned_parts_holding`. In
     progress on `pk/AAAILABEL`; the AAAI notes kept as moved (once-per-name `lx_aaai_marked@<kind>`) stay as they are; 3
-  - ARYDSHLN — (DG 2026-11-26) translate upstream LaTeXML PR 2889 (the arydshln binding, by Christopher Smolen) with
-    dashed borders in the HTML: `ltx_border_{t,b,l,r}_dashed` on a per-side style channel beside `border_color`, a
-    `:`/`;{}` column rule that leaves nothing in the cell, `\arrayrulecolor` kept as a colour setter (arydshln.sty
-    :1119-1123), no `\xleaders` no-op, the upstream test as a golden pair; its own PR into `int/towards_v0_8_1`; in
-    progress on `pk/ARYDSHLN`; 3
+  - ARYMATHROW (needs a ruling) — a math `array` keeps an empty `XMRow` at every `\hline`/`\hdashline` (Perl keeps
+    every inner row of a math alignment, Alignment.pm:768-769), and its `tex=` shows `\hdashline\cr`; text tables
+    prune it. RED `alignment-bindings/math_array_rule_keeps_an_empty_row_red.tex` (found by the arydshln port, upstream
+    PR 2889's expected output has it too); a math-row pruning batch would move many goldens; 2
   - GTPART — gtpart.cls `\urladdr`, `\subject` undefined (MTREDUCE residual; `\corresponding` bound).; Reach (census 2026-11-24): 9/30k ≈ 837 papers
   - TITLENOTELAST — stopped, no binding, post-release: sig-alternate/acm_proc_article-sp title note order; 1003.2281 (70 census papers).
   - JASAPACS — stopped, no binding, post-release: JASA PACS notes; 0803.0204 (4 papers).; Reach (census 2026-11-24): 3/30k ≈ 279 papers

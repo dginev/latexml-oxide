@@ -7,7 +7,9 @@ use std::{
   collections::VecDeque,
 };
 
-use latexml_core::alignment::{read_alignment_template, template::TemplateConfig};
+use latexml_core::alignment::{
+  is_column_rule_token, read_alignment_template, template::TemplateConfig,
+};
 
 use crate::prelude::*;
 
@@ -1697,14 +1699,12 @@ fn template_after_fill_defeated(after: &Option<Tokens>) -> bool {
     !(s == "\\lx@intercol"
       || s.contains("intercol")
       || s == "\\lx@column@trimright"
-      || s == "\\vrule"
-      // colortbl's `|` paint: `\lx@CT@paint@live`, or `\lx@CT@paint` and its frozen `\lx@CT@arc@<n>` (colortbl_sty.rs)
-      || s.starts_with("\\lx@CT@")
       || s == "\\relax"
       || s == "\\hfil"
       || s == "\\hfill"
       || s == "\\hskip"
-      || s.trim().is_empty())
+      || s.trim().is_empty()
+      || is_column_rule_token(&s))
   })
 }
 
@@ -1764,6 +1764,8 @@ pub fn extract_alignment_column(
   let mut align = initial_align;
   let mut border = String::new();
   let (mut left_color, mut right_color) = (None, None);
+  // A side's rules are dashed when each is (arydshln's `:`, `\lx@adl@vdashrule`).
+  let (mut left_dashed, mut right_dashed) = (true, true);
   let mut saveleft = VecDeque::new();
   let mut saveright = VecDeque::new();
   let mut lspaces: Vec<Digested> = Vec::new();
@@ -1827,6 +1829,7 @@ pub fn extract_alignment_column(
         border.push('l');
         // the rule drawn last is on top: its own colour (colortbl's `|`, colortbl_sty.rs) is the side's
         left_color = rule_border_color(&front_box);
+        left_dashed &= front_box.get_property_bool("border_dashed");
         // Perl L487-489: space before | ? move lspaces to previous column's rspaces
         if !lspaces.is_empty() {
           prev_rspaces_transfer = Some(std::mem::take(&mut lspaces));
@@ -1877,6 +1880,7 @@ pub fn extract_alignment_column(
           right_color = rule_border_color(&last_box);
         }
         border.push('r');
+        right_dashed &= last_box.get_property_bool("border_dashed");
         rspaces.clear(); // Perl L508: discard spacing after rule
       },
       _ if is_phantom_with_width(&last_box) => {
@@ -1948,8 +1952,8 @@ pub fn extract_alignment_column(
     }
     colspec.border = old_border;
     let (left, right): (String, String) = border.chars().partition(|c| matches!(c, 'l' | 'L'));
-    colspec.add_border(&left, left_color.as_deref());
-    colspec.add_border(&right, right_color.as_deref());
+    colspec.add_border(&left, left_color.as_deref(), left_dashed);
+    colspec.add_border(&right, right_color.as_deref(), right_dashed);
     colspec.boxes = Some(digested_out.clone());
     // Perl L526-527: store lspaces/rspaces
     if !lspaces.is_empty() {
@@ -2092,6 +2096,54 @@ fn read_newline_args(skipspaces: bool) -> Result<(bool, Option<Tokens>)> {
 /// (2306.10087). Guard: `perfect_kernel_batch65::misplaced_hline_in_a_cell_draws_no_rule`.
 pub fn alignment_to_rule() -> Option<Digested> {
   lookup_alignment().filter(|_| !lookup_bool("lx@noalign@misplaced"))
+}
+
+/// The columns a `\cline{<spec>}` rules (`1-2`, `1-2,4`; Perl's `\@cline`, latex_constructs.pool.ltxml:3709), as
+/// arydshln's `\cdashline` reads them too.
+pub fn cline_columns(cols: &str) -> Vec<usize> {
+  let mut cols_vec = Vec::new();
+  // Cap individual `\cline` range spans to avoid OOM DoS on hostile inputs
+  // like `\cline{1-1000000000}`; no real LaTeX table has >10,000 columns.
+  const MAX_CLINE_COL: usize = 10_000;
+  let push_range = |cols_vec: &mut Vec<usize>, from: Option<usize>, this_num: usize| {
+    if let Some(from_num) = from {
+      let end = this_num.min(from_num.saturating_add(MAX_CLINE_COL));
+      for num_in_range in from_num..=end {
+        cols_vec.push(num_in_range);
+      }
+    } else {
+      cols_vec.push(this_num);
+    }
+  };
+  let mut from: Option<usize> = None;
+  let mut num = String::new();
+  for c_next in cols.chars() {
+    match c_next {
+      ',' => {
+        if !num.is_empty() {
+          if let Ok(this_num) = num.parse::<usize>() {
+            push_range(&mut cols_vec, from, this_num);
+          }
+          from = None;
+          num.clear();
+        }
+      },
+      '-' => {
+        // `\cline{-3}` (no leading number) is malformed but appears in
+        // the wild; treat it as `\cline{1-3}` rather than panicking.
+        from = Some(num.parse::<usize>().unwrap_or(1));
+        num.clear();
+      },
+      c if c.is_ascii_digit() => num.push(c_next),
+      _ => break,
+    }
+  }
+  if !num.is_empty()
+    && let Ok(this_num) = num.parse::<usize>()
+  {
+    push_range(&mut cols_vec, from, this_num);
+  }
+  cols_vec
 }
 
 /// The group-local flag of [`report_misplaced_alignment`]: a misplaced alignment command was reported in this group.

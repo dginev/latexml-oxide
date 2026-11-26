@@ -56,6 +56,9 @@ pub struct Cell {
   /// The colour of each side's rule when it was drawn (colortbl's `\arrayrulecolor`, the
   /// `RULE_COLOR`, or a `|` rule box's `border_color`), by [`BorderSpec`]: top, bottom, left, right; `None` the default ink.
   pub border_color:        [Option<String>; 4],
+  /// Whether each side's rules are dashed (arydshln's `\hdashline`, `\cdashline`, `:`), by [`BorderSpec`]: a side is
+  /// dashed only when every rule on it is.
+  pub border_dashed:       [bool; 4],
   /// Perl: $$colspec{tabskip} — intercolumn glue from \halign template
   pub tabskip:             Option<Glue>,
   /// Perl: $$colspec{lspaces} — left-side spacing (incl. tabskip)
@@ -100,16 +103,45 @@ impl Cell {
   }
 
   /// Adds the `border` letters (`t`/`b`/`l`/`r`, upper case alike), each side now drawn in `color`: a rule drawn
-  /// later is on top, as in TeX.
-  pub fn add_border(&mut self, sides: &str, color: Option<&str>) {
-    self.border.push_str(sides);
-    for side in sides.chars().filter_map(BorderSpec::of_letter) {
-      self.border_color[side as usize] = color.map(str::to_string);
+  /// later is on top, as in TeX. A side stays dashed only while every rule added to it is `dashed`.
+  pub fn add_border(&mut self, sides: &str, color: Option<&str>, dashed: bool) {
+    for letter in sides.chars() {
+      if let Some(side) = BorderSpec::of_letter(letter) {
+        let first = self.border_at_side(side).next().is_none();
+        self.border_dashed[side as usize] = dashed && (first || self.border_dashed[side as usize]);
+        self.border_color[side as usize] = color.map(str::to_string);
+      }
+      self.border.push(letter);
     }
+  }
+
+  /// The `border` letters on `side`.
+  fn border_at_side(&self, side: BorderSpec) -> impl Iterator<Item = char> + '_ {
+    self
+      .border
+      .chars()
+      .filter(move |&c| BorderSpec::of_letter(c) == Some(side))
   }
 
   pub fn border_color_at(&self, side: BorderSpec) -> Option<&str> {
     self.border_color[side as usize].as_deref()
+  }
+
+  pub fn border_dashed_at(&self, side: BorderSpec) -> bool { self.border_dashed[side as usize] }
+
+  /// The classes of the dashed sides the cell's `border` keeps (`ltx_border_r_dashed`), in the `border` attribute's
+  /// order.
+  pub fn border_dashed_classes(&self) -> Vec<String> {
+    [
+      (BorderSpec::Bottom, 'b'),
+      (BorderSpec::Left, 'l'),
+      (BorderSpec::Right, 'r'),
+      (BorderSpec::Top, 't'),
+    ]
+    .into_iter()
+    .filter(|&(side, _)| self.border_dashed_at(side) && self.border_at_side(side).next().is_some())
+    .map(|(_, letter)| format!("ltx_border_{letter}_dashed"))
+    .collect()
   }
 
   /// The `cssstyle` of the coloured sides the cell's `border` keeps (`border-top-color:#FF0000`).
@@ -122,10 +154,7 @@ impl Cell {
       (BorderSpec::Right, "right"),
     ] {
       if let Some(color) = self.border_color_at(side)
-        && self
-          .border
-          .chars()
-          .any(|c| BorderSpec::of_letter(c) == Some(side))
+        && self.border_at_side(side).next().is_some()
       {
         style.push(format!("border-{name}-color:{color}"));
       }
