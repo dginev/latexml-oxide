@@ -1,0 +1,20 @@
+% amsart's `\subjclass` sets `\subjclassname` to its edition's name at each call (amsart.cls:555-563 `\@xp\let\@xp
+% \subjclassname\csname subjclassname@#1\endcsname`), over a `\subjclassname` the document renewed before it: the
+% renewal is never printed (DG 2026-11-26: the PDF given to arXiv decides).
+% witness: 1501.02464, 2503.20773 (renew, then a yearless `\subjclass`; their arXiv PDFs print the class's default)
+% oracle:  pdflatex (TL 2025) 0 errors: "2020 Mathematics Subject Classification. Primary 11A."; Perl (same host) name
+%          "2010 …", scheme "1991 …" (KNOWN_PERL_ERRORS #1341)
+% engines: rust INT081AB = <classification name="2010 Mathematics Subject Classification: "> (the document's name,
+%          scheme 2020); rust MSCLET = name 2020
+% expect:  0 errors, 0 warnings; <classification name="2020 Mathematics Subject Classification: "
+%          scheme="2020 Mathematics Subject Classification">Primary 11A</classification>
+% status:  RED (INT081AB) -> GREEN (MSCLET; guard `perfect_kernel_batchthmedpsres::thmedpsres_rows`)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\renewcommand{\subjclassname}{\textup{2010} Mathematics Subject Classification}
+\begin{document}
+\title{T}\author{A}
+\subjclass{Primary 11A}
+\maketitle
+x
+\end{document}

@@ -1,0 +1,18 @@
+% amsart's `\subjclass[<year>]` lets `\subjclassname` be that edition's name (amsart.cls:561), over a
+% `\subjclassname` the document renewed before it: name and scheme the call's edition.
+% witness: synthetic (the preamble renewal of 1501.02464, then a call with a year)
+% oracle:  pdflatex (TL 2025) 0 errors: "2000 Mathematics Subject Classification. 11F70."; Perl (same host) name
+%          "2010 …", scheme "2000 …" (KNOWN_PERL_ERRORS #1341)
+% engines: rust INT081AB = name "2010 …", scheme "2000 …"; rust MSCLET = name and scheme "2000 …"
+% expect:  0 errors, 0 warnings; <classification name="2000 Mathematics Subject Classification: "
+%          scheme="2000 Mathematics Subject Classification">11F70</classification>
+% status:  RED (INT081AB) -> GREEN (MSCLET; guard `perfect_kernel_batchthmedpsres::thmedpsres_rows`)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\renewcommand{\subjclassname}{\textup{2010} Mathematics Subject Classification}
+\begin{document}
+\title{T}\author{A}
+\subjclass[2000]{11F70}
+\maketitle
+x
+\end{document}

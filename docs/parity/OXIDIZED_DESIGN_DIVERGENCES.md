@@ -16511,7 +16511,9 @@ the AMS binding, also one whose title page never prints `\@subjclass`: CSML.cls'
 discards it). A document's `\subjclass` copy that stores `\@subjclass` but sets no `\subjclassname` takes the class's
 default edition, 2020 (amsart.cls:789; Perl's 1991, KNOWN_PERL_ERRORS #1337; no corpus paper,
 `sectioning-frontmatter/amsart_document_subjclass_copy_default_edition`, guard
-`perfect_kernel_batchthmedpsres::thmedpsres_rows`). Residuals of
+`perfect_kernel_batchthmedpsres::thmedpsres_rows`). The binding's own `\subjclass` under the AMS classes lets
+`\subjclassname` be its edition's name at the call, over a preamble renewal, or warns of an edition the class does not
+know and keeps it, as amsart.cls:555-563 does (Perl keeps the renewal: KNOWN_PERL_ERRORS #1341). Residuals of
 the 86a r2 re-review: an imsart block on a supplement's own title page, the frontmatter sealed, is kept in place as
 bare text run into the next paragraph, its heading lost (RED `sectioning-frontmatter/imsart_supplement_keyword_block_keeps_its_heading`;
 85a lost the words; OmniBus's sealed `{keyword}` after a `\section*` is still dropped; no corpus paper); arxbj's

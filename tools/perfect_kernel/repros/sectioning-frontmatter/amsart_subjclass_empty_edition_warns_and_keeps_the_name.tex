@@ -1,0 +1,19 @@
+% amsart's `\subjclass[]{…}`: `subjclassname@` is undefined, so the class warns "Unknown edition () of Mathematics
+% Subject Classification; using '2020'." and leaves `\subjclassname` as it was (amsart.cls:557-560), here the document's
+% renewal, which `\maketitle` prints (the empty-edition trick of 1001.1600, 1601.08172).
+% witness: 1001.1600, 1601.08172
+% oracle:  pdflatex (TL 2025) 0 errors, 1 class warning: "2010 Mathematics Subject Classification. 11F70."; Perl (same
+%          host) 0 warnings, the same name and scheme
+% engines: rust INT081AB = the name and scheme below, 0 warnings; rust MSCLET = 1 warning
+% expect:  0 errors, 1 warning; <classification name="2010 Mathematics Subject Classification: "
+%          scheme="Mathematics Subject Classification">11F70</classification>
+% status:  RED (INT081AB) -> GREEN (MSCLET; guard `perfect_kernel_batchthmedpsres::thmedpsres_rows`)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\renewcommand{\subjclassname}{\textup{2010} Mathematics Subject Classification}
+\begin{document}
+\title{T}\author{A}
+\subjclass[]{11F70}
+\maketitle
+x
+\end{document}

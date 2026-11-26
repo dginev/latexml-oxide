@@ -1,0 +1,18 @@
+% amsart's `\subjclass[<year>]` of an edition the class does not know warns "Unknown edition (1985) of Mathematics
+% Subject Classification; using '2020'." and leaves `\subjclassname`, the class's 2020 name (amsart.cls:557-560, :789).
+% The scheme stays the edition the author gave.
+% witness: synthetic
+% oracle:  pdflatex (TL 2025) 0 errors, 1 class warning: "2020 Mathematics Subject Classification. 11F70."; Perl (same
+%          host) 0 warnings, name and scheme "1985 …" (KNOWN_PERL_ERRORS #1341)
+% engines: rust INT081AB = 0 warnings, name "1985 …"; rust MSCLET = 1 warning, name "2020 …"
+% expect:  0 errors, 1 warning; <classification name="2020 Mathematics Subject Classification: "
+%          scheme="1985 Mathematics Subject Classification">11F70</classification>
+% status:  RED (INT081AB) -> GREEN (MSCLET; guard `perfect_kernel_batchthmedpsres::thmedpsres_rows`)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\begin{document}
+\title{T}\author{A}
+\subjclass[1985]{11F70}
+\maketitle
+x
+\end{document}

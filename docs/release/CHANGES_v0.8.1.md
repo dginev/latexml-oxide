@@ -9,6 +9,12 @@ top of its group.
 
 ### Unreleased
 
+  - **An AMS class's `\subjclass` sets `\subjclassname` at the call, as amsart.cls does.** Each call names its
+    edition's "Mathematics Subject Classification", over a `\subjclassname` the preamble renewed, which the class never
+    prints (1501.02464 and 2503.20773 named the renewal's year); an edition the class does not know (`\subjclass[]`,
+    `\subjclass[1985]`) keeps the name in force with the class's Warning "Unknown edition (…)" (1001.1600,
+    1601.08172). A renewal after the call is still the name `\maketitle` prints (0811.1789). KNOWN_PERL_ERRORS #1341;
+    guard `perfect_kernel_batchthmedpsres::thmedpsres_rows`.
   - **thmtools' list filters, edpsmath's keywords, amsart's default MSC edition, and an `\item[…]` label that steps
     its own counter.** Under thmtools, thm-listof's `\showtheorems`, `\ignoretheorems`, `\onlynamedtheorems` and
     `\setlisttheoremstyle` are defined and `\listoftheorems[…]` reads its keys (`ignoreall`, `show`, `ignore`,

@@ -285,31 +285,18 @@ LoadDefinitions!({
 \@namedef{subjclassname@2000}{\textup{2000} Mathematics Subject Classification}
 \@namedef{subjclassname@2010}{\textup{2010} Mathematics Subject Classification}
 \@namedef{subjclassname@2020}{\textup{2020} Mathematics Subject Classification}");
-  // Perl ams_support.sty.ltxml L141-144: pure expansion macro. Translate
-  // `[Default:\@subjclassyear]` to `[\@subjclassyear]` (default-fill of
-  // empty optional arg) and inline the `\ifx.#1.\else\xdef…\fi` guard so
-  // the body tokens (`#2`) are passed straight through to
-  // `\@add@frontmatter` without a Rust-side `to_string` round-trip. The
-  // earlier Rust `\lx@subjclass@{}{}` reified `#2` to a string, which
-  // mangled `\sc AMS` into `\scAMS` (the trailing-space-after-CS rule
-  // doesn't survive `tokenize_internal`-after-`to_string`). Driver paper:
-  // arXiv:1902.09816 (`\subjclass{{\sc AMS Subject Classification:} ...}`).
-  // Perl ams_support.sty.ltxml L141-144 — strict translation:
-  // `[Default:\@subjclassyear]` provides `\@subjclassyear`-expansion as
-  // the Optional default when the user omits `[...]`. The `\ifx.#1.`
-  // guard updates the global year only when the user supplied a non-CS
-  // value. Body tokens (`#2`) pass straight through to
-  // `\@add@frontmatter` — no Rust-side `to_string` round-trip (which
-  // mangled `\sc AMS` into `\scAMS` by losing the trailing-space-after-CS
-  // rule). Driver paper: arXiv:1902.09816
-  // (`\subjclass{{\sc AMS Subject Classification:} 06B05}`).
+  // Perl ams_support.sty.ltxml:131-137, a pure expansion: `#2`'s tokens go to the frontmatter as read (a string
+  // round-trip made 1902.09816's `{\sc AMS Subject Classification:} 06B05` `\scAMS`).
   DefMacro!("\\subjclass", sub[_args] { post_title_topmatter("\\lx@ams@subjclass") });
   // The edition a `\subjclass` without one names: Perl's, the last given, unless the class has its own
   // (`amsart_class_internals`). The name is the `\subjclassname` in force when the frontmatter is made, as amsart
   // prints the one in force at `\maketitle` (amsart.cls:657, :832; 0811.1789 renews it after its `\subjclass`).
   DefMacro!("\\lx@ams@subjclass@edition", None, "\\@subjclassyear");
+  // What the call does to `\subjclassname`: here nothing, the name following `\@subjclassyear`; the AMS classes
+  // let it to the edition's (`amsart_class_internals`).
+  DefMacro!("\\lx@ams@subjclass@setname{}", "");
   DefMacro!("\\lx@ams@subjclass[Default:\\lx@ams@subjclass@edition]{}",
-    "\\ifx.#1.\\else\\xdef\\@subjclassyear{#1}\\fi\\global\\let\\lx@ams@subjclass@given\\@empty\
+    "\\ifx.#1.\\else\\xdef\\@subjclassyear{#1}\\fi\\lx@ams@subjclass@setname{#1}\\global\\let\\lx@ams@subjclass@given\\@empty\
      \\lx@add@classification[scheme={#1 Mathematics Subject Classification},name={\\subjclassname:~}]{#2}",
     short => true);
 
@@ -608,7 +595,10 @@ pub fn ams_class_caption_format() -> Result<()> {
 ///   `runhead` (:305) and `toc`/`lof`/`lot` (:1143-1145): `\section{\for{toc}{<short>}\except{toc}{<long>}}` keeps the
 ///   long title in the body (run-347 inventory 89 + 73 papers; 1304.2934, 1601.05128, 1912.08145).
 /// - :555, :789 the edition a `\subjclass` without one names, 2020 at each call (`\subjclass[2][2020]`), where Perl's
-///   binding names 1991, or the year an earlier call gave (ams_support.sty.ltxml:131-136; KNOWN_PERL_ERRORS #1337).
+///   binding names 1991, or the year an earlier call gave (ams_support.sty.ltxml:131-136; KNOWN_PERL_ERRORS #1337);
+///   :556-562 each call lets `\subjclassname` be its edition's name, over one the preamble renewed (1501.02464,
+///   2503.20773), or warns of an unknown edition and keeps it (`\subjclass[]`: 1001.1600, 1601.08172), where Perl's
+///   name follows the last year given (KNOWN_PERL_ERRORS #1341).
 /// - :554, :564 `\@keywords` and `\@subjclass`, empty: `\keywords` and `\subjclass` give the frontmatter, so a
 ///   document's own print of them (2510.22858 `\ifx\@keywords\@empty\else…`) prints nothing twice, as `\@dedicatory`;
 ///   :114 `\@dateposted` and :710-711 `\@PII` alike (memo-l.cls:116-171's abstract-page notes read them: 2412.15928).
@@ -695,6 +685,13 @@ pub fn amsart_class_internals() -> Result<()> {
 \let\@subjclass=\@empty
 \def\@subjclassyear{2020}
 \def\lx@ams@subjclass@edition{2020}
+\def\lx@ams@subjclass@setname#1{\@ifundefined{subjclassname@#1}{%
+    \ClassWarning{\@classname}{Unknown edition (#1) of Mathematics
+      Subject Classification; using '2020'.}%
+  }{%
+    \@xp\let\@xp\subjclassname\csname subjclassname@#1\endcsname
+  }}
+\@xp\let\@xp\subjclassname\csname subjclassname@2020\endcsname
 \let\lx@ams@keywords@given\relax
 \let\lx@ams@subjclass@given\relax
 \def\lx@ams@stored@topmatter{%

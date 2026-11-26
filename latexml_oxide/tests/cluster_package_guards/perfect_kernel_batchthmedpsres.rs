@@ -5,7 +5,8 @@
 //! - edpsmath's `\keywords`, which the class sets in a box only its title page prints (`edpsmath_cls.rs`): the
 //!   frontmatter's keywords, with no footnote of them (1901.04804) and under `[proc]`, which prints none (1110.0287).
 //! - amsart's default MSC edition (KNOWN_PERL_ERRORS #1337): the binding's `\subjclass`, the name `\maketitle` prints
-//!   (0811.1789), and a document's own store.
+//!   (0811.1789), and a document's own store; the name each call lets, over a preamble renewal (1501.02464), or keeps
+//!   with the class's Warning for an edition it does not know (`[]`: 1001.1600; KNOWN_PERL_ERRORS #1341, MSCLET).
 //! - an `\item[…]` label that steps its own list's counter (1704.06431, KNOWN_PERL_ERRORS #1338).
 //!
 //! Each converts its repro once and asserts the exact Error and Warning counts, the creators where the class has a
@@ -115,6 +116,55 @@ const ROWS: &[Row] = &[
     creators: &[&["A. Author"]],
     elements: &[("classification", &[
       "<classification name=\"2000 Mathematics Subject Classification:\u{a0}\" scheme=\"2020 Mathematics Subject Classification\">20M05</classification>",
+    ])],
+    absent:   &[],
+  },
+  // MSCLET: amsart.cls:555-563 at each call; red on INT081AB (the renewed name kept, no Warning).
+  Row {
+    name:     "amsart: \\subjclassname renewed before a yearless \\subjclass",
+    tex:      repro!("sectioning-frontmatter/amsart_subjclassname_renewed_before_subjclass.tex"),
+    files:    &[],
+    counts:   (0, 0),
+    creators: &[&["A"]],
+    elements: &[("classification", &[
+      "<classification name=\"2020 Mathematics Subject Classification:\u{a0}\" scheme=\"2020 Mathematics Subject Classification\">Primary 11A</classification>",
+    ])],
+    absent:   &[],
+  },
+  Row {
+    name:     "amsart: \\subjclass[2000] over a renewed \\subjclassname",
+    tex:      repro!("sectioning-frontmatter/amsart_subjclass_year_over_a_renewed_name.tex"),
+    files:    &[],
+    counts:   (0, 0),
+    creators: &[&["A"]],
+    elements: &[("classification", &[
+      "<classification name=\"2000 Mathematics Subject Classification:\u{a0}\" scheme=\"2000 Mathematics Subject Classification\">11F70</classification>",
+    ])],
+    absent:   &[],
+  },
+  Row {
+    name:     "amsart: \\subjclass[] warns, the renewed name kept",
+    tex:      repro!(
+      "sectioning-frontmatter/amsart_subjclass_empty_edition_warns_and_keeps_the_name.tex"
+    ),
+    files:    &[],
+    counts:   (0, 1),
+    creators: &[&["A"]],
+    elements: &[("classification", &[
+      "<classification name=\"2010 Mathematics Subject Classification:\u{a0}\" scheme=\"Mathematics Subject Classification\">11F70</classification>",
+    ])],
+    absent:   &[],
+  },
+  Row {
+    name:     "amsart: \\subjclass[1985] warns, the class's name kept",
+    tex:      repro!(
+      "sectioning-frontmatter/amsart_subjclass_unknown_edition_warns_and_keeps_the_name.tex"
+    ),
+    files:    &[],
+    counts:   (0, 1),
+    creators: &[&["A"]],
+    elements: &[("classification", &[
+      "<classification name=\"2020 Mathematics Subject Classification:\u{a0}\" scheme=\"1985 Mathematics Subject Classification\">11F70</classification>",
     ])],
     absent:   &[],
   },

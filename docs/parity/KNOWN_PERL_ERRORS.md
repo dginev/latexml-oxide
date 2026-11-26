@@ -23014,3 +23014,31 @@ pdflatex: an empty "List of Theorems". Perl (same host): `Error:undefined:\ignor
 Warning: a theorem's `inlist` does not record its name (RED
 `tools/perfect_kernel/repros/package-bindings/thmtools_onlynamedtheorems_lists_named_only_red.tex`). Repro
 `package-bindings/thmtools_listoftheorems_filters.tex`; guard `perfect_kernel_batchthmedpsres::thmedpsres_rows`.
+
+## 1341. Perl's `\subjclass` keeps a `\subjclassname` renewed before it, and names an unknown edition
+
+ams_support.sty.ltxml:133-137 makes `\subjclassname` `\textup{\@subjclassyear} …` and `\subjclass` only `\xdef`s the
+year, so a `\subjclassname` the document renewed before the call is printed, and an unknown year is named. amsart.cls:
+555-563 (amsproc.cls:533, amsbook.cls:503 alike) lets `\subjclassname` be `\subjclassname@<edition>` at each call, or,
+that being undefined (`\subjclass[]`, an unknown year), warns "Unknown edition (…) of Mathematics Subject
+Classification" and leaves it. Minimal trigger:
+
+```latex
+\documentclass{amsart}
+\renewcommand{\subjclassname}{\textup{2010} Mathematics Subject Classification}
+\begin{document}
+\title{T}\author{A}
+\subjclass{Primary 11A}
+\maketitle
+\end{document}
+```
+
+pdflatex (TL 2025): "2020 Mathematics Subject Classification. Primary 11A." Perl (same host): name "2010 Mathematics
+Subject Classification", scheme 1991; `\subjclass[1985]` gives name and scheme "1985 …" and no Warning. Witnesses
+1501.02464 and 2503.20773, whose arXiv PDFs print the class's default, not the renewal; 1001.1600 and 1601.08172
+(`\subjclass[]` after a renewal, which the class prints, with its Warning). Fixed in Rust under the AMS classes
+(`ams_support_sty.rs` `amsart_class_internals`, `\lx@ams@subjclass@setname`); a renewal after the call is still the
+name `\maketitle` prints (0811.1789). Repros `tools/perfect_kernel/repros/sectioning-frontmatter/`
+`amsart_subjclassname_renewed_before_subjclass.tex`, `amsart_subjclass_year_over_a_renewed_name.tex`,
+`amsart_subjclass_empty_edition_warns_and_keeps_the_name.tex`,
+`amsart_subjclass_unknown_edition_warns_and_keeps_the_name.tex`; guard `perfect_kernel_batchthmedpsres::thmedpsres_rows`.
