@@ -37,13 +37,17 @@ type Case = (
 /// label_opening_glue_nets_against_labelsep: a label's leading glue nets against `\labelsep` on every label path, a
 /// trailing one stays, a `\usebox`ed register keeps its own. Red (QA14K2 eb92bd5ebc9): `<tag> x</tag>` (U+2002),
 /// `<tag> •</tag>`, the typerefnum's ` k`. Witnesses 2605.07451, 1508.03599.
+/// description_label_opens_with_labelsep, amsart_description_label_opens_with_labelsep: the default
+/// `\descriptionlabel`'s `\hspace\labelsep` is what nets away, the label's own glue stays. Red (QA14K2 924919feffb):
+/// U+2002 "D", U+2002 U+200A "Q", "T" without its NBSP.
 /// enumitem_wide_clears_the_left_margin: `wide`/`fullwidth` set `\leftmargin\z@`, keys in order. Red (QA14K2
-/// eb92bd5ebc9): A-D, F "319.99997pt 25.00003pt"; G, H (a `leftmargin` before `wide`) "316.54726pt 28.45274pt".
+/// eb92bd5ebc9): A-D, F "319.99997pt 25.00003pt"; G, H (a `leftmargin` before `wide`) "316.54726pt 28.45274pt"; I (a
+/// `\setlist*` storing `leftmargin` again after `wide`; 924919feffb) "345.0pt 0.0pt".
 /// note_and_cell_paragraphs_are_unspaced_in_a_list: a footnote and a `p` cell reset `\parskip`. Red (QA14K2
 /// eb92bd5ebc9): "4.0pt plus 2.0pt minus 1.0pt" (the list's `\parsep`).
 #[test]
 fn list_registers_set_the_line_width() {
-  let cases: [Case; 9] = [
+  let cases: [Case; 11] = [
     (repro!("list-structure/list_narrows_the_line_width.tex"), &[
       (
         "p",
@@ -336,6 +340,51 @@ fn list_registers_set_the_line_width() {
       ],
     ),
     (
+      repro!("list-structure/description_label_opens_with_labelsep.tex"),
+      &[
+        (
+          "item",
+          "S0.I1.ix1",
+          "<item xml:id=\"S0.I1.ix1\"><tags><tag><text font=\"bold\" xml:id=\"S0.I1.ix1.1\">\u{2003}D</text></tag><tag role=\"typerefnum\">item \u{2003}D</tag></tags><para xml:id=\"S0.I1.ix1.p1\"><p xml:id=\"S0.I1.ix1.p1.1\">d</p></para></item>",
+        ),
+        (
+          "item",
+          "S0.I1.ix2",
+          "<item xml:id=\"S0.I1.ix2\"><tags><tag><text font=\"bold\" xml:id=\"S0.I1.ix2.1\">\u{2003}\u{200a}Q</text></tag><tag role=\"typerefnum\">item \u{2003}Q</tag></tags><para xml:id=\"S0.I1.ix2.p1\"><p xml:id=\"S0.I1.ix2.p1.1\">q</p></para></item>",
+        ),
+        (
+          "item",
+          "S0.I1.ix3",
+          "<item xml:id=\"S0.I1.ix3\"><tags><tag><text font=\"bold\" xml:id=\"S0.I1.ix3.1\">\u{a0}T</text></tag><tag role=\"typerefnum\">item \u{a0}T</tag></tags><para xml:id=\"S0.I1.ix3.p1\"><p xml:id=\"S0.I1.ix3.p1.1\">t</p></para></item>",
+        ),
+        (
+          "item",
+          "S0.I1.ix4",
+          "<item xml:id=\"S0.I1.ix4\"><tags><tag><text font=\"bold\" xml:id=\"S0.I1.ix4.1\">N</text></tag><tag role=\"typerefnum\">item N</tag></tags><para xml:id=\"S0.I1.ix4.p1\"><p xml:id=\"S0.I1.ix4.p1.1\">n</p></para></item>",
+        ),
+        (
+          "item",
+          "S0.I1.i1",
+          "<item xml:id=\"S0.I1.i1\"><tags><tag role=\"typerefnum\">item</tag></tags><para xml:id=\"S0.I1.i1.p1\"><p xml:id=\"S0.I1.i1.p1.1\">bare</p></para></item>",
+        ),
+      ],
+    ),
+    (
+      repro!("class-bindings/amsart_description_label_opens_with_labelsep.tex"),
+      &[
+        (
+          "item",
+          "S0.I1.ix1",
+          "<item xml:id=\"S0.I1.ix1\"><tags><tag><text font=\"bold\" xml:id=\"S0.I1.ix1.1\">\u{2003}\u{200a}Q: </text></tag><tag role=\"typerefnum\">item \u{2003}Q</tag></tags><para xml:id=\"S0.I1.ix1.p1\"><p xml:id=\"S0.I1.ix1.p1.1\">q</p></para></item>",
+        ),
+        (
+          "item",
+          "S0.I1.ix2",
+          "<item xml:id=\"S0.I1.ix2\"><tags><tag><text font=\"bold\" xml:id=\"S0.I1.ix2.1\">N: </text></tag><tag role=\"typerefnum\">item N</tag></tags><para xml:id=\"S0.I1.ix2.p1\"><p xml:id=\"S0.I1.ix2.p1.1\">n</p></para></item>",
+        ),
+      ],
+    ),
+    (
       repro!("list-structure/enumitem_wide_clears_the_left_margin.tex"),
       &[
         (
@@ -377,6 +426,11 @@ fn list_registers_set_the_line_width() {
           "itemize",
           "S0.I8",
           "<itemize cssstyle=\"--ltx-enum-leftmargin:0pt\" xml:id=\"S0.I8\"><item xml:id=\"S0.I8.i1\"><tags><tag>•</tag><tag role=\"typerefnum\">1st item</tag></tags><para xml:id=\"S0.I8.i1.p1\"><p xml:id=\"S0.I8.i1.p1.1\">H 345.0pt 0.0pt</p></para></item></itemize>",
+        ),
+        (
+          "enumerate",
+          "S0.I9",
+          "<enumerate cssstyle=\"--ltx-enum-leftmargin:3em\" xml:id=\"S0.I9\"><item xml:id=\"S0.I9.i1\"><tags><tag>1.</tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">item\u{a0}1</tag></tags><para xml:id=\"S0.I9.i1.p1\"><p xml:id=\"S0.I9.i1.p1.1\">I 314.99995pt 30.00005pt</p></para></item></enumerate>",
         ),
       ],
     ),

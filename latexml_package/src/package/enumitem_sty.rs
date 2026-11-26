@@ -319,10 +319,6 @@ fn enumerate_short_label(template: &Tokens) -> Result<Tokens> {
   Ok(Tokens::new(label))
 }
 
-/// A `leftmargin` value we can safely place verbatim in a CSS length: a number
-/// followed by a unit CSS shares with TeX (`pt`/`em`/`ex`/`cm`/`mm`/`in`, plus
-/// CSS `px`/`rem`/`%`), or a bare `0`. Returns `None` for anything else — a raw
-/// TeX macro / `\dimexpr` is not valid CSS, so it must not reach the stylesheet.
 /// A margin key's reading: a length stated, or one enumitem computes from the label (`*`, `!`; enumitem.sty:313-319).
 enum Margin {
   Stated(Tokens),
@@ -350,6 +346,10 @@ fn stated_leftmargin(hash: &rustc_hash::FxHashMap<String, ArgWrap>) -> Option<Ma
   })
 }
 
+/// A `leftmargin` value we can safely place verbatim in a CSS length: a number
+/// followed by a unit CSS shares with TeX (`pt`/`em`/`ex`/`cm`/`mm`/`in`, plus
+/// CSS `px`/`rem`/`%`), or a bare `0`. Returns `None` for anything else — a raw
+/// TeX macro / `\dimexpr` is not valid CSS, so it must not reach the stylesheet.
 fn css_length(raw: &str) -> Option<String> {
   let s = raw.trim();
   for unit in ["pt", "px", "em", "ex", "rem", "cm", "mm", "in", "%"] {
@@ -477,9 +477,9 @@ fn store_enumitem_defaults(name: &str, kv: &KeyVals, scope: Option<Scope>) {
         assign_value(&val_key, Stored::String(pin(val.to_string())), scope);
       },
     }
-    if !keys.contains(key) {
-      keys.push(key.clone());
-    }
+    // `\setlist*` appends its keys (enumitem.sty:1603-1611): a key stored again applies after the others (`merge_key`).
+    keys.retain(|k| k != key);
+    keys.push(key.clone());
   }
   assign_value(
     &s!("{name}@keys"),

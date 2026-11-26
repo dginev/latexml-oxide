@@ -1,0 +1,15 @@
+% mechanism: amsart.cls:933 `\descriptionlabel` opens with `\hspace\labelsep`, which latex.ltx:16028-16039 `\@item`'s
+%   `\hskip-\labelsep` cancels; the binding's (ams_support_sty.rs; Perl ams_support.sty.ltxml:177 drops it) does too, so
+%   a label's own `\quad` stays (`net_label_labelsep`), as in article's (`description_label_opens_with_labelsep.tex`).
+% witness: synthetic (QA14K2 re-review F1, sibling sweep)
+% oracle:  pdflatex 0 errors; "Q:" a quad right of "N:"
+% engines: rust INT081AA as expected; QA14K2 924919feffb `<tag>` U+2002 U+200A "Q: "
+% expect:  0 errors, 0 warnings; U+2003 U+200A "Q: ", "N: " (bold)
+% status:  RED (QA14K2 924919feffb) -> GREEN (QA14K2 fix round 2)
+\documentclass{amsart}
+\begin{document}
+\begin{description}
+\item[\quad Q] q
+\item[N] n
+\end{description}
+\end{document}

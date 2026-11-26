@@ -565,8 +565,8 @@ trio), its `\@parboxrestore` is `Tokens()`, a `p` cell sets `\hsize` alone (TeX_
 - **Lists** (QA14 K2): a list sets latex.ltx:15848-15869 `\list`'s registers — `\rightmargin`, `\listparindent`,
   `\itemindent` cleared, `\@list<depth>` (size10.clo:216-249) and the setup body run (`\lx@list@params`), then
   `\parskip\parsep` and `\linewidth`/`\@totalleftmargin` moved by `\leftmargin` and `\rightmargin` (`\lx@list@margins`) —
-  in the kernel `\list`, in `begin_itemize` for itemize/enumerate/description (article.cls:556's description setup,
-  enumitem's stated `leftmargin`/`rightmargin`), in `{quote}`/`{quotation}`/`{verse}` (article.cls:571-596) and in
+  in the kernel `\list`, in `begin_itemize` for itemize/enumerate/description (article.cls:360's description setup,
+  enumitem's stated `leftmargin`/`rightmargin`), in `{quote}`/`{quotation}`/`{verse}` (article.cls:389-408) and in
   changepage's `{adjustwidth}` (#341); a `\trivlist` (center, flushleft, flushright, theorem, proof) clears the margins
   (:15903-15910). The standard classes set `\leftmargini`..`\leftmarginvi`, `\labelsep` and `\labelwidth`
   (article.cls:322-339, report.cls:397-415, book.cls:424-442) in ems of the size file's `\normalsize`
@@ -577,15 +577,20 @@ trio), its `\@parboxrestore` is `Tokens()`, a `p` cell sets `\hsize` alone (TeX_
   `\lx@item@labelbox`): :16028-16039 `\@item` sets the box after `\hskip-\labelsep`, so of the skips and kerns a label
   opens with, an `\unhbox`ed box's too (:17206 `\@begintheorem`, syntax.sty:244), `max(0, sum - \labelsep)` stays and a
   trailing `\labelsep` stays, on every label path (`\item[…]`, a `\list` label, a trivlist item, the typerefnum);
-  1508.03599 (10pt kept), 2605.07451 (none). enumitem's `wide`/`fullwidth` set `\leftmargin\z@` (enumitem.sty:745-758),
-  one reading with a stated `leftmargin` for the setup and the CSS (`stated_leftmargin`), the keys in enumitem's order,
-  `\setlist`'s first (`merge_key`). Not modelled: :15864
+  1508.03599 (10pt kept), 2605.07451 (none). The binding's `\descriptionlabel` opens with article.cls:364's
+  `\hspace\labelsep` (amsart.cls:933's too; Perl latex_constructs.pool.ltxml:1619 and ams_support.sty.ltxml:177 drop
+  it); a skip of exactly `\labelsep` in the run is the one cancelled, the label's own glue kept as written (`~`,
+  `\quad`). A label that is only glue narrower than `\labelsep` (`\item[~]`) prints no `<tag>` (Perl: `<tag> </tag>`).
+  enumitem's `wide`/`fullwidth` set `\leftmargin\z@` (enumitem.sty:745-758), one reading with a stated `leftmargin`
+  for the setup and the CSS (`stated_leftmargin`), the keys in enumitem's order, `\setlist`'s first (`merge_key`), a
+  key a `\setlist*` stores again after the others (enumitem.sty:1603-1611). Not modelled: :15864
   `\parindent\listparindent` (it would mark every item's paragraphs `ltx_noindent`), `\parshape`, `\@toodeep`. **Perl**:
   `\list` sets no register (latex_constructs.pool.ltxml:1649), `beginItemize` none (:1303), and every margin register is
   0pt (:1690-1702), so a `width=\linewidth` graphic in a list took the text's width. Residuals (RED catalog):
   amsart's label-measured margins, REVTeX's point margins, enumitem's computed `leftmargin=*`, `{thebibliography}`'s
   list, the marginpar's line, the body's 10pt em at 11pt/12pt (`{quotation}`'s indent, `{verse}`'s margin), enumitem's
-  `left=`, a bound class's own list registers (mnras's `{quote}`, emulateapj's itemize). Guard
+  `left=`, a bound class's own list registers (mnras's `{quote}`, emulateapj's itemize), a label's glue after a zero-width
+  item (`\strut`, `\label`, a colour, `\mbox`). Guard
   `perfect_kernel_batchqa14k2::list_registers_set_the_line_width`; census report_QA14.tsv: the 104 LIST/CLASSLIST/ADJW/
   CONSEQ cells of its article contexts exact, none of its 348 exact cells changed.
 

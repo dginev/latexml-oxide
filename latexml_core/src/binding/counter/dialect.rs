@@ -1650,7 +1650,8 @@ pub fn ref_step_item_counter(tag_opt: Option<&Tokens>) -> Result<HashMap<Stored>
     if tag.is_empty() {
       return Ok(props);
     }
-    let formatter = if counter.starts_with("@desc") {
+    let description = counter.starts_with("@desc");
+    let formatter = if description {
       T_CS!("\\descriptionlabel")
     } else {
       T_CS!("\\makelabel")
@@ -1734,6 +1735,10 @@ pub fn ref_step_item_counter(tag_opt: Option<&Tokens>) -> Result<HashMap<Stored>
       T_CS!("\\lx@item@labelbox"),
       T_BEGIN!(),
     ]);
+    // (the label box as the item's, minus the formatter's fonts: a description's opens with its `\hspace\labelsep`)
+    if description {
+      tag_tokens.extend([T_CS!("\\hspace"), T_CS!("\\labelsep")]);
+    }
     tag_tokens.extend(reverted_tag);
     tag_tokens.extend([T_END!(), T_END!()]);
     tag_tokens.extend(
@@ -1868,7 +1873,7 @@ pub fn begin_itemize(
       .clone()
       .map(|s| s.unlist())
       .unwrap_or_default();
-    // article.cls:556-558 `{description}`: `\list{}{\labelwidth\z@ \itemindent-\leftmargin …}`.
+    // article.cls:360-363 `{description}`: `\list{}{\labelwidth\z@ \itemindent-\leftmargin …}`.
     if itype == "description" {
       setup.splice(
         0..0,
@@ -2141,28 +2146,34 @@ pub fn begin_itemize(
 }
 
 /// latex.ltx:16028-16039 `\@item` sets the label's box after `\hskip-\labelsep`, so the glue a label opens with
-/// (`\hskip\labelsep`, :17206 `\@begintheorem`, article.cls:557 `\descriptionlabel`) nets against it: of the label's
+/// (`\hskip\labelsep`, :17206 `\@begintheorem`, article.cls:364 `\descriptionlabel`) nets against it: of the label's
 /// leading run of skips and kerns, an `\unhbox`ed box's too, `max(0, sum - \labelsep)` stays (`\lx@item@labelbox`).
 /// Witnesses 1508.03599 (acmlarge.cls:628 `\hskip10pt\hskip\labelsep`: 10pt), 2605.07451 (syntax.sty:244: none).
 pub fn net_label_labelsep(items: Vec<Digested>) -> Result<Vec<Digested>> {
-  let mut total = 0;
-  let mut count = 0;
+  let mut widths = Vec::new();
   let (items, _) = rewrite_leading_glue(items, &mut |item, width| {
-    total += width;
-    count += 1;
+    widths.push(width);
     Ok(item.clone())
   })?;
-  if count == 0 {
+  if widths.is_empty() {
     return Ok(items);
   }
   let labelsep = lookup_dimension("\\labelsep").map_or(0, |d| d.value_of());
-  let mut left = (total - labelsep).max(0);
-  // (each item becomes an `\hskip` in its own font, the net on the first: the label's text runs stay as they were)
+  // A skip of `\labelsep` in the run (the class's `\hspace\labelsep`) is the one cancelled, the others stay as written
+  // (a `~`, a `\quad`, their font); else the net is on the first, the rest emptied, each an `\hskip` in its own font.
+  let cancelled = widths.iter().position(|&width| width == labelsep);
+  let mut left = (widths.iter().sum::<i64>() - labelsep).max(0);
+  let mut index = 0;
   let (items, _) = rewrite_leading_glue(items, &mut |item, _| {
+    index += 1;
+    let width = match cancelled {
+      Some(at) if at + 1 != index => return Ok(item.clone()),
+      Some(_) => 0,
+      None => std::mem::take(&mut left),
+    };
     let mut skip = vec![T_CS!("\\hskip")];
-    skip.extend(Explode!(&s!("{left}sp")));
+    skip.extend(Explode!(&s!("{width}sp")));
     skip.push(T_CS!("\\relax"));
-    left = 0;
     let glue = stomach::digest(Tokens::new(skip))?.unlist();
     if let Some(font) = item.get_font()? {
       for item in &glue {

@@ -300,7 +300,7 @@ pub(crate) fn load() -> Result<()> {
   // Perl `<ltx:quote>#body</ltx:quote>` (and `role='verse'`), its end acting on the quote it opened
   // (`quote_environment`).
   // Each is a `\list` in latex.ltx, so it runs `\@trivlist`'s additions (`\lx@trivlist@hook`, below) and sets the
-  // list's registers with its own setup (article.cls:571-596, `quote_list`).
+  // list's registers with its own setup (article.cls:389-408, `quote_list`).
   DefEnvironment!("{quote}", sub[document, _args, props] {
     quote_environment(document, props, None)
   }, before_digest => { quote_list(r"\rightmargin\leftmargin")?; }, mode => "internal_vertical");
@@ -594,11 +594,13 @@ pub(crate) fn load() -> Result<()> {
   def_macro_noop("\\the@descvi")?;
   // These hookup latexml"s numbering to normal latex"s
   // Umm.... but they"re not normally used, since \item usually gets an argument!
-  DefMacro!("\\descriptionlabel{}", "\\normalfont\\bfseries #1");
-  DefMacro!("\\fnum@@desci", "{\\descriptionlabel{}}");
-  DefMacro!("\\fnum@@descii", "{\\descriptionlabel{}}");
-  DefMacro!("\\fnum@@desciii", "{\\descriptionlabel{}}");
-  DefMacro!("\\fnum@@desciv", "{\\descriptionlabel{}}");
+  // article.cls:364's `\hspace\labelsep` (Perl :1619 drops it), cancelled in the label box, as `\@item` cancels it
+  // (`net_label_labelsep`); a bare `\item`'s label is boxed too (Perl :1620-1623 `{\descriptionlabel{}}`).
+  DefMacro!("\\descriptionlabel{}", "\\hspace\\labelsep\\normalfont\\bfseries #1");
+  DefMacro!("\\fnum@@desci", r"{\lx@item@labelbox{\descriptionlabel{}}}");
+  DefMacro!("\\fnum@@descii", r"{\lx@item@labelbox{\descriptionlabel{}}}");
+  DefMacro!("\\fnum@@desciii", r"{\lx@item@labelbox{\descriptionlabel{}}}");
+  DefMacro!("\\fnum@@desciv", r"{\lx@item@labelbox{\descriptionlabel{}}}");
 
   DefMacro!("\\desctyperefname", "\\lx@latin@name{item}");
 
@@ -1218,7 +1220,7 @@ fn close_trivlists_from(document: &mut Document, level: usize) -> Result<()> {
   Ok(())
 }
 
-/// The `\list` a `{quote}`, `{quotation}` or `{verse}` is in latex.ltx (article.cls:571-596): `\@trivlist`'s additions,
+/// The `\list` a `{quote}`, `{quotation}` or `{verse}` is in latex.ltx (article.cls:389-408): `\@trivlist`'s additions,
 /// `\@listdepth` stepped, and the list's registers with `setup` (`begin_list_registers`), the line narrowed by both margins.
 fn quote_list(setup: &'static str) -> Result<()> {
   run_trivlist_hook()?;
