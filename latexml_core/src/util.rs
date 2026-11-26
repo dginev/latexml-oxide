@@ -5,6 +5,8 @@ pub mod char_cursor;
 pub mod image;
 /// log recording and reporting interface
 pub mod logger;
+/// the Mathematics Subject Classification's editions, and the edition a list of codes is stamped with
+pub mod msc;
 /// helper methods for file system paths
 pub mod pathname;
 /// files trusted only when this user wrote them (format dump caches)

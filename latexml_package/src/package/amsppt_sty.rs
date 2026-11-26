@@ -238,18 +238,29 @@ LoadDefinitions!({
   // the topmatter is set (`\noexpand\subjyear@`). That edition is the classification's scheme and its label, as for
   // amsart's `\subjclass[2000]` (ams_support.sty.ltxml:134-137); Perl's amsppt binding has neither (undefined
   // `\subjclassyear`: cs0201007, math0205233, math0209036; KNOWN_PERL_ERRORS #814). Guard
-  // `perfect_kernel_batch68r::amsppt_subjclassyear_names_the_scheme`.
+  // `perfect_kernel_batch68r::amsppt_subjclassyear_names_the_scheme`. The year the author gave is kept
+  // (`\lx@ppt@subjyear@given`): the edition the codes are read against (`\lx@msc@infer`, OXIDIZED_DESIGN_DIVERGENCES
+  // #1168), declared when the style takes it, else the author's label it discards.
   RawTeX!(r"\def\xci@{1991}
 \def\mm@{2000}
 \def\subjclassyear#1{%
-   \def\subjyear@{#1}%
+   \def\subjyear@{#1}\def\lx@ppt@subjyear@given{#1}%
    \ifx\subjyear@\mm@
    \else \ifx\subjyear@\xci@
    \else \message{AmS-TeX warning: Unknown edition (#1) of
        Mathematics Subject Classification; using 1991 edition}%
      \def\subjyear@{1991}%
    \fi\fi}
-\subjclassyear{1991}");
+\subjclassyear{1991}\def\lx@ppt@subjyear@given{}
+\def\lx@ppt@subjclass#1{%
+  \edef\lx@ppt@infer{\noexpand\lx@msc@infer{\subjyear@}%
+    {\ifx\subjyear@\lx@ppt@subjyear@given\subjyear@\fi}%
+    {\ifx\subjyear@\lx@ppt@subjyear@given\else\lx@ppt@subjyear@given\fi}}%
+  \lx@ppt@infer{#1}%
+  \ifx\lx@msc@edition\empty\def\lx@ppt@year{\subjyear@}\else\let\lx@ppt@year\lx@msc@edition\fi
+  \expandafter\lx@ppt@subjclass@add\expandafter{\lx@ppt@year}{#1}}
+\def\lx@ppt@subjclass@add#1#2{\lx@add@classification[scheme={#1\space Mathematics Subject Classification},%
+  name={#1\space Mathematics Subject Classification.\space}]{#2}}");
   // `\subjclass\nofrills …` (:411 `\nofrillscheck`, :80-83): the prefix is `\frills@`'s, which `\nofrills` eats, and the
   // author writes their own (0804.1078's `{{\rm 2000}{\it Mathematics Subject Classification}.\usualspace}`, 1107.2266's
   // `{\it Mathematics Subject Classification \rm(2000).}`): no scheme or name, which said "1991" above the author's
@@ -257,12 +268,7 @@ LoadDefinitions!({
   DefMacro!("\\subjclass Until:\\endsubjclass", sub[(codes)] {
     let nofrills = codes.unlist_ref().iter().find(|t| t.get_catcode() != Catcode::SPACE)
       == Some(&T_CS!("\\nofrills"));
-    let call = if nofrills {
-      "\\lx@add@classification"
-    } else {
-      "\\lx@add@classification[scheme={\\subjyear@\\space Mathematics Subject Classification},\
-       name={\\subjyear@\\space Mathematics Subject Classification.\\space}]"
-    };
+    let call = if nofrills { "\\lx@add@classification" } else { "\\lx@ppt@subjclass" };
     let mut out = mouth::tokenize_internal(call).unlist();
     out.push(T_BEGIN!());
     out.extend(codes.unlist());

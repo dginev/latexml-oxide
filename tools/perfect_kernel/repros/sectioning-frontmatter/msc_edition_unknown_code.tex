@@ -1,0 +1,15 @@
+% A code-shaped word in no edition (a typo or a pre-1991 code) gets an Info naming it and constrains nothing
+%   (ruling DG 2026-11-26 (5)).
+% witness: synthetic (30 of 6,929 census codes, 27 papers, ADV_MSCINFER_2026-11-26 §2)
+% oracle:  pdflatex (TL 2025) 0 errors: "2010 Mathematics Subject Classification. 35Q55, 35Q99, 35Z05."
+% engines: rust INT081AD = name and scheme 2010, no Info; rust MSCINFER the same, Info:frontmatter:msc_unknown_code
+% expect:  0 errors, 0 warnings, 1 Info msc_unknown_code ("35Z05"); <classification name="2010 Mathematics Subject Classification: " scheme="2010 Mathematics Subject Classification">
+% status:  RED (INT081AD) -> GREEN (MSCINFER; guard `perfect_kernel_batchmscinfer::mscinfer_rows`)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\begin{document}
+\title{T}\author{A. Author}
+\subjclass[2010]{35Q55, 35Q99, 35Z05}
+\maketitle
+x
+\end{document}

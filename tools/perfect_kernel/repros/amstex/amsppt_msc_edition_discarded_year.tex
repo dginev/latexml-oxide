@@ -1,0 +1,18 @@
+% amsppt's `\subjclassyear{2010}` is an edition the style does not know: it reports it and prints 1991
+%   (amsppt.sty:391-401). The year the author gave is their label, which names the edition the codes fit (C2).
+% witness: synthetic (the amsppt sibling of 1501.02464's discarded label)
+% oracle:  amstex (TL 2025) 0 errors, "Unknown edition (2010)" message: "1991 Mathematics Subject Classification. 16R10, 17A70."
+% engines: rust INT081AD = name and scheme 1991; rust MSCINFER = 2010, Info:frontmatter:msc_edition
+% expect:  0 errors, 0 warnings, 1 Info msc_edition; <classification name="2010 Mathematics Subject Classification. " scheme="2010 Mathematics Subject Classification">
+% status:  RED (INT081AD) -> GREEN (MSCINFER; guard `perfect_kernel_batchmscinfer::mscinfer_rows`)
+\input amstex
+\documentstyle{amsppt}
+\topmatter
+\title Title Text\endtitle
+\author A. Author\endauthor
+\subjclassyear{2010}
+\subjclass 16R10, 17A70\endsubjclass
+\endtopmatter
+\document
+Body text.
+\enddocument

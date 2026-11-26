@@ -23066,7 +23066,8 @@ Subject Classification", scheme 1991; `\subjclass[1985]` gives name and scheme "
 1501.02464 and 2503.20773, whose arXiv PDFs print the class's default, not the renewal; 1001.1600 and 1601.08172
 (`\subjclass[]` after a renewal, which the class prints, with its Warning). Fixed in Rust under the AMS classes
 (`ams_support_sty.rs` `amsart_class_internals`, `\lx@ams@subjclass@setname`); a renewal after the call is still the
-name `\maketitle` prints (0811.1789). Repros `tools/perfect_kernel/repros/sectioning-frontmatter/`
-`amsart_subjclassname_renewed_before_subjclass.tex`, `amsart_subjclass_year_over_a_renewed_name.tex`,
+name `\maketitle` prints (0811.1789); the discarded renewal is the edition's evidence where the codes fit it
+(OXIDIZED_DESIGN_DIVERGENCES #1168: 1501.02464 → 2010, 2503.20773 → 2000). Repros
+`tools/perfect_kernel/repros/sectioning-frontmatter/` `amsart_subjclassname_renewed_before_subjclass.tex`, `amsart_subjclass_year_over_a_renewed_name.tex`,
 `amsart_subjclass_empty_edition_warns_and_keeps_the_name.tex`,
 `amsart_subjclass_unknown_edition_warns_and_keeps_the_name.tex`; guard `perfect_kernel_batchthmedpsres::thmedpsres_rows`.

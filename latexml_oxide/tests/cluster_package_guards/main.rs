@@ -589,6 +589,8 @@ mod perfect_kernel_batchmem1;
 /// MLN1: names led by their marks read as names (`names_led_by_marks`); OD #1019.
 mod perfect_kernel_batchmln1;
 mod perfect_kernel_batchmml2;
+/// MSCINFER: the MSC edition a classification is stamped with follows its codes (OD #1168).
+mod perfect_kernel_batchmscinfer;
 /// MTARG: an `\@maketitle` taking an argument stays live in the replay, else is deposited with `{}` (0801.1806, iaus.cls).
 mod perfect_kernel_batchmtarg;
 /// MTREDUCE: the kernel asks only whether the class's `\maketitle` runs; a package's prints its binding's marks.

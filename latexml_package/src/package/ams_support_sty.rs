@@ -292,13 +292,17 @@ LoadDefinitions!({
   // (`amsart_class_internals`). The name is the `\subjclassname` in force when the frontmatter is made, as amsart
   // prints the one in force at `\maketitle` (amsart.cls:657, :832; 0811.1789 renews it after its `\subjclass`).
   DefMacro!("\\lx@ams@subjclass@edition", None, "\\@subjclassyear");
-  // What the call does to `\subjclassname`: here nothing, the name following `\@subjclassyear`; the AMS classes
-  // let it to the edition's (`amsart_class_internals`).
-  DefMacro!("\\lx@ams@subjclass@setname{}", "");
+  // What the call (year, codes) does to `\subjclassname`: here nothing, the name following `\@subjclassyear`; the AMS
+  // classes let it to the edition's, or to the one the codes support (`\lx@msc@infer`, `amsart_class_internals`),
+  // which then names the scheme.
+  DefMacro!("\\lx@ams@subjclass@setname{}{}", "\\let\\lx@msc@edition\\@empty");
   DefMacro!("\\lx@ams@subjclass[Default:\\lx@ams@subjclass@edition]{}",
-    "\\ifx.#1.\\else\\xdef\\@subjclassyear{#1}\\fi\\lx@ams@subjclass@setname{#1}\\global\\let\\lx@ams@subjclass@given\\@empty\
-     \\lx@add@classification[scheme={#1 Mathematics Subject Classification},name={\\subjclassname:~}]{#2}",
+    "\\ifx.#1.\\else\\xdef\\@subjclassyear{#1}\\fi\\lx@ams@subjclass@setname{#1}{#2}\\global\\let\\lx@ams@subjclass@given\\@empty\
+     \\ifx\\lx@msc@edition\\@empty\\def\\lx@ams@subjclass@year{#1}\\else\\let\\lx@ams@subjclass@year\\lx@msc@edition\\fi\
+     \\expandafter\\lx@ams@subjclass@add\\expandafter{\\lx@ams@subjclass@year}{#2}",
     short => true);
+  DefMacro!("\\lx@ams@subjclass@add{}{}",
+    "\\lx@add@classification[scheme={#1 Mathematics Subject Classification},name={\\subjclassname:~}]{#2}");
 
   // amsart.cls:723-725 `\@setcopyright` prints the copyright only with a year (`\ifx\@empty\copyrightyear\else`; and
   // only with a series logo, `\ifx\@empty\@serieslogo`, which the frontmatter keeps as metadata): a class's
@@ -599,7 +603,8 @@ pub fn ams_class_caption_format() -> Result<()> {
 ///   binding names 1991, or the year an earlier call gave (ams_support.sty.ltxml:131-136; KNOWN_PERL_ERRORS #1337);
 ///   :556-562 each call lets `\subjclassname` be its edition's name, over one the preamble renewed (1501.02464,
 ///   2503.20773), or warns of an unknown edition and keeps it (`\subjclass[]`: 1001.1600, 1601.08172), where Perl's
-///   name follows the last year given (KNOWN_PERL_ERRORS #1341).
+///   name follows the last year given (KNOWN_PERL_ERRORS #1341); the edition the codes support where they refute the
+///   class's (`\lx@msc@infer`, OXIDIZED_DESIGN_DIVERGENCES #1168: 1501.02464's discarded renewal, 0904.0450).
 /// - :554, :564 `\@keywords` and `\@subjclass`, empty: `\keywords` and `\subjclass` give the frontmatter, so a
 ///   document's own print of them (2510.22858 `\ifx\@keywords\@empty\else…`) prints nothing twice, as `\@dedicatory`;
 ///   :114 `\@dateposted` and :710-711 `\@PII` alike (memo-l.cls:116-171's abstract-page notes read them: 2412.15928).
@@ -686,13 +691,25 @@ pub fn amsart_class_internals() -> Result<()> {
 \let\@subjclass=\@empty
 \def\@subjclassyear{2020}
 \def\lx@ams@subjclass@edition{2020}
-\def\lx@ams@subjclass@setname#1{\@ifundefined{subjclassname@#1}{%
+\def\lx@ams@subjclass@yearless{\lx@ams@subjclass@edition}
+\def\lx@ams@subjclass@setname#1#2{\def\lx@ams@subjclass@year{#1}\@ifundefined{subjclassname@#1}{%
     \ClassWarning{\@classname}{Unknown edition (#1) of Mathematics
       Subject Classification; using '2020'.}%
+    \edef\lx@ams@subjclass@infer{\noexpand\lx@msc@infer{\unexpanded\@xp{\subjclassname}}{#1}{}}%
   }{%
+    \edef\lx@ams@subjclass@infer{\noexpand\lx@msc@infer{#1}%
+      {\ifx\lx@ams@subjclass@year\lx@ams@subjclass@yearless\else#1\fi}%
+      {\ifx\subjclassname\lx@ams@subjclass@let\else\unexpanded\@xp{\subjclassname}\fi}}%
     \@xp\let\@xp\subjclassname\csname subjclassname@#1\endcsname
-  }}
+    \let\lx@ams@subjclass@let\subjclassname
+  }%
+  \lx@ams@subjclass@infer{#2}%
+  \ifx\lx@msc@edition\@empty\else
+    \@xp\let\@xp\subjclassname\csname subjclassname@\lx@msc@edition\endcsname
+    \let\lx@ams@subjclass@let\subjclassname
+  \fi}
 \@xp\let\@xp\subjclassname\csname subjclassname@2020\endcsname
+\let\lx@ams@subjclass@let\subjclassname
 \let\lx@ams@keywords@given\relax
 \let\lx@ams@subjclass@given\relax
 \def\lx@ams@stored@topmatter{%

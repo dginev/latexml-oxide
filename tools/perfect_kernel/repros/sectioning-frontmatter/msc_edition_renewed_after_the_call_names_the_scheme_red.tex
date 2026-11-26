@@ -1,0 +1,19 @@
+% mechanism: a `\subjclassname` renewed after the call is the name amsart's `\maketitle` prints (amsart.cls:657,
+%   :832); the inference (`\lx@msc@infer`, OXIDIZED_DESIGN_DIVERGENCES #1168) runs at the call, so the scheme keeps
+%   the call's edition while the name is the renewal's
+% witness: 0811.1789 (`\subjclass{20M05}`, then `\renewcommand{\subjclassname}{\textup{2000} …}`)
+% oracle:  pdflatex (TL 2025) 0 errors: "2000 Mathematics Subject Classification. 20M05."
+% engines: rust INT081AD and MSCINFER = name "2000 Mathematics Subject Classification: ", scheme "2020 …"
+% expect:  the scheme read from the name `\maketitle` prints when the codes fit it: scheme "2000 Mathematics Subject
+%   Classification" (study ADV_MSCINFER_2026-11-26 §4 item 4)
+% status:  RED (MSCINFER)
+% moves:   post-merge
+% preload: ar5iv.sty
+\documentclass{amsart}
+\begin{document}
+\title{T}\author{A. Author}
+\subjclass{20M05}
+\renewcommand{\subjclassname}{\textup{2000} Mathematics Subject Classification}
+\maketitle
+x
+\end{document}

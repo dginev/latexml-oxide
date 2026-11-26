@@ -1,0 +1,15 @@
+% An edition the class does not know (`[2011]`) states nothing: amsart warns and keeps the name in force
+%   (amsart.cls:557-560), whose 2020 the codes refute (14T05 is MSC2010's alone): the name and scheme are 2010.
+% witness: synthetic (7 census papers give 2008, 2011 or 2023, ADV_MSCINFER_2026-11-26 §2)
+% oracle:  pdflatex (TL 2025) 0 errors, 1 class warning: "2020 Mathematics Subject Classification. 14T05, 14M25."
+% engines: rust INT081AD = 1 warning, name 2020, scheme "2011 Mathematics Subject Classification"; rust MSCINFER = 2010, Info msc_edition
+% expect:  0 errors, 1 warning, 1 Info msc_edition; <classification name="2010 Mathematics Subject Classification: " scheme="2010 Mathematics Subject Classification">
+% status:  RED (INT081AD) -> GREEN (MSCINFER; guard `perfect_kernel_batchmscinfer::mscinfer_rows`)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\begin{document}
+\title{T}\author{A. Author}
+\subjclass[2011]{14T05, 14M25}
+\maketitle
+x
+\end{document}

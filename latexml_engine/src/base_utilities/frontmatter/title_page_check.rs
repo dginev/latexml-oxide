@@ -961,6 +961,13 @@ pub(super) fn note_net_counted(words: &[String]) {
   assign_value(NET_COUNTED, Stored::String(pin(all)), Some(Scope::Global));
 }
 
+/// Note the words of `text`, read as the check reads them, that an Info counted (an MSC year `\lx@msc@infer` corrects).
+pub(crate) fn note_info_counted(text: &str) {
+  note_net_counted(&net_content_words(
+    &resolver::base_letters(text).to_lowercase(),
+  ));
+}
+
 /// The document's frontmatter elements, whose text [`check_title_page_words`] reads first: the title page's words are
 /// mostly theirs. A pubnote's label is its `name` alone, which only the last, whole-document step reads otherwise
 /// (smj's "E-mail:", 1509.00049; 1309.6903).
@@ -1659,6 +1666,10 @@ pub fn check_title_page_words(document: &Document) -> Result<()> {
     // (with their attributes: a contact's `name`, an e-mail's `href`, which the frontmatter commands' words often are)
     claimed.extend(output_words(node, Some(&wanted), true));
   }
+  // (and the words a Warning or an Info already counted, claimed first: they cost no whole-document read)
+  for word in lookup_string(NET_COUNTED).split(' ') {
+    claim(&wanted, word, &mut claimed);
+  }
   let mut source: Option<HashSet<String>> = None;
   let mut held_all = |claimed: &HashSet<String>| {
     unclaimed_words(&folded, claimed, &mut || {
@@ -1680,9 +1691,6 @@ pub fn check_title_page_words(document: &Document) -> Result<()> {
       claim(&wanted, word, &mut claimed);
     }
   });
-  for word in lookup_string(NET_COUNTED).split(' ') {
-    claim(&wanted, word, &mut claimed);
-  }
   if held_all(&claimed) {
     return Ok(());
   }

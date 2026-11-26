@@ -1,0 +1,14 @@
+% ClassPrint: nothing stated and the class's default (amsart.cls:555, 2020) fits the codes: it stands, no Info.
+% witness: 2102.08651 (yearless, codes in every edition)
+% oracle:  pdflatex (TL 2025) 0 errors: "2020 Mathematics Subject Classification. 41A25, 94A12."
+% engines: rust INT081AD = name and scheme 2020; rust MSCINFER the same, no Info
+% expect:  0 errors, 0 warnings, 0 Info; <classification name="2020 Mathematics Subject Classification: " scheme="2020 Mathematics Subject Classification">
+% status:  GREEN (safe side; guard `perfect_kernel_batchmscinfer::mscinfer_rows`)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\begin{document}
+\title{T}\author{A. Author}
+\subjclass{41A25, 94A12}
+\maketitle
+x
+\end{document}
