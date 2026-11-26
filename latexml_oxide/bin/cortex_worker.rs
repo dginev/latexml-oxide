@@ -1160,19 +1160,18 @@ fn unpack_archive(
   Ok((tempdir, on_exit, main_tex))
 }
 
-/// Faithful port of Perl Pack.pm detect_source / arXiv::FileGuess.
-/// Identical to the find_main_tex in latexml_oxide.rs.
+/// Faithful port of Perl Pack.pm detect_source / arXiv::FileGuess. A sibling of `latexml::main_tex::find_main_tex`, not
+/// a copy: it has no `ignore` directive and its own `invalid:` messages; the `00README` entries share its guard.
 fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
   use std::sync::LazyLock;
 
   use regex::Regex;
 
   // Phase I.1: Check 00README.json (2025 arXiv format)
-  if let Some(filename) = parse_readme_json(dir) {
-    let main_path = dir.join(&filename);
-    if main_path.exists() {
-      return Ok(main_path.to_string_lossy().to_string());
-    }
+  if let Some(main_path) =
+    parse_readme_json(dir).and_then(|name| latexml::main_tex::readme_entry(dir, &name))
+  {
+    return Ok(main_path.to_string_lossy().to_string());
   }
 
   // Phase I.1.2: Check 00README.XXX (legacy arXiv format)
@@ -1182,11 +1181,11 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
   {
     for line in content.lines() {
       let parts: Vec<&str> = line.split_whitespace().collect();
-      if parts.len() >= 2 && parts[1] == "toplevelfile" {
-        let main_path = dir.join(parts[0]);
-        if main_path.exists() {
-          return Ok(main_path.to_string_lossy().to_string());
-        }
+      if parts.len() >= 2
+        && parts[1] == "toplevelfile"
+        && let Some(main_path) = latexml::main_tex::readme_entry(dir, parts[0])
+      {
+        return Ok(main_path.to_string_lossy().to_string());
       }
     }
   }

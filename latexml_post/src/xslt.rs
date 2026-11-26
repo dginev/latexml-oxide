@@ -468,19 +468,20 @@ impl XSLT {
 
     // Determine destination once — same logic regardless of whether
     // the resource ends up on disk or comes from the embedded table.
-    let dest = if let Some(ref rd) = self.resource_directory {
+    // `root` is the directory it is built on, which its `@import` copies stay in.
+    let (root, dest) = if let Some(ref rd) = self.resource_directory {
       if let Some(site_dir) = doc.get_site_directory() {
-        format!("{}/{}/{}", site_dir, rd, rel_dest)
+        (site_dir, format!("{}/{}/{}", site_dir, rd, rel_dest))
       } else {
-        format!("{}/{}", rd, rel_dest)
+        (rd.as_str(), format!("{}/{}", rd, rel_dest))
       }
     } else if let Some(base) = doc
       .get_site_directory()
       .or_else(|| doc.get_destination_directory())
     {
-      format!("{}/{}", base, rel_dest)
+      (base, format!("{}/{}", base, rel_dest))
     } else {
-      rel_dest
+      (".", rel_dest)
     };
     let ensure_parent = |dest: &str| {
       if let Some(parent) = Path::new(dest).parent() {
@@ -538,7 +539,7 @@ impl XSLT {
         if let Some(seen) = imports
           && follows
         {
-          placed &= copy_css_imports(Path::new(&path), Path::new(&dest), seen);
+          placed &= copy_css_imports(Path::new(&path), Path::new(&dest), Path::new(root), seen);
         }
       },
       None => {
@@ -653,10 +654,12 @@ fn parse_css_imports(css: &str) -> Vec<String> {
 /// the on-disk source and the destination, so the same relative path is
 /// recreated under the destination — copied, and (if itself a `.css`) recursed
 /// into. Remote (`http(s)://`, `//`, `data:`, any `scheme://`) and absolute
-/// (`/…`) targets are left untouched. `seen` (keyed on the absolute source
+/// (`/…`) targets are left untouched. A target whose copy would land outside
+/// `root` (the destination or site directory) is neither read nor written, with a
+/// Warning (OXIDIZED_DESIGN_DIVERGENCES #1166). `seen` (keyed on the absolute source
 /// path) guards against import cycles and redundant copies. Returns false when an import target was
 /// missing or could not be copied (each warned), so the caller retries it on the next page.
-fn copy_css_imports(src: &Path, dest: &Path, seen: &mut HashSet<PathBuf>) -> bool {
+fn copy_css_imports(src: &Path, dest: &Path, root: &Path, seen: &mut HashSet<PathBuf>) -> bool {
   let content = match fs::read_to_string(src) {
     Ok(c) => c,
     Err(_) => return true,
@@ -678,6 +681,17 @@ fn copy_css_imports(src: &Path, dest: &Path, seen: &mut HashSet<PathBuf>) -> boo
     }
     let import_src = src_dir.join(t);
     let import_dest = dest_dir.join(t);
+    if !pathname::is_lexically_inside(&import_dest, root) {
+      Warn!(
+        "unexpected",
+        t,
+        "@import {} in {} would be copied outside {}; not copied",
+        t,
+        src.display(),
+        root.display()
+      );
+      continue;
+    }
     // Skip if already handled (shared import or cycle).
     if !seen.insert(import_src.clone()) {
       continue;
@@ -716,7 +730,7 @@ fn copy_css_imports(src: &Path, dest: &Path, seen: &mut HashSet<PathBuf>) -> boo
       .and_then(|e| e.to_str())
       .is_some_and(|e| e.eq_ignore_ascii_case("css"))
     {
-      placed &= copy_css_imports(&import_src, &import_dest, seen);
+      placed &= copy_css_imports(&import_src, &import_dest, root, seen);
     }
   }
   placed

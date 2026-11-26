@@ -94,7 +94,8 @@ required-features = ["cortex"]
 name = "cortex_worker_exit_reports"
 required-features = ["cortex"]
 
-# cortex_worker never loads a runtime `.rhai` binding shipped in a source; the CLI still does.
+# cortex_worker never loads a runtime `.rhai` binding shipped in a source (the CLI still does), nor a 00README main
+# file outside it.
 [[test]]
 name = "cortex_worker_untrusted_bindings"
 required-features = ["cortex"]

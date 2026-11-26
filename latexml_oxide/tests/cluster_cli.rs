@@ -531,6 +531,76 @@ mod cli_css_resource_copy {
     );
   }
 
+  /// An archive's own `LaTeXML.css` (`--css=LaTeXML.css`) whose `@import` would be copied above the destination
+  /// directory: that import is neither read nor written, with one Warning, while a nested `../` import that stays inside
+  /// the destination is still copied (OD #1166).
+  #[test]
+  fn archive_css_imports_stay_inside_the_destination() {
+    use std::io::Write as _;
+    let work = tempfile::tempdir().expect("create tempdir");
+    let tmp = work.path().join("tmp");
+    std::fs::create_dir(&tmp).unwrap();
+    let victim = work.path().join("victim.txt");
+    std::fs::write(&victim, "ORIGINAL\n").unwrap();
+    let mut zip =
+      zip::ZipWriter::new(std::fs::File::create(work.path().join("paper.zip")).unwrap());
+    for (name, body) in [
+      ("main.tex", HELLO_TEX),
+      (
+        "resources/CSS/LaTeXML.css",
+        "@import url(\"../../victim.txt\");\n@import url(\"parts/ok.css\");\n",
+      ),
+      (
+        "resources/CSS/parts/ok.css",
+        "@import url(\"../more.css\");\n",
+      ),
+      ("resources/CSS/more.css", "/* more marker */\n"),
+      ("victim.txt", "FROM-THE-ARCHIVE\n"),
+    ] {
+      zip
+        .start_file(name, zip::write::SimpleFileOptions::default())
+        .unwrap();
+      zip.write_all(body.as_bytes()).unwrap();
+    }
+    zip.finish().unwrap();
+    // The destination directory is `out/a`; `../../victim.txt` from its `LaTeXML.css` is `victim.txt` above it.
+    let output = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+      .args(["paper.zip", "--dest=out/a/doc.html", "--css=LaTeXML.css"])
+      .current_dir(work.path())
+      .env("TMPDIR", &tmp)
+      .env("TEMP", &tmp)
+      .env("TMP", &tmp)
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(output.status.success(), "stderr:\n{stderr}");
+    assert_eq!(
+      std::fs::read_to_string(&victim).unwrap(),
+      "ORIGINAL\n",
+      "stderr:\n{stderr}"
+    );
+    let dest = work.path().join("out/a");
+    assert_eq!(
+      std::fs::read_to_string(dest.join("parts/ok.css")).unwrap(),
+      "@import url(\"../more.css\");\n"
+    );
+    assert_eq!(
+      std::fs::read_to_string(dest.join("more.css")).unwrap(),
+      "/* more marker */\n"
+    );
+    let warnings: Vec<&str> = stderr
+      .lines()
+      .filter(|l| l.starts_with("Warning:"))
+      .collect();
+    assert_eq!(warnings.len(), 1, "one Warning:\n{stderr}");
+    assert!(
+      warnings[0].starts_with("Warning:unexpected:../../victim.txt @import ../../victim.txt in ")
+        && warnings[0].ends_with("; not copied"),
+      "{}",
+      warnings[0]
+    );
+  }
+
   /// Issue 807: every page links where `copyResource` put each resource, relative to that page (Perl
   /// XSLT.pm:71-125) — an absolute `--css`/`--javascript` outside the source at the top level, a contained relative
   /// one at its own path, `../` once from a split sub-page; the bundled `<ltx:resource>` CSS likewise.
@@ -1666,6 +1736,65 @@ mod whatsinout {
       assert!(
         left.is_empty(),
         "{source} left {left:?} in the temp directory"
+      );
+    }
+  }
+
+  /// A `00README` naming a main file outside the archive (`..`, absolute; the JSON and `.XXX` forms) is ignored with one
+  /// `Warning:archive:path`: the archive's own main is converted and the outside file is never read (OD #1166).
+  #[test]
+  fn archive_readme_main_outside_the_archive_is_ignored() {
+    let work = tempfile::tempdir().expect("tempdir");
+    let tmp = work.path().join("tmp");
+    std::fs::create_dir_all(work.path().join("x")).unwrap();
+    std::fs::create_dir(&tmp).unwrap();
+    let canary = work.path().join("x").join("canary.tex");
+    std::fs::write(
+      &canary,
+      "\\documentclass{article}\\begin{document}CANARY-OUTSIDE\\end{document}\n",
+    )
+    .unwrap();
+    // The archive unpacks to `tmp/<dir>/`, so `../../x/canary.tex` names the canary.
+    let json =
+      |name: &str| format!(r#"{{"sources":[{{"filename":"{name}","usage":"toplevel"}}]}}"#);
+    let abs = canary.to_string_lossy().replace('\\', "/");
+    for (readme, body) in [
+      ("00README.json", json("../../x/canary.tex")),
+      ("00README.json", json(&abs)),
+      (
+        "00README.XXX",
+        "../../x/canary.tex toplevelfile\n".to_string(),
+      ),
+    ] {
+      write_zip(&work.path().join("paper.zip"), &[
+        (readme, body.as_bytes()),
+        ("main.tex", HELLO_TEX.as_bytes()),
+      ]);
+      let out = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+        .args(["paper.zip", "--dest=out.xml"])
+        .current_dir(work.path())
+        .env("TMPDIR", &tmp)
+        .env("TEMP", &tmp)
+        .env("TMP", &tmp)
+        .output()
+        .expect("spawn latexml_oxide");
+      let stderr = stderr_of(&out);
+      let xml = std::fs::read_to_string(work.path().join("out.xml")).unwrap_or_default();
+      assert!(
+        out.status.success() && xml.contains("Hello World!") && !xml.contains("CANARY"),
+        "{readme} {body}: the archive's main.tex is converted:\n{xml}\n{stderr}"
+      );
+      let warnings: Vec<&str> = stderr
+        .lines()
+        .filter(|l| l.starts_with("Warning:"))
+        .collect();
+      assert_eq!(warnings.len(), 1, "{readme} {body}: one Warning:\n{stderr}");
+      assert!(
+        warnings[0].starts_with("Warning:archive:path the 00README names '")
+          && warnings[0]
+            .contains("canary.tex' as a top-level file outside the source directory; ignored"),
+        "{readme} {body}: {}",
+        warnings[0]
       );
     }
   }
