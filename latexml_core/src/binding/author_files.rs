@@ -178,6 +178,7 @@ pub const AUTHOR_FILE_STAND_INS: &[&str] = &[
   "doublespace.sty",
   "eacl.sty",
   "ecai.cls",
+  "edpsmath.cls",
   "egpubl.cls",
   "elife.cls",
   "elsart.sty",
