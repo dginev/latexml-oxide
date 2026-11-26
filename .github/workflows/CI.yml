@@ -677,10 +677,35 @@ jobs:
       # No auto-update: the build and the shards then install the runner
       # image's same formula versions, so the shards' dylibs match the link
       # and their `texlive` is the tree the dumps below are stamped against.
+      #
+      # Homebrew's bottle downloads are cached: texlive's bottle is 2.24 GB, and
+      # fetching it plus its 35 dependencies from the registry was ~2 of the
+      # install's ~5 min (2026-11-26). The unpack (~2.75 min) still runs. The key
+      # is texlive's version, so a new bottle starts a new entry, and a stale
+      # file is harmless: brew checks each bottle's sha256 and fetches only what
+      # changed. This job saves and the shards below restore, within one run.
+      # Only `main` saves (see the lint job's rust-cache note on the 10 GB cap).
+      - name: Homebrew bottle cache key
+        id: brewkey
+        run: |
+          echo "path=$(brew --cache)/downloads" >> "$GITHUB_OUTPUT"
+          echo "texlive=$(brew info --json=v2 texlive | jq -r '.formulae[0] | "\(.versions.stable)_\(.revision)"')" >> "$GITHUB_OUTPUT"
+      - name: restore Homebrew bottles
+        id: bottles
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ steps.brewkey.outputs.path }}
+          key: brew-bottles-v1-${{ runner.os }}-${{ runner.arch }}-texlive${{ steps.brewkey.outputs.texlive }}
       - name: install dependencies
         run: |
           command -v pkg-config >/dev/null || brew install pkgconf
           brew install libxml2 libxslt texlive
+      - name: save Homebrew bottles
+        if: github.ref == 'refs/heads/main' && steps.bottles.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ steps.brewkey.outputs.path }}
+          key: brew-bottles-v1-${{ runner.os }}-${{ runner.arch }}-texlive${{ steps.brewkey.outputs.texlive }}
       - name: surface keg-only pkg-config paths
         run: |
           echo "PKG_CONFIG_PATH=$(brew --prefix libxml2)/lib/pkgconfig:$(brew --prefix libxslt)/lib/pkgconfig" >> "$GITHUB_ENV"
@@ -789,7 +814,18 @@ jobs:
       # Runtime only: the test binaries load libxml2/libxslt from Homebrew's
       # keg (the same prefix on every runner); `texlive` is the build job's
       # (same image, no auto-update), the tree its dumps are stamped against;
-      # jing-trang for the schema guards.
+      # jing-trang for the schema guards. The bottles come from the build job's
+      # cache entry (see its note); jing-trang and its JDK are fetched fresh.
+      - name: Homebrew bottle cache key
+        id: brewkey
+        run: |
+          echo "path=$(brew --cache)/downloads" >> "$GITHUB_OUTPUT"
+          echo "texlive=$(brew info --json=v2 texlive | jq -r '.formulae[0] | "\(.versions.stable)_\(.revision)"')" >> "$GITHUB_OUTPUT"
+      - name: restore Homebrew bottles
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ steps.brewkey.outputs.path }}
+          key: brew-bottles-v1-${{ runner.os }}-${{ runner.arch }}-texlive${{ steps.brewkey.outputs.texlive }}
       - name: install dependencies
         run: brew install libxml2 libxslt texlive jing-trang
       - uses: actions/download-artifact@v6
