@@ -21,7 +21,7 @@ Rules:
    `pk/REGTAILD` at `b0f34364ecb` (on `int/towards_v0_8_1` `35a85b96669`), gates green (8786 tests), A/B 502 papers:
    E 7031 → 5071, 11 changed, 0 worse; OD #1156 and KPE #1328 reserved; guards `perfect_kernel_batchregtaild::*`.
 
-**The long-tail list** (221 items on 2026-11-24: weight 338, 15 without a weight — counted as the `  - ID`
+**The long-tail list** (222 items on 2026-11-26: weight 341, 15 without a weight — counted as the `  - ID`
 bullets below; moved from row R by DG's ruling of 2026-11-23, in row R's order):
 
   - ODR1 — OD #973's pgfmath residuals (moved from OD by the 2026-11-14 rationalization): string operands, units after array primaries, grouping, out-of-bounds indexing (repro `graphics-tikz/pgfmath_string_and_units_in_arithmetic_red`; every case's pgf-vs-ours values: OPEN_ROWS ODR1); 3
@@ -566,3 +566,10 @@ bullets below; moved from row R by DG's ruling of 2026-11-23, in row R's order):
     is not moved to the cover (base, TITLEFIG rounds 1 and 2 alike). Reach (census 2026-11-24): 1 of the 30k sample ≈ 93 papers; 3
   - IJMEMAILCOLON (after 0.8.0, nit) — an ijmart e-mail contact gets `name="e-mail:: "`: the class's `\emailaddrname`
     already ends in ":" and the binding appends ": ". Reach (census 2026-11-24): 1 of the 30k sample ≈ 93 papers; 1
+  - AAAIAFFIL — (moved from row R 2026-11-26: 11 of 3000 aaai21+ papers, ≈ 60 corpus-wide) a `\thanks`/`\footnote`
+    inside aaai's `\affiliations` loses its mark and its place: the deposit (`sect05.rs` `deposit_tokens_of`) leaves
+    the kernel `\thanks` (= Perl `latex_constructs.pool.ltxml:1128`, a mark-less pubnote) where TeX prints
+    `\footnotemark` at the call (latex.ltx:17213-17216); 0 Warnings (2110.07444, 2312.01324, 2502.18479, 2410.04191).
+    PERL-ORIGIN inside the OD #265 surpass. P1 (a note made in place at the call, mark-less, plus an Info) is easy;
+    P2 (the glyph from the counter state) is hard. Also: sect05.rs ~:4058-4061 says the deposits `\let\thanks\@gobble`;
+    only the replay does; 3

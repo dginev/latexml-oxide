@@ -89,21 +89,23 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (418 items on 2026-11-25 on `int/towards_v0_8_1`: 418 open, weight 920, 43 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (434 items on 2026-11-26 on `int/towards_v0_8_1`: 434 open, weight 952, 40 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
 
 
   - ODR6 — OD ruling 12 (recorded in OD #449): `dump_reader.rs`'s "add-only" docstrings (:365, :574) corrected, then a removal trial of the skip lists against CLAUDE.md rule 2; 1
   - ODR7 — OD ruling 6: each "Bindings beyond Perl's tree" body (end of OD) into its binding module's `//!` doc comment, then trim the catalog to its table — the 19 CLSFM bodies ODDOC-E moved there from #460 (#412 … #912) included; 3
   - ODR8 — OD docs: #8 (the OML slot-127 claim unconfirmed in code), #26 (mdframed now inserts through `insert_block`, `mdframed_sty.rs`); 1
   - ODR9 — wire `tools/perfect_kernel/od_anchors.sh` into `tools/lint.sh`; 1
-  - DIGFATAL — (RHODR residual, Rhai-only, arXiv reach 0) a Fatal raised while digesting (a Rhai body's `Fatal()`, a
-    register getter's or setter's) loses all the text before it — inside the document body, the whole document — where
-    Perl's `hardYankProcessing` (`Error.pm:336-338`) keeps it (Perl: `<p>First paragraph.</p><p>Before </p>`);
-    `core_interface::digest_step_guarded` salvages only for the Stomach guards, TooManyErrors and Timeout:IfLimit. RED
-    `rhai-bindings/digest_fatal_keeps_text_before_red.tex`. Options: (a) keep the text before every digestion Fatal
-    except the token-loop guards (Gemini Neon's recommendation: `core_interface.rs:463` `_ => None` → `Some(false)`,
-    re-verify 2605.25400 and `101_fatal_salvages_partial_document`); (b) only a binding's Fatal; (c) keep today's and
-    count the loss; 2
+  - DIGFATAL — (RHODR residual; arXiv reach 159 Fatal papers) a Fatal raised while digesting (Mouth:EoF,
+    ParamSpec:Expected, TargetUnexpected:Endgroup, Stomach:Misdefined, a Rhai body's `Fatal()`) loses all the text
+    before it, where Perl's `hardYankProcessing` (`Error.pm:336-338`) keeps it (Perl: `<p>First paragraph.</p><p>Before
+    </p>`); `core_interface::digest_step_guarded` salvages only for the Stomach guards, TooManyErrors and Timeout:IfLimit.
+    RED `rhai-bindings/digest_fatal_keeps_text_before_red.tex`. DG 2026-11-26: option (a) — keep the text before every
+    digestion Fatal except the loop and resource guards (StreamingRestart, Timeout:MemoryBudget/Convert/TokenLimit/
+    PushbackLimit re-raise; Timeout:Recursion and Mouth:Recursion keep no salvage, 2605.25400; Stomach:Recursion/
+    MemoryBudget unchanged), the status staying Fatal (design `GN_DIGFATAL_2026-11-25.md`). CorTeX's fatal reports:
+    Mouth:EoF 126, ParamSpec:Expected 10, TargetUnexpected:Endgroup 7, Stomach:Misdefined 16 (159, every one in the
+    batch's A/B). In progress on `pk/DIGFATAL`; 2
   - OD83 — OD #83 (DG 2026-11-15): keep digesting acmart's `\Description`, but report an error inside it as a Warning (acmart.cls:895 discards the argument, so pdflatex never meets it; 2607.21760's `\D1 … \D5`; KNOWN_PERL_ERRORS #66 point 2) — post-cutoff; 1
   - PGF259 — OD #259 (DG 2026-11-15): one rule, pgf's `\divide`, for every native division by zero — `pgfmath_divisor` (pgfmath_code_tex.rs:208) returns the dividend as `pgfmath_divide` (:235) does, not EPSILON — post-cutoff code + guard rows; 1
   - PGF1007 — OD #1007 (DG 2026-11-15): follow pgf — an unparseable expression raises pgf's "Unknown function" Error and computes 0; `calc_compat_expand` (pgfmath_code_tex.rs:2247) retired — post-cutoff, with an A/B sizing the papers that lose a value; 3
@@ -535,7 +537,7 @@ Rules that keep this file honest and mergeable:
     of the texlua child — Linux Landlock (read texmf and the source, write the job dir) + seccomp (no
     execve/fork/socket), a macOS sandbox-exec profile, a Windows Job object (no child processes) + a restricted token; 5
   - PARANOIDIN — (DG 2026-11-25: v0.8.1; "not now" 2026-11-18) a document reads any file the user can read, as under
-    TeX's default `openin_any=a` and in Perl; confirmed for an archive (CLI `.zip`, and `cortex_worker` by its code): all
+    TeX's default `openin_any=a`; confirmed for an archive (CLI `.zip`, and `cortex_worker` by its code): all
     19 read paths leak a file outside the unpacked tree by `../` or an absolute name with Status OK (`\input`,
     `\include`, `\IfFileExists`, `\openin`, verbatim/listings/fancyvrb, `\includegraphics` copying it, `\graphicspath`,
     `.bib`/biblatex, `\import`, `\usepackage{../x}`, `\pdfmdfivesum`, Lua `io.open`), and a bare name is answered from
@@ -543,11 +545,15 @@ Rules that keep this file honest and mergeable:
     confined, `--paranoid-input` opt-in for plain `.tex`; `Error:refused_file` once per name, one Warning per
     out-of-tree `\graphicspath`/`\input@path` directory. Rule study (advisor, `agent_reports/2026-11-25_ARCHJAIL_rule_study.md`):
     roots = the unpack root (lexical then resolved), `--path` and the TeX installation from kpathsea's `$TEXMF`
-    expansion + `OSFONTDIR` (lexical + same-file, not resolved: the distro tree's symlinks point outside it), never the
-    destination, cwd, `$HOME` or `SELFAUTO*`; checked inside `pathname::find`/`pathname::kpsewhich` before any stat (no
+    expansion + `OSFONTDIR` (lexical + same-file, not resolved: the distro tree's symlinks point outside it), never cwd (unless it
+    is one of the roots), `$HOME` or `SELFAUTO*`; checked inside `pathname::find`/`pathname::kpsewhich` before any stat (no
     existence oracle); post `graphics.rs:495`'s cwd try; Lua's whole read surface (`io.lines`, `loadfile`, `dofile`,
-    `package.path`, `lfs.dir`). Six decisions for DG in the study (dest root, user trees, cwd under
-    `--paranoid-input`, env `TEXINPUTS`, Lua reads, absolute TL paths). Repro probes `~/data/pk_wt/scratch_PARANOID/`; 5
+    `package.path`, `lfs.dir`). DG 2026-11-26: a confined conversion reads from the source directory,
+    the whole destination and site directories, the TeX installation (read-only) and the `--path` directories given
+    on the command line or in the fleet config (never ones a document adds); everything else, system directories
+    included, is refused (one Error per name); writes go only into the destination and site. User trees as `$TEXMF`
+    expands them; env `TEXINPUTS` directories outside `$TEXMF` refused (the message points to `--path`); Lua reads
+    mirror the write rule. Repro probes `~/data/pk_wt/scratch_PARANOID/`; 5
   - IMGINTENT — after v0.8.0, a dedicated sprint (DG 2026-11-20: "addressing the full challenge and complexity, and
     testing against the full diversity of arXiv"): image sizing that keeps the source's width intent (issue #721,
     ar5iv#83). Today `width=7in`, `0.8\linewidth`, a length register and a macro all reach the XML as pt
@@ -572,7 +578,18 @@ Rules that keep this file honest and mergeable:
   - SPCONF-BLOCKEMAIL — e-mail lines inside spconf's `\address` keep the note whole; 2407.20176 (2-for-2 unplaced). (the fail-safe of c9b7845ce4d; placing them needs an owner rule stricter than `listed_address_owners`, which misread 1802.09371's "Aline, Roumy"); Reach (census 2026-11-24): 31/30k ≈ 2883 papers
   - SPCONF-ISCLS — Interspeech.cls does not share spconf's `\maketitle` address decision: key-marked names `\name[affiliation=1]` are unseen by the line reader.; Reach (census 2026-11-24): 23/30k ≈ 2139 papers
   - DATELEG-LEGEND — (DATELEGb) the legend-note rescue was CUT: 1507.08926, 2508.05506, 2404.15649, 2602.04557 keep their legend notes unrescued.
-  - DATEICML — DATELEG NOT DONE: notes the flush places — icml 2602.04557, MRM `\corres`.; Reach (census 2026-11-24): 285/30k ≈ 26505 papers
+  - DATEICML — (root-caused 2026-11-26) no words lost: icml's starred names carry a mark-only `footnotemark` note
+    while `\printAffiliationsAndNotice{\icmlEqualContribution}` becomes an unowned block `affiliationnotice`
+    (2602.04557; 6 of 20 sampled icml papers ≈ 6.9k corpus-wide; Perl drops the notice, `icml_support.sty.ltxml:52`).
+    Fix in the icml binding (`\lx@frontmatter@namemark` for the symbol, per-piece labelled contacts from the notice,
+    then the existing kind-legend pass); in progress on `pk/DATEICML`; 1
+  - WILEYCORRES — WileyNJD-v2/WileyASNA/MRM `\corres{*Name, address, \email{…}}` stays a free `note role=corresponding`
+    beginning with the typed `*` (1903.08928, 2003.04316, 2102.05937, 2201.01977, 2307.09820, 2412.06516, MRM
+    2509.13644; ≈ 1.6k corpus-wide); the binding shape of DATEICML with the glyph as label; open: the starred
+    author's corresponding note or their contact; 1
+  - MRMAUTHLABEL — MRM `\author[1,2]{…}` drops its labels: all three `\address[n]` and an e-mail land on the last
+    author, and `\presentaddress` is absent (2506.14995); 3
+  - MLSYSNOCREATOR — an mlsys paper emits 0 creators (2601.11589); 3
   - DATEMACRO — DATELEG NOT DONE (the `\@date` store / date macros; detail not given beyond the ID).
   - AUTHORNLABEL — DATELEG NOT DONE (detail not given beyond the ID).
   - SETCOPY-FLAG — (OD #1078) a store the class's replayed setter changed, handed whole to a frozen setter copy (`\orig@author{\toc@authors}`), reads as no events of the copy's block: each name is written as plain text with the per-name Warning "a name its events don't spell" (names correct, markup lost): tocbase 1811.06821 ×3, 1811.11810 ×3, 1904.05269 ×5, 1905.07135 ×4, 2311.03341 ×4; `setter_copy/tocbase_shape.tex` pins W=3 (`perfect_kernel_batchsetcopy::a_copy_in_an_end_code_takes_the_class_list_once`); fix: the copy's call reads the store's digested names as its own events; Reach (census 2026-11-24): 3/30k ≈ 279 papers; 3
@@ -589,8 +606,16 @@ Rules that keep this file honest and mergeable:
   - CJKGB — GB2312 mojibake inside "(…" read as a mark (`lexer.rs:317`), ")" lost; CJK GB decoding is silent where Perl errs.
   - BLOCKPLACE-DECL — `\lx@names@note` declared in jfm, mdpi, ieeeaccess, oup, autart, sigma, spconf, Interspeech only; the other elsart-family clones are unverified and ieeetaes stays undeclared.; Reach (census 2026-11-24): 121/30k ≈ 11253 papers
   - BLOCKPLACE-AUTART — 19 autart papers: the comma-junk titlepage now follows the moved addresses (pre-existing junk).; Reach (census 2026-11-24): 18/30k ≈ 1674 papers
-  - AAAIAFFIL — AAAI affiliation marks residual (revPRESBXb); detail not given beyond the ID.; Reach (census 2026-11-24): 162/30k ≈ 15066 papers
-  - AAAILABEL — AAAI notes kept as moved (once-per-name `lx_aaai_marked@<kind>`); the label reading stays open; no aaai binding (OD note).
+  - AAAILABEL — (DG 2026-11-26: the aaai slot of the v0.8.1 frontmatter reopening) aaai's labelled `\affiliations`
+    lines stay an unowned title-page block while the names carry their marks (20 of 20 sampled aaai21+ papers; ≈ 95 %
+    of modern aaai). Two gates keep aaai off the displaced-setter route (OD #955): `affiliations` is not in
+    `STORE_SETTERS`, and the copies' `_`-delimited self-redefining store is skipped by `assigned_parts_holding`. In
+    progress on `pk/AAAILABEL`; the AAAI notes kept as moved (once-per-name `lx_aaai_marked@<kind>`) stay as they are; 3
+  - ARYDSHLN — (DG 2026-11-26) translate upstream LaTeXML PR 2889 (the arydshln binding, by an arydshln author) with
+    dashed borders in the HTML: `ltx_border_{t,b,l,r}_dashed` on a per-side style channel beside `border_color`, a
+    `:`/`;{}` column rule that leaves nothing in the cell, `\arrayrulecolor` kept as a colour setter (arydshln.sty
+    :1119-1123), no `\xleaders` no-op, the upstream test as a golden pair; its own PR into `int/towards_v0_8_1`; in
+    progress on `pk/ARYDSHLN`; 3
   - GTPART — gtpart.cls `\urladdr`, `\subject` undefined (MTREDUCE residual; `\corresponding` bound).; Reach (census 2026-11-24): 9/30k ≈ 837 papers
   - TITLENOTELAST — stopped, no binding, post-release: sig-alternate/acm_proc_article-sp title note order; 1003.2281 (70 census papers).
   - JASAPACS — stopped, no binding, post-release: JASA PACS notes; 0803.0204 (4 papers).; Reach (census 2026-11-24): 3/30k ≈ 279 papers

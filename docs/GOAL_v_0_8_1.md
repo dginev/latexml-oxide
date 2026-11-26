@@ -200,4 +200,5 @@ Every problem of TeX interpretation is worked the same way:
 - **Math:** is math still parked except named exceptions during v0.8.1, with the math-parse study on Nasser's
   mathematics as one of them?
 - **Frontmatter:** is a new holdout draw still planned, or are the frontmatter bars closed for v0.8.1?
-- **Issue 972:** which of the five options (comment of 2026-11-23) — and on which timeline?
+- **Issue 972:** decided (DG 2026-11-26): Grow, in 0.8.0 through rc6, in the base LaTeXML.css and the bundled
+  ar5iv-css 0.9.6.
