@@ -6,7 +6,7 @@
 //! (1901.04804, `[mmnp]`), or lost where the journal option prints none (1110.0287, `[proc]`: edpsproc.clo:8
 //! `\def\@setkeywords{}`), as the author's text the frontmatter keeps (FIDELITY_CHARTER §2). Here they are the
 //! frontmatter's keywords, named by the class's label, and the title page prints no footnote of them. Perl has no
-//! binding and reads the class raw.
+//! binding: it reports the class missing and loads its dependency amsart, whose `\keywords` keeps them.
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
