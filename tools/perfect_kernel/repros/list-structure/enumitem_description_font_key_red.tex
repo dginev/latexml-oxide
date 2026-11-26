@@ -1,0 +1,16 @@
+% mechanism: enumitem.sty:1470-1480: a description's `font`/`format` is set inside `\descriptionlabel`, after its
+%   `\normalfont\bfseries`, so `font=\sffamily` gives a bold sans label. Our `{description}` (`@desc`) items take
+%   `\descriptionlabel` directly and the key wraps it from outside (`\fnum@font@@desci`), where `\normalfont` undoes it.
+% witness: synthetic (QA14K2 fix round 3 sibling sweep)
+% oracle:  pdflatex 0 errors; "Sans" in CMSSBX10.
+% engines: rust INT081AA `<tag><text font="bold">Sans</text></tag>`; QA14K2 707b5c4ba03 and fix round 3 the same after
+%   an empty `<text/>`.
+% expect:  0 errors, 0 warnings; `<tag><text font="sansserif bold">Sans</text></tag>`.
+% status:  RED (INT081AA, QA14K2 fix round 3); moves: post-merge
+\documentclass{article}
+\usepackage{enumitem}
+\begin{document}
+\begin{description}[font=\sffamily]
+\item[Sans] a sans label
+\end{description}
+\end{document}

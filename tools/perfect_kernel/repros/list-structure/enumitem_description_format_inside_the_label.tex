@@ -1,0 +1,25 @@
+% mechanism: enumitem.sty:1470-1480: a description-type list's `\makelabel` is `\descriptionlabel{\enit@format{#1}}`, the
+%   `font`/`format` key inside the description label (`\hspace\labelsep\normalfont\bfseries`), so a format that is
+%   math (`\ensuremath{\mathsf{…}}`) is set in math and a text one keeps its family in bold. `begin_enum_itemize` sets
+%   it in the setup of a `\newlist{…}{description}` list, whose items are `\makelabel`'s.
+% witness: 1809.03101 (`\newlist{rules}{description}{2}\setlist[rules]{format={\Rule}}`, `\Rule` a `\mathsf`)
+% oracle:  pdflatex 0 errors; "Step" in CMSS10, "Sans" in CMSSBX10.
+% engines: rust INT081AA: "Step" `\mathsf`, "Sans" sans-serif, not bold; QA14K2 fix round 3 before this (the format
+%   around `\descriptionlabel`): a bold `<XMTok>` "Step" and 1 W (`\bfdefault` in math), "Sans" bold, not sans.
+% expect:  0 errors, 0 warnings; "Step" a `\mathsf` `<Math>`, "Sans" `font="sansserif bold"`.
+% status:  RED (QA14K2 7e7a159fee6) -> GREEN (QA14K2 fix round 3)
+\documentclass{article}
+\usepackage{enumitem}
+\newcommand\Rule[1]{\ensuremath{\mathsf{#1}}}
+\newlist{rules}{description}{1}
+\setlist[rules]{format=\Rule}
+\newlist{sfdesc}{description}{1}
+\setlist[sfdesc]{font=\textsf}
+\begin{document}
+\begin{rules}
+\item[Step] a rule
+\end{rules}
+\begin{sfdesc}
+\item[Sans] a sans label
+\end{sfdesc}
+\end{document}

@@ -580,8 +580,14 @@ trio), its `\@parboxrestore` is `Tokens()`, a `p` cell sets `\hsize` alone (TeX_
   1508.03599 (10pt kept), 2605.07451 (none). The binding's `\descriptionlabel` opens with article.cls:364's
   `\hspace\labelsep` (amsart.cls:933's too; Perl latex_constructs.pool.ltxml:1619 and ams_support.sty.ltxml:177 drop
   it); a skip of exactly `\labelsep` in the run is the one cancelled, the label's own glue kept as written (`~`,
-  `\quad`); an itemize or enumerate makes `\makelabel` its own (latex.ltx:16061, :16072; `begin_itemize`), so one
-  nested in a description (a paralist `{compactenum}`, 1406.1992) does not take `\descriptionlabel`. A label that is only glue narrower than `\labelsep` (`\item[~]`) prints no `<tag>` (Perl: `<tag> </tag>`).
+  `\quad`). `\makelabel` is reset after `\@list<depth>` (:15859, in `\lx@list@params`; identity, as `\@mklab`'s `\hfil`
+  would lead the tag), then the list's setup sets its own: an itemize's or enumerate's (:16061, :16072), a
+  description's `\descriptionlabel` (article.cls:362; enumitem.sty:1470, a `\newlist{…}{description}` too, its
+  `font`/`format` inside the label, :1474-1480; 1809.03101). So neither a class's `\@list<depth>` label (tlp.cls
+  `\makeRLlabel`, 1210.0368) nor an enclosing description's (a paralist `{compactenum}`, 1406.1992; a kernel `\list`)
+  nor a document's global `\makelabel` labels the items; an inline list, which opens no `\list`, resets it in
+  `begin_itemize`. Perl's `\list` resets none. A label that is only glue narrower than `\labelsep` (`\item[~]`) prints
+  no `<tag>` in a list whose label is not a description's (Perl: `<tag> </tag>`).
   enumitem's `wide`/`fullwidth` set `\leftmargin\z@` (enumitem.sty:745-758), one reading with a stated `leftmargin`
   for the setup and the CSS (`stated_leftmargin`), the keys in enumitem's order, `\setlist`'s first (`merge_key`), a
   key a `\setlist*` stores again after the others (enumitem.sty:1603-1611). Not modelled: :15864
@@ -591,7 +597,7 @@ trio), its `\@parboxrestore` is `Tokens()`, a `p` cell sets `\hsize` alone (TeX_
   amsart's label-measured margins, REVTeX's point margins, enumitem's computed `leftmargin=*`, `{thebibliography}`'s
   list, the marginpar's line, the body's 10pt em at 11pt/12pt (`{quotation}`'s indent, `{verse}`'s margin), enumitem's
   `left=`, a bound class's own list registers (mnras's `{quote}`, emulateapj's itemize), a label's glue after a zero-width
-  item (`\strut`, `\label`, a colour, `\mbox`). Guard
+  item (`\strut`, `\label`, a colour, `\mbox`), an enumitem `{description}`'s `font` key outside its label. Guard
   `perfect_kernel_batchqa14k2::list_registers_set_the_line_width`; census report_QA14.tsv: the 104 LIST/CLASSLIST/ADJW/
   CONSEQ cells of its article contexts exact, none of its 348 exact cells changed.
 

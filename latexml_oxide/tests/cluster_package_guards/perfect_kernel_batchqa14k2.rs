@@ -50,9 +50,11 @@ type Case = (
 /// Red (QA14K2 707b5c4ba03): `<text width="0.0pt">` "•", "1.", "X"; a bold "1.", "Y". Witness 1210.0368 (tlp.cls).
 /// makelabel_in_a_description_is_the_lists_own: a list in a description, a global `\makelabel`, a `\newlist`
 /// description. Red (INT081AA, QA14K2 707b5c4ba03): "X-", "M-", a bold "(i)" twice.
+/// enumitem_description_format_inside_the_label: a description list's `format` inside `\descriptionlabel`. Red (QA14K2
+/// 7e7a159fee6): a bold "Step" and a `\bfdefault` Warning, "Sans" not sans. Witness 1809.03101.
 #[test]
 fn list_registers_set_the_line_width() {
-  let cases: [Case; 13] = [
+  let cases: [Case; 14] = [
     (repro!("list-structure/list_narrows_the_line_width.tex"), &[
       (
         "p",
@@ -516,6 +518,21 @@ fn list_registers_set_the_line_width() {
           "item",
           "S0.I3.ix3",
           "<item xml:id=\"S0.I3.ix3\"><tags><tag><text font=\"bold\" xml:id=\"S0.I3.ix3.1\">G</text></tag><tag role=\"typerefnum\">item G</tag></tags><para xml:id=\"S0.I3.ix3.p1\"><description xml:id=\"S0.I3.ix3.I3\"><item xml:id=\"S0.I3.ix3.I3.ix1\"><tags><tag><text font=\"bold\" xml:id=\"S0.I3.ix3.I3.ix1.1\">H</text></tag><tag role=\"typerefnum\">item H</tag></tags><para xml:id=\"S0.I3.ix3.I3.ix1.p1\"><p xml:id=\"S0.I3.ix3.I3.ix1.p1.1\">a description list in it</p></para></item></description></para></item>",
+        ),
+      ],
+    ),
+    (
+      repro!("list-structure/enumitem_description_format_inside_the_label.tex"),
+      &[
+        (
+          "item",
+          "S0.I1.ix1",
+          "<item xml:id=\"S0.I1.ix1\"><tags><tag><Math mode=\"inline\" tex=\"\\mathsf{Step}\" text=\"Step\" xml:id=\"S0.I1.ix1.m1\"><XMath xml:id=\"S0.I1.ix1.m1.1\"><XMTok font=\"sansserif\" role=\"UNKNOWN\">Step</XMTok></XMath></Math></tag><tag role=\"typerefnum\">item Step</tag></tags><para xml:id=\"S0.I1.ix1.p1\"><p xml:id=\"S0.I1.ix1.p1.1\">a rule</p></para></item>",
+        ),
+        (
+          "item",
+          "S0.I2.ix1",
+          "<item xml:id=\"S0.I2.ix1\"><tags><tag><text font=\"sansserif bold\" xml:id=\"S0.I2.ix1.1\">Sans</text></tag><tag role=\"typerefnum\">item Sans</tag></tags><para xml:id=\"S0.I2.ix1.p1\"><p xml:id=\"S0.I2.ix1.p1.1\">a sans label</p></para></item>",
         ),
       ],
     ),
