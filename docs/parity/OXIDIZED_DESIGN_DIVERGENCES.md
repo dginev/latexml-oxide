@@ -6159,13 +6159,42 @@ the class, luatexja then loaded and the whole body was converted with
 directive "we depend on the messages for establishing success" is met by making
 the pipeline Perl-shaped rather than by admitting more post-Fatal messages:
 
-1. **`core_interface::hard_yank_processing`**: on a resource Fatal,
+1. **`core_interface::hard_yank_processing`**: on a resource Fatal
+   (`Timeout:{MemoryBudget,Convert,TokenLimit,PushbackLimit}`, re-raised),
    `digest_internal` rescues the completed bodies (`RESCUED_BOXES`, Perl's
    `rescued_boxes`) and `gullet::flush()`es the input; the converter's salvage
-   pass re-collects the rescue and reads nothing more. The in-progress body is
-   still not salvaged for `Timeout:Recursion` (2605.25400: reviving it
-   re-entered the loop during build) — only the stomach box-cap path salvages
-   pending lists, as before.
+   pass re-collects the rescue and reads nothing more.
+   **Every other digestion Fatal keeps the text digested before it**
+   (`finish_digestion_fatal`, DG 2026-11-26): the boxes of every pending level
+   (`stomach::salvage_pending_box_lists`, outermost first) are built, the input
+   after the Fatal stays unread and the status stays Fatal. That keeps more than
+   Perl: `hardYankProcessing` rescues `@LaTeXML::LIST` (Error.pm:336-338), the
+   innermost list, which `digestNextBody` and `digest` bind afresh
+   (Stomach.pm:92-97, :146), so for a Fatal inside `\footnote` Perl keeps
+   `<p>Note text </p>` alone and we also keep the paragraphs before it. The levels
+   are kept, not closed: an unfinished footnote, `\author{…}`, formula or list
+   leaves its boxes in the running paragraph (`rhai-bindings/digest_fatal_in_*_red.tex`,
+   post-merge). Perl's guards and ours:
+   - Perl's `TOKEN_LIMIT` and `PUSHBACK_LIMIT` (Gullet.pm:301-306) and its wall
+     clock (`timedout`, Error.pm:579), our `Timeout:{TokenLimit,PushbackLimit,Convert}`,
+     and our RSS fuse (`Timeout:MemoryBudget`) are re-raised: only the completed
+     bodies are kept, where Perl keeps the innermost list;
+   - Perl's `IF_LIMIT` (Conditional.pm:63), our `Timeout:IfLimit`, keeps every
+     level, as any other Fatal (2006.14937);
+   - Perl's `MAXSTACK` (Stomach.pm:175, `internal:<recursion>`), our
+     `Stomach:Recursion`, and our own box-window cycle guard and box ceilings
+     (`Stomach:{Recursion,MemoryBudget}`) drop the innermost level, the repeating
+     window (2508.07407), and keep the outer ones, where Perl keeps the innermost;
+   - our token-loop guards, which Perl lacks, keep nothing: the gullet's cycle
+     guard (`Timeout:Recursion`) and the input-level limit (`Mouth:Recursion`,
+     TeX's `max_in_open`); on 2605.25400 the salvage revived the loop in the
+     build, an 8.7 s Fatal became a 2 m 12 s timeout writing a zero-byte file;
+   - a salvage of `STOMACH_CYCLE_ACTIVATE` boxes or more is refused.
+   `TooManyErrors`, `Mouth:EoF` (hep-th9308151, astro-ph0012068),
+   `Stomach:Misdefined`, `ParamSpec:Expected`, `TargetUnexpected:Endgroup` and a
+   binding's own Fatal keep every level. One helper serves every digestion loop:
+   the eager steps, a Fatal stashed in the last step (`digest_adaptive`,
+   `digest_internal`) and streaming pass 1.
 2. **`Fatal!` / `fatal!` write their `Fatal:` line at the raise** (Perl L312);
    `Error::log_fatal` at the converter/post sinks is idempotent per fatal.
    Before, only the sink logged, so a binding swallowing the `Err`
@@ -6192,6 +6221,8 @@ flagging). Measured on s107 (2,371 logs): zero counted-but-unlogged Errors or
 Warnings and zero fatal counters without a `Fatal:` line — the code defects were
 latent; the observed gaps were the continuation (jlreq family) and the panic.
 **Guards**: `perfect_kernel_batch56::a_resource_fatal_rescues_the_digested_bodies_and_reads_no_further_input`,
+`fatal_salvages_partial_document::{a_digestion_fatal_keeps_the_text_before_it,
+recoverable_fatal_keeps_the_already_digested_document, too_many_errors_keeps_the_already_digested_document}`,
 `common::error::tests::{fatal_macro_logs_its_line_at_the_raise_exactly_once,
 ignored_diagnostics_scope_drops_line_and_count_together,
 emit_error_fires_the_too_many_errors_fatal_once,
@@ -19391,7 +19422,7 @@ reloads and is unchanged. **Guards**: `common::error::tests::an_ignoring_scope_t
 Fatal. **Rust.** A `Fatal()` (or `Error()` past MAX_ERRORS) prints its one line and sets status 3; containment does not
 swallow it (`script_bindings/wire.rs` `contain` returns the Fatal `take_raised_fatal` finds, PR #829), so it ends the
 conversion from a binding's top level, a body, a hook or a binding another binding loads (probe: `Before \wftopmacro\
-after.` with a body `Fatal()` keeps no text, "Conversion failed: 1 fatal error"). A Fatal the script catches with
+after.` with a body `Fatal()` keeps `<p>Before </p>`, "Conversion failed: 1 fatal error"). A Fatal the script catches with
 `try`/`catch` was printed at its raise; the script and the conversion go on, and a later error stays its own counted
 `Error:script:` line (the user's ruling that every Error is emitted and counted, 2026-11-11); no ignore flag outlives it. DG 2026-11-14 confirmed both halves: a Rhai Fatal stops
 processing, and a Fatal the binding deliberately catches may continue, as Perl's `eval` allows. A `DefLigature`
@@ -19408,8 +19439,8 @@ and drops its own with a discard, and the core's end drops one no step raised, s
 in the rewrite phase ends the rewrites and keeps the document, which is finalized and post-processed, status 3, as Perl
 dies out of the rule loop (Core.pm:282-287) and post-processes the rescued document (LaTeXML.pm:277-283, 327-336);
 unlike Perl the math is still parsed and the siblings after a failed `replace` stay
-(`rewrite_fatal_keeps_the_document.tex`). A digestion Fatal keeps no text where Perl keeps the text before it
-(`digest_fatal_keeps_text_before_red.tex`, post-merge).
+(`rewrite_fatal_keeps_the_document.tex`). A digestion Fatal keeps the text before it (#251,
+`digest_fatal_keeps_text_before.tex`).
 **Guard**: `30_script_bindings::a_rhai_fatal_is_logged_once` (the caught-then-thrown, `fontTest`, `set_node`, setter and
 getter rows, every `<p>` whole; the rewrite rows post-processed).
 

@@ -347,149 +347,84 @@ fn digest_step_guarded(boxes: &mut Vec<Digested>) -> Result<bool> {
       boxes.extend(next_bodies);
       Ok(true)
     },
-    Err(e) => {
-      // Re-raise MemoryBudget / wall-clock Timeout (Convert) errors:
-      // those are *resource* failures, not recoverable digestion
-      // hiccups. Catching them here would silently produce empty
-      // output for a runaway-loop paper, masking a real bug and
-      // inflating canvas pass rates with empty conversions.
-      // R35.A: ensure pathological inputs fail loudly (exit 1+)
-      // rather than silently turning into a zero-byte HTML.
-      use latexml_core::common::error::ErrorCategory;
-      // NOTE the target discrimination on `MemoryBudget`, which is
-      // deliberate rather than an oversight. `Timeout`-target is the RSS
-      // fuse: real resident memory is already at the ceiling, so
-      // continuing means allocating straight into an OOM — there is
-      // nothing to do but stop. `Stomach`-target is the box-list ceilings
-      // (`box_count_cap` / `box_bytes_budget` / boxing depth), where the
-      // salvage below CLEARS the offending accumulation and therefore
-      // itself frees the memory; recovering there is safe precisely
-      // because the hard RSS backstop above stays non-recoverable
-      // underneath it. So the stomach's memory guards stay on the recovery
-      // path — a graceful end with as much of the document as was already
-      // digested, and the Fatal announced and latched below.
-      // A streaming-restart watermark stop is not a failure at all: the CLI
-      // reruns the document under --streaming. No salvage, no Fatal line, no
-      // recovery warning — the converter reports it as an Info.
-      if matches!(e.category, ErrorCategory::StreamingRestart) {
-        return Err(e);
-      }
-      if matches!(
-        (&e.target, &e.category),
-        (ErrorTarget::Timeout, ErrorCategory::MemoryBudget)
-          | (ErrorTarget::Timeout, ErrorCategory::Convert)
-          | (ErrorTarget::Timeout, ErrorCategory::TokenLimit)
-          | (ErrorTarget::Timeout, ErrorCategory::PushbackLimit)
-      ) {
-        emit_warn(
-          "recovery",
-          "digest_internal",
-          &format!(
-            "digest_internal: resource failure ({:?}/{:?}) — not recovering",
-            e.target, e.category
-          ),
-        );
-        return Err(e);
-      }
-      // The Err that landed here was raised at Fatal level. We recover
-      // BOXES from it (below) — Perl `finishDigestion` L219-220 — but a
-      // Fatal-level raise stays FATAL in the document's reported outcome:
-      // salvaging content is not licence to reclassify the verdict, and
-      // there is deliberately no auto-upgrade to Error severity here (user
-      // policy 2026-07-28). The one sanctioned demotion in this codebase is
-      // the bibliography's explicit `DEMOTE_FATALS` (`error.rs`), which is
-      // opt-in and scoped.
-      //
-      // `log_fatal()` is the single seam that does BOTH halves: it emits
-      // the standard `Fatal:<target>:<category>` line AND latches
-      // `LogStatus::Fatal`. This used to be a hand-rolled `log::error!`
-      // with a `Fatal:`-prefixed target, avoiding `log_fatal` for fear of
-      // "double-incrementing the counter" — unfounded, since the fatal
-      // status is a sticky BOOL (`error.rs` `note_status`, guarded by
-      // `fatal_status_is_sticky_and_returns_1`). The hand-rolled call used
-      // the raw `log`-crate macro, which never reaches `note_status`, so
-      // guard fatals raised as a plain `Err` by `stomach::check_timeout`
-      // (rather than through `Fatal!`) were never counted at all: the log
-      // carried a `Fatal:` line while the run summarised as `Conversion
-      // complete: No obvious problems`, status code 0 — "ok" to cortex.
-      // Guard: `101_fatal_salvages_partial_document`.
-      // (the Fatal's one line, as Perl prints it; no recovery Warning repeating it)
-      e.log_fatal();
-      // (the tokens the failed invocations left on the stack go, as Perl's `hardYankProcessing` empties it for every
-      // Fatal: left there, the next digestion — the build's — failed its first push, 2410.07647, 2105.02599)
-      stomach::clear_token_stack();
-      // Recover what the failed body already digested. Without this the
-      // "still produce partial output" intent above only worked when the
-      // failure landed in a LATER body — a Fatal inside the FIRST one left
-      // `boxes` empty and the run wrote a 39-byte empty document, losing a
-      // whole paper to one bad construct (arXiv:2508.07407 / ar5iv #556,
-      // one pathological `\tikz` picture).
-      //
-      // Scoped to the STOMACH box-cycle guard, deliberately. That guard
-      // fires while the token stream is still healthy — one construct is
-      // piling up boxes — so the surrounding document is sound and worth
-      // keeping, and the innermost level (the 50k-box repeating window) is
-      // exactly the construct to drop.
-      //
-      // It is NOT extended to the gullet's `Timeout:Recursion`, where the
-      // TOKEN stream is the thing looping: measured on arXiv:2605.25400,
-      // salvaging there revived a poisoned state that re-entered the same
-      // loop during build and turned an 8.7 s fatal into a 2 m 12 s
-      // wall-clock timeout writing a ZERO-byte file — strictly worse than
-      // the 39-byte stub, for a 1.7 KB gain on the one paper it helped.
-      //
-      // `TooManyErrors` keeps everything digested before it, as Perl's
-      // `hardYankProcessing` rescues `@LaTeXML::LIST` for every Fatal
-      // (Common/Error.pm:336-338) and the daemon's retry of `finishDigestion`
-      // (LaTeXML.pm:251-259, Core.pm:222-224) builds it: latexmlc writes the
-      // partial document where this wrote a 39-byte stub (acro-manual 120 KB
-      // in Perl; 27 TeX Live manuals and 5 of 7 Fatals in a 3,003-paper arXiv
-      // sample hit this Fatal). Its token stream is healthy — each error ends
-      // in an `<ERROR>` box — so there is no loop to re-enter, and the
-      // current level is honest content (the paragraph in progress). Input
-      // after the Fatal stays unread, as in Perl.
-      //
-      //
-      // The conditional guard (`Timeout:IfLimit`) keeps everything too: a run of conditionals adds no boxes of its own,
-      // so the current level is the document's (for a loop in the body's own paragraph, the whole body), and the
-      // salvage's own ceiling still refuses a loop that piles up boxes. A finite figure-heavy paper reaches the limit as
-      // surely as a loop: 2006.14937's 24 matplotlib `.pgf` figures (5.3 MB) trip it at the ninth, and the whole paper
-      // was a 39-byte stub.
-      let drop_innermost = match (&e.target, &e.category) {
-        (ErrorTarget::Stomach, _) => Some(true),
-        (ErrorTarget::TooManyErrors, _) | (ErrorTarget::Timeout, ErrorCategory::IfLimit) => {
-          Some(false)
-        },
-        _ => None,
-      };
-      // What is kept still has to be built. The Fatal is announced and its document kept, so it leaves the latch the math
-      // parser reads a resource Fatal from (`take_last_resource_fatal`): left there, the first formula a semantic action
-      // rejects took it for its own and dropped the document; `resource_fatal_latched` stays set. A conditional of the
-      // build (a rewrite's, a constructor's) would trip the spent guard again, so the phases after digestion get its
-      // budget afresh, and a loop the build re-enters still ends at the limit.
-      if matches!(e.category, ErrorCategory::IfLimit) {
-        error::take_last_resource_fatal();
-        if state::if_limit() > 0 {
-          state::set_if_limit(state::if_count() + state::if_limit());
-        }
-      }
-      if let Some(drop_innermost) = drop_innermost {
-        let salvaged = stomach::salvage_pending_box_lists(drop_innermost);
-        if !salvaged.is_empty() {
-          emit_info(
-            "recovery",
-            "digest_internal",
-            &format!(
-              "digest_internal: salvaged {} box(es) digested before the fatal",
-              salvaged.len()
-            ),
-          );
-          boxes.extend(salvaged);
-        }
-      }
-      Ok(false)
-    },
+    Err(e) => finish_digestion_fatal(e, boxes).map(|()| false),
   }
+}
+
+/// A Fatal that ended digestion: logged and latched, the boxes of every pending level added to `boxes` (Perl's
+/// `hardYankProcessing` rescues the innermost `@LaTeXML::LIST`, Common/Error.pm:336-338, and `finishDigestion` builds
+/// it, LaTeXML.pm:251-259; OD #251); the input after it stays unread. `Err` re-raises a resource Fatal.
+/// Shared by every digestion loop: the eager steps, a Fatal stashed in the last step, streaming pass 1.
+fn finish_digestion_fatal(e: Error, boxes: &mut Vec<Digested>) -> Result<()> {
+  use latexml_core::common::error::ErrorCategory;
+  // A streaming-restart stop is not a failure: the CLI reruns the document under --streaming (no salvage, no Fatal
+  // line). The resource Fatals end the run where they fire (R35.A: a runaway paper fails loudly, never as an empty
+  // document): the RSS fuse (`Timeout`-target `MemoryBudget`; the `Stomach`-target box ceilings below free their own
+  // accumulation), the wall clock, the token and pushback limits.
+  if matches!(e.category, ErrorCategory::StreamingRestart) {
+    return Err(e);
+  }
+  if matches!(
+    (&e.target, &e.category),
+    (ErrorTarget::Timeout, ErrorCategory::MemoryBudget)
+      | (ErrorTarget::Timeout, ErrorCategory::Convert)
+      | (ErrorTarget::Timeout, ErrorCategory::TokenLimit)
+      | (ErrorTarget::Timeout, ErrorCategory::PushbackLimit)
+  ) {
+    emit_warn(
+      "recovery",
+      "digest_internal",
+      &format!(
+        "digest_internal: resource failure ({:?}/{:?}) — not recovering",
+        e.target, e.category
+      ),
+    );
+    return Err(e);
+  }
+  // The Fatal's one line and its sticky status (`log_fatal` does both; a salvage never reclassifies the verdict, user
+  // policy 2026-07-28; guards `101_fatal_salvages_partial_document`, `fatal_status_is_sticky_and_returns_1`).
+  e.log_fatal();
+  // (the tokens the failed invocations left on the stack go, as Perl's `hardYankProcessing` empties it for every
+  // Fatal: left there, the next digestion — the build's — failed its first push, 2410.07647, 2105.02599)
+  stomach::clear_token_stack();
+  // What the failed body digested is kept (a `document` environment is one body: without it a Fatal anywhere in the
+  // body wrote a 39-byte document; 2508.07407, ar5iv #556), with two exceptions:
+  // - the stomach's runaway guards drop the innermost level, the 50k-box repeating window, and keep the outer ones;
+  // - the token-loop guards (`Timeout:Recursion`, the mouth's input nesting) keep nothing: on 2605.25400 the salvage
+  //   revived the poisoned loop in the build, an 8.7 s Fatal became a 2 m 12 s timeout writing a zero-byte file.
+  // `TooManyErrors`, `Timeout:IfLimit` (2006.14937's 24 `.pgf` figures), `Mouth:EoF`, a binding's Fatal and every
+  // other one keep it all; `salvage_pending_box_lists` still refuses a salvage that is itself runaway output.
+  let drop_innermost = match (&e.target, &e.category) {
+    (ErrorTarget::Stomach, ErrorCategory::Recursion | ErrorCategory::MemoryBudget) => Some(true),
+    (ErrorTarget::Timeout | ErrorTarget::Mouth, ErrorCategory::Recursion) => None,
+    _ => Some(false),
+  };
+  // What is kept still has to be built. The Fatal is announced and its document kept, so it leaves the latch the math
+  // parser reads a resource Fatal from (`take_last_resource_fatal`): left there, the first formula a semantic action
+  // rejects took it for its own and dropped the document; `resource_fatal_latched` stays set. A conditional of the
+  // build (a rewrite's, a constructor's) would trip the spent guard again, so the phases after digestion get its
+  // budget afresh, and a loop the build re-enters still ends at the limit.
+  if matches!(e.category, ErrorCategory::IfLimit) {
+    error::take_last_resource_fatal();
+    if state::if_limit() > 0 {
+      state::set_if_limit(state::if_count() + state::if_limit());
+    }
+  }
+  if let Some(drop_innermost) = drop_innermost {
+    let salvaged = stomach::salvage_pending_box_lists(drop_innermost);
+    if !salvaged.is_empty() {
+      emit_info(
+        "recovery",
+        "digest_internal",
+        &format!(
+          "digest_internal: salvaged {} box(es) digested before the fatal",
+          salvaged.len()
+        ),
+      );
+      boxes.extend(salvaged);
+    }
+  }
+  Ok(())
 }
 
 /// The document head shared by the eager and streaming paths: a fresh
@@ -2080,6 +2015,16 @@ impl DigestionAPI for Core {
         };
       }
     }
+    // (a Fatal stashed in the last step is the digestion's, as in `digest_internal`: left armed, the build raised it)
+    if let Some(fatal) = stomach::take_stashed_fatal()
+      && let Err(e) = finish_digestion_fatal(fatal, &mut boxes)
+    {
+      disarm(armed_here);
+      if !matches!(e.category, ErrorCategory::StreamingRestart) {
+        hard_yank_processing(boxes);
+      }
+      return Err(e);
+    }
     disarm(armed_here);
     gullet::flush();
     note_end(&digestion_note);
@@ -2150,10 +2095,14 @@ impl DigestionAPI for Core {
         },
       }
     }
-    // (a Fatal stashed in the last step is the digestion's, its boxes rescued as for any other)
-    if let Some(fatal) = stomach::take_stashed_fatal() {
-      hard_yank_processing(boxes);
-      return Err(fatal);
+    // (a Fatal stashed in the last step is the digestion's, its boxes kept as for any other)
+    if let Some(fatal) = stomach::take_stashed_fatal()
+      && let Err(e) = finish_digestion_fatal(fatal, &mut boxes)
+    {
+      if !matches!(e.category, ErrorCategory::StreamingRestart) {
+        hard_yank_processing(boxes);
+      }
+      return Err(e);
     }
     gullet::flush();
     Ok(Digested::from(List::new(boxes)))

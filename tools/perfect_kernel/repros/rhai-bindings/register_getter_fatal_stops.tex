@@ -6,11 +6,11 @@
 % oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Before 0.0pt after. Second paragraph."; Perl 0.8.8:
 %   <p>Before </p>, 1 fatal error
 % engines: INT081Y (23ce8bc3c25): <p>Before  after.</p> <p>Second paragraph.</p>, 1 fatal error (dropped)
-%          RHODR: no paragraph, 1 fatal error, status 3 (a digestion Fatal keeps no text, as a body `Fatal()`:
-%          digest_fatal_keeps_text_before_red.tex)
-% expect:  1 fatal error; the text after the getter's read not built (as a body `Fatal()`)
-% status:  GREEN for the stop (RHODR; guard 30_script_bindings::a_rhai_fatal_is_logged_once, rows "a register getter"
-%   and its caught Fatal); the text lost before it is DIGFATAL (digest_fatal_keeps_text_before_red.tex, post-merge)
+%          RHODR: no paragraph, 1 fatal error, status 3 (a digestion Fatal kept no text)
+%          DIGFATAL: <p>Before </p>, 1 fatal error, status 3 (as a body `Fatal()`: digest_fatal_keeps_text_before.tex)
+% expect:  1 fatal error; <p>Before </p> kept, the text after the getter's read not built (as a body `Fatal()`)
+% status:  GREEN (RHODR for the stop, DIGFATAL for the text before it; guard 30_script_bindings::
+%   a_rhai_fatal_is_logged_once, rows "a register getter" and its caught Fatal)
 \documentclass{article}
 \usepackage{lxrgf}
 \begin{document}

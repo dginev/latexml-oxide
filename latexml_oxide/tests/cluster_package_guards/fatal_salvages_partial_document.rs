@@ -117,7 +117,7 @@ fn recoverable_fatal_keeps_the_already_digested_document() {
 }
 
 /// A `TooManyErrors` Fatal keeps everything digested before it: Perl's
-/// `hardYankProcessing` rescues `@LaTeXML::LIST` for every Fatal
+/// `hardYankProcessing` rescues the innermost `@LaTeXML::LIST` for every Fatal
 /// (Common/Error.pm:336-338) and latexmlc builds it (LaTeXML.pm:251-259). The
 /// run wrote a 39-byte stub (27 TeX Live manuals, e.g. acro-manual, 120 KB in
 /// Perl). The input after the Fatal stays unread, as in Perl, and the Fatal
@@ -143,4 +143,135 @@ fn too_many_errors_keeps_the_already_digested_document() {
   );
   assert!(xml.contains("<p>KEEPMEBEFOREMARKER prose.</p>"), "{xml}");
   assert!(!xml.contains("KEEPMEAFTERMARKER"), "{xml}");
+}
+
+type SalvageRow<'a> = (
+  &'a str,
+  &'a str,
+  &'a [(&'a str, &'a str)],
+  &'a str,
+  usize,
+  usize,
+  &'a [&'a str],
+);
+
+/// Every digestion Fatal but the resource and token-loop guards keeps the text of every pending level digested before
+/// it (`core_interface::finish_digestion_fatal`; Perl keeps the innermost list, Common/Error.pm:336-338, OD #251); the
+/// run stays Fatal and reads nothing past it. A `document` environment is one body, so a Fatal in it kept no text at all
+/// before DIGFATAL. (row, repro, its side files, the `Fatal:` line's head, `Error:` and `Warning:` lines, every `<p>`)
+#[test]
+fn a_digestion_fatal_keeps_the_text_before_it() {
+  const KEPT: &[&str] = &["<p>First paragraph.</p>", "<p>Before </p>"];
+  let rows: &[SalvageRow] = &[
+    (
+      // a binding's own Fatal in a macro body (the RHODR shape)
+      "a binding's Fatal",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/rhai-bindings/digest_fatal_keeps_text_before.tex"
+      ),
+      &[(
+        "lxmbf.sty.rhai",
+        include_str!("../../../tools/perfect_kernel/repros/rhai-bindings/lxmbf.sty.rhai"),
+      )],
+      "Fatal:unexpected:Internal lxmbf gives up",
+      0,
+      0,
+      KEPT,
+    ),
+    (
+      // TeX's emergency stop after "File ended while scanning use of \grab" (hep-th9308151, astro-ph0012068;
+      // CorTeX's hep-th0008096 no longer reaches it)
+      "Mouth:EoF",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/parameter-conditional/delimited_argument_at_end_of_input_keeps_the_text_before.tex"
+      ),
+      &[],
+      "Fatal:Mouth:EoF File ended while scanning use of a Until:\\stop argument",
+      1,
+      0,
+      KEPT,
+    ),
+    (
+      // a Stomach-target Fatal that is no runaway guard keeps the innermost level too (synthetic: 1509.08999's and
+      // 1807.06367's fire in the preamble, where there is no text to keep; 1311.6759 no longer reaches it)
+      "Stomach:Misdefined",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/rhai-bindings/unbalanced_definition_keeps_text_before.tex"
+      ),
+      &[(
+        "lxubd.sty.rhai",
+        include_str!("../../../tools/perfect_kernel/repros/rhai-bindings/lxubd.sty.rhai"),
+      )],
+      "Fatal:Stomach:Misdefined Expansion of '\\lxubdx' has unbalanced {}",
+      0,
+      0,
+      KEPT,
+    ),
+    (
+      // a getter's Fatal stashed by the input's last token is the digestion's tail's, not the build's (the reviewer's
+      // `tail/last.tex`: INT081RC6 built nothing and warned "build stopped early")
+      "a stashed Fatal at the end of input",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/rhai-bindings/register_getter_fatal_at_end_of_input_keeps_text_before.tex"
+      ),
+      &[(
+        "lxrgf.sty.rhai",
+        include_str!("../../../tools/perfect_kernel/repros/rhai-bindings/lxrgf.sty.rhai"),
+      )],
+      "Fatal:unexpected:Internal lxrgf gives up",
+      0,
+      0,
+      KEPT,
+    ),
+    (
+      // the token-loop guards keep nothing: the salvage revived the loop in the build (2605.25400)
+      "Timeout:Recursion",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/expansion-primitives/expansion_loop_keeps_nothing.tex"
+      ),
+      &[],
+      "Fatal:Timeout:Recursion Infinite expansion loop: a window of 2 token(s) repeated 100+ times",
+      0,
+      0,
+      &[],
+    ),
+    (
+      // the input-level limit is one of them (hep-th0409095, 1503.05624)
+      "Mouth:Recursion",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/expansion-primitives/scantokens_self_recursion_keeps_nothing.tex"
+      ),
+      &[],
+      "Fatal:Mouth:Recursion TeX capacity exceeded, sorry [text input levels=15]",
+      0,
+      0,
+      &[],
+    ),
+  ];
+  let mut failures = Vec::new();
+  for (name, tex, files, fatal, want_errors, want_warnings, paras) in rows {
+    let (log, xml, status, code) = latexml::util::test::convert_files_with_status(tex, files, None);
+    let fatals: Vec<&str> = log.lines().filter(|l| l.starts_with("Fatal:")).collect();
+    let errors = log.lines().filter(|l| l.starts_with("Error:")).count();
+    let warnings = log.lines().filter(|l| l.starts_with("Warning:")).count();
+    let found = latexml::util::test::xml_elements(&xml, "p", &[]);
+    let want: Vec<String> = paras
+      .iter()
+      .map(|p| latexml::util::test::normalize_markup(p))
+      .collect();
+    if fatals.len() != 1
+      || !fatals[0].starts_with(fatal)
+      || errors != *want_errors
+      || warnings != *want_warnings
+      || code != 3
+      || !status.ends_with("1 fatal error")
+      || found != want
+    {
+      failures.push(format!(
+        "{name}: fatals {fatals:#?} (want one starting {fatal:?}), {errors} Error: lines (want {want_errors}), {warnings} Warning: \
+         lines (want {want_warnings}), status {status:?} ({code}), paragraphs {found:#?} (want {want:#?})\n{xml}\n{log}"
+      ));
+    }
+  }
+  assert!(failures.is_empty(), "{}", failures.join("\n\n"));
 }

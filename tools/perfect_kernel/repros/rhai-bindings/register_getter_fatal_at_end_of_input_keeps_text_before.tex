@@ -1,0 +1,19 @@
+% mechanism: a register getter's stashed Fatal raised by the input's last token is taken by the digestion's tail
+%   (`core_interface` `digest_adaptive`, `stomach::take_stashed_fatal` -> `finish_digestion_fatal`) and keeps the text
+%   before it; left armed, the build raised it and stopped early with nothing built
+% witness: synthetic (review of DIGFATAL, `tail/last.tex`; the binding lxrgf.sty.rhai, lxrgf.sty.ltxml for Perl,
+%   lxrgf.sty for pdflatex)
+% oracle:  pdflatex (TL 2025, -no-shell-escape): "! Emergency stop. *** (job aborted, no legal \end found)", no PDF
+%   (the input ends on purpose before \end{document}); Perl 0.8.8 (latexmlc): 1 fatal error,
+%   <p>First paragraph.</p> <p>Before </p>
+% engines: INT081RC6: a 39-byte document, 1 fatal error, W=1 ("convert_document: build stopped early")
+%          DIGFATAL: 1 fatal error, W=0, <p>First paragraph.</p> <p>Before </p>
+% expect:  1 fatal error, W=0; <p>First paragraph.</p> <p>Before </p>
+% status:  GREEN (DIGFATAL; guard fatal_salvages_partial_document::a_digestion_fatal_keeps_the_text_before_it, row
+%   "a stashed Fatal at the end of input")
+\documentclass{article}
+\usepackage{lxrgf}
+\begin{document}
+First paragraph.
+
+Before \the\lxrgf

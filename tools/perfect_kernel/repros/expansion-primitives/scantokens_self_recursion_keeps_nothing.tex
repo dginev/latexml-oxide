@@ -1,0 +1,17 @@
+% mechanism: the input-level limit (`Fatal:Mouth:Recursion`, gullet.rs `mark_everyeof_mouth`) is a loop guard, like the
+%   gullet's cycle guard (`Timeout:Recursion`): the digestion salvage (`core_interface::finish_digestion_fatal`) keeps
+%   nothing for it, where it keeps the text before every other digestion Fatal (on 2605.25400 a salvage of the cycle
+%   guard revived the loop in the build). Perl has no input-level limit; it rescues the innermost list for every
+%   Fatal (Common/Error.pm:336-338)
+% witness: synthetic (the Mouth:Recursion shape of hep-th0409095, 1503.05624, 1812.09658)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) "! TeX capacity exceeded, sorry [text input levels=15]."
+%   (texmf.cnf:868 max_in_open), no PDF
+% engines: INT081RC6: a 39-byte document, 1 fatal error, status 3
+% expect:  1 fatal error, status 3; no paragraph
+% status:  CONTROL (TeX errs; the salvage's exclusion)
+\documentclass{article}
+\begin{document}
+First paragraph.
+
+Before \def\x{\scantokens{\x}}\x after.
+\end{document}

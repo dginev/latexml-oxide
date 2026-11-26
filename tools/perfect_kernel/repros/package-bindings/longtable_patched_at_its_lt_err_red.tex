@@ -1,0 +1,23 @@
+% mechanism: longtable's binding defines `\longtable` without the real one's body (longtable.sty:91-106, where
+%   `\LT@err` reports a two-column document), so a preamble patch that splits the real body at `\LT@err` reads to the end
+%   of the input (`Fatal:Mouth:EoF` in the preamble: the document is lost whatever the digestion salvage keeps)
+% witness: 1409.6572, 1503.02372, 1702.08827, 1909.09200, 2503.01096 (the "longtable in twocolumn" preamble hack)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Text before. A Text after."
+% engines: INT081RC6 and DIGFATAL: 1 error ("Missing argument Until:\LT@err at end of input"), 1 fatal error, a 39-byte
+%   document
+% expect:  0 errors; "Text before.", the table, "Text after."
+% status:  RED (DIGFATAL)
+% moves:   post-merge (longtable's binding: the real `\longtable` body, or a raw load)
+\documentclass{article}
+\usepackage{longtable}
+\makeatletter
+\long\def\foo#1\LT@err#2#3#4!!{\def\longtable{#1#4}}
+\expandafter\foo\longtable!!
+\makeatother
+\begin{document}
+Text before.
+\begin{longtable}{l}
+A\\
+\end{longtable}
+Text after.
+\end{document}

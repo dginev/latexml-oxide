@@ -1636,7 +1636,8 @@ fn a_rewrite_scope_names_its_unit() {
 /// `Error:script:` lines, the `Warning:` lines, every `<p>` of the output, whole). A binding's top-level
 /// throw is its own Fatal, as Perl's `Fatal('die', …, "File … had an error")` (Package.pm:2338). A Fatal in a build
 /// hook (a `fontTest`) stops the build, which keeps the document built so far with its one Warning. A digestion Fatal
-/// keeps no text (Perl keeps the text before it: `rhai-bindings/digest_fatal_keeps_text_before_red.tex`).
+/// in the body keeps the text before it (`rhai-bindings/digest_fatal_keeps_text_before.tex`, OD #251); one in the
+/// preamble leaves no document.
 type FatalRow<'a> = (
   &'a str,
   &'a [(&'a str, &'a str)],
@@ -1675,7 +1676,7 @@ fn a_rhai_fatal_is_logged_once() {
       &["Fatal:unexpected:Internal wfbody gives up"],
       0,
       0,
-      &[],
+      &["<p>Before </p>"],
     ),
     (
       "Error() past MAX_ERRORS",
@@ -1800,7 +1801,7 @@ fn a_rhai_fatal_is_logged_once() {
       &["Fatal:unexpected:Internal wfset gives up"],
       0,
       0,
-      &[],
+      &["<p>Before </p>"],
     ),
     (
       "a caught Fatal in a register setter",
@@ -1824,7 +1825,7 @@ fn a_rhai_fatal_is_logged_once() {
       &["Fatal:unexpected:Internal wfget gives up"],
       0,
       0,
-      &[],
+      &["<p>Before </p>"],
     ),
     (
       "a caught Fatal in a register getter",
@@ -1853,7 +1854,7 @@ DefRegister("\\wfb", Dimension("0pt"), #{ getter: || { try { Fatal("unexpected",
       ],
       0,
       0,
-      &[],
+      &["<p>Before </p>"],
     ),
   ];
   let mut failures = Vec::new();
