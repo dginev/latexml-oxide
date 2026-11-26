@@ -1,6 +1,6 @@
 # Change Log
 
-## [0.8.0] (98 % of arXiv without an error; packages read from their own sources; 198 new bindings; a frontmatter engine; faster, in less memory)
+## [0.8.0] (98 % of arXiv without an error; packages read from their own sources; 199 new bindings; a frontmatter engine; faster, in less memory)
 
 Highlights since v0.7.6 in August:
 
@@ -10,8 +10,8 @@ Highlights since v0.7.6 in August:
    their original engine.
 3. Raw interpretation of packages and classes is now enabled by default: latexml-oxide loads those without a binding
    from their own `.sty`/`.cls` sources.
-4. Adds bindings for 198 more packages and classes, including unicode-math, polyglossia, xeCJK, datatool, tagpdf, the
-   KOMA-Script classes, apa7 and the AAAI, ACL, ICLR and USENIX conference styles.
+4. Adds bindings for 199 more packages and classes, including unicode-math, polyglossia, xeCJK, datatool, tagpdf, the
+   KOMA-Script base packages, apa7 and the AAAI, ACL, ICLR and USENIX conference styles.
    - [`docs/SUPPORTED_PACKAGES.md`](docs/SUPPORTED_PACKAGES.md)
 5. Converts a typical arXiv paper 1.3× faster than v0.7.6, at about the cost of a single pdflatex pass.
 6. Converts very large documents. Thanks to Nasser for his book of differential-equation tests (67,000 PDF pages),

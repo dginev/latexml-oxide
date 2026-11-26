@@ -16,7 +16,7 @@ lthooks as the one hook store, the frontmatter event model) and the OXIDIZED_DES
 
 ## New bindings
 
-Bindings for 198 more packages and classes than 0.7.6, none of which Perl LaTeXML ships (`latexml_package/src/lib.rs`
+Bindings for 199 more packages and classes than 0.7.6, none of which Perl LaTeXML ships (`latexml_package/src/lib.rs`
 and `latexml_contrib/src/lib.rs` against the 0.7.6 tag). Four were retired, their packages now loading from their own
 sources: alphabeta, atableau, catoptions and textalpha.
 
@@ -27,10 +27,10 @@ extbook, extreport, g-brief, g-brief2, gtpart, hha, hld, ijsra, iucr, jcm, jhrs,
 knittingpattern, l-aa, l-aa-ps, l4dc2026, laa, lni, ltnews, ltxdockit, midl, modernposter, moduli, neus2025, pasa,
 pasj00, pasj01, pasj02, quantumview, rasti, resphilosophica, rmaa, smfart, SNmult, uiucthesis, uspatent, vmsta, webofc.
 
-**Packages (130):**
+**Packages (131):**
 aaai, aas2pp4, aaspptwo, abntex2cite, acl, adjmulticol, aistats, aistats2e, aistats2eM, aj_pt4, ajmacros,
 algpseudocodex, animate, apjpt4, assoccnt, autobreak, autonum, axodraw, axodraw2, bfhlayout, bibentry, bidi,
-bmvc2k_natbib, caption2, cclayout, centernot, clefval, cmpj, cmpj2, cmpj3, codehigh, coling, collcell, colm, conll,
+bigfoot, bmvc2k_natbib, caption2, cclayout, centernot, clefval, cmpj, cmpj2, cmpj3, codehigh, coling, collcell, colm, conll,
 corl, crossreftools, cuted, datatool, dgruyter, dhucs, directory, eacl, emnlp, emnlp-ijcnlp, enotez, eqnarray, etoc,
 figbib, floatrow, frontespizio, gauss, hvfloat, hypdestopt, iclr, ifoddpage, imakeidx, ims_support, imsart, isorot,
 jinstpub, jurabib, keytheorems, latex-lab-testphase-block, latex-lab-testphase-minipage, ltxtable, lua-widow-control,
