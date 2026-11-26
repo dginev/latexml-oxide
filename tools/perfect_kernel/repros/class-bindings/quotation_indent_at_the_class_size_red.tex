@@ -1,0 +1,12 @@
+% mechanism: article.cls:584 `{quotation}`'s `\listparindent 1.5em` is read in the document's `\normalsize` (12pt: cmr12's
+%   1em = 11.74988pt); the binding's `\normalsize` is 10pt at every class size (Perl's), so a body em is 10pt.
+% witness: synthetic (QA14 K2; Gemini Neon's oracle article/report 11pt and 12pt quotation rows)
+% oracle:  pdflatex 0 errors; "Q 17.62482pt 17.62482pt"
+% engines: rust INT081AA "Q 0.0pt 0.0pt"; QA14K2 "Q 15.00002pt 15.00002pt"
+% expect:  0 errors; "Q 17.62482pt 17.62482pt"
+% status:  RED (QA14K2)
+% moves:   post-merge (the class size's `\normalsize`)
+\documentclass[12pt]{article}
+\begin{document}
+\begin{quotation}Q \the\itemindent\space\the\listparindent\end{quotation}
+\end{document}

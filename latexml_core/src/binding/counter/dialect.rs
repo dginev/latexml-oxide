@@ -1661,6 +1661,7 @@ pub fn ref_step_item_counter(tag_opt: Option<&Tokens>) -> Result<HashMap<Stored>
     };
 
     let mut tag_tokens = vec![T_BEGIN!()];
+    tag_tokens.extend(label_box_labelsep());
     // An `\item[…]` does not `\refstepcounter` (latex.ltx `\@item`: only `\if@noitemarg`), so a `\label` on it takes
     // `\@currentlabel` as the last numbered item in force left it. Perl types `\p@<counter>` instead
     // (latex_constructs.pool.ltxml:1383 `\let\the<counter>\@empty`), the enclosing item's label only while `\p@enumii`
@@ -1779,6 +1780,9 @@ pub struct BeginItemizeOptions {
   /// a list that opens no `\list` (paralist's `in…` lists), so `\@listdepth` stays;
   /// enumitem's inline lists do open one (enumitem.sty:1188-1191)
   pub opens_no_list: bool,
+  /// what the list's `\list` second argument sets after `\@list<depth>` (`begin_list_registers`): enumitem's
+  /// margin keys
+  pub setup:         Option<Tokens>,
 }
 
 /// Runs `\lx@trivlist@hook` in the current group: what a package adds to latex.ltx's `\@trivlist`, which every list but
@@ -1816,12 +1820,6 @@ pub fn begin_itemize(
   let listlevel = lookup_int("itemization_level") + 1; // level for this list overall
   let level = lookup_int(&s!("{counter}level")) + // level for lists of specific type
     (if options.nolevel { 0 } else { 1 });
-  AssignRegister!(
-    "\\itemsep",
-    lookup_dimension("\\lx@default@itemsep")
-      .unwrap_or_default()
-      .into()
-  );
   assign_value("itemization_level", listlevel, None);
   assign_value(&s!("{counter}level"), level, None);
   // latex.ltx's `\itemize`/`\enumerate` advance `\@itemdepth`/`\@enumdepth` inside their group
@@ -1849,19 +1847,34 @@ pub fn begin_itemize(
       item_depth = Some(depth);
     }
   }
-  if !options.opens_no_list && !matches!(itype, "list" | "trivlist") {
-    let depth = register_depth("\\@listdepth");
-    assign_register(
-      "\\@listdepth",
-      RegisterValue::Number(Number(depth + 1)),
-      Some(Scope::Global),
-      vec![],
-    )?;
-    let mut restore = vec![T_CS!("\\lx@listdepth@restore")];
-    restore.extend(Explode!(&depth.to_string()));
-    restore.push(T_CS!("\\relax"));
-    push_value("afterGroup", Stored::Tokens(Tokens::new(restore)))?;
+  // The list's `\list` registers (`begin_list_registers`; the kernel `\list` and a raw class's set their own, and
+  // `\trivlist` clears them, `trivlist_registers`), the item spacing then Perl's default.
+  let opens_list = !options.opens_no_list && !matches!(itype, "list" | "trivlist");
+  let sets_margins = opens_list && !itype.starts_with("inline@");
+  if opens_list {
+    step_list_depth()?;
   }
+  if sets_margins {
+    let mut setup = options
+      .setup
+      .clone()
+      .map(|s| s.unlist())
+      .unwrap_or_default();
+    // article.cls:556-558 `{description}`: `\list{}{\labelwidth\z@ \itemindent-\leftmargin …}`.
+    if itype == "description" {
+      setup.splice(
+        0..0,
+        mouth::tokenize_internal(r"\labelwidth\z@\itemindent-\leftmargin").unlist(),
+      );
+    }
+    begin_list_registers(setup)?;
+  }
+  AssignRegister!(
+    "\\itemsep",
+    lookup_dimension("\\lx@default@itemsep")
+      .unwrap_or_default()
+      .into()
+  );
   assign_value("itemization_items", 0, None);
   let listpostfix = roman!(listlevel).to_string();
   let postfix = roman!(level).to_string();
@@ -2111,7 +2124,67 @@ pub fn begin_itemize(
     .add(lookup_dimension_cs("\\partopsep", false).unwrap_or_default());
   rsc.insert("padtop", Stored::Dimension(pad));
   rsc.insert("padbottom", Stored::Dimension(pad));
+  if sets_margins {
+    end_list_registers()?;
+  } else if itype == "trivlist" {
+    trivlist_registers()?;
+  }
   Ok(rsc)
+}
+
+/// The tag holds the label's box alone, which latex.ltx:16033 `\@item` sets after `\hskip-\labelsep`: the
+/// `\hskip\labelsep` a label opens with to cancel it (:17206 `\@begintheorem`, article.cls:557 `\descriptionlabel`)
+/// is read at 0pt, as before the class set `\labelsep` (the label no space wider).
+pub fn label_box_labelsep() -> Vec<Token> {
+  if lookup_register_quiet("\\labelsep").is_some() && lookup_register_quiet("\\z@").is_some() {
+    vec![T_CS!("\\labelsep"), T_CS!("\\z@")]
+  } else {
+    Vec::new()
+  }
+}
+
+/// latex.ltx:15852 `\list`'s `\global\advance\@listdepth\@ne`, put back where the list's group ends (the `\endlist`
+/// half, :15913) by `\lx@listdepth@restore`.
+pub fn step_list_depth() -> Result<()> {
+  let depth = match lookup_register_quiet("\\@listdepth") {
+    Some(RegisterValue::Number(n)) => n.0,
+    _ => 0,
+  };
+  assign_register(
+    "\\@listdepth",
+    RegisterValue::Number(Number(depth + 1)),
+    Some(Scope::Global),
+    vec![],
+  )?;
+  let mut restore = vec![T_CS!("\\lx@listdepth@restore")];
+  restore.extend(Explode!(&depth.to_string()));
+  restore.push(T_CS!("\\relax"));
+  push_value("afterGroup", Stored::Tokens(Tokens::new(restore)))
+}
+
+/// latex.ltx:15854-15861 `\list`'s parameters, in the current group: `\rightmargin`, `\listparindent` and
+/// `\itemindent` cleared, `\@list<depth>` run (the class's `\leftmargin` and spacing), then `setup`, the list's own
+/// second argument. `end_list_registers` then narrows the line.
+pub fn begin_list_registers(setup: Vec<Token>) -> Result<()> {
+  let mut tokens = vec![T_CS!("\\lx@list@params")];
+  tokens.extend(setup);
+  tokens.push(T_CS!("\\relax"));
+  stomach::digest(Tokens::new(tokens))?;
+  Ok(())
+}
+
+/// latex.ltx:15863-15867, after `\@trivlist`: `\parskip\parsep`, and `\linewidth` and `\@totalleftmargin` moved in by
+/// the list's margins (`\lx@list@margins`; `\parindent` stays, sect06.rs).
+pub fn end_list_registers() -> Result<()> {
+  stomach::digest(Tokens!(T_CS!("\\lx@list@margins")))?;
+  Ok(())
+}
+
+/// latex.ltx:15903-15910 `\trivlist`: `\parsep\parskip`, and no label or left margin (`\lx@trivlist@margins`), the
+/// line as wide as around it. For the environments that are a `\trivlist` in LaTeX (center, theorem, proof).
+pub fn trivlist_registers() -> Result<()> {
+  stomach::digest(Tokens!(T_CS!("\\lx@trivlist@margins")))?;
+  Ok(())
 }
 
 /// Set the itemization style for a given level.

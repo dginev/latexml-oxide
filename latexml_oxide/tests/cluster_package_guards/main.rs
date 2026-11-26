@@ -701,6 +701,8 @@ mod perfect_kernel_batchpsf1;
 mod perfect_kernel_batchpure;
 /// QA14A: a `\parbox` sets `\hsize` and `\linewidth` only, `\textwidth`/`\columnwidth` the page's; KPE #1273.
 mod perfect_kernel_batchqa14a;
+/// QA14 K2: a list sets latex.ltx's `\list` registers, its line narrowed by its margins; `{adjustwidth}` is one.
+mod perfect_kernel_batchqa14k2;
 /// QA47A: `\begin{document}` runs the kernel's begin-document lists, so `cmd/<name>/<hook>` hooks patch TeX macros;
 /// a binding's hook is a counted Warning (BM Q3.3).
 mod perfect_kernel_batchqa47a;

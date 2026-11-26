@@ -1,0 +1,13 @@
+% mechanism: latex.ltx `\@xympar` sets the note in `\hsize\marginparwidth` with `\@parboxrestore`: its `\linewidth` is
+%   `\marginparwidth` (article.cls's 65pt at 10pt), in a list too. The kernel's `\marginparwidth` is 0pt
+%   (sect05.rs) and the note sets no line.
+% witness: synthetic (QA14 K2 sibling sweep)
+% oracle:  pdflatex 0 errors; "M 65.0pt 65.0pt"
+% engines: rust INT081AA "M 345.0pt 345.0pt"; QA14K2 "M 319.99997pt 345.0pt" (the list's line)
+% expect:  0 errors; "M 65.0pt 65.0pt"
+% status:  RED (QA14K2)
+% moves:   post-merge (the marginpar's `\@parboxrestore` with the class's `\marginparwidth`)
+\documentclass{article}
+\begin{document}
+\begin{itemize}\item text\marginpar{M \the\linewidth\space\the\hsize}\end{itemize}
+\end{document}

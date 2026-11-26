@@ -1,0 +1,32 @@
+% mechanism: in a list, what latex.ltx sets as a box sets its own line: a footnote (`\@footnotetext`, :17661-17663
+%   `\hsize\columnwidth \@parboxrestore`), a float (`\@xfloat`, :17482-17483), a minipage (`\@iiiminipage`, :16312-16325,
+%   its lists first-level ones: `\let\@listdepth\@mplistdepth \@mplistdepth\z@`) and a `p` cell (`\@arrayparboxrestore`,
+%   :16276-16281) start at their own left edge; a `\trivlist` (center, theorem, proof; :15903-15910) keeps the list's
+%   line with no margin; a `\fbox` and an `l` cell keep the list's line.
+% witness: synthetic (QA14 K2 sibling sweep; report_QA14.tsv rows footnote-in-itemize3, figure-in-itemize3,
+%   minipage.5lw-in-itemize3, center, theorem)
+% oracle:  pdflatex 0 errors; `\linewidth \leftmargin \@totalleftmargin \labelwidth`: F "345.0pt 25.00003pt 0.0pt
+%   20.00003pt", G "345.0pt 25.00003pt 0.0pt 20.00003pt", M "159.99998pt 25.00003pt 0.0pt 20.00003pt", MI "134.99995pt
+%   25.00003pt 25.00003pt 20.00003pt", P "85.35826pt 25.00003pt 0.0pt 20.00003pt", L and X "319.99997pt 25.00003pt
+%   25.00003pt 20.00003pt", C, T and R "319.99997pt 0.0pt 25.00003pt 0.0pt"
+% engines: rust INT081AA: every line 345.0pt, the margins 0.0pt (Perl alike); QA14K2 before the box resets: F and G
+%   "319.99997pt … 25.00003pt …", MI "134.99995pt 22.0pt 47.00003pt 17.0pt"
+% expect:  0 errors, 0 warnings; the values pdflatex prints
+% status:  RED (INT081AA) -> GREEN (QA14K2)
+\documentclass{article}
+\usepackage{amsthm}
+\newtheorem{thm}{Theorem}
+\makeatletter
+\newcommand\W[1]{#1 \the\linewidth\space\the\leftmargin\space\the\@totalleftmargin\space\the\labelwidth}
+\makeatother
+\begin{document}
+\begin{itemize}
+\item A\footnote{\W{F}}
+\item \begin{figure}[h]\W{G}\end{figure}
+\item \begin{minipage}{.5\linewidth}\W{M}\begin{itemize}\item \W{MI}\end{itemize}\end{minipage}
+\item \begin{tabular}{p{3cm}l}\W{P} & \W{L}\end{tabular} \fbox{\W{X}}
+\item \begin{center}\W{C}\end{center}
+\begin{thm}\W{T}\end{thm}
+\begin{proof}\W{R}\end{proof}
+\end{itemize}
+\end{document}

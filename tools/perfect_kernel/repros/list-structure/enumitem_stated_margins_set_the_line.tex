@@ -1,0 +1,17 @@
+% mechanism: enumitem.sty:1383-1400 `\enit@preset` sets the list's keys in its `\list` setup, after `\@list<depth>`:
+%   a stated `leftmargin` or `rightmargin` is the margin `\linewidth` narrows by (latex.ltx:15863-15867); a list without
+%   keys has the class's.
+% witness: synthetic (QA14 K2 sibling sweep: `[leftmargin=0pt]` printed 345.0pt on the base by its 0pt registers)
+% oracle:  pdflatex 0 errors; `\linewidth \leftmargin \rightmargin`: A "345.0pt 0.0pt 0.0pt", B "288.09451pt
+%   28.45274pt 28.45274pt", C "319.99997pt 25.00003pt 0.0pt"
+% engines: rust INT081AA: every line 345.0pt, every margin 0.0pt
+% expect:  0 errors, 0 warnings; the values pdflatex prints
+% status:  RED (INT081AA, B and C) -> GREEN (QA14K2)
+\documentclass{article}
+\usepackage{enumitem}
+\newcommand\W[1]{#1 \the\linewidth\space\the\leftmargin\space\the\rightmargin}
+\begin{document}
+\begin{itemize}[leftmargin=0pt]\item \W{A}\end{itemize}
+\begin{enumerate}[leftmargin=1cm,rightmargin=1cm]\item \W{B}\end{enumerate}
+\begin{itemize}[nosep]\item \W{C}\end{itemize}
+\end{document}

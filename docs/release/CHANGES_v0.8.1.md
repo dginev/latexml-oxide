@@ -9,6 +9,20 @@ top of its group.
 
 ### Unreleased
 
+  - **A list's `\linewidth` is its line, as LaTeX sets it.** `\list` and every environment that is a list in LaTeX
+    (itemize, enumerate, description, quote, quotation, verse, changepage's `{adjustwidth}`) now set latex.ltx's list
+    registers: `\leftmargin` from `\@list<depth>`, the line narrowed by both margins, `\@totalleftmargin`; the standard
+    classes set `\leftmargini`..`\leftmarginvi`, `\labelsep` and `\labelwidth` (article.cls:322-339) in ems of their
+    size, and a center, theorem or proof clears the margins. Before, every margin was 0pt (as in Perl), so a
+    `width=\linewidth` graphic in a list was 7-20 % too wide, and MDPI's `{adjustwidth}{-\extralength}{0cm}`
+    full-width figures kept the text's width (`\extralength` is now the class's 4.61cm). A footnote, a float, a
+    minipage or a `p` cell inside a list sets its own line; panels in an `{adjustwidth}` share its line (2405.20768,
+    2408.06972); enumitem's stated `leftmargin`/`rightmargin` are read; a label's leading `\hskip\labelsep` is read at
+    0pt, as LaTeX's `\@item` cancels it. An A/B of 212 papers that use lists with `\linewidth` or `{adjustwidth}`
+    moved 22, with equal errors, warnings and words: 19 in widths, heights, `panelwidth`/`panelline` and SVG geometry
+    only; 1703.00699's figure is one row, as in the PDF; 2306.09542 sets one more line mark in a narrower list item;
+    1508.03599's proof heads lose a leading space. Guard `perfect_kernel_batchqa14k2::list_registers_set_the_line_width`
+    (OXIDIZED_DESIGN_DIVERGENCES #29).
   - **Rhai bindings: a register getter's or a `fontTest`'s `Fatal()` stops the conversion, a rewrite's keeps the
     document, and ligature code may assign values.** A getter's Fatal was logged but dropped (the register read unset
     and the whole document was built), and so was a `fontTest`'s Fatal raised while a `\footnote` closed the text before

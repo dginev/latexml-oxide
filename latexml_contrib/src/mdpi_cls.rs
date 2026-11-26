@@ -360,8 +360,9 @@ LoadDefinitions!({
       "\\def\\orcid{letter}{{\\@ifundefined{{orcidauthor{letter}}}{{}}{{\\expandafter\\lx@add@orcid\\expandafter{{\\orcidauthor{letter}}}}}}}"
     ));
   }
-  // \extralength is a length register — define as 0pt.
-  DefRegister!("\\extralength" => Dimension::new(0));
+  // mdpi.cls:1486-1487 (2609.00671's): `\extralength` is 4.61cm, the margin a full-width
+  // `\begin{adjustwidth}{-\extralength}{0cm}` figure reaches into, its `\linewidth` widened by it (changepage_sty.rs).
+  DefRegister!("\\extralength" => Dimension!("4.61cm"));
   // \authorcontributions, \funding, \conflictsofinterest,
   // \abbreviations — substantive author-supplied text; render as
   // a named section.

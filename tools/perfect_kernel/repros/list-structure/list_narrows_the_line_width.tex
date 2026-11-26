@@ -1,0 +1,30 @@
+% mechanism: latex.ltx:15848-15869 `\list`: `\@list<depth>` (size10.clo:216-249) and the setup body give
+%   `\leftmargin`/`\rightmargin`, by which `\linewidth` narrows and `\@totalleftmargin` grows; article.cls:322-339 sets
+%   `\leftmargini`..`\leftmarginvi` and `\labelsep`. Every list-shaped environment: itemize at four depths, enumerate,
+%   description (article.cls:556), quote, quotation, verse (:571-596), `\begin{list}{}{…}`; the line back after each.
+% witness: synthetic (Bruce Q&A QA14 K2, the length census `agent_reports/report_QA14.tsv`)
+% oracle:  pdflatex 0 errors; `\linewidth \leftmargin \rightmargin \@totalleftmargin \labelwidth \itemindent`:
+%   A "345.0pt 25.00003pt 0.0pt 0.0pt 20.00003pt 0.0pt" (`\labelsep` 5.0pt), B1 "319.99997pt 25.00003pt 0.0pt 25.00003pt
+%   20.00003pt 0.0pt", B4 "262.30002pt 16.99998pt 0.0pt 82.69998pt 11.99998pt 0.0pt", D "319.99997pt … 0.0pt
+%   -25.00003pt", Q "294.99994pt 25.00003pt 25.00003pt 25.00003pt …", V "279.99992pt 40.00005pt 25.00003pt 40.00005pt
+%   20.00003pt -15.00002pt", L "259.64175pt 28.45274pt 56.9055pt 28.45274pt …", Z as A
+% engines: rust INT081AA: every line 345.0pt, every margin and `\labelsep` 0.0pt (Perl's registers, pool:1690-1702)
+% expect:  0 errors, 0 warnings; the values pdflatex prints
+% status:  RED (INT081AA) -> GREEN (QA14K2)
+\documentclass{article}
+\makeatletter
+\newcommand\W[1]{#1 \the\linewidth\space\the\leftmargin\space\the\rightmargin\space\the\@totalleftmargin\space
+  \the\labelwidth\space\the\itemindent}
+\makeatother
+\begin{document}
+\W{A} \the\labelsep
+\begin{itemize}\item \W{B1}\begin{itemize}\item \W{B2}\begin{itemize}\item \W{B3}\begin{itemize}\item \W{B4}
+\end{itemize}\end{itemize}\end{itemize}\end{itemize}
+\begin{enumerate}\item \W{E1}\begin{enumerate}\item \W{E2}\end{enumerate}\end{enumerate}
+\begin{description}\item[d] \W{D}\end{description}
+\begin{quote}\W{Q}\end{quote}
+\begin{quotation}\W{N}\end{quotation}
+\begin{verse}\W{V}\end{verse}
+\begin{list}{}{\setlength\leftmargin{1cm}\setlength\rightmargin{2cm}}\item \W{L}\end{list}
+\W{Z}
+\end{document}

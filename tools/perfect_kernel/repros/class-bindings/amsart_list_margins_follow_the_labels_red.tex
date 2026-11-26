@@ -1,0 +1,21 @@
+% mechanism: amsart.cls:940-962 sets the list margins at `\begin{document}` from its labels: `\leftmargini` =
+%   `\settowidth{\labelenumi\hskip\labelsep}` + `\normalparindent`, the others each its label's width, `\labelsep` 5pt
+%   (:241); `{description}` `\itemindent-12\p@` (:935); `{quotation}` 3pc margins (:893). The binding sets none of it.
+% witness: synthetic (QA14 K2; Gemini Neon's oracle GN_QA14K2_2026-11-25.tsv amsart rows)
+% oracle:  pdflatex 0 errors; `\linewidth \leftmargin \labelwidth \itemindent`: A "325.22217pt 34.77783pt 29.77783pt
+%   0.0pt", B "304.11101pt 21.11116pt 16.11116pt 0.0pt", D "325.22217pt 34.77783pt 0.0pt -12.0pt", Q "288.0pt 36.0pt
+%   29.77783pt 0.0pt"
+% engines: rust INT081AA: every line 345.0pt, every margin 0.0pt; QA14K2 (article's, which the binding inherits):
+%   A "319.99997pt 25.00003pt 20.00003pt 0.0pt", D "… -25.00003pt", Q "294.99994pt 25.00003pt 20.00003pt 15.00002pt"
+% expect:  0 errors; the values pdflatex prints (and amsart's 30pc `\textwidth`, the class geometry)
+% status:  RED (QA14K2)
+% moves:   post-merge (amsart's own list parameters in amsart_cls.rs)
+\documentclass{amsart}
+\makeatletter
+\newcommand\W[1]{#1 \the\linewidth\space\the\leftmargin\space\the\labelwidth\space\the\itemindent}
+\makeatother
+\begin{document}
+\begin{itemize}\item \W{A}\begin{itemize}\item \W{B}\end{itemize}\end{itemize}
+\begin{description}\item[d] \W{D}\end{description}
+\begin{quotation}\W{Q}\end{quotation}
+\end{document}

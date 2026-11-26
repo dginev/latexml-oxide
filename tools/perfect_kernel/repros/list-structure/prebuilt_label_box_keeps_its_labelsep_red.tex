@@ -1,0 +1,16 @@
+% mechanism: latex.ltx:16028-16039 `\@item` sets the label box after `\hskip-\labelsep`, cancelling the
+%   `\hskip\labelsep` a label opens with. A label read in `\item[…]` is digested at `\labelsep` 0pt
+%   (`label_box_labelsep`), but a box built before the `\item` (syntax.sty:244 `\sbox\z@{\hskip\labelsep…}`, then
+%   `\item[\unhbox\z@]`) keeps its 5pt skip, an en space (U+2002) at the start of the tag.
+% witness: synthetic (QA14 K2; the guard `perfect_kernel_batch56::everypar_grammar_survives_vertical_material_between_productions`)
+% oracle:  pdflatex 0 errors; "x" at the margin, no gap before it
+% engines: rust INT081AA `<tag>x</tag>` (`\labelsep` 0pt); QA14K2 `<tag> x</tag>`
+% expect:  0 errors; `<tag>x</tag>`
+% status:  RED (QA14K2)
+% moves:   post-merge
+\documentclass{article}
+\begin{document}
+\begin{list}{}{}
+\sbox0{\hskip\labelsep x}\item[\unhbox0] text
+\end{list}
+\end{document}

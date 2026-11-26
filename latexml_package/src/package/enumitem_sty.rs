@@ -105,6 +105,24 @@ fn begin_enum_itemize(
     opts.resume_star = Some(resume_star_toks.to_string());
   }
 
+  // The list's own margins, its `\list` setup after `\@list<depth>` (enumitem.sty:1383-1400 `\enit@preset`): a stated `leftmargin` or
+  // `rightmargin` length. A computed one (`*`, `!`: the label's width) keeps the class's.
+  let mut setup = Vec::new();
+  for (key, register) in [
+    ("leftmargin", "\\leftmargin"),
+    ("rightmargin", "\\rightmargin"),
+  ] {
+    if let Some(value) = hash.get(key).and_then(argwrap_to_tokens)
+      && !matches!(value.to_string().trim(), "*" | "!" | "")
+    {
+      setup.extend([T_CS!("\\setlength"), T_CS!(register), T_BEGIN!()]);
+      setup.extend(value.unlist());
+      setup.push(T_END!());
+    }
+  }
+  if !setup.is_empty() {
+    opts.setup = Some(Tokens::new(setup));
+  }
   let mut props = begin_itemize(itype, Some(counter_str), opts)?;
   // label / label* — Perl L94-101. Defined AFTER `begin_itemize`, which aliases an itemize's
   // `\label<usecounter>` to `\labelitem<depth>`: the list's own label wins, as enumitem's

@@ -1,0 +1,24 @@
+% mechanism: a float's panels set in an `{adjustwidth}` (changepage.sty:110-120, a `\list`) are a row of the
+%   adjustwidth's line, latex.ltx:15863-15867's `\linewidth` moved by its margins: three `{subfigure}{.3\linewidth}`
+%   in `{adjustwidth}{-1cm}{-1cm}` are 132.6pt each, one row.
+% witness: 2405.20768 S3.F1 (`{adjustwidth}{-0.3in}{-0.3in}`), 2408.06972 S3.F1 (MDPI `{-\extralength}{0cm}`)
+% oracle:  pdflatex 0 errors; one row of three panels "(a) A (b) B (c) C"
+% engines: rust INT081AA: the graphics 103.5pt (the line 345pt), one row; QA14K2 before the panel line: 120.57pt
+%   against a 345pt line, `panelwidth` 0.349, two rows
+% expect:  0 errors, 0 warnings; `panelrows="1"`, each graphic as wide as its subfigure
+% status:  RED (QA14K2 round 1) -> GREEN (QA14K2)
+\documentclass{article}
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage{changepage}
+\begin{document}
+\begin{figure}[h]
+\begin{adjustwidth}{-1cm}{-1cm}
+\centering
+\begin{subfigure}{.3\linewidth}\includegraphics[width=\linewidth]{a.png}\caption{A}\end{subfigure}
+\begin{subfigure}{.3\linewidth}\includegraphics[width=\linewidth]{b.png}\caption{B}\end{subfigure}
+\begin{subfigure}{.3\linewidth}\includegraphics[width=\linewidth]{f.png}\caption{C}\end{subfigure}
+\end{adjustwidth}
+\caption{Three.}
+\end{figure}
+\end{document}
