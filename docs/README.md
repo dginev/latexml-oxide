@@ -5,7 +5,7 @@ with [`SYNC_STATUS.md`](SYNC_STATUS.md).
 
 > **What this project is.** latexml-oxide is a faithful Perl→Rust translation of
 > [LaTeXML](https://github.com/brucemiller/latexml). Two co-equal targets drive the work: **(1) faithful parity** with
-> the original Perl (the Perl source is ground truth), and **(2) beyond-Perl improvements** over the ~2.8M-document
+> the original Perl (the Perl source is ground truth), and **(2) beyond-Perl improvements** over the ~3M-document
 > arXiv corpus (the levers Rust affords that single-threaded, libxslt-bound Perl cannot). The themes below mirror that
 > split.
 

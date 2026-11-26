@@ -43,7 +43,7 @@ If you prefer the portable tarball, the binary is statically linked against libx
 $ curl -LO https://github.com/dginev/latexml-oxide/releases/download/$VERSION/latexml-oxide-$VERSION-x86_64-unknown-linux-gnu.tar.gz
 $ tar xzf latexml-oxide-$VERSION-x86_64-unknown-linux-gnu.tar.gz
 $ sudo cp latexml-oxide-$VERSION-x86_64-unknown-linux-gnu/latexml_oxide /usr/local/bin/
-$ sudo apt install imagemagick mupdf-tools poppler-utils ghostscript dvipng dvisvgm \
+$ sudo apt install imagemagick mupdf-tools poppler-utils ghostscript \
                    texlive-latex-base texlive-latex-extra texlive-science
 ```
 
@@ -78,8 +78,8 @@ $ curl -LO https://github.com/dginev/latexml-oxide/releases/download/$VERSION/la
 $ tar xzf latexml-oxide-$VERSION-x86_64-apple-darwin.tar.gz
 $ sudo cp latexml-oxide-$VERSION-x86_64-apple-darwin/latexml_oxide /usr/local/bin/
 
-$ brew install imagemagick mupdf-tools poppler ghostscript dvisvgm
-$ brew install texlive          # or install MacTeX / BasicTeX (provides dvipng)
+$ brew install imagemagick mupdf-tools poppler ghostscript
+$ brew install texlive          # or install MacTeX / BasicTeX
 ```
 
 The prebuilt binary links `libkpathsea` statically, so it finds your TeX files in-process on either
@@ -148,9 +148,7 @@ The `.deb` declares all of these, so `apt install ./latexml-oxide_*.deb` pulls t
 | `mutool` | `mupdf-tools` | `mupdf-tools` | primary PDF graphics (fast) |
 | `pdftocairo` | `poppler-utils` | `poppler` | vector-SVG from PDF |
 | `gs`, `ps2pdf` | `ghostscript` | `ghostscript` | PDF/PostScript conversion |
-| `dvipng` | `dvipng` | TeX Live | raster LaTeX-image output |
-| `dvisvgm` | `dvisvgm` | TeX Live | vector-SVG LaTeX-image output |
-| `kpsewhich`, `latex`, `pdflatex`, `tftopl` | `texlive-latex-base` (+`-extra`, `-science`) | `texlive` / MacTeX | TeX package/class/font resolution |
+| `kpsewhich`, `latex`, `pdflatex` | `texlive-latex-base` (+`-extra`, `-science`) | `texlive` / MacTeX | TeX package/class/font resolution |
 | `texlua` | `texlive-binaries` | `texlive` / MacTeX | the sandboxed Lua of `\directlua` (LuaTeX documents and packages) |
 
 ## From crates.io (`cargo install`)
