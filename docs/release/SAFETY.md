@@ -70,13 +70,20 @@ see that section below.
   permissions across the unpacked tree (`a-x,u+rwX` on Unix; clearing read-only on Windows) so read-only directories
   never leak temp files and archive exec bits do not survive. The search for the main file walks real directories only,
   so a link to a directory above it (`a -> .`) cannot make it cycle; a persistent `cortex_worker` drops the held
-  archive `Warning`s of a job that failed before its report.
+  archive `Warning`s of a job that failed before its report. A `00README` main file that is absolute, has a `..` or
+  resolves (symbolic links followed) outside the source is ignored with a `Warning:archive:path`, and one that is not a
+  file is passed over, for an archive and a local folder alike (OXIDIZED_DESIGN_DIVERGENCES #1166).
 - **Fully untrusted sources belong in a container or VM.** TeX itself, and Perl LaTeXML, can read any file the
   invoking user can read, and so can a conversion: run sources you do not trust inside a container or virtual
   machine.
 - **Image copies stay under `--dest`.** A graphic whose source-relative path would leave the destination
   directory is copied under a generated `xN` name inside it (Perl `Post/Graphics.pm`'s `pathname_is_contained`
   fallback).
+- **Stylesheet copies stay in their folders.** A stylesheet and each `@import` it follows are read only from inside
+  the folder they were found in (the archive, the document's folder, a `--path` folder) and written only inside the
+  destination (or site) directory, symbolic links followed on both sides; one that would leave is neither read nor
+  written, with a `Warning`, an operator's `--css` included. A stylesheet the document itself names by a path outside
+  those folders is read where it lies, as a document's `\input` is (OXIDIZED_DESIGN_DIVERGENCES #1166).
 
 ## `unsafe` budget
 
