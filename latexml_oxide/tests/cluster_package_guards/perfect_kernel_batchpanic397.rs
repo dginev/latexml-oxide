@@ -3,7 +3,7 @@
 //! (1901.06584), and titlesec handing its before-code the kernel's title wrapper (ccjnl.cls; 2208.03460, 2208.09785,
 //! 2209.08255). Each guard is one code path.
 
-use latexml::util::test::{convert_with, error_count, warning_count};
+use latexml::util::test::{assert_element, convert_with, error_count, warning_count};
 
 use super::perfect_kernel_batch84b::text;
 
@@ -54,22 +54,30 @@ fn pgfmath_a_register_with_arguments_errs() {
   );
 }
 
-/// The outer `\ooalign` reverted while it is absorbed (its inner math's malformed close closes the math around it)
-/// reverts from its definition, with a Warning, instead of panicking (1901.06584).
+/// A nested `\ooalign` in node math (1901.06584) no longer panics: the outer one was reverted while absorbed, its
+/// inner math's malformed close closing the math around it (3 Errors, 3 Warnings). Since HALIGNINT the node's text
+/// has TeX's `\halign` (OXIDIZED_DESIGN_DIVERGENCES #1167): both alignments are tabulars, as outside a picture.
 #[test]
 fn a_nested_ooalign_in_node_math_reverts() {
   let (log, xml) = run(repro!(
     "graphics-tikz",
     "a_nested_ooalign_in_node_math_reverts"
   ));
-  assert_eq!((error_count(&log), warning_count(&log)), (3, 3), "{log}");
-  assert_eq!(
-    log.matches("self_referential_alignment").count(),
-    2,
-    "{log}"
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_element(
+    &xml,
+    "tabular",
+    &[r#"xml:id="p1.pic1.1""#],
+    r#"<tabular class="ltx_markedasmath" vattach="top" xml:id="p1.pic1.1">
+      <tr xml:id="p1.pic1.1.1">
+        <td align="left" class="ltx_nopad_l ltx_nopad_r" xml:id="p1.pic1.1.1.1"><tabular class="ltx_markedasmath" vattach="top" xml:id="p1.pic1.1.1.1.1">
+          <tr xml:id="p1.pic1.1.1.1.1.1">
+            <td align="left" class="ltx_nopad_l ltx_nopad_r" xml:id="p1.pic1.1.1.1.1.1.1">L</td>
+          </tr>
+        </tabular></td>
+      </tr>
+    </tabular>"#,
   );
-  // The cell is kept where TeX sets it: the inner alignment's own foreignObject.
-  assert!(xml.contains(">L</svg:foreignObject>"), "{xml}");
 }
 
 /// titlesec's before-code takes the author's title (`#4{#8}`), not `{\lx@format@title@font@@{subsection}…}`:

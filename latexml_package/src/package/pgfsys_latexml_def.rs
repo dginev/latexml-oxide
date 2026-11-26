@@ -379,10 +379,25 @@ LoadDefinitions!({
   // 0. Environment specific stuff
   //===================================================================
 
-  // Perl L59: \lxSVG@installcommands
+  // Perl L59: \lxSVG@installcommands. The `\halign` it replaces is kept for `\lxSVG@uninstallcommands`, unless it is
+  // the SVG one already (a picture nested without an interruption inherits the install).
   DefPrimitive!("\\lxSVG@installcommands", {
-    let_i(&T_CS!("\\halign"), &T_CS!("\\lxSVG@halign"), None);
+    let (halign, svg_halign) = (T_CS!("\\halign"), T_CS!("\\lxSVG@halign"));
+    if !x_equals(&halign, &svg_halign) {
+      let_i(&T_CS!("\\lxSVG@TeX@halign"), &halign, None);
+    }
+    let_i(&halign, &svg_halign, None);
     let_i(&T_CS!("\\ignorespaces"), &T_CS!("\\lx@inpgf@ignorespaces"), None);
+  });
+
+  // Text leaving a picture (`\pgfinterruptpicture`, pgfcorescopes.code.tex:742-759: nodes, labels, `\pgftext`) gets
+  // TeX's `\halign` back, as tikz uninstalls its own commands there (tikz.code.tex:3904); 1502.07025, 1901.06584.
+  // `\ignorespaces` stays the picture's (OXIDIZED_DESIGN_DIVERGENCES #1167).
+  DefPrimitive!("\\lxSVG@uninstallcommands", {
+    let (halign, saved) = (T_CS!("\\halign"), T_CS!("\\lxSVG@TeX@halign"));
+    if x_equals(&halign, &T_CS!("\\lxSVG@halign")) && lookup_meaning(&saved).is_some() {
+      let_i(&halign, &saved, None);
+    }
   });
 
   // Perl L63 `sub { (); }`: a body returning nothing, so no box reverts to the name in a node's `tex=`
@@ -395,8 +410,13 @@ LoadDefinitions!({
   DefConstructor!("\\lxSVG@halign BoxSpecification",
     "#alignment",
     // It takes the primitive's place (`\lxSVG@installcommands` lets `\halign` to it), so a document's `\halign` macro
-    // saved inside a picture ends with it (tex_tables.rs `run_halign_redefinition_prelude`; witness 2107.05054).
+    // saved in a picture's own body ends with it (tex_tables.rs `run_halign_redefinition_prelude`); a node's text has
+    // TeX's back (witness 2107.05054).
     halign_primitive => true,
+    // Perl L899-904: `\halign spec {template\cr rows}`, the reversion of the primitive it stands for.
+    reversion => sub[whatsit, _args] {
+      engine::tex_tables::alignment_primitive_reversion(whatsit, T_CS!("\\halign"))
+    },
     bounded => true, leave_horizontal => true,
     sizer => sub[whatsit] {
       match whatsit.get_property("alignment").as_deref() { Some(Stored::Digested(alignment_d)) => {

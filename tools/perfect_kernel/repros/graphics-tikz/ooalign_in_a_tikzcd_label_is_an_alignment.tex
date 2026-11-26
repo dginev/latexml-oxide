@@ -1,0 +1,16 @@
+% witness: 1901.06584 (`\fakebold`'s nested `\ooalign` in arrow labels), 2409.06632, 2409.04903, 2103.05078 (an
+%          `\ooalign`-built symbol in a tikz-cd label)
+% oracle:  pdflatex 0 errors: A -> B, C <- D, the first arrow labelled by the crossed arrow
+% engines: rust INT081AB 1 error (`</ltx:XMWrap>` not open): the label's `\ooalign` was the SVG matrix, its cells
+%          hoisted out of the formula (an empty `text="[]"` Math); perl 1 error (`svg:g` in `ltx:block`)
+% expect:  0 errors; the label's formula an XMArray of the two symbols, `tex` the `\halign` as outside a picture
+% status:  RED (INT081AB) -> GREEN (HALIGNINT: a node's text has TeX's `\halign`, OXIDIZED_DESIGN_DIVERGENCES #1167)
+\documentclass{article}
+\usepackage{tikz-cd}
+\newcommand{\bsym}{\mathrel{\ooalign{$\rightarrow$\cr\hidewidth$\mid$\hidewidth\cr}}}
+\begin{document}
+\begin{tikzcd}
+A \arrow[r, "\bsym"] & B \arrow[d, "f"] \\
+C & D \arrow[l, "g"']
+\end{tikzcd}
+\end{document}

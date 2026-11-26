@@ -519,6 +519,8 @@ mod perfect_kernel_batchga1;
 mod perfect_kernel_batchga2;
 mod perfect_kernel_batchga5;
 mod perfect_kernel_batchgl1;
+/// HALIGNINT: a picture's text sets `\halign` as TeX does; `align=` lines and pgf matrices stay SVG; OD #1167.
+mod perfect_kernel_batchhalignint;
 /// HG1: the guards DEL1 left hollow asserting again — rows of one table, the wrong ones `_red.tex` catalog repros.
 mod perfect_kernel_batchharden397;
 mod perfect_kernel_batchhg1;

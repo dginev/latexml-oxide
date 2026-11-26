@@ -46,9 +46,9 @@ pub const ALIGNMENT_IS_DISPLAY: &str = "display";
 
 /// Whether `token` means the `\halign` primitive, under whatever name a package saved it (cryptocode.sty:950
 /// `\let\@pc@halign\halign`): a constructor declared `halign_primitive`, the primitive itself or a binding's stand-in
-/// that takes its place — inside a pgf picture its SVG matrix `\lxSVG@halign` (`\lxSVG@installcommands` lets `\halign`
-/// to it, pgfsys_latexml_def.rs; Perl pgfsys-latexml.def L59), which a pseudocode in a TikZ node saves instead (witness
-/// 2107.05054).
+/// that takes its place — in a pgf picture's own body its SVG matrix `\lxSVG@halign` (`\lxSVG@installcommands` lets
+/// `\halign` to it, pgfsys_latexml_def.rs; Perl pgfsys-latexml.def L59). A pseudocode in a TikZ node saves the primitive:
+/// the node's text has it back (`\lxSVG@uninstallcommands`; witness 2107.05054).
 fn means_halign_primitive(token: &Token) -> bool {
   with_meaning(
     token,
@@ -915,17 +915,9 @@ LoadDefinitions!({
 // If the Template is appropriately constructed, either by \halign or various \begin{tabular}
 // the body of the alignment is processed the same way.
 
-/// The `\halign` after-digest shared by the tabular primitive (above) and the
-/// SVG matrix variant (`\lxSVG@halign`, pgfsys_latexml_def.rs): the
-/// restricted-horizontal mode frame, the template parse, the `to` width, the
-/// caller's alignment bindings, the body digest, and the align-state balance
-/// for a `{` opener (tex.web §347: only a catcode-1 `{` is masked by the
-/// gullet, so only that opener is unmasked here — a `\halign\bgroup`, pgf's
-/// matrices, must not be). ONE implementation: the SVG copy once kept an
-/// unconditional decrement after the tabular one gained this guard (batch
-/// 54), and every tikz-cd inside an amsmath cell left the cell's math open.
-/// The reversion of an `\halign` or `\valign`: the primitive, its box specification, the template and the rows.
-fn alignment_primitive_reversion(whatsit: &Whatsit, primitive: Token) -> Result<Tokens> {
+/// The reversion of an `\halign` or `\valign`: the primitive, its box specification, the template and the rows; the SVG
+/// matrix `\lxSVG@halign` reverts as `\halign` too (Perl pgfsys-latexml.def.ltxml:899-904).
+pub fn alignment_primitive_reversion(whatsit: &Whatsit, primitive: Token) -> Result<Tokens> {
   let mut tks = vec![primitive];
   if let Some(spec) = whatsit.get_arg(1) {
     tks.extend(spec.revert()?.unlist());
@@ -938,16 +930,29 @@ fn alignment_primitive_reversion(whatsit: &Whatsit, primitive: Token) -> Result<
   if let Some(Stored::Digested(alignment_d)) = whatsit.get_property("alignment").as_deref()
     && let DigestedData::Alignment(data) = alignment_d.data()
   {
-    // Mirror line-30 fix: tolerate a re-entrant borrow during
-    // reversion rather than panic. See comment there.
-    if let Ok(d) = data.try_borrow() {
-      tks.extend(d.revert()?.unlist());
+    // Mid-absorption the alignment is mutably borrowed; counted as `Whatsit::revert` counts it (1901.06584).
+    match data.try_borrow() {
+      Ok(d) => tks.extend(d.revert()?.unlist()),
+      Err(_) => Warn!(
+        "unexpected",
+        "self_referential_alignment",
+        "Reverting an alignment during its own absorption; its cells are not in the reversion"
+      ),
     }
   }
   tks.push(T_END!());
   Ok(Tokens::new(tks))
 }
 
+/// The `\halign` after-digest shared by the tabular primitive (above) and the
+/// SVG matrix variant (`\lxSVG@halign`, pgfsys_latexml_def.rs): the
+/// restricted-horizontal mode frame, the template parse, the `to` width, the
+/// caller's alignment bindings, the body digest, and the align-state balance
+/// for a `{` opener (tex.web §347: only a catcode-1 `{` is masked by the
+/// gullet, so only that opener is unmasked here — a `\halign\bgroup`, pgf's
+/// matrices, must not be). ONE implementation: the SVG copy once kept an
+/// unconditional decrement after the tabular one gained this guard (batch
+/// 54), and every tikz-cd inside an amsmath cell left the cell's math open.
 pub fn halign_after_digest(
   whatsit: &mut Whatsit,
   mut xml_attrs: HashMap<String, String>,

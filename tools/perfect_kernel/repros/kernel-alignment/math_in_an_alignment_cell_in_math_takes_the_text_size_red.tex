@@ -1,0 +1,13 @@
+% witness: synthetic (HALIGNINT: tikz-cd's label `\everymath{\scriptstyle}` around an `\ooalign` symbol, the shape of
+%          1901.06584, 2409.06632, 2409.04903, 2103.05078)
+% oracle:  pdflatex 0 errors; the arrow in the cell is scriptstyle (7.97224pt wide, as `$\scriptstyle\rightarrow$`)
+% engines: rust HALIGNINT 0 errors, the cell's XMTok `fontsize="49%"`: the formula's script size is applied again to
+%          the cell's new formula, which in TeX is a new formula in text style (tex.web §1139); outside a picture too
+% expect:  0 errors; the cell's arrow `fontsize="70%"`
+% status:  RED (math font size inside an alignment cell's formula, not the picture's `\halign`)
+% moves:   post-merge
+\documentclass{article}
+\newcommand{\bsym}{\mathrel{\ooalign{$\rightarrow$\cr\hidewidth$\mid$\hidewidth\cr}}}
+\begin{document}
+{\everymath\expandafter{\the\everymath\scriptstyle}$\bsym$}
+\end{document}
