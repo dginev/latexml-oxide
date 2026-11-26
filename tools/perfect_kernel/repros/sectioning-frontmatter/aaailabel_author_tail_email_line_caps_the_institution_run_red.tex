@@ -1,0 +1,36 @@
+% A line of addresses after the names inside `\author` (`\\ {\tt(ann,bob,cy)@a.edu} \\`) is read as every author's
+%   affiliation (the kernel's author tail), and the run it closes leaves AAAI's unlabelled `\affiliations`
+%   institution (aaai25.sty:72) to the last name only (`annotate=run`, queue_digest.rs `run_cap_past_labels`). The
+%   mislabel is the kernel author tail's, a second mechanism.
+% witness: 2109.09904; synthetic stand-in
+% oracle:  pdflatex 0 errors: "Ann Able, Bob Baker, Cy Cole", "(ann,bob,cy)@a.edu", "School of Computing", "Univ A"
+% engines: rust INT081RC6 = 0 errors, the address line every author's affiliation, the institution a body paragraph;
+%          AAAILABEL = the institution "School of Computing Univ A" Cy Cole's only
+% expect:  the institution every author's; the address line their e-mails (or once at the block), not an affiliation
+% status:  RED (AAAILABEL)
+% moves:   post-merge (the author tail's line reading)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{aaai25.sty}
+\ProvidesPackage{aaai25}[2025/05/08 AAAI 2025 Submission format]
+\def\showauthors@on{T}
+\DeclareOption{submission}{\gdef\showauthors@on{}}
+\ProcessOptions\relax
+\def\maketitle{\par\begingroup\def\thefootnote{\fnsymbol{footnote}}\twocolumn[\@maketitle]\@thanks\endgroup
+  \setcounter{footnote}{0}\let\maketitle\relax\let\@maketitle\relax
+  \gdef\@thanks{}\gdef\@author{}\gdef\@title{}\let\thanks\relax}
+\long\gdef\affiliations #1{ \def \affiliations_{\if T\showauthors@on#1\fi}}%
+\def\@maketitle{\def\theauthors{\if T\showauthors@on\@author\else Anonymous submission\fi}%
+  \vbox{\hsize\textwidth\linewidth\hsize\centering
+    {\LARGE\bf \@title \par}\vskip 0.1in
+    {\Large{\textbf{\theauthors\ifhmode\\\fi}}}\vskip .2em
+    {\normalsize \affiliations_\ifhmode\\\fi}\vskip .5em}}
+\end{filecontents*}
+\documentclass[letterpaper]{article}
+\usepackage{aaai25}
+\title{A Title}
+\author{Ann Able, Bob Baker, Cy Cole \\ {\tt(ann,bob,cy)@a.edu} \\}
+\affiliations{\textbf{School of Computing\\ Univ A}}
+\begin{document}
+\maketitle
+Body.
+\end{document}

@@ -35,6 +35,11 @@ pub const STORE_SETTERS: &[(&str, &str)] = &[
     "affiliation",
     "\\lx@add@store@affiliations{affiliation}{#1}",
   ),
+  // aaai21-aaai2027's labelled lines (aaai25.sty:72 `\long\gdef\affiliations #1{ \def \affiliations_{…#1…}}`)
+  (
+    "affiliations",
+    "\\lx@add@store@affiliations{affiliations}{#1}",
+  ),
   ("inst", "\\lx@add@store@affiliations{inst}{#1}"),
   ("department", "\\lx@add@store@affiliations{department}{#1}"),
   ("institute", "\\lx@add@store@affiliations{institute}{#1}"),

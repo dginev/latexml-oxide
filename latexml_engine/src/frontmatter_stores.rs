@@ -3122,8 +3122,7 @@ fn displaced_records() -> Vec<DisplacedRecord> {
     };
     let store = T_CS!(&with(*store, ToString::to_string));
     let part = part.unlist_ref().to_vec();
-    let stands = parameterless_body(&store).is_some_and(|body| {
-      let body = body.unlist_ref();
+    let stands = crate::latex_constructs::no_argument_value(&store).is_some_and(|body| {
       !part.is_empty()
         && body.len() >= part.len()
         && body.windows(part.len()).any(|w| w == part.as_slice())
@@ -3361,7 +3360,17 @@ fn route_and_hand_displaced() -> Result<Vec<Digested>> {
     }
   }
   use crate::latex_constructs::title_page_print_tokens;
-  let Some((printed, letters)) = sentinel_runs(&stores, &title_page_print_tokens, true, false)?
+  let frames: Vec<Option<SentinelFrame>> = stores
+    .iter()
+    .map(|store| {
+      records
+        .iter()
+        .find(|r| r.store == *store)
+        .and_then(displaced_frame)
+    })
+    .collect();
+  let Some((printed, letters)) =
+    framed_sentinel_runs(&stores, &frames, &title_page_print_tokens, true, false)?
   else {
     return Ok(Vec::new());
   };
@@ -3369,9 +3378,8 @@ fn route_and_hand_displaced() -> Result<Vec<Digested>> {
     stores
       .iter()
       .find(|t| t.with_str(|cs| cs == name))
-      .and_then(parameterless_body)
-      .as_ref()
-      .and_then(plain_value_text)
+      .and_then(crate::latex_constructs::no_argument_value)
+      .and_then(|value| plain_value_text(&Tokens::new(value)))
       .is_some()
   }) {
     // (the title-page reading's text, its run with the document's own values)
@@ -3392,6 +3400,22 @@ fn route_and_hand_displaced() -> Result<Vec<Digested>> {
   );
   route_displaced(records, &printed)?;
   hand_displaced_stores()
+}
+
+/// The class's code around a displaced call's argument in its store's value (the first of the argument's tokens in the
+/// recorded part): the sentinel runs ask whether the title page prints the argument, so a test the store itself makes
+/// stays (aaai25.sty:72 `\if T\showauthors@on#1\fi`, which `[submission]` empties). `None` when the part does not
+/// hold the argument token for token (an `\xdef` expanded it, iau.cls:1515): the whole value is then the sentinel's.
+fn displaced_frame(record: &DisplacedRecord) -> Option<SentinelFrame> {
+  let value = crate::latex_constructs::no_argument_value(&record.store)?;
+  let (part, arg) = (record.part.as_slice(), record.arg.unlist_ref());
+  if part.is_empty() || arg.is_empty() {
+    return None;
+  }
+  let at = value.windows(part.len()).position(|w| w == part)?;
+  let within = part.windows(arg.len()).position(|w| w == arg)?;
+  let start = at + within;
+  Some((value[..start].to_vec(), value[start + arg.len()..].to_vec()))
 }
 
 /// Does a displaced setter's store stay the class's by the rules K11 applies to its own stores ([`store_setter_body`],
@@ -4504,9 +4528,17 @@ fn sentinel(i: usize, kind: Sentinel) -> String {
 /// The sentinel `i` of `kind` as it is looked for in a run's lower-cased text.
 fn sentinel_found(i: usize, kind: Sentinel) -> String { sentinel(i, kind).to_lowercase() }
 
-/// `\def<store>{<sentinel i>}` for each store, the `i`-th its index; `<store>={<sentinel i>}` for a token register (the
-/// unclaimed-text net's: sig-alternate.cls:1374-1398 `\tntoks`).
-fn sentinel_definitions(stores: &[Token], kind: Sentinel) -> Vec<Token> {
+/// A store's value around the argument it holds, the class's code before and after it ([`displaced_frame`]).
+type SentinelFrame = (Vec<Token>, Vec<Token>);
+
+/// `\def<store>{<sentinel i>}` for each store, the `i`-th its index, with the store's own delimiters (`\def
+/// \affiliations_{…}`, aaai25.sty:72) and the frame `frames[i]` gives around it; `<store>={<sentinel i>}` for a token
+/// register (the unclaimed-text net's: sig-alternate.cls:1374-1398 `\tntoks`).
+fn sentinel_definitions(
+  stores: &[Token],
+  kind: Sentinel,
+  frames: &[Option<SentinelFrame>],
+) -> Vec<Token> {
   let mut defs = Vec::new();
   for (i, store) in stores.iter().enumerate() {
     if is_token_register(store) {
@@ -4515,9 +4547,13 @@ fn sentinel_definitions(stores: &[Token], kind: Sentinel) -> Vec<Token> {
     } else {
       defs.push(T_CS!("\\def"));
       defs.push(*store);
+      defs.extend(crate::latex_constructs::no_argument_delimiters(store));
     }
     defs.push(T_BEGIN!());
+    let frame = frames.get(i).and_then(Option::as_ref);
+    defs.extend(frame.iter().flat_map(|(before, _)| before.iter().copied()));
     defs.extend(mouth::tokenize_internal(TeXString::assembled(sentinel(i, kind))).unlist());
+    defs.extend(frame.iter().flat_map(|(_, after)| after.iter().copied()));
     defs.push(T_END!());
   }
   defs
@@ -4558,9 +4594,20 @@ fn sentinel_runs(
   aborted_printed_nothing: bool,
   isolated: bool,
 ) -> Result<Option<(String, String)>> {
+  framed_sentinel_runs(stores, &[], build, aborted_printed_nothing, isolated)
+}
+
+/// [`sentinel_runs`], each store's sentinel set in its frame (`frames`, by index: [`sentinel_definitions`]).
+fn framed_sentinel_runs(
+  stores: &[Token],
+  frames: &[Option<SentinelFrame>],
+  build: &dyn Fn(&[Token]) -> Tokens,
+  aborted_printed_nothing: bool,
+  isolated: bool,
+) -> Result<Option<(String, String)>> {
   use crate::latex_constructs::{SpeculativeRun, title_page_probe_run};
   let letters = match title_page_probe_run(
-    build(&sentinel_definitions(stores, Sentinel::Letters)),
+    build(&sentinel_definitions(stores, Sentinel::Letters, frames)),
     isolated,
   )? {
     SpeculativeRun::Printed(text) => text,
@@ -4576,7 +4623,7 @@ fn sentinel_runs(
     return Ok(Some((String::new(), letters)));
   }
   let digits = match title_page_probe_run(
-    build(&sentinel_definitions(stores, Sentinel::Digits)),
+    build(&sentinel_definitions(stores, Sentinel::Digits, frames)),
     isolated,
   )? {
     SpeculativeRun::Printed(text) => text,
@@ -4696,9 +4743,8 @@ fn confirmed_printed(stores: &[Token], printed: &str, letters: &str, real: &str)
       let Some(i) = stores.iter().position(|t| t.with_str(|cs| cs == *name)) else {
         return true;
       };
-      let Some(value) = parameterless_body(&stores[i])
-        .as_ref()
-        .and_then(plain_value_text)
+      let Some(value) = crate::latex_constructs::no_argument_value(&stores[i])
+        .and_then(|value| plain_value_text(&Tokens::new(value)))
         .map(|text| alphanumerics(&text))
         .filter(|text| !text.is_empty())
       else {
@@ -4807,7 +4853,7 @@ fn verify_title_page_labels() -> Result<()> {
     }
   }
   let run = title_page_probe_run(
-    title_page_print_tokens(&sentinel_definitions(&stores, Sentinel::Letters)),
+    title_page_print_tokens(&sentinel_definitions(&stores, Sentinel::Letters, &[])),
     false,
   )?;
   let text = match run {
@@ -5016,9 +5062,8 @@ pub fn before_title_page_runs() -> Result<()> {
     all
       .iter()
       .find(|t| t.with_str(|cs| cs == name))
-      .and_then(parameterless_body)
-      .as_ref()
-      .and_then(plain_value_text)
+      .and_then(crate::latex_constructs::no_argument_value)
+      .and_then(|value| plain_value_text(&Tokens::new(value)))
       .is_some()
   }) {
     let reading = crate::latex_constructs::title_page_reading::title_page_reading()?;
@@ -8097,6 +8142,11 @@ pub fn harvest_stores(at_maketitle: bool) -> Result<Vec<Digested>> {
     }
     if annotates_a_creator(name) {
       if !has_creator {
+        // (no creator carries it: its words are the title-page check's third source, as a raw setter's argument's are —
+        // naverlabseurope.cls's `\affiliations` beside its own `\authors`, 2408.05088)
+        if at_maketitle {
+          note_uncarried_store_value(value);
+        }
         continue;
       }
     } else if !creates_a_creator(name)

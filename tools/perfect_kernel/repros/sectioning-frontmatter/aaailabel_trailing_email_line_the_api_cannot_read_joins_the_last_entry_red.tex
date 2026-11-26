@@ -1,0 +1,36 @@
+% An unlabelled e-mail line after AAAI's labelled `\affiliations` lines (aaai25.sty:72) is the entry before it
+%   (frontmatter_stores.rs `displaced_entries`); where the API reads its addresses they go by spelling, but text it cannot
+%   read as addresses (a spaced brace list, `{ann, bob} @a.edu`) stays in that entry's affiliation, on the names of its
+%   label only. A second mechanism (the API's address reading), not AAAILABEL's.
+% witness: 2211.16869, 2412.03107, 2408.10349 (2310.14120: a URL line after a `$^\dag$` line joins it); synthetic stand-in
+% oracle:  pdflatex 0 errors: "Ann Able1, Bob Baker1, Cy Cole2", "1Univ A", "2Univ B", "ann, bob @a.edu, cy@b.edu"
+% engines: rust INT081RC6 = 0 errors, the three lines a logical-block; AAAILABEL = 0 errors, Cy Cole's affiliation
+%          "2Univ B ann, bob @a.edu", his e-mail cy@b.edu, Ann and Bob "1Univ A" and no e-mail
+% expect:  Ann ann@a.edu, Bob bob@a.edu (or the unread text once at the block), Cy "2Univ B" and cy@b.edu
+% status:  RED (AAAILABEL)
+% moves:   post-merge (the API's e-mail list reading)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{aaai25.sty}
+\ProvidesPackage{aaai25}[2025/05/08 AAAI 2025 Submission format]
+\def\showauthors@on{T}
+\DeclareOption{submission}{\gdef\showauthors@on{}}
+\ProcessOptions\relax
+\def\maketitle{\par\begingroup\def\thefootnote{\fnsymbol{footnote}}\twocolumn[\@maketitle]\@thanks\endgroup
+  \setcounter{footnote}{0}\let\maketitle\relax\let\@maketitle\relax
+  \gdef\@thanks{}\gdef\@author{}\gdef\@title{}\let\thanks\relax}
+\long\gdef\affiliations #1{ \def \affiliations_{\if T\showauthors@on#1\fi}}%
+\def\@maketitle{\def\theauthors{\if T\showauthors@on\@author\else Anonymous submission\fi}%
+  \vbox{\hsize\textwidth\linewidth\hsize\centering
+    {\LARGE\bf \@title \par}\vskip 0.1in
+    {\Large{\textbf{\theauthors\ifhmode\\\fi}}}\vskip .2em
+    {\normalsize \affiliations_\ifhmode\\\fi}\vskip .5em}}
+\end{filecontents*}
+\documentclass[letterpaper]{article}
+\usepackage{aaai25}
+\title{A Title}
+\author{Ann Able\textsuperscript{\rm 1}, Bob Baker\textsuperscript{\rm 1}, Cy Cole\textsuperscript{\rm 2}}
+\affiliations{\textsuperscript{\rm 1}Univ A\\ \textsuperscript{\rm 2}Univ B\\ {ann, bob} @a.edu, cy@b.edu}
+\begin{document}
+\maketitle
+Body.
+\end{document}

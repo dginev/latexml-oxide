@@ -14288,6 +14288,17 @@ bypassed under raw loading; the class's `\@maketitle` never runs under the locke
   prints (formerly #939); a raw package's stores (formerly #940); a mark before a pure store (formerly #941); displaced
   affiliation text (formerly #955); a class-numbered `\institute` by numbers (formerly #791); neurips's
   `\@projectpage` (formerly #741); wiley-article and CSML (formerly #758).
+- *A store is a macro that takes no argument* (tex.web §473-476): no parameter text, or one of delimiters alone
+  (aaai25.sty:72 `\long\gdef\affiliations #1{ \def \affiliations_{\if T\showauthors@on#1\fi}}`, which its
+  `\@maketitle` prints as `\affiliations_`; `latex_constructs/sect05.rs no_argument_body`). The record, the take-out and
+  the sentinel keep the delimiters, and a displaced store's sentinel stands for the argument inside the store's own code
+  (`frontmatter_stores.rs displaced_frame`), so aaai's `[submission]`, whose `\showauthors@on` is empty, prints none.
+  aaai's labelled lines go by the names' marks, one unlabelled institution to every author. Witnesses 2501.02471,
+  2109.09904, 2212.00442, 2508.05165, 2511.12066; guard `perfect_kernel_batchaaailabel::aaai_affiliations_rows`.
+- *A store no creator carries*: a rerouted store that annotates a creator, at a `\maketitle` with none, is not handed
+  on; its value joins the title-page check's third source, so its words are counted as a raw setter's are
+  (`title_page_check.rs note_uncarried_store_value`; naverlabseurope.cls's `\affiliations` beside its own `\authors`,
+  2408.05088). Guard `perfect_kernel_batch108b::a_store_of_a_refused_replay_is_counted`.
 - *A labelled off-table store* (QA61, DG 2026-11-15; BM Q3.13): one the run prints right after the class's own label, in
   a line holding no other value and not glued to the class's text, is an `ltx:pubnote` named by the label even where the
   deposit or replay typesets it; they read it as empty and take the label out, from the line the label was read in

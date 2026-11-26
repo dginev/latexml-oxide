@@ -1,0 +1,33 @@
+% An AAAI `\affiliations` line whose marks follow each institution, `Univ A\textsuperscript{\rm 1}, Univ
+%   B\textsuperscript{\rm 2}` (aaai25.sty:72), leads with no label, so it lands once at the block: no name gets its own.
+% witness: 2507.19474; synthetic stand-in
+% oracle:  pdflatex 0 errors: "Ann Able1, Bob Baker2", "Univ A1, Univ B2"
+% engines: rust INT081RC6 = 0 errors, the line a body paragraph; AAAILABEL = "Univ A 1 , Univ B 2" a nameless creator's
+% expect:  Ann "Univ A", Bob "Univ B"
+% status:  RED (AAAILABEL)
+% moves:   post-merge (marks after their entries)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{aaai25.sty}
+\ProvidesPackage{aaai25}[2025/05/08 AAAI 2025 Submission format]
+\def\showauthors@on{T}
+\DeclareOption{submission}{\gdef\showauthors@on{}}
+\ProcessOptions\relax
+\def\maketitle{\par\begingroup\def\thefootnote{\fnsymbol{footnote}}\twocolumn[\@maketitle]\@thanks\endgroup
+  \setcounter{footnote}{0}\let\maketitle\relax\let\@maketitle\relax
+  \gdef\@thanks{}\gdef\@author{}\gdef\@title{}\let\thanks\relax}
+\long\gdef\affiliations #1{ \def \affiliations_{\if T\showauthors@on#1\fi}}%
+\def\@maketitle{\def\theauthors{\if T\showauthors@on\@author\else Anonymous submission\fi}%
+  \vbox{\hsize\textwidth\linewidth\hsize\centering
+    {\LARGE\bf \@title \par}\vskip 0.1in
+    {\Large{\textbf{\theauthors\ifhmode\\\fi}}}\vskip .2em
+    {\normalsize \affiliations_\ifhmode\\\fi}\vskip .5em}}
+\end{filecontents*}
+\documentclass[letterpaper]{article}
+\usepackage{aaai25}
+\title{A Title}
+\author{Ann Able\textsuperscript{\rm 1}, Bob Baker\textsuperscript{\rm 2}}
+\affiliations{Univ A\textsuperscript{\rm 1}, Univ B\textsuperscript{\rm 2}}
+\begin{document}
+\maketitle
+Body.
+\end{document}
