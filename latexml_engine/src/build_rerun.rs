@@ -8,6 +8,9 @@
 //! rebuilds the crate on every invocation — the #676 symptom on a fresh
 //! checkout, where the committed `resources/` tree is present but the
 //! gitignored, `tools/make_formats.sh`-generated `resources/dumps/` is not.
+//!
+//! Its twin `latexml_post/src/build_rerun.rs` applies the same rule to the bundled `ar5iv.css`; each crate keeps its
+//! own copy, as a file shared across crates is not packaged for crates.io.
 
 use std::path::{Path, PathBuf};
 

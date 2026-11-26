@@ -861,9 +861,10 @@ mod texmf_root_trailing_separator {
 }
 
 mod stale_css_overwrite {
-  //! Regression for GitHub #312: a stale/empty `LaTeXML.css` / `ltx-article.css`
-  //! already sitting in the destination must be OVERWRITTEN with the bundled
-  //! stylesheet, not left as-is.
+  //! Regression for GitHub #312: an empty `LaTeXML.css` left in the destination
+  //! must be OVERWRITTEN with the bundled stylesheet, not left as-is; a non-empty
+  //! one (`ltx-article.css` here) is the user's and is used as-is (DG 2026-11-25,
+  //! Perl `copyResource`, XSLT.pm:117-118).
   //!
   //! The reporter had empty `.css` files left by an earlier failed run. Because
   //! the destination directory (== the source directory here) is on the resource
@@ -881,16 +882,16 @@ mod stale_css_overwrite {
                            \\end{document}\n";
 
   #[test]
-  fn stale_css_in_dest_is_overwritten_with_bundled() {
+  fn empty_css_in_dest_is_overwritten_with_bundled() {
     let bin = env!("CARGO_BIN_EXE_latexml_oxide");
     assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
 
     let workdir = tempfile::tempdir().expect("create tempdir");
     let p = workdir.path();
     std::fs::write(p.join("hello.tex"), HELLO_TEX).expect("write hello.tex");
-    // Reporter's exact setup: stale stylesheets already in the destination (==
-    // source) directory, which is on the resource search path — one empty, one
-    // with junk content, to catch both the truncate-to-empty and skip variants.
+    // Reporter's exact setup: stylesheets already in the destination (== source)
+    // directory, which is on the resource search path — one empty (repaired), one
+    // with content (kept byte-for-byte, never truncated by a copy onto itself).
     std::fs::write(p.join("LaTeXML.css"), b"").expect("write empty LaTeXML.css");
     std::fs::write(p.join("ltx-article.css"), b"/* STALE LEFTOVER */").expect("write stale css");
 
@@ -918,10 +919,9 @@ mod stale_css_overwrite {
        stylesheet, got {} bytes:\n{latexml_css}",
       latexml_css.len(),
     );
-    assert!(
-      !article_css.contains("STALE") && article_css.contains("ltx_"),
-      "a stale ltx-article.css in the dest must be overwritten with the bundled \
-       stylesheet, got:\n{article_css}",
+    assert_eq!(
+      article_css, "/* STALE LEFTOVER */",
+      "a non-empty ltx-article.css in the dest is used as-is"
     );
   }
 }
@@ -5087,6 +5087,7 @@ mod hostile_input_hardening {
       "archive with escaping symlink & ro dir must convert cleanly, status {:?}\nstderr:\n{stderr}",
       out.status.code()
     );
+    #[cfg_attr(not(unix), allow(unused_variables))] // read on every OS, checked on Unix
     let xml = std::fs::read_to_string(work.path().join("paper.xml")).expect("read paper.xml");
     #[cfg(unix)]
     assert!(

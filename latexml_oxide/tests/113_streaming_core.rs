@@ -244,6 +244,7 @@ fn unwritable_handoff_file_falls_back_to_the_string() {
 /// A handoff whose write fails mid-file (a symlink to `/dev/full`: created, then `ENOSPC` on the first chunk) takes
 /// the same fallback, and the partial file goes: `serialize_to_file`'s removal, which a failed directory never reaches.
 #[test]
+#[cfg_attr(not(unix), allow(clippy::needless_return))] // the skip is the whole body off Unix
 fn handoff_write_error_removes_the_partial_file() {
   if cfg!(not(target_os = "linux")) || !std::path::Path::new("/dev/full").exists() {
     eprintln!("SKIP handoff_write_error_removes_the_partial_file: needs Linux's /dev/full");

@@ -394,7 +394,8 @@ struct Cli {
   embed: bool,
 
   // === Repeatable flags ===
-  /// Add a CSS stylesheet link to the HTML output (repeatable).
+  /// Add a CSS stylesheet link to the HTML output (repeatable). Release builds bundle
+  /// `ar5iv.css`: use `--css=ar5iv.css --nodefaultresources`.
   #[arg(long = "css", value_name = "URL")]
   css_files: Vec<String>,
 
@@ -413,7 +414,8 @@ struct Cli {
   search_paths: Vec<String>,
 
   // === Value flags ===
-  /// Conversion timeout in seconds (default: 60). Use 0 to disable.
+  /// Conversion timeout in seconds (default: 60). Use 0 to disable. A one-time format build (a TeX tree the bundled
+  /// formats don't match) runs off this clock, under its own 10-minute bound.
   #[arg(long, value_name = "SECONDS", default_value = "60")]
   timeout: u64,
 

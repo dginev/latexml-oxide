@@ -395,12 +395,14 @@ fn older_tree_dump(dump: &str) -> String {
 }
 
 /// Convert `tex` with the CLI binary in a tempdir that also holds `local_files` (a document's own
-/// files), with the given child-process environment. Returns (exit success, ANSI-stripped stderr,
-/// XML). A child process, not the internal convert API: the dump locations and the format cache are
-/// read once per process, and building a format changes the process's working directory.
+/// files), with the given `--timeout` and child-process environment. Returns (exit success,
+/// ANSI-stripped stderr, XML). A child process, not the internal convert API: the dump locations and
+/// the format cache are read once per process, and building a format changes the process's working
+/// directory.
 fn convert_cli_beside(
   tex: &str,
   local_files: &[(&str, &str)],
+  timeout: u32,
   env: &[(&str, String)],
 ) -> (bool, String, String) {
   let bin = env!("CARGO_BIN_EXE_latexml_oxide");
@@ -410,7 +412,8 @@ fn convert_cli_beside(
     std::fs::write(workdir.path().join(name), content).expect("write a local file");
   }
   let output = Command::new(bin)
-    .args(["t.tex", "--dest", "t.xml", "--nocomments", "--timeout=600"])
+    .args(["t.tex", "--dest", "t.xml", "--nocomments"])
+    .arg(format!("--timeout={timeout}"))
     .envs(env.iter().map(|(key, value)| (*key, value.as_str())))
     .current_dir(workdir.path())
     .output()
@@ -483,8 +486,17 @@ fn a_dump_built_from_another_tree_is_not_used() {
     ("LATEXML_NO_EMBEDDED_DUMP", String::from("1")),
     ("LATEXML_FORMAT_CACHE", cache.path().display().to_string()),
   ];
-  let (ok, stderr, xml) = convert_cli_beside(tex, &own_copy, &forced);
+  // The builds run off the conversion's `--timeout` (`watchdog::off_the_clock`), here 10 s, which they outlast (about
+  // 25 s in the test profile on 16 cores; 30 s did not, so the guard must stay below the fastest build). Red
+  // (0.8.0-rc4, Windows): the watchdog killed a build that did (exit 124) and counted it towards marking it failed.
+  const TIMEOUT: u32 = 10;
+  let started = std::time::Instant::now();
+  let (ok, stderr, xml) = convert_cli_beside(tex, &own_copy, TIMEOUT, &forced);
   assert!(ok, "the conversion exited non-zero:\n{stderr}");
+  assert!(
+    started.elapsed().as_secs() >= u64::from(TIMEOUT),
+    "the builds no longer outlast the timeout: lower it"
+  );
   assert!(
     !stderr.contains("Mismatched LaTeX support files"),
     "{stderr}"
@@ -516,6 +528,13 @@ fn a_dump_built_from_another_tree_is_not_used() {
     .map(|entry| entry.path())
     .collect();
   assert_eq!(built_into.len(), 1, "{built_into:?}");
+  let notes: Vec<String> = std::fs::read_dir(&built_into[0])
+    .expect("read the cache directory")
+    .flatten()
+    .map(|entry| entry.file_name().to_string_lossy().into_owned())
+    .filter(|name| name.starts_with(".attempts.") || name.starts_with(".failed."))
+    .collect();
+  assert!(notes.is_empty(), "a build counted as failed: {notes:?}");
   // The built dumps record this tree's sources, what the loaders compare (the discriminating check
   // that the build read the tree's files, not the document's, is the own `expl3-code.tex` above).
   for kind in ["plain", "latex"] {
@@ -552,7 +571,7 @@ fn a_dump_built_from_another_tree_is_not_used() {
       .expect("make the cached dump writable by all");
     std::fs::write(&attempts, "1\tthe plain format build died with its process")
       .expect("record a dead build");
-    let (ok, stderr, _) = convert_cli_beside(tex, &own_copy, &forced);
+    let (ok, stderr, _) = convert_cli_beside(tex, &own_copy, 600, &forced);
     assert!(ok, "the conversion exited non-zero:\n{stderr}");
     assert!(
       stderr.contains("[format_dumps] no plain dump matches this TeX tree; building one into"),
@@ -586,7 +605,7 @@ fn a_dump_built_from_another_tree_is_not_used() {
   failing.push(("TEXINPUTS", format!("{}{sep}", shadow.path().display())));
   let plain_tex = "Text.\n\\bye\n";
   let failure = "building the plain format logged 1 error(s)";
-  let (ok, stderr, _) = convert_cli_beside(plain_tex, &[], &failing);
+  let (ok, stderr, _) = convert_cli_beside(plain_tex, &[], 600, &failing);
   assert!(ok, "the conversion exited non-zero:\n{stderr}");
   assert!(stderr.contains("building one into"), "{stderr}");
   assert_eq!(
@@ -594,7 +613,7 @@ fn a_dump_built_from_another_tree_is_not_used() {
     format!("1\t{failure}")
   );
   assert!(!failed.exists(), "one failed build marks the format failed");
-  let (ok, stderr, xml) = convert_cli_beside(plain_tex, &[], &failing);
+  let (ok, stderr, xml) = convert_cli_beside(plain_tex, &[], 600, &failing);
   assert!(ok, "the conversion exited non-zero:\n{stderr}");
   assert_eq!(
     std::fs::read_to_string(&failed).expect("the failed mark"),
@@ -621,7 +640,7 @@ fn a_dump_built_from_another_tree_is_not_used() {
   assert_eq!(error_count(&stderr), 1, "{stderr}");
   // Removing the mark, as it says, builds the format again.
   std::fs::remove_file(&failed).expect("remove the failed mark");
-  let (ok, stderr, _) = convert_cli_beside(plain_tex, &[], &forced);
+  let (ok, stderr, _) = convert_cli_beside(plain_tex, &[], 600, &forced);
   assert!(ok, "the conversion exited non-zero:\n{stderr}");
   assert!(stderr.contains("building one into"), "{stderr}");
   assert!(!stderr.contains("Warning:dump:build_failed"), "{stderr}");
@@ -631,7 +650,7 @@ fn a_dump_built_from_another_tree_is_not_used() {
   std::fs::remove_file(&plain_cached).expect("remove the cached plain dump");
   std::fs::write(&attempts, "2\tthe plain format build died with its process")
     .expect("record two dead builds");
-  let (ok, stderr, _) = convert_cli_beside(plain_tex, &[], &forced);
+  let (ok, stderr, _) = convert_cli_beside(plain_tex, &[], 600, &forced);
   assert!(ok, "the conversion exited non-zero:\n{stderr}");
   assert!(!stderr.contains("building one into"), "{stderr}");
   assert_eq!(
@@ -649,7 +668,7 @@ fn a_dump_built_from_another_tree_is_not_used() {
     .open(&failed)
     .and_then(|file| file.set_modified(two_days_ago))
     .expect("age the failed mark");
-  let (ok, stderr, _) = convert_cli_beside(plain_tex, &[], &forced);
+  let (ok, stderr, _) = convert_cli_beside(plain_tex, &[], 600, &forced);
   assert!(ok, "the conversion exited non-zero:\n{stderr}");
   assert!(stderr.contains("building one into"), "{stderr}");
   assert!(!stderr.contains("Warning:dump:build_failed"), "{stderr}");
@@ -671,7 +690,7 @@ fn a_dump_built_from_another_tree_is_not_used() {
   )
   .expect("write plain dump");
   let unused_cache = tempfile::tempdir().expect("create tempdir");
-  let (ok, stderr, xml) = convert_cli_beside(tex, &own_copy, &[
+  let (ok, stderr, xml) = convert_cli_beside(tex, &own_copy, 600, &[
     ("LATEXML_DUMP_DIR", matching.path().display().to_string()),
     ("LATEXML_DUMP_DIR_ONLY", String::from("1")),
     ("LATEXML_NO_EMBEDDED_DUMP", String::from("1")),
