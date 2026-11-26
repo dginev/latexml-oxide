@@ -534,15 +534,30 @@ settings.
     ```markdown
     ## [X.Y.Z] (theme summary)
 
-    The highlights since X.Y.(Z-1). Every change … is listed in
-    [`docs/release/CHANGES_vX.Y.Z.md`](docs/release/CHANGES_vX.Y.Z.md).
+    One line on the cycle. In short:
 
-    ### …
+    - **…headline…** (four to six, one line each)
+
+    Every change … is listed in [`docs/release/CHANGES_vX.Y.Z.md`](docs/release/CHANGES_vX.Y.Z.md).
+
+    <details>
+    <summary><b>Highlights</b></summary>
+
     - **…headline…** one or two sentences, a measured figure with its basis.
 
-    ### Upgrading from X.Y.(Z-1)
+    </details>
+
+    <details>
+    <summary><b>Upgrading from X.Y.(Z-1)</b>: …</summary>
+
     - …each default, option, output or API change a user must act on…
+
+    </details>
     ```
+
+   The release page shows the short list; the highlights and the upgrade notes fold into `<details>` blocks (DG
+   2026-11-26, from 0.8.0). Keep a blank line after each `<summary>` and before each `</details>`, or GitHub renders
+   the Markdown inside as plain text.
 
    No date in the heading (the 0.7.x form). From 0.8.0 on, the section is a curated
    summary of at most ~100 lines (user 2026-11-18): the headlines of the whole release

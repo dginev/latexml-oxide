@@ -2,10 +2,20 @@
 
 ## [0.8.0] (98 % of arXiv without an error; packages read from their own sources; 198 new bindings; a frontmatter engine; faster, in less memory)
 
-The highlights since 0.7.6 (2026-08-23). Every change, with its guard tests and design references, is listed in
+Hundreds of improvements since 0.7.6 (2026-08-23). In short:
+
+- **98 % of arXiv converts without an error**, up from 86.3 % under 0.7.6, and every release is regression-tested
+  against the whole corpus.
+- **Packages and classes without a binding are read from their own sources by default**, and 198 more have bindings.
+- **A new frontmatter engine**, and **a Rhai binding API that is Perl's `Package.pm` API**.
+- **Faster, in less memory:** a typical arXiv paper converts 1.3× faster, a large split book 2.3× faster.
+- **Untrusted input stays inside the job.**
+
+Every change, with its guard tests and design references, is listed in
 [`docs/release/CHANGES_v0.8.0.md`](docs/release/CHANGES_v0.8.0.md).
 
-### Highlights
+<details>
+<summary><b>Highlights</b></summary>
 
 - **98 % of arXiv converts without an error.** The production run of November 2026 converts 98.1 % of arXiv's
   2,962,950 LaTeX articles with no Error or Fatal, up from 86.3 % under 0.7.6. The release is regression-tested
@@ -40,7 +50,10 @@ The highlights since 0.7.6 (2026-08-23). Every change, with its guard tests and 
 - **Platforms:** builds, and converts basic documents, without TeX Live; the full test suite runs on Windows for
   every release (Windows binaries ship unsigned); each release names its exact build inputs (`BUILD-INPUTS`).
 
-### Upgrading from 0.7.6
+</details>
+
+<details>
+<summary><b>Upgrading from 0.7.6</b>: the defaults, options and outputs that changed</summary>
 
 - **Formats:** the first conversion on a new TeX tree builds its format once (about 11 s) into
   `~/.cache/latexml-oxide/formats/` and says so on stderr; `--timeout` does not cover that build.
@@ -68,6 +81,8 @@ The highlights since 0.7.6 (2026-08-23). Every change, with its guard tests and 
   `default_resources` (inverted); the prelude exports `LazyLock`, not `Lazy`; `test-utils` is no longer a default
   feature; `HtmlOptions` is `#[non_exhaustive]`; `PostDocument::new_document` takes the parent page's id;
   `post::run_post_processing_logged` with `split: true` streams; `Config` and `ConversionResponse` gain `handoff_file`.
+
+</details>
 
 ## [0.7.6] (graphics & SVG figure fidelity; minted highlighting + overpic; author/frontmatter class sweep; Rhai runtime binding API; latexmlpost CLI parity; wider package & bibliography coverage)
 
