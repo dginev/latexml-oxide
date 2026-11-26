@@ -1,0 +1,28 @@
+% mechanism: sn-jnl's `\@maketitle` prints, under the addresses, an `\equalcont` note's line (2412.01641's sn-jnl.cls:754)
+%   and then the `\presentaddress` line (:756), before `\printabstract` (:759). An `\equalcont` given before any
+%   `\author` marks no name: `print_notes` (sn_jnl_cls.rs) queues it as the document's note at `\maketitle`, undeclared,
+%   so it lands after the abstract, while the present address, declared at its call (`\lx@names@note`,
+%   OXIDIZED_DESIGN_DIVERGENCES #1074), sits under the names. Declaring the document's note too puts it after the
+%   present address (queued later): the two lines need one declaration in the class's print order.
+% witness: synthetic (revBLOCKDECL's sn2; the shape of snjnl_note_before_any_name.tex)
+% oracle:  pdflatex 0 errors (with 2412.01641's sn-jnl.cls): "A Title / †Ann Able1 / 1Univ A. / †These authors
+%          contributed equally to this work. / Present Address: / Lab Q, Town / Abstract / The abstract."
+% engines: rust BLOCKDECL (this commit): title, creator, note[present-address], abstract, note[equal-contributors]
+% expect:  0 errors 0 Warnings; root order title, creator, note[role=equal-contributors], note[role=present-address],
+%          abstract
+% status:  RED (BLOCKDECL)
+% moves:   post-merge (sn-jnl's title-page notes declared together, in print order)
+% preload: ar5iv.sty
+\documentclass{sn-jnl}
+\usepackage{amsmath}
+\begin{document}
+\title{A Title}
+\equalcont{These authors contributed equally to this work.}
+\author[1]{\fnm{Ann} \sur{Able}}
+\affil[1]{\orgname{Univ A}}
+\presentaddress{Lab Q, Town}
+\abstract{The abstract.}
+\maketitle
+\section{S}
+Body.
+\end{document}

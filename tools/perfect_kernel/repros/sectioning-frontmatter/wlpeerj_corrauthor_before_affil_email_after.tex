@@ -1,0 +1,28 @@
+% mechanism: wlpeerj's `\@maketitle` prints `\@author` (the `\affil` lines, authblk; wlpeerj.cls:33, :173) before
+%   `\thecorrauthor` (:146-151, :176-177) whatever the order of the calls: `\corrauthor` before `\affil` still prints
+%   the e-mail after the affiliation. The binding declares the e-mail under the names as the title prints
+%   (`\lx@maketitle@begin`), after the `\affil` notes declared at their calls (`\lx@names@note`,
+%   `insert::place_block_notes`, OXIDIZED_DESIGN_DIVERGENCES #1074). The binding alone carries it (the class is not in
+%   TL 2025); sibling of `wlpeerj_affil_and_email_under_the_names.tex` (the other call order).
+% witness: synthetic (revBLOCKDECL's wl1; the class of 2007.11779)
+% oracle:  pdflatex 0 errors (with 2007.11779's wlpeerj.cls): "T / Ann Able1 / 1Univ X, Town / Corresponding author: /
+%          Ann Able1 / Email address: ann@x.edu / ABSTRACT / Abstract text."
+% engines: rust BLOCKDECL (eca47cbf6cb): title, creator, creator, note[email], note[affiliation], abstract
+% expect:  0 errors 0 Warnings; root order title, creator, creator, note[role=affiliation], note[role=email], abstract
+% status:  RED (BLOCKDECL eca47cbf6cb) -> GREEN (perfect_kernel_batchblockplace::a_block_contact_note_sits_under_the_names)
+% preload: ar5iv.sty
+\documentclass{wlpeerj}
+\title{T}
+\author[1]{Ann Able}
+\corrauthor[1]{Ann Able}{ann@x.edu}
+\affil[1]{Univ X, Town}
+\begin{abstract}
+Abstract text.
+\end{abstract}
+\begin{document}
+\flushbottom
+\maketitle
+\thispagestyle{empty}
+\section{S}
+Body.
+\end{document}
