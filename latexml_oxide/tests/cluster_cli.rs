@@ -5087,6 +5087,7 @@ mod hostile_input_hardening {
       "archive with escaping symlink & ro dir must convert cleanly, status {:?}\nstderr:\n{stderr}",
       out.status.code()
     );
+    #[cfg_attr(not(unix), allow(unused_variables))] // read on every OS, checked on Unix
     let xml = std::fs::read_to_string(work.path().join("paper.xml")).expect("read paper.xml");
     #[cfg(unix)]
     assert!(

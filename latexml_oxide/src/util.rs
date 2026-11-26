@@ -208,6 +208,8 @@ pub fn unpack_zip<R: std::io::Read + std::io::Seek>(
 /// archive directories (`0555`) never leave temporary files behind on cleanup.
 /// Walks real directories only (`file_type()`, never following symlinks) so
 /// in-archive directory link cycles (`a -> .`, #924) never loop.
+// Not Unix: `set_readonly(false)` clears the read-only attribute; the lint warns of Unix world-writable modes.
+#[cfg_attr(not(unix), allow(clippy::permissions_set_readonly_false))]
 fn normalize_unpacked_permissions(dir: &std::path::Path) {
   fn fix_dir(path: &std::path::Path) {
     #[cfg(unix)]

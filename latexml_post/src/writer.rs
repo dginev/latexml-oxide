@@ -149,9 +149,12 @@ impl Staged {
   pub fn beside(dest: &Path) -> Self { Self::at(free_path(dest)) }
 
   /// [`Self::beside`], created empty by `create_new`: the name is this caller's alone.
-  fn create(dest: &Path) -> io::Result<(Self, fs::File)> {
+  fn create(dest: &Path) -> io::Result<(Self, fs::File)> { Self::create_at(|| free_path(dest)) }
+
+  /// The first of the `next` names that `create_new` makes, created empty.
+  fn create_at(next: impl Fn() -> PathBuf) -> io::Result<(Self, fs::File)> {
     loop {
-      let path = free_path(dest);
+      let path = next();
       match fs::OpenOptions::new()
         .write(true)
         .create_new(true)
@@ -166,8 +169,13 @@ impl Staged {
 
   /// [`Self::beside`], made a hard link to `src`; `None` where the filesystem can't link it here.
   fn link(src: &Path, dest: &Path) -> io::Result<Option<Self>> {
+    Self::link_at(src, || free_path(dest))
+  }
+
+  /// The first of the `next` names made a hard link to `src`; `None` where the filesystem can't link it there.
+  fn link_at(src: &Path, next: impl Fn() -> PathBuf) -> io::Result<Option<Self>> {
     loop {
-      let path = free_path(dest);
+      let path = next();
       match fs::hard_link(src, &path) {
         Ok(()) => return Ok(Some(Self::at(path))),
         Err(e) if e.kind() == io::ErrorKind::AlreadyExists => continue,
@@ -186,6 +194,20 @@ impl Staged {
         Err(e) => return Err(e),
       }
     }
+  }
+
+  /// A hard link to `src`, or a copy, under a short name in the temporary directory, `lx.<pid>.<seq>.<ext>` (the
+  /// extension kept for converters that read the format from it): `src`'s bytes where its own path is out of reach.
+  pub fn alias(src: &Path) -> io::Result<Self> {
+    let ext = src.extension().and_then(|e| e.to_str());
+    let next = || free_alias_path(ext);
+    if let Ok(Some(alias)) = Self::link_at(src, next) {
+      return Ok(alias);
+    }
+    let (alias, file) = Self::create_at(next)?;
+    drop(file);
+    fs::copy(src, alias.path())?;
+    Ok(alias)
   }
 
   fn at(path: PathBuf) -> Self {
@@ -253,6 +275,21 @@ fn staged_path(dest: &Path, seq: u64) -> PathBuf {
 fn free_path(dest: &Path) -> PathBuf {
   loop {
     let path = staged_path(dest, ATOMIC_TMP_SEQ.fetch_add(1, Ordering::Relaxed));
+    if fs::symlink_metadata(&path).is_err() {
+      return path;
+    }
+  }
+}
+
+/// The next [`Staged::alias`] name that names no file.
+fn free_alias_path(ext: Option<&str>) -> PathBuf {
+  let (dir, pid) = (std::env::temp_dir(), std::process::id());
+  loop {
+    let seq = ATOMIC_TMP_SEQ.fetch_add(1, Ordering::Relaxed);
+    let path = dir.join(match ext {
+      Some(ext) => format!("lx.{pid}.{seq}.{ext}"),
+      None => format!("lx.{pid}.{seq}"),
+    });
     if fs::symlink_metadata(&path).is_err() {
       return path;
     }
@@ -635,6 +672,24 @@ mod tests {
     staged.install(&a).unwrap();
     assert!(!temp.exists(), "the staged link is left behind");
     assert_eq!(fs::read(&a).unwrap(), b"<svg/>");
+  }
+
+  /// A figure's alias (`Graphics::reachable_source`, Windows) has a short name, its extension kept, in the temporary
+  /// directory, never beside the figure; it holds the figure's bytes and goes when dropped.
+  #[test]
+  fn an_alias_is_a_short_name_in_the_temporary_directory() {
+    let dir = tempfile::tempdir().unwrap();
+    let figure = dir.path().join(format!("{}.pdf", "f".repeat(200)));
+    fs::write(&figure, b"%PDF-1.4 figure").unwrap();
+    let alias = Staged::alias(&figure).unwrap();
+    let path = alias.path().to_path_buf();
+    assert_eq!(path.parent(), Some(std::env::temp_dir().as_path()));
+    let name = path.file_name().unwrap().to_str().unwrap();
+    assert!(name.len() < 40 && name.ends_with(".pdf"), "{name}");
+    assert_eq!(fs::read(&path).unwrap(), b"%PDF-1.4 figure");
+    drop(alias);
+    assert!(!path.exists(), "the alias outlived its drop");
+    assert_eq!(fs::read_dir(dir.path()).unwrap().count(), 1);
   }
 
   /// A 240-character figure name stays under NAME_MAX (255 bytes) through its stage and a stage of

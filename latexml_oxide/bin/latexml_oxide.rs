@@ -414,7 +414,8 @@ struct Cli {
   search_paths: Vec<String>,
 
   // === Value flags ===
-  /// Conversion timeout in seconds (default: 60). Use 0 to disable.
+  /// Conversion timeout in seconds (default: 60). Use 0 to disable. A one-time format build (a TeX tree the bundled
+  /// formats don't match) runs off this clock, under its own 10-minute bound.
   #[arg(long, value_name = "SECONDS", default_value = "60")]
   timeout: u64,
 

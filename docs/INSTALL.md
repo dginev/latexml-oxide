@@ -14,6 +14,8 @@ installed, or when your tree's kernel files (`latex.ltx`, `expl3-code.tex`) are 
 those of the TeX Live snapshot it was built from. On any other tree (often the case for a Linux
 distribution's TeX Live, MiKTeX, or a TeX Live at a different update level), the first conversion
 builds the formats once (about 10 s) into a per-user cache, and later conversions reuse them.
+That build does not count towards `--timeout`; under a non-zero `--timeout` it has its own
+10-minute bound (under `--timeout=0`, none).
 Interrupting that first conversion (Ctrl+C) cancels the build, and the next conversion builds them
 again. A build that fails twice in a row is not retried for a day: conversions then load the format
 from the engine's own definitions, with many spurious errors, and say so on the terminal, naming the
