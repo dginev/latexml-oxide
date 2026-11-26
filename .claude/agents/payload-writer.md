@@ -43,6 +43,11 @@ to it, and where the brief is more specific, the brief wins.
   link's RAM gets the A/B oomd-killed).
 - Doc edits: the Edit tool, or Python with raw strings; then check for control bytes
   (`grep -nP '[\x00-\x08\x0b\x0c\x0e-\x1f]' <file>`).
+- **Holdout (four breaches, each by an agent "checking" ids):** never pass the holdout file to any command in any form —
+  no `grep -c`, no `wc`, no `ls` of it, no existence check — and never read anything under
+  `/home/deyan/data/pk_agents/main/fm_scorer/`. Every witness id named in your brief is cleared: never check an id
+  against any list. Convert only ids from a population file the main session gave you. A hook blocks any Bash command
+  that names these paths; do not work around it.
 
 ## Method
 - Perl is ground truth: read the Perl source and the real `.sty`/`.cls`/`latex.ltx`/`tex.web` first; port faithfully;
@@ -87,14 +92,15 @@ to it, and where the brief is more specific, the brief wins.
 - First round: the witness A/B and the census A/B the brief names. NO manual net and NO random sample unless the brief
   asks — the main session runs those once per bundle.
 - A/B: copy your release build to `~/data/pk_bin/latexml_oxide.<label>-rel` and give it
-  `~/data/pk_agents/vendor_dumps<label>` (a symlink to the base's when no pool code changed); a population is
-  `~/data/pk_agents/main/ab_66bundle/pop<pop>.tsv` (from `~/data/pk_agents/main/census/who_uses.py --class X --sample all
-  --label L --out …`, or the brief's). Launch `systemd-run --user --unit=ab-<label>
+  `~/data/pk_agents/vendor_dumps<label>` (a symlink to the base's when no pool code changed); a population is the
+  brief's `~/data/pk_agents/main/ab_66bundle/pop<pop>.tsv`, built by the main session with `kit/pop.py` (which excludes
+  the holdout). Never build your own (2026-11-21: six holdout ids leaked through writers' own populations): write the
+  candidate ids to `<NAME>-scratch/candidates.txt` and stop for the main session. Launch `systemd-run --user --unit=ab-<label>
   --working-directory=/home/deyan/data/pk_agents/main/ab_66bundle --setenv=POP=<pop> --setenv=AB_CPUS=<cores>
   --setenv=PAR=<par> --setenv=RL=<label> /bin/bash scripts/run_ab2.sh <label> <base>` — LABELS, not paths (a path
   gives an all-zero A/B that reads clean). Check `systemctl --user is-active ab-<label>` right after, and that the TOTAL
   row has nonzero words; read it with `python3 -I scripts/analyze_pop2.py r<label> <pop>` (with the `r`) and
-  `python3 -I scripts/fm_checks.py <label>`. Build the population with `kit/pop.py`.
+  `python3 -I scripts/fm_checks.py <label>`.
 - Every worse paper is root-caused. Before calling it a regression, rerun it alone on both binaries; a paper whose base
   alone varies (a memory abort, a load timeout) is noise — report it with both counts.
 - Final commit only: `GATE_TREE=<your worktree> CARGO_TARGET_DIR=<your target> GATE_CPUS=<the brief's> bash

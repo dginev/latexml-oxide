@@ -24,6 +24,10 @@ Rules:
   with `python3 -I`, pdflatex only there with `-no-shell-escape`. Bash: no `!`, no
   `until`/polling loops, no foreground `sleep`; kill only by exact PID; `rm` only with
   absolute literal paths. Stop your own background work before you reply.
+- Holdout: never pass the holdout file to any command in any form — no `grep -c`, no `wc`, no `ls` of it, no
+  existence check — and never read anything under `/home/deyan/data/pk_agents/main/fm_scorer/`. Every witness id
+  named in your brief is cleared: never check an id against any list. A hook blocks any Bash command that names these
+  paths; do not work around it.
 - LOOK BEFORE DERIVING: grep the witness id and the deciding CS in `docs/SYNC_STATUS.md`,
   `docs/perfect_kernel/OPEN_ROWS.md`, `docs/parity/DEFERRED_FAMILIES.md` and
   `docs/parity/KNOWN_PERL_ERRORS.md`. A known row: cite it and report only what is new.

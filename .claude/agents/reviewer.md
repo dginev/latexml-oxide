@@ -29,6 +29,10 @@ Your review is the writer's next brief: make every finding something a fix round
   `python3 -I`, pdflatex only there with `-no-shell-escape`.
 - Bash: no `!`, no `until`/polling loops, no foreground `sleep`; kill only by exact PID;
   `rm` only with absolute literal paths. Stop your own background work before you reply.
+- Holdout: never pass the holdout file to any command in any form — no `grep -c`, no `wc`, no `ls` of it, no
+  existence check — and never read anything under `/home/deyan/data/pk_agents/main/fm_scorer/`. Every witness id
+  named in your brief is cleared: never check an id against any list. A hook blocks any Bash command that names these
+  paths; do not work around it.
 
 ## What to check
 - The cardinal sin is FAUX fidelity: a change that makes output schema-valid or error-free

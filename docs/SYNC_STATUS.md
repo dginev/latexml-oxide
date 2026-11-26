@@ -1068,6 +1068,31 @@ Rules that keep this file honest and mergeable:
     dropped below 1991, `source_date.rs`), so the era rule seldom applies and the corpus takes DG's oldest-edition
     fallback (2026-11-26): math9909024 → 1991, hep-th0307062 → 1991 (its era's 2000), 1504.02453 → 2000 (its era's
     2010); `source_date` should treat a 1980 zip entry as undated rather than rely on the 1991 floor; 2
+  - HALIGNREVERT — no guard reaches an alignment reverted during its own absorption (`self_referential_alignment`,
+    tex_tables.rs ~933-941; the old panic-recovery path, whatsit.rs ~355-362): a shape that still does is owed (OD #1167
+    Residual); 1
+  - YTABNODE — a Young diagram set in a pgf node renders as the running-text diagram, boxes 21.86×25.32 against
+    pdflatex's 15.53×15.6, so 2509.03390 Figs. 1–2 and 1909.01257 Fig. 1.2 overlap their labels (content kept; OD
+    #1167); owned by the ytableau binding batch; 2
+  - QA14K2-FMT — enumitem sets a description's `font`/`format` inside `\descriptionlabel` and sends every label through
+    `\makelabel` (enumitem.sty:1470-1480); ours wraps the key around the whole label from outside, so a keyed `\newlist`
+    description is not bold, a bare `\item` prints its number, and `{description}`'s `\normalfont` undoes the key (RED
+    `list-structure/enumitem_description_format_inside_the_label_red`; 1810.05092, 2609.31516, 2212.04966). The general
+    rule: every item label through `\makelabel{\@itemlabel}`, with enumitem's format inside; 2
+  - BAREITEMTAG — in a keyed `{description}` a bare `\item` keeps an empty `<tag><text/></tag>` (the netted `\labelsep`
+    skip carries the key's font; 1305.3417; same RED repro as QA14K2-FMT); 1
+  - WIDETABLELEFT — base CSS: a centred table wider than the screen starts past the page's left edge, where no scroll
+    reaches (issue 972's longtable 17 px at 375 px, 1805.00336 126 px, 2001.07938 220 px; RED
+    `block-model/wide_longtable_past_the_left_edge_red`, from 0.8.0-rc6's GROWBASE review); 1
+  - FLEXCELLGROW — base CSS: a minipage figure panel in `.ltx_flex_cell` grows to its display but the flex cell does not,
+    so a wide display overprints the neighbour panel's caption (pre-existing, not a Grow regression; the flex cell holding
+    such a box needs `min-width:min-content`; GROWBASE review probe `fig.tex`); 1
+  - SCHEMAMODEL — a Rust tool that generates `LaTeXML.model` from the `.rng` schema, with a drift guard (DG 2026-11-26),
+    the first milestone of a Rust RelaxNG and validation toolbox: rnc → rng, rng → model, and HTML-dialect validation in
+    place of the W3C validator; 2
+  - RUSTONLY — load-bearing tools move to Rust (DG 2026-11-26: "tools can survive as python if they are exploratory, but
+    long-term we really want to be Rust-only"): `tools/*.py` holds 10 scripts; port the ones CI, release or the guards
+    depend on first; 1
   - ITEMTHEBLANK (needs a ruling) — `\item[…]` lets `\the<ctr>` be empty (Perl latex_constructs.pool.ltxml:1390), so
     `\item[(\theenumi)] B\label{y}` prints "()" and "See ." where TeX prints "(1)" and "See 1."; `\item[\fnum@fc]` gives
     "Fig. :" (TeX "Fig. 1:"); a nested list reusing the counter labels its inner item "Fig. 0:" (TeX "Fig. 1:"). Keep

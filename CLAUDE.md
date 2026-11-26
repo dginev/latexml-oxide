@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-> **This is a Perl-to-Rust translation project.** Every translated entry must follow tightly the original semantics and nuances of the Perl source. Read the Perl source first, translate precisely; do not invent new abstractions, rename concepts, or simplify behavior unless documented as an intentional divergence in `docs/parity/OXIDIZED_DESIGN.md`. The Perl code is the ground truth for the design, data model and interfaces; where Perl approximates TeX itself, real TeX (tex.web, latex.ltx, the package source, pdflatex) decides behaviour, recorded as a divergence and offered to Perl as a patch (DG 2026-08-31; BM — Bruce Miller, LaTeXML's author — 2026-11-05: fidelity is "seldom (if ever?) traded for speed" but "may more often be lost due to not understanding what TeX really is doing").
+> **This is a Perl-to-Rust translation project.** Every translated entry must follow tightly the original semantics and nuances of the Perl source. Read the Perl source first, translate precisely; do not invent new abstractions, rename concepts, or simplify behavior unless documented as an intentional divergence in `docs/parity/OXIDIZED_DESIGN.md`. The Perl code is the ground truth for the design, data model and interfaces; where Perl approximates TeX itself, real TeX (tex.web, latex.ltx, the package source, pdflatex) decides behaviour, recorded as a divergence (offering it to Perl as a patch is paused for now, DG 2026-11-25; the KNOWN_PERL_ERRORS record stays) (DG 2026-08-31; BM — Bruce Miller, LaTeXML's author — 2026-11-05: fidelity is "seldom (if ever?) traded for speed" but "may more often be lost due to not understanding what TeX really is doing").
 
 ## Active priorities: faithful parity + beyond-Perl arXiv runs
 
@@ -150,7 +150,7 @@ falsification attempts. **Subagents are narrow and bounded** (user directives 20
 2026-10-12): one question or one mechanism, a fixed deliverable, then stop. Analysis
 agents are read-only. The only writers are `payload-writer` agents, whose fix rounds
 run targeted checks only; the main checkout's tree, integration, the bundle-level full
-suite + A/B, and every push stay in the main session. At most 4 subagents run at once (user 2026-11-11). Definitions are discovered at session start; a new one needs a
+suite + A/B, and every push stay in the main session. At most 4 subagents run at once (DG 2026-11-20; it protects the weekly quota, so idle CPU is no reason to add one). Definitions are discovered at session start; a new one needs a
 restart. Brief read-only agents with the main checkout, not a worktree: `LaTeXML/`
 (the Perl oracle) is gitignored and absent from every worktree, so a worktree agent
 greps nothing and reports "no gaps" — a payload writer reads the oracle from the main

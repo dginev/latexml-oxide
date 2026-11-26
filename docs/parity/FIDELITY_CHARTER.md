@@ -154,10 +154,14 @@ missing image, a broken `\ref` or `\cite`, and the like — the fixes are usuall
   overlap. **No institution marks:** an affiliation's leading `\footnotemark`, the mark the names' note pairs it by
   (1607.07280), is not written; generated per-institution marks are a later feature. A `\ \footnotemark[N]` after a
   name's note is that name's (1911.13299; a mark alone on its own line after `\\` stays an orphan, 2026-11-09). A mark
-  or note between two names is the nearer name's by the glue TeX prints, a tie the next name's; one a fill or other ink
-  leaves undecided is a counted loss, never a guess; an orphan bare mark keeps its footnote step, its glyph counted
-  lost (DG 2026-11-16, OD #1057); a mark glued past a name's comma and labels is measured from the comma's ink
-  (COMMAMARK, 1111.1979). **Marks pair by number** (DG 2026-11-16, MARKKEY; OD #1058): a name's footnote mark answers
+  or note between two names is the name's before it, and an affiliation's or legend's label is the text's after it (DG
+  2026-11-17, ADVLAYER; it replaced 11-16's nearer-name-by-glue rule and COMMAMARK's glue measure). Only positive
+  evidence overrides that default: a line or cell start, a binding declaring its class's left-side convention, or the
+  block's edge proof (its first piece precedes its first name, inside that name's own stretch, and no piece follows
+  its last); no glue widths are compared. A note glued to the name before makes the block mixed (the default, with an
+  Info), and a mixed block's ties stay undecided and counted; an orphan bare mark keeps its footnote step, its glyph
+  counted lost (DG 2026-11-16, OD #1057); a block's consistent suffix convention is only a tie-breaker (1111.1979).
+  **Marks pair by number** (DG 2026-11-16, MARKKEY; OD #1058): a name's footnote mark answers
   the note its number names, as TeX pairs them — a `\footnotetext[n]` in the author block is the note of each name
   showing n (2407.04435), a name's given `\footnotemark[n]` a copy of its block's note n —, never a glyph alone where a
   number decides; IEEEtran's unmarked `\thanks` is the block's, not the last author's (1510.02728). **One note, many
