@@ -23922,9 +23922,10 @@ it, and as a CSS table it put the `\intertext` row in its first column (a footno
   `\raisebox`. A `p{}` cell, `\parbox`, minipage or inline logical block holding a display is at least the display's
   `min-content` width, its centring pads (and a table cell's) `min-width:0`; a note is not widened: a
   `.ltx_note_content` holding a display scrolls in x (its padding takes the text boxes' overhang: no vertical bar).
-  Mirrors ar5iv-css `342a531` with two differences, as base CSS has no `.ltx_table` scroll box: a `\parbox` table
-  float grows with its table (excluded, its centred table ran 186 px off the page's left edge at 1280 px, 2001.00529
-  `A3.T2`), and the pads' rule is keyed on the boxes, not on `span.ltx_eqn_table` (a span-form display outside a box
+  Mirrors ar5iv-css `342a531` with three differences, as base CSS has no `.ltx_table` scroll box: a `\parbox` table
+  float grows with its table (with `:not(.ltx_table)` its centred table ran 186 px off the page's left edge at 1280 px,
+  2001.00529 `A3.T2`), the note rule above is base-only, and the pads' rule is keyed on the boxes (minipage and
+  `\parbox` included), not on `span.ltx_eqn_table` (a span-form display outside a box
   kept its 2em pads, 2001.11999 `S2.Ex1`).
 - Measured (Chrome and Firefox, 1280/375 px, the issue's MWE, synthetic cells, `\parbox`, minipage, footnotes, a
   lowered `\raisebox`, and 1805.09247, 2001.00529, 2001.11999, 1805.00336, 2001.03096, 2001.04829, 2001.07938): of

@@ -658,7 +658,7 @@ foreignObject {
    2001.11999, 1805.00336, 2001.03096, 2001.04829. */
 :is(.ltx_inline-block, .ltx_inline-logical-block, .ltx_minipage, .ltx_parbox):has(.ltx_eqn_table) {
   min-width:min-content; }
-:is(.ltx_inline-block, .ltx_inline-logical-block, .ltx_td) :is(.ltx_eqn_center_padleft, .ltx_eqn_center_padright) {
+:is(.ltx_inline-block, .ltx_inline-logical-block, .ltx_minipage, .ltx_parbox, .ltx_td) :is(.ltx_eqn_center_padleft, .ltx_eqn_center_padright) {
   min-width:0; }
 .ltx_note_content:has(.ltx_eqn_table) { overflow-x:auto; }
 /* latexml-oxide local delta (issue #972): in an inline context (a p{} cell, \parbox, minipage, note) the XSLT writes a

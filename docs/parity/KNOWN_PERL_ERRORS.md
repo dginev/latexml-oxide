@@ -3879,8 +3879,7 @@ breakage ⇒ SHARED-FAILURE; the lualatex PDF keeps the math in its cell.
 **Divergence** (surpass-Perl, user-approved 2026-08-15): a bundled-CSS local
 delta re-boxes display math as a **block scroll container** (a plain block since 0.8.0,
 the box growing to fit it: OXIDIZED_DESIGN_DIVERGENCES #1135) *only under a
-constrained ancestor*, so it stays inside the cell and scrolls horizontally when
-too wide — the same containment `.ltx_listing` (code) already uses:
+constrained ancestor*, so it stays inside the cell (the scroll-box form, until 0.8.0):
 `.ltx_inline-block .ltx_eqn_table, .ltx_td .ltx_eqn_table { display:block;
 overflow-x:auto; max-width:100% }`. `display:block` (not `overflow` on the
 table, which browsers ignore) is required to establish the scroll box; the

@@ -43,12 +43,18 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
 
 ## Changes
 
-### 0.8.0-rc5
+### 0.8.0-rc6
 
   - **A display in a table cell, `\parbox` or minipage shows no scrollbar** (issue 972): Chrome drew an empty vertical
     one and both browsers cut off a lowered `\raisebox`; the box now widens to fit its display, and a footnote scrolls
-    a too-wide one (ar5iv-css too since `342a531`, after the bundled 0.9.5). OXIDIZED_DESIGN_DIVERGENCES #1135; guard
+    a too-wide one (ar5iv-css too, in the bundled 0.9.6). OXIDIZED_DESIGN_DIVERGENCES #1135; guard
     `cluster_cli::browser_render_eqn_rows_in_cells`.
+  - **The bundled ar5iv.css is ar5iv-css 0.9.6** (`tools/ar5iv-css.pin`): the same no-scrollbar display in a box, an
+    aligned display's rows lined up in a box as outside, the title page's margin notes beside the text on very wide
+    screens, and a zero-width text-mode `\vphantom`.
+
+### 0.8.0-rc5
+
   - **The first conversion's format build no longer counts towards `--timeout`.** On a TeX tree the bundled formats
     don't match, the first conversion builds them once. That build ran on the conversion's clock: on a busy host a slow
     build was killed (exit 124), and two such runs marked the format failed for a day, so every later conversion fell

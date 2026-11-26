@@ -1861,7 +1861,7 @@ mod witnessed_css_delta {
       ".ltx_inline-block .ltx_eqn_table,\n.ltx_td .ltx_eqn_table { display:block; max-width:100%; }",
       ":is(.ltx_inline-block, .ltx_inline-logical-block, .ltx_minipage, .ltx_parbox):has(.ltx_eqn_table) {\n  \
        min-width:min-content; }",
-      ":is(.ltx_inline-block, .ltx_inline-logical-block, .ltx_td) :is(.ltx_eqn_center_padleft, .ltx_eqn_center_padright) {\n  \
+      ":is(.ltx_inline-block, .ltx_inline-logical-block, .ltx_minipage, .ltx_parbox, .ltx_td) :is(.ltx_eqn_center_padleft, .ltx_eqn_center_padright) {\n  \
        min-width:0; }",
       ".ltx_note_content:has(.ltx_eqn_table) { overflow-x:auto; }",
     ] {

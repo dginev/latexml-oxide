@@ -293,9 +293,8 @@ tag's commit (`git -C ar5iv-css rev-parse <tag>^{commit}`) and
 Dev and CI builds fetch nothing and lack it (`--css=ar5iv.css` there warns); a
 local `make_release.sh` fetches it itself and leaves it in the checkout's
 gitignored `resources/ar5iv-css/`, so later builds of that checkout embed it too
-(harmless: it is used only on request). The pinned 0.9.5's LICENSE still reads
-"2021"; latexml-oxide's banner and notices say 2021-2027, as upstream's LICENSE
-does from `2bed2f5`, so the next pin bump brings the upstream text into line.
+(harmless: it is used only on request). latexml-oxide's banner and notices say
+2021-2027, as the pinned release's LICENSE does (from 0.9.6).
 
 **Design requirement — portability.** A conversion must not *read* any of
 latexml_oxide's *own* resources from disk during its main operation: the
