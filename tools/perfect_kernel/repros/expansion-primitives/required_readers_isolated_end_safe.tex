@@ -1,0 +1,17 @@
+% mechanism: a required reader that runs out at the end of an ISOLATED token list, not of the input, stays quiet
+%   (`gullet::note_missing_argument` errs only at `at_end_of_all_input`): an index phrase is digested at `\index`
+%   time from a mouth of its own, where TeX only writes it to the `.idx`, so `\label` and `\mbox` ending a phrase
+%   find no argument there and TeX never reads them (OD #304)
+% witness: synthetic
+% oracle:  pdflatex 0 `!`, "before text more"; Perl 2 errors ("Missing argument Semiverbatim", "Missing argument {}")
+%          that TeX does not raise
+% engines: INT081AU: 0 errors
+% expect:  0 errors, 0 warnings, the two index marks "a" and "b"
+% status:  GREEN (TRUEENDREADERS; guard error_boundary::perfect_kernel_error_boundary)
+\documentclass{article}
+\usepackage{makeidx}
+\makeindex
+\begin{document}
+before \index{a\label} text \index{b\mbox} more
+\printindex
+\end{document}

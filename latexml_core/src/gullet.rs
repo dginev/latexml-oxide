@@ -4120,6 +4120,18 @@ pub fn read_arg(expansion_level: ExpansionLevel) -> Result<Tokens> {
   Ok(read_arg_or_none(expansion_level)?.unwrap_or_default())
 }
 
+/// [`read_arg`] for a required parameter of type `spec`: input that ran out is [`note_missing_argument`]'s, and the
+/// call runs on the empty argument (Perl's put-back, Parameter.pm:93-97; OD #304).
+pub fn read_required_arg(expansion_level: ExpansionLevel, spec: &str) -> Result<Tokens> {
+  match read_arg_or_none(expansion_level)? {
+    Some(arg) => Ok(arg),
+    None => {
+      note_missing_argument(spec, spec)?;
+      Ok(Tokens::default())
+    },
+  }
+}
+
 /// [`read_arg`], or `None` when the input ran out before the argument (Perl `readArg`'s undef, Gullet.pm:735).
 pub fn read_arg_or_none(expansion_level: ExpansionLevel) -> Result<Option<Tokens>> {
   match read_non_space()? {

@@ -1,0 +1,13 @@
+% mechanism: `\mbox` at the true end of all input: `HBoxArgContents` (tex_box.rs `read_box_arg_contents`, its own
+%   reader) errs as Perl's "Missing argument" for its `{}` (Parameter.pm:93-97; `gullet::note_missing_argument`,
+%   OD #304) and the box is made empty
+% witness: synthetic
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 3 `!` ("File ended while scanning use of \mbox ", "Emergency stop"),
+%          no PDF; Perl 1 error "Missing argument {} for ...[\mbox {}]"
+% engines: INT081AU: 0 errors
+% expect:  "before text" kept and one "Missing argument HBoxArgContents at end of input" Error
+% status:  GREEN (TRUEENDREADERS; guard error_boundary::perfect_kernel_error_boundary)
+\documentclass{article}
+\begin{document}
+before text
+\mbox

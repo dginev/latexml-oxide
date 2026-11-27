@@ -1,0 +1,18 @@
+% mechanism: a constructor's required reader at the end of an `\input` file (not the true end) stays quiet: its
+%   read is not at the `matching` scanner status, so `argument_ran_off_a_file` does not abandon it and
+%   `note_missing_argument` (true end only) does not report it; `\label` runs on an empty key. TeX reports the file's
+%   end and drops the call (tex.web §338, §392); Perl reports "Missing argument" (row R TRUEENDREADERS-FILE)
+% witness: synthetic (the TRUEENDREADERS sibling sweep)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 1 `!` ("File ended while scanning use of \label."), "before in file
+%          key after"; Perl, the file on disk: 1 error "Missing argument Semiverbatim"
+% engines: TRUEENDREADERS: 0 errors, "before in file key after"
+% expect:  "before in file key after" and one Error for the `\label` miss
+% status:  RED
+% moves:   post-merge (TRUEENDREADERS-FILE)
+\begin{filecontents*}[overwrite]{\jobname-sub.tex}
+in file \label
+\end{filecontents*}
+\documentclass{article}
+\begin{document}
+before \input{\jobname-sub}{key} after
+\end{document}

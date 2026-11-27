@@ -1281,6 +1281,50 @@ const BOUNDARY: &[Row] = &[
     &["Error:expected:Token Missing argument Token at end of input"],
     &[("p", "p1.1", r#"<p xml:id="p1.1">before after </p>"#)],
   ),
+  // --- the readers built on `read_arg` that run out at the true end: `gullet::read_required_arg` (TRUEENDREADERS) ---
+  (
+    "`Semiverbatim` (`\\label`) missed at the true end (repro expansion-primitives/required_reader_true_end_errs)",
+    "pdflatex 3 `!` (File ended while scanning use of \\label; Emergency stop), no PDF; Perl 7 errors, the first \
+     \"Missing argument Semiverbatim\"",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/expansion-primitives/required_reader_true_end_errs.tex"
+    ),
+    &[],
+    (1, 0),
+    &["Error:expected:Semiverbatim Missing argument Semiverbatim at end of input"],
+    &[("p", "p1.1", "<p xml:id=\"p1.1\">before text\n</p>")],
+  ),
+  (
+    "`Undigested` (`\\section`'s title) missed at the true end (repro \
+     expansion-primitives/undigested_reader_true_end_errs)",
+    "pdflatex 2 `!` (Emergency stop, no legal \\end found), no PDF; Perl 1 error \"Missing argument Undigested\"",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/expansion-primitives/undigested_reader_true_end_errs.tex"
+    ),
+    &[],
+    (1, 0),
+    &["Error:expected:Undigested Missing argument Undigested at end of input"],
+    &[
+      ("p", "p1.1", r#"<p xml:id="p1.1">before text</p>"#),
+      ("title", "", r#"<title><tag close=" ">1</tag></title>"#),
+    ],
+  ),
+  (
+    "`HBoxArgContents` (`\\mbox`) missed at the true end (repro expansion-primitives/box_reader_true_end_errs)",
+    "pdflatex 3 `!` (File ended while scanning use of \\mbox; Emergency stop), no PDF; Perl 1 error \"Missing \
+     argument {}\"",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/expansion-primitives/box_reader_true_end_errs.tex"
+    ),
+    &[],
+    (1, 0),
+    &["Error:expected:HBoxArgContents Missing argument HBoxArgContents at end of input"],
+    &[(
+      "p",
+      "p1.1",
+      "<p xml:id=\"p1.1\">before text\n<text xml:id=\"p1.1.1\"/></p>",
+    )],
+  ),
   // --- the same `{}` and `Token` readers, safe side: every argument present, pdflatex clean ---
   (
     "`{}` and `Token` arguments present (repro expansion-primitives/undelimited_and_token_arguments_present_safe)",
@@ -1292,6 +1336,42 @@ const BOUNDARY: &[Row] = &[
     (0, 0),
     &[],
     &[("p", "p1.1", r#"<p xml:id="p1.1">before [abcd] x after</p>"#)],
+  ),
+  (
+    "`Semiverbatim`, `Undigested`, `HBoxArgContents`, `SanitizedVerbatim` arguments present (repro \
+     expansion-primitives/required_readers_arguments_present_safe)",
+    "pdflatex 0 `!`, \"before text ?? [?] box\", section 1 \"Sec\"; Perl 0 errors",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/expansion-primitives/required_readers_arguments_present_safe.tex"
+    ),
+    &[],
+    (0, 0),
+    &[],
+    &[
+      (
+        "p",
+        "p1.1",
+        r#"<p xml:id="p1.1">before text  <ref labelref="LABEL:a"/> <cite class="ltx_citemacro_cite">[<bibref bibrefs="x" separator="," yyseparator=","/>]</cite> <text xml:id="p1.1.1">box</text></p>"#,
+      ),
+      ("title", "", r#"<title><tag close=" ">1</tag>Sec</title>"#),
+    ],
+  ),
+  (
+    "`\\label` and `\\mbox` ending an index phrase, an isolated mouth's end: quiet (repro \
+     expansion-primitives/required_readers_isolated_end_safe)",
+    "pdflatex 0 `!` (the phrase is only written to the .idx), \"before text more\"; Perl 2 errors (\"Missing \
+     argument Semiverbatim\", \"Missing argument {}\") TeX does not raise",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/expansion-primitives/required_readers_isolated_end_safe.tex"
+    ),
+    &[],
+    (0, 0),
+    &[],
+    &[(
+      "p",
+      "p1.1",
+      r#"<p xml:id="p1.1">before <indexmark><indexphrase key="a">a</indexphrase></indexmark> text <indexmark><indexphrase key="b">b<text xml:id="p1.1.1"/></indexphrase></indexmark> more</p>"#,
+    )],
   ),
   // --- an alignment open at the end of input: its last cell's dropped text is counted (EOFPUTBACK fix 2; the drop
   // itself stays RED, so the pinned cell `p1.1.1.2.2` is empty) ---

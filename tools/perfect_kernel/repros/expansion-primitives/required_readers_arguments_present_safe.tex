@@ -1,0 +1,14 @@
+% mechanism: the safe side of required_reader_true_end_errs, undigested_reader_true_end_errs and
+%   box_reader_true_end_errs: the same `Semiverbatim`, `Undigested`, `HBoxArgContents` and `SanitizedVerbatim` readers
+%   with their arguments present are clean; only a reader that runs out at the true end of input errs (OD #304)
+% witness: synthetic
+% oracle:  pdflatex 0 `!`, "before text ?? [?] box" then section 1 "Sec", "after"; Perl 0 errors
+% engines: INT081AU: 0 errors
+% expect:  0 errors, 0 warnings, the label, ref, cite, box and section kept
+% status:  GREEN (TRUEENDREADERS; guard error_boundary::perfect_kernel_error_boundary)
+\documentclass{article}
+\begin{document}
+before text \label{a} \ref{a} \cite{x} \mbox{box} \index{i}
+\section{Sec}
+after
+\end{document}

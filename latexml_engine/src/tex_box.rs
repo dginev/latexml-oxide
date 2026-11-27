@@ -1160,7 +1160,7 @@ LoadDefinitions!({
   // not run for it (OXIDIZED_DESIGN_DIVERGENCES #769).
   DefParameterType!(PBoxContents, sub[_inner, _extra] {
     let mut body = box_prefix_tokens(Some(Tokens!(T_CS!("\\lx@enterhorizontal")))).unlist();
-    body.extend(read_arg(ExpansionLevel::Off)?.unlist());
+    body.extend(read_required_arg(ExpansionLevel::Off, "PBoxContents")?.unlist());
     Ok(Tokens::new(body))
   },
   predigest => sub[arg] {
@@ -2209,7 +2209,11 @@ pub fn read_box_arg_contents(everybox_opt: Option<Tokens>) -> Result<Tokens> {
       unread(Tokens::new(live));
       Ok(Tokens!())
     },
-    _ => {
+    found => {
+      // `None`: the input ran out (OD #304).
+      if found.is_none() {
+        note_missing_argument("HBoxArgContents", "HBoxArgContents")?;
+      }
       unread(prefix);
       Ok(Tokens!())
     },

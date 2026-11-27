@@ -7330,11 +7330,14 @@ reset per conversion; `\long` survives the dump.
 - **The true end of all input** (`gullet::at_end_of_all_input`: no mouth beneath, no `reading_from_mouth`; DG
   2026-11-26): an `Until:` argument that misses there follows Perl's put-back, not TeX's §338/§392 drop and §360 job
   abort — the tokens go back (Gullet.pm:686-688), "Missing argument" is an Error (Parameter.pm:93-97) and the call
-  runs on the empty argument (`base_parameter_types.rs` `Until`). The `{}` reader and the token readers that run out
-  there err the same way (`gullet::note_missing_argument`; the token readers run on `\relax`); the other required
-  readers built on `read_arg` (`Semiverbatim`, `Undigested`, `HBoxArgContents`, …: `\label`, `\ref`, `\cite`,
-  `\section`, `\mbox`) still return an empty argument silently, where Perl errs (RED
-  `expansion-primitives/required_reader_true_end_silent_red.tex`; row R TRUEENDREADERS). A
+  runs on the empty argument (`base_parameter_types.rs` `Until`). Every other required reader that runs out there
+  errs the same way (`gullet::note_missing_argument`): the token readers, which run on `\relax`, and the readers
+  built on `read_arg` through `gullet::read_required_arg` (`{}`, `Semiverbatim`, `Undigested`, the style and
+  expanded readers, …; `\label`, `\ref`, `\cite`, `\section`) and `HBoxArgContents` (`\mbox`), which run on the
+  empty argument. An isolated mouth's end stays quiet, as TeX never reads there (an index phrase digested at
+  `\index` time); a `\scantokens` pseudo-file's end and a constructor's read at an `\input` file's end stay quiet
+  too, where TeX and Perl err (REDs `expansion-primitives/required_reader_scantokens_end_silent_red.tex`,
+  `required_reader_input_file_end_silent_red.tex`). A
   self-recursive scanner re-misses to the error cap, as Perl's: fancyvrb `\FV@Scan` (fancyvrb/fancyvrb-doc), l3prg
   `\prg_map_break:Nn` (stex/stex-doc; Perl's 37 `Until:` + 64 `{}` misses), pgf's `\pgfutil@switch@@` shape. A
   `\futurelet` peek loop does not: its missed token comes back as `\relax`, where Perl's `unread` skips the undef
@@ -7345,7 +7348,8 @@ reset per conversion; `\long` survives the dump.
   `digest_alignment_column`, `base_utilities::ink_words`; RED
   `alignment-bindings/alignment_open_at_end_of_input_drops_its_text_red.tex` for the text). This supersedes batch
   52's one report then `Fatal:Mouth:EoF`. Guards
-  `error_boundary::perfect_kernel_error_boundary` (the `Until:`, `{}`, `Token` and open-alignment rows),
+  `error_boundary::perfect_kernel_error_boundary` (the `Until:`, `{}`, `Token`, `Semiverbatim`, `Undigested`,
+  `HBoxArgContents`, isolated-end and open-alignment rows),
   `perfect_kernel_batch48::until_miss_at_true_eof_errors_like_perl`,
   `perfect_kernel_batch52::until_miss_at_eof_reaches_the_error_cap`.
 - **Measured**: error counts, messages and text equal pdflatex's on the six cases of `vfs_file_end`, the 56ix control

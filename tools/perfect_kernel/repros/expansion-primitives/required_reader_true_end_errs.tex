@@ -1,0 +1,15 @@
+% mechanism: at the true end of all input a required reader built on `read_arg` (`Semiverbatim` for `\label`/`\ref`/
+%   `\cite`, `Undigested` for `\section`, `HBoxArgContents` for `\mbox`; base_parameter_types.rs, tex_box.rs) that
+%   finds no argument errs as Perl's generic "Missing argument" (Parameter.pm:93-97), through
+%   `gullet::read_required_arg` (`read_arg_or_none` + `note_missing_argument`); the call runs on the empty argument
+%   (OD #304)
+% witness: synthetic (the EOFPUTBACK re-review's probes)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 3 `!` ("File ended while scanning use of \label.", "Emergency stop"),
+%          no PDF; Perl 7 errors, the first "Missing argument Semiverbatim for ...[\lx@label Semiverbatim]"
+% engines: INT081AU: 0 errors, "before text" kept
+% expect:  "before text" kept and one "Missing argument Semiverbatim at end of input" Error
+% status:  GREEN (TRUEENDREADERS; guard error_boundary::perfect_kernel_error_boundary)
+\documentclass{article}
+\begin{document}
+before text
+\label
