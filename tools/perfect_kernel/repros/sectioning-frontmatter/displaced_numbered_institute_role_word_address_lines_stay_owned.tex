@@ -1,0 +1,33 @@
+% A raw class's `\and`-numbered `\institute` (caosp.sty:519-527 `\institutename`, `class_numbered_institutes`) is the
+%   class's own entries: frontmatter_stores.rs `displaced_entries` reads no piece of them, so an address line led by a
+%   word the address reader does not take as a role tag (`Internet:`) keeps the store routed, each entry its
+%   requesters', as before AAAILABEL.
+% witness: astro-ph9805232 (caosp `\institute{… Russia\\ Internet: glagol@… \and …}`: 9e7098cc4be left all four
+%          creators without their affiliation and e-mail); synthetic stand-in (the reviewer's cao/c_Internet.tex)
+% oracle:  pdflatex 0 errors: "Ann Able1, Bob Baker2 and Cy Cole2", "1Univ A, Town", "Internet: ann@a.edu",
+%          "2Univ B, City", "Internet: bob@b.edu, cy@b.edu"
+% engines: rust INT081RC6 = 0 errors, each creator its entry and its e-mail; 9e7098cc4be = no contact, the class's lines
+% expect:  0 errors, 0 warnings; as INT081RC6: Ann "1Univ A, Town Internet" and ann@a.edu, Bob and Cy "2Univ B, City
+%          Internet", bob@b.edu Bob's, cy@b.edu Cy's
+% status:  RED (9e7098cc4be) -> GREEN (AAAILABEL fix 3: perfect_kernel_batchaaailabel::aaai_affiliations_rows)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{cainst.cls}
+\ProvidesClass{cainst}\LoadClass{article}
+\newcounter{@inst}
+\def\inst#1{\unskip$^{#1}$}
+\def\institute#1{\gdef\@institute{\it #1}}
+\def\institutename{\par\begingroup\parindent=0pt\setcounter{@inst}{1}%
+  \def\and{\par\stepcounter{@inst}\noindent$^{\the@inst}$\enspace\ignorespaces}%
+  \noindent$^{1}$\enspace\ignorespaces\@institute\par\endgroup}
+\def\@maketitle{\begin{center}{\LARGE\@title\par}\vskip1em{\large\@author\par}\end{center}
+  {\small\institutename}\vskip1em}
+\end{filecontents*}
+\documentclass{cainst}
+\begin{document}
+\title{A Title}
+\author{Ann Able\inst{1}, Bob Baker\inst{2} and Cy Cole\inst{2}}
+\institute{Univ A, Town\\ Internet: ann@a.edu
+\and Univ B, City\\ Internet: bob@b.edu, cy@b.edu}
+\maketitle
+Text.
+\end{document}

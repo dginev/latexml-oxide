@@ -1,0 +1,38 @@
+% A lone address line under AAAI's one labelled `\affiliations` entry (aaai25.sty:72) with the comma of the list it
+%   ended (`ann.able@a.edu,`) stays that entry's (one labelled entry: frontmatter_stores.rs `displaced_entries`, as
+%   affiliations.rs `place_address_runs` reads it), so the closing line's trim (`insert.rs one_address_unseparated`)
+%   does not reach it and the Kind step's e-mail keeps the comma, the mailto link's address too. The same holds for a
+%   lone address line a labelled entry keeps in any displaced class (rstransa, iau).
+% witness: synthetic (the reviewer's p/t20.tex; 2511.02997's shape under one label)
+% oracle:  pdflatex 0 errors: "Ann Able1", "1Univ A,", "ann.able@a.edu,"
+% engines: rust INT081RC6 = 0 errors, the lines a logical-block; AAAILABEL fix 3 = Ann "1Univ A" and e-mail
+%          "ann.able@a.edu,"
+% expect:  0 errors, 0 warnings; Ann "1Univ A" and ann.able@a.edu
+% status:  RED (AAAILABEL fix 3)
+% moves:   post-merge (the trim for every lone address line an entry keeps: the Kind step's, one reader)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{aaai25.sty}
+\ProvidesPackage{aaai25}[2025/05/08 AAAI 2025 Submission format]
+\def\showauthors@on{T}
+\DeclareOption{submission}{\gdef\showauthors@on{}}
+\ProcessOptions\relax
+\def\maketitle{\par\begingroup\def\thefootnote{\fnsymbol{footnote}}\twocolumn[\@maketitle]\@thanks\endgroup
+  \setcounter{footnote}{0}\let\maketitle\relax\let\@maketitle\relax
+  \gdef\@thanks{}\gdef\@author{}\gdef\@title{}\let\thanks\relax}
+\long\gdef\affiliations #1{ \def \affiliations_{\if T\showauthors@on#1\fi}}%
+\def\@maketitle{\def\theauthors{\if T\showauthors@on\@author\else Anonymous submission\fi}%
+  \vbox{\hsize\textwidth\linewidth\hsize\centering
+    {\LARGE\bf \@title \par}\vskip 0.1in
+    {\Large{\textbf{\theauthors\ifhmode\\\fi}}}\vskip .2em
+    {\normalsize \affiliations_\ifhmode\\\fi}\vskip .5em}}
+\end{filecontents*}
+\documentclass[letterpaper]{article}
+\usepackage{aaai25}
+
+\title{A Title}
+\author{Ann Able\textsuperscript{\rm 1}}
+\affiliations{\textsuperscript{\rm 1}Univ A,\\ ann.able@a.edu,}
+\begin{document}
+\maketitle
+Body.
+\end{document}

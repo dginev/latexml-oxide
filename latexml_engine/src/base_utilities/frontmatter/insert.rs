@@ -2784,6 +2784,7 @@ fn kind_address_lines(document: &mut Document) -> Result<HashSet<String>> {
         .get_attribute("role")
         .is_some_and(|role| CUT_ROLES.contains(&role.as_str()))
         && entry.get_content().contains('@')
+        && entry.get_attribute("_unread").is_none()
     })
     .collect();
   if entries.is_empty() {
@@ -3775,6 +3776,10 @@ pub enum AddressLineReading {
   Addresses,
   /// It prints an `@` neither reads, or a mark the API cuts the line at (`entry_calls`).
   Unread,
+  /// Its `@` follows words that are no local parts (`A-1180 Wien (ann@x.org)`, `Internet: ann@x.org`, a mark's
+  /// legend): an address in a line of other words, the frontmatter observer's text reading's, as the Kind step leaves
+  /// it (`kind::kind_entry_addresses`; astro-ph9805051, 2610.17630).
+  OtherWords,
 }
 
 /// The reading of a line by its printed text (`printed_address_text`; a `\@` prints none, latex.ltx:9422), or by
@@ -3794,18 +3799,41 @@ pub fn address_line_reading(line: &Tokens, typeset: Option<&str>) -> Result<Addr
       _ => return Ok(AddressLineReading::NoAddress),
     }
   }
+  // (an `@` after words that are no local parts is in a line of other words, a mark's legend too: 2610.17630's
+  // `$^\dagger$Corresponding authors: … \href{mailto:…}`, which the API's Cut reads by its marks)
+  let before = text.split('@').next().unwrap_or_default();
+  let listed = before
+    .split(|c: char| c.is_whitespace() || ",;{}()[]<>|".contains(c))
+    .filter(|word| !word.is_empty())
+    .all(is_listed_local_part);
+  let unread = if listed {
+    AddressLineReading::Unread
+  } else {
+    AddressLineReading::OtherWords
+  };
   if author_mark_position(line).is_some() {
-    return Ok(AddressLineReading::Unread);
+    return Ok(unread);
   }
   if email_addresses(line).is_some() {
     return Ok(AddressLineReading::Addresses);
   }
   let keys = queued_author_name_keys()?;
   let spells = |local: &str| spelled_owner(&keys, &s!("{local}@x.org")).is_some();
-  Ok(match address_line_cut(text.trim(), &spells, false) {
-    Some(_) => AddressLineReading::Addresses,
-    None => AddressLineReading::Unread,
-  })
+  if address_line_cut(text.trim(), &spells, false).is_some() {
+    return Ok(AddressLineReading::Addresses);
+  }
+  Ok(unread)
+}
+
+/// A line of addresses as an entry of its own: one address without the `,` or `;` that ends it, the separator of a list
+/// it no longer stands in (`jonk@anthropic.com,`, 2511.02997; frontmatter_stores.rs `displaced_entries`), as the API
+/// trims an entry's (`emitter::calls::trim_trailing_separator`); any other line as it is.
+pub fn one_address_unseparated(line: &Tokens) -> Tokens {
+  let trimmed = Tokens::new(trim_trailing_separator(line.unlist_ref().to_vec()));
+  match email_addresses(&trimmed) {
+    Some(found) if found.len() == 1 => trimmed,
+    _ => line.clone(),
+  }
 }
 
 /// [`address_line_cut_untagged`] of a line, a role tag after its addresses read apart ([`role_tag`]).

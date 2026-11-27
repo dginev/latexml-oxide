@@ -377,12 +377,13 @@ fn key_list_bounds(v: &[Token]) -> (Option<usize>, Option<usize>) {
 /// Whether a queued call's key `key` places it — the keys the reading's own placement replaces: `label`, `labelseq`,
 /// `annotate`, `owner`, `annotations` unless kept, and the internal `_` keys but `_kinded`, `_markshown` (read already),
 /// `_fnpart` (the footnote it is part of, `FOOTNOTE_PART`), `_markfromcounter` (a mark its command prints, which no glyph
-/// typed on a name is: `MARK_FROM_COUNTER`, sn-jnl's author notes, revSNJNLb S3) and, where kept, `_zone` (where it prints).
+/// typed on a name is: `MARK_FROM_COUNTER`, sn-jnl's author notes, revSNJNLb S3), `_unread` (a line no Kind step reads,
+/// frontmatter_stores.rs `displaced_entries`) and, where kept, `_zone` (where it prints).
 fn routing_key(key: &str, keep_annotations: bool, zone: bool) -> bool {
   (key.starts_with('_')
     && !(matches!(
       key,
-      "_kinded" | "_markshown" | "_fnpart" | MARK_FROM_COUNTER
+      "_kinded" | "_markshown" | "_fnpart" | "_unread" | MARK_FROM_COUNTER
     ) || (zone && key == "_zone")))
     || matches!(key, "label" | "labelseq" | "annotate" | "owner")
     || (key == "annotations" && !keep_annotations)

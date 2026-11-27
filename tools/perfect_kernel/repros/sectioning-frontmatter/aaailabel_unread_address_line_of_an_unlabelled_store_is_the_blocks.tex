@@ -1,12 +1,13 @@
 % An AAAI `\affiliations` no line of which is labelled (aaai25.sty:72) is one entry, every line of it read: one printing
-%   an `@` the frontmatter reads as no line of addresses keeps the store the class's text (frontmatter_stores.rs
-%   `displaced_entries`).
+%   an `@` the frontmatter reads as no line of addresses is the author block's, the rest every author's
+%   (frontmatter_stores.rs `displaced_entries`, DG ruling 1 of 2026-11-26).
 % witness: synthetic
 % oracle:  pdflatex 0 errors: "Ann Able, Bob Baker", "ann, bob @a.edu", "Univ A"
 % engines: rust INT081RC6 = 0 errors, the two lines a logical-block; 66558570ce3 = "ann, bob @a.edu Univ A" an
 %          affiliation of both authors
-% expect:  0 errors, 0 warnings; as INT081RC6: the lines one block, the names with no contact
-% status:  RED (66558570ce3) -> GREEN (AAAILABEL fix 2: perfect_kernel_batchaaailabel::aaai_affiliations_rows)
+% expect:  0 errors, 0 warnings; Ann, Bob "Univ A", the block creator's affiliation "ann, bob @a.edu"
+% status:  RED (66558570ce3) -> GREEN (AAAILABEL fix 2: the class's lines) -> GREEN (AAAILABEL fix 3: the block's line;
+%          perfect_kernel_batchaaailabel::aaai_affiliations_rows)
 % preload: ar5iv.sty
 \begin{filecontents*}[overwrite]{aaai25.sty}
 \ProvidesPackage{aaai25}[2025/05/08 AAAI 2025 Submission format]

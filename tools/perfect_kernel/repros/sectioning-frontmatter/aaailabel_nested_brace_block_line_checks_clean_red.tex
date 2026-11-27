@@ -1,0 +1,36 @@
+% AAAI's closing `\affiliations` line holding a nested brace list (`\{ann.able@a.edu, \{dan,bob\}@b.edu\}`,
+%   aaai25.sty:72) is the author block's line as it prints (frontmatter_stores.rs `displaced_entries`, `_unread`), every
+%   word kept; the title-page content check (`title_page_check.rs`) counts the contact's `dan,bob}@b.edu` as one word
+%   and the print's as two, so it reports one word gained and two lost that are the same text.
+% witness: 2412.03107 (`\{…, \{leishanzhe,linyilun\}@pjlab.org.cn\}`: two such Warnings); synthetic stand-in
+% oracle:  pdflatex 0 errors: "Ann Able1, Dan Dorn1, Bob Baker2", "1Univ A", "2Univ B", "{ann.able@a.edu, {dan,bob}@b.edu}"
+% engines: rust INT081RC6 = 0 errors, 0 warnings, the lines a logical-block; AAAILABEL fix 3 = 0 errors, 2 warnings
+%          ("2 words … missing: Dan bob}@b.edu", "1 words … more often: dan,bob}@b.edu"), the block's contact whole
+% expect:  0 errors, 0 warnings; the block's contact "{ann.able@a.edu, {dan,bob}@b.edu}"
+% status:  RED (AAAILABEL fix 3)
+% moves:   post-merge (the title-page check's word reading of a brace list in a contact)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{aaai25.sty}
+\ProvidesPackage{aaai25}[2025/05/08 AAAI 2025 Submission format]
+\def\showauthors@on{T}
+\DeclareOption{submission}{\gdef\showauthors@on{}}
+\ProcessOptions\relax
+\def\maketitle{\par\begingroup\def\thefootnote{\fnsymbol{footnote}}\twocolumn[\@maketitle]\@thanks\endgroup
+  \setcounter{footnote}{0}\let\maketitle\relax\let\@maketitle\relax
+  \gdef\@thanks{}\gdef\@author{}\gdef\@title{}\let\thanks\relax}
+\long\gdef\affiliations #1{ \def \affiliations_{\if T\showauthors@on#1\fi}}%
+\def\@maketitle{\def\theauthors{\if T\showauthors@on\@author\else Anonymous submission\fi}%
+  \vbox{\hsize\textwidth\linewidth\hsize\centering
+    {\LARGE\bf \@title \par}\vskip 0.1in
+    {\Large{\textbf{\theauthors\ifhmode\\\fi}}}\vskip .2em
+    {\normalsize \affiliations_\ifhmode\\\fi}\vskip .5em}}
+\end{filecontents*}
+\documentclass[letterpaper]{article}
+\usepackage{aaai25}
+\title{A Title}
+\author{Ann Able\textsuperscript{\rm 1}, Dan Dorn\textsuperscript{\rm 1}, Bob Baker\textsuperscript{\rm 2}}
+\affiliations{\textsuperscript{\rm 1}Univ A\\ \textsuperscript{\rm 2}Univ B\\ \{ann.able@a.edu, \{dan,bob\}@b.edu\}}
+\begin{document}
+\maketitle
+Body.
+\end{document}

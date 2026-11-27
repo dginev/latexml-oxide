@@ -6,12 +6,15 @@
 //! (`frontmatter_stores::displaced_frame`). One row per path: labelled lines by the names' marks (2501.02471,
 //! 2511.12066), one unlabelled institution every author's (2212.00442, 2508.05165), an anonymous `[submission]` copy
 //! whose title page prints no affiliation; a line printing an `@` the frontmatter reads as no line of addresses,
-//! unread or holding a mark, keeps the class's lines wherever it stands but a labelled entry's lead — a continuation
-//! line, a paragraph of a labelled line, an unlabelled lead line, a store with no label, a document macro's text
-//! (`frontmatter_stores::displaced_entries`: 2211.16869, 2212.12190); one the Kind step reads stays routed
-//! (2211.08824), an address in a labelled line too (2303.13269); a line of addresses after the last labelled line is
-//! the whole block's, never that label's (2404.14949, 2511.11817), also as a macro's text, while a city line stays
-//! with its entry; the store's take-out when empty, never set or set after `\maketitle`.
+//! unread or holding a mark, is an entry of its own, the author block's, wherever it stands but a labelled entry's
+//! lead — a continuation line, a paragraph of a labelled line, an unlabelled lead line, a store with no label, a
+//! document macro's text, a `\{…\}\@x` group (`frontmatter_stores::displaced_entries`: 2211.16869, 2212.12190,
+//! 2408.10349); one the Kind step reads stays routed (2211.08824), an address in a labelled line too (2303.13269); a
+//! line of addresses after the last labelled line is the whole block's, never that label's (2404.14949, 2511.11817),
+//! also as a macro's text, one address without its list's comma (2511.02997), while a city line stays with its entry,
+//! and per-label lines stay their labels'; a class's `\and`-numbered entries are read as before (astro-ph9805232); an
+//! address in a line of other words stays with its entry (astro-ph9805051, an rstransa-shaped `Internet:` line); the
+//! store's take-out when empty, never set or set after `\maketitle`.
 use latexml::util::test::convert_with;
 
 use super::{
@@ -81,23 +84,33 @@ const ROWS: &[Row] = &[
     creators: &[&["Ann Able", "mark=1"], &["Bob Baker", "mark=2"]],
     block:    &[],
   },
-  // (red on 842364fc86c: Cy Cole "2Univ B ann, bob @a.edu", Ann and Bob no e-mail; the lines stay the class's block)
+  // (red on 842364fc86c: Cy Cole "2Univ B ann, bob @a.edu", Ann and Bob no e-mail; fix 1-2 kept the class's lines,
+  // fix 3 (DG ruling 1) the unread line the block's)
   Row {
-    repro:    "aaailabel_unread_address_continuation_line_keeps_the_classs_lines",
-    tex:      repro!("aaailabel_unread_address_continuation_line_keeps_the_classs_lines"),
+    repro:    "aaailabel_unread_address_continuation_line_is_the_blocks",
+    tex:      repro!("aaailabel_unread_address_continuation_line_is_the_blocks"),
     warnings: 0,
-    creators: &[&["Ann Able", "mark=1"], &["Bob Baker", "mark=1"], &[
-      "Cy Cole", "mark=2",
-    ]],
-    block:    &["1 Univ A", "2 Univ B", "ann, bob @a.edu, cy@b.edu"],
+    creators: &[
+      &["Ann Able", "affiliation=1 Univ A"],
+      &["Bob Baker", "affiliation=1 Univ A"],
+      &["Cy Cole", "affiliation=2 Univ B"],
+      &["affiliation=ann, bob @a.edu, cy@b.edu"],
+    ],
+    block:    &[],
   },
-  // (red on 842364fc86c: every author "Univ A, Town", cy@a.edu a nameless creator's)
+  // (red on 842364fc86c: cy@a.edu a nameless creator's beside every author's "Univ A, Town"; fix 1-2 kept the class's
+  // lines; fix 3: the line the block's as it prints, no Kind step reading its mark, `_unread`, 2212.12190)
   Row {
-    repro:    "aaailabel_mark_inside_address_continuation_line_keeps_the_classs_lines",
-    tex:      repro!("aaailabel_mark_inside_address_continuation_line_keeps_the_classs_lines"),
+    repro:    "aaailabel_mark_inside_address_continuation_line_is_the_blocks",
+    tex:      repro!("aaailabel_mark_inside_address_continuation_line_is_the_blocks"),
     warnings: 0,
-    creators: &[&["Ann Able"], &["Bob Baker"], &["Cy Cole", "mark=1"]],
-    block:    &["Univ A, Town", "{ann, 1 cy}@a.edu, bob@b.edu"],
+    creators: &[
+      &["Ann Able", "affiliation=Univ A, Town"],
+      &["Bob Baker", "affiliation=Univ A, Town"],
+      &["Cy Cole", "mark=1", "affiliation=Univ A, Town"],
+      &["affiliation={ann, 1 cy}@a.edu, bob@b.edu"],
+    ],
+    block:    &[],
   },
   // (red on the fix's first candidate, `line_is_email_list` alone: the three lines the class's block again; fix 2: the
   // closing line is the block's, no longer label 2's, so `cy@b.edu`, spelled by no one and out of author order, is the
@@ -163,31 +176,42 @@ const ROWS: &[Row] = &[
     ]],
     block:    &[],
   },
-  // (red on 66558570ce3: Ann's affiliation "1 Univ A ann, bob @a.edu")
+  // (red on 66558570ce3: Ann's affiliation "1 Univ A ann, bob @a.edu"; fix 2 the class's lines, fix 3 the block's line)
   Row {
-    repro:    "aaailabel_unread_address_paragraph_of_a_labelled_line_keeps_the_classs_lines",
-    tex:      repro!(
-      "aaailabel_unread_address_paragraph_of_a_labelled_line_keeps_the_classs_lines"
-    ),
+    repro:    "aaailabel_unread_address_paragraph_of_a_labelled_line_is_the_blocks",
+    tex:      repro!("aaailabel_unread_address_paragraph_of_a_labelled_line_is_the_blocks"),
     warnings: 0,
-    creators: &[&["Ann Able", "mark=1"], &["Bob Baker", "mark=2"]],
-    block:    &["1 Univ A", "ann, bob @a.edu", "2 Univ B"],
+    creators: &[
+      &["Ann Able", "affiliation=1 Univ A"],
+      &["Bob Baker", "affiliation=2 Univ B"],
+      &["affiliation=ann, bob @a.edu"],
+    ],
+    block:    &[],
   },
-  // (red on 66558570ce3: "ann, bob @a.edu" an affiliation of both authors)
+  // (red on 66558570ce3: "ann, bob @a.edu" an affiliation of both authors; fix 2 the class's lines, fix 3 the block's)
   Row {
-    repro:    "aaailabel_unread_address_lead_line_keeps_the_classs_lines",
-    tex:      repro!("aaailabel_unread_address_lead_line_keeps_the_classs_lines"),
+    repro:    "aaailabel_unread_address_lead_line_is_the_blocks",
+    tex:      repro!("aaailabel_unread_address_lead_line_is_the_blocks"),
     warnings: 0,
-    creators: &[&["Ann Able", "mark=1"], &["Bob Baker", "mark=2"]],
-    block:    &["ann, bob @a.edu", "1 Univ A", "2 Univ B"],
+    creators: &[
+      &["Ann Able", "affiliation=1 Univ A"],
+      &["Bob Baker", "affiliation=2 Univ B"],
+      &["affiliation=ann, bob @a.edu"],
+    ],
+    block:    &[],
   },
-  // (red on 66558570ce3: "ann, bob @a.edu Univ A" an affiliation of both authors)
+  // (red on 66558570ce3: "ann, bob @a.edu Univ A" an affiliation of both authors; fix 2 the class's lines, fix 3 the
+  // block's line and "Univ A" every author's)
   Row {
-    repro:    "aaailabel_unread_address_line_of_an_unlabelled_store_keeps_the_classs_lines",
-    tex:      repro!("aaailabel_unread_address_line_of_an_unlabelled_store_keeps_the_classs_lines"),
+    repro:    "aaailabel_unread_address_line_of_an_unlabelled_store_is_the_blocks",
+    tex:      repro!("aaailabel_unread_address_line_of_an_unlabelled_store_is_the_blocks"),
     warnings: 0,
-    creators: &[&["Ann Able"], &["Bob Baker"]],
-    block:    &["ann, bob @a.edu", "Univ A"],
+    creators: &[
+      &["Ann Able", "affiliation=Univ A"],
+      &["Bob Baker", "affiliation=Univ A"],
+      &["affiliation=ann, bob @a.edu"],
+    ],
+    block:    &[],
   },
   // (red on 66558570ce3: 12345@b.edu Bob Baker's)
   Row {
@@ -202,13 +226,131 @@ const ROWS: &[Row] = &[
     ],
     block:    &[],
   },
-  // (red on 66558570ce3: Bob's affiliation "2 Univ B ann, bob @a.edu")
+  // (red on 66558570ce3: Bob's affiliation "2 Univ B ann, bob @a.edu"; fix 2 the class's lines, fix 3 the block's)
   Row {
-    repro:    "aaailabel_unread_address_macro_line_keeps_the_classs_lines",
-    tex:      repro!("aaailabel_unread_address_macro_line_keeps_the_classs_lines"),
+    repro:    "aaailabel_unread_address_macro_line_is_the_blocks",
+    tex:      repro!("aaailabel_unread_address_macro_line_is_the_blocks"),
     warnings: 0,
-    creators: &[&["Ann Able", "mark=1"], &["Bob Baker", "mark=2"]],
-    block:    &["1 Univ A", "2 Univ B", "ann, bob @a.edu"],
+    creators: &[
+      &["Ann Able", "affiliation=1 Univ A"],
+      &["Bob Baker", "affiliation=2 Univ B"],
+      &["affiliation=ann, bob @a.edu"],
+    ],
+    block:    &[],
+  },
+  // (red on 9e7098cc4be: 12345@b.edu the block's; a line of addresses under label 1 puts each label's under it)
+  Row {
+    repro:    "aaailabel_per_label_address_lines_stay_with_their_labels",
+    tex:      repro!("aaailabel_per_label_address_lines_stay_with_their_labels"),
+    warnings: 0,
+    creators: &[
+      &["Ann Able", "affiliation=1 Univ A", "email=ann.able@a.edu"],
+      &["Dan Dorn", "affiliation=1 Univ A", "email=dan.dorn@a.edu"],
+      &["Bob Baker", "affiliation=2 Univ B", "email=12345@b.edu"],
+    ],
+    block:    &[],
+  },
+  // (red on 9e7098cc4be: Ann's e-mail "ann@a.edu,", 2511.02997's `jonk@anthropic.com,`)
+  Row {
+    repro:    "aaailabel_one_address_closing_line_drops_its_separator",
+    tex:      repro!("aaailabel_one_address_closing_line_drops_its_separator"),
+    warnings: 0,
+    creators: &[&["Ann Able", "affiliation=1 Univ A", "email=ann@a.edu"], &[
+      "Bob Baker",
+      "affiliation=2 Univ B",
+    ]],
+    block:    &[],
+  },
+  // (9e7098cc4be: the class's lines; the `\}\@b.edu` group digested in the block's contact with no Error, 2408.10349)
+  Row {
+    repro:    "aaailabel_unread_brace_group_line_is_the_blocks",
+    tex:      repro!("aaailabel_unread_brace_group_line_is_the_blocks"),
+    warnings: 0,
+    creators: &[
+      &["Ann Able", "affiliation=1 Univ A", "email=ann@a.edu"],
+      &["Bob Baker", "affiliation=1 Univ A", "email=bob@a.edu"],
+      &["Cy Cole", "affiliation=2 Univ B"],
+      &["affiliation={cy, dan}b.edu"],
+    ],
+    block:    &[],
+  },
+  // (red on 9e7098cc4be: no contact, the class's lines; a class's numbered `\and` entries are not read, astro-ph9805232)
+  Row {
+    repro:    "displaced_numbered_institute_role_word_address_lines_stay_owned",
+    tex:      repro!("displaced_numbered_institute_role_word_address_lines_stay_owned"),
+    warnings: 0,
+    creators: &[
+      &[
+        "Ann Able",
+        "affiliation=1 Univ A, Town Internet",
+        "email=ann@a.edu",
+      ],
+      &[
+        "Bob Baker",
+        "affiliation=2 Univ B, City Internet",
+        "email=bob@b.edu",
+      ],
+      &[
+        "Cy Cole",
+        "affiliation=2 Univ B, City Internet",
+        "email=cy@b.edu",
+      ],
+    ],
+    block:    &[],
+  },
+  // (red on 9e7098cc4be: 12345@b.edu the block's; no closing move for a class's numbered entries)
+  Row {
+    repro:    "displaced_numbered_institute_address_line_is_its_entrys",
+    tex:      repro!("displaced_numbered_institute_address_line_is_its_entrys"),
+    warnings: 0,
+    creators: &[
+      &["Ann Able", "affiliation=1 Univ A, Town", "email=ann@a.edu"],
+      &[
+        "Bob Baker",
+        "affiliation=2 Univ B, City",
+        "email=12345@b.edu",
+      ],
+    ],
+    block:    &[],
+  },
+  // (red on 9e7098cc4be: cy@b.edu the block's)
+  Row {
+    repro:    "displaced_numbered_institute_tagged_address_line_is_its_entrys",
+    tex:      repro!("displaced_numbered_institute_tagged_address_line_is_its_entrys"),
+    warnings: 0,
+    creators: &[
+      &["Ann Able", "affiliation=1 Univ A, Town", "email=ann@a.edu"],
+      &["Bob Baker", "affiliation=2 Univ B, City", "email=bob@b.edu"],
+      &["Cy Cole", "affiliation=2 Univ B, City", "email=cy@b.edu"],
+    ],
+    block:    &[],
+  },
+  // (red on 9e7098cc4be: no contact, the class's lines; an address in a line of other words stays with its entry, as
+  // at INT081RC6)
+  Row {
+    repro:    "displaced_address_store_trailing_internet_line_stays_with_its_entry",
+    tex:      repro!("displaced_address_store_trailing_internet_line_stays_with_its_entry"),
+    warnings: 0,
+    creators: &[
+      &["Ann Able", "address=1 Univ A, Town", "email=ann@a.edu"],
+      &["Bob Baker", "address=2 Univ B, City Internet"],
+    ],
+    block:    &[],
+  },
+  // (red on this round's first build: "A-1180 Wien" the block's; astro-ph9805051, astro-ph9805033, astro-ph9805076)
+  Row {
+    repro:    "displaced_address_in_a_line_of_words_stays_with_its_entry",
+    tex:      repro!("displaced_address_in_a_line_of_words_stays_with_its_entry"),
+    warnings: 0,
+    creators: &[
+      &[
+        "Ann Able",
+        "affiliation=Univ A, Town, A-1180 Wien",
+        "email=ann.able@a.edu",
+      ],
+      &["Bob Baker", "affiliation=Univ A, Town, A-1180 Wien"],
+    ],
+    block:    &[],
   },
   Row {
     repro:    "aaailabel_empty_affiliations_print_nothing",

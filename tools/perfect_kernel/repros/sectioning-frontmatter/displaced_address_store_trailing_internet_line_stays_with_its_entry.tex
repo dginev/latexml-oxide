@@ -1,0 +1,28 @@
+% A trailing line of a raw class's displaced `\address` store (rstransa.cls:1154's shape) whose address follows a word
+%   that is no local part and no role tag the reader knows (`Internet: ann@a.edu`) is an address in a line of other
+%   words (`insert.rs address_line_reading`'s `OtherWords`): it stays with the last label's entry, as at INT081RC6, the
+%   frontmatter observer's text reading giving the address the name it spells; "Internet" stays in Bob's address.
+% witness: synthetic (rstransa, iau and alta ship the store; astro-ph9805232's caosp `Internet:` lines)
+% oracle:  pdflatex 0 errors: "Ann Able1 and Bob Baker2", "1Univ A, Town", "2Univ B, City", "Internet: ann@a.edu"
+% engines: rust INT081RC6 = 0 errors, Bob's address "2Univ B, City Internet", ann@a.edu Ann's; 9e7098cc4be = no
+%          contact, the class's lines
+% expect:  0 errors, 0 warnings; Ann "1Univ A, Town" and ann@a.edu, Bob "2Univ B, City Internet"
+% status:  RED (9e7098cc4be) -> GREEN (AAAILABEL fix 3: perfect_kernel_batchaaailabel::aaai_affiliations_rows)
+% residual: post-merge, "Internet:" a label of the address it leads, not a word of Bob's address
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{dsaddr.cls}
+\ProvidesClass{dsaddr}\LoadClass{article}
+\newif\ifds@split
+\newcommand{\address}[1]{\gdef\ds@address{#1\ifds@split\relax\fi}}
+\let\ds@address\empty
+\def\@maketitle{\begin{center}{\LARGE\@title\par}\vskip1em{\large\@author\par}\vskip1em
+  \ifx\ds@address\empty\else{\small\ds@address\par}\fi\end{center}}
+\end{filecontents*}
+\documentclass{dsaddr}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{1}$ and Bob Baker$^{2}$}
+\address{$^{1}$Univ A, Town\\ $^{2}$Univ B, City\\ Internet: ann@a.edu}
+\maketitle
+Text.
+\end{document}

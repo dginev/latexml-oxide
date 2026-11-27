@@ -1,13 +1,14 @@
 % A paragraph after a `\par` inside AAAI's first labelled `\affiliations` line (aaai25.sty:72) is read as every other
-%   line is: one printing an `@` the frontmatter reads as no line of addresses keeps the store the class's text
+%   line is: one printing an `@` the frontmatter reads as no line of addresses is the author block's
 %   (frontmatter_stores.rs `displaced_entries`: each entry split at `\\` and `\par`, only a labelled entry's lead piece
-%   skipped).
+%   skipped; DG ruling 1 of 2026-11-26).
 % witness: synthetic (2403.16883's blank line before its addresses)
 % oracle:  pdflatex 0 errors: "Ann Able1, Bob Baker2", "1Univ A", "ann, bob @a.edu", "2Univ B"
 % engines: rust INT081RC6 = 0 errors, the three lines a logical-block; 66558570ce3 = Ann's affiliation "1Univ A ann,
 %          bob @a.edu"
-% expect:  0 errors, 0 warnings; as INT081RC6: the lines one block, the names with their marks only
-% status:  RED (66558570ce3) -> GREEN (AAAILABEL fix 2: perfect_kernel_batchaaailabel::aaai_affiliations_rows)
+% expect:  0 errors, 0 warnings; Ann "1Univ A", Bob "2Univ B", the block creator's affiliation "ann, bob @a.edu"
+% status:  RED (66558570ce3) -> GREEN (AAAILABEL fix 2: the class's lines) -> GREEN (AAAILABEL fix 3: the block's line;
+%          perfect_kernel_batchaaailabel::aaai_affiliations_rows)
 % preload: ar5iv.sty
 \begin{filecontents*}[overwrite]{aaai25.sty}
 \ProvidesPackage{aaai25}[2025/05/08 AAAI 2025 Submission format]
