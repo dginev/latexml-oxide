@@ -5534,7 +5534,7 @@ mod log_note_nesting {
     );
   }
 
-  /// Issue #1024: a definitions file's note says `w/@ other` only where `@` is read as other (Perl Mouth.pm:94-96).
+  /// Issue #1024: a definitions file's note says `w/@ other` only where `@` is not a letter (Perl Mouth.pm:94-96).
   /// A raw package's `\input` keeps the current catcodes, so its file reads `@` as the package's letter, or as other
   /// where the package made it so; each `.clo` records the catcode it was read under. `xy_sty.rs` reads xy.tex with
   /// `@` other, as Perl's `xy.tex.ltxml:24` (`at_letter => 0`), and both say so.

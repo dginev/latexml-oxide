@@ -24552,7 +24552,8 @@ absolute or `../` path) is read where it lies, as a document's `\input` is.
 Related: #312 (the same `\input`, re-read), #1029 (under `\everyeof`), KNOWN_PERL_ERRORS #457 (the Perl defect).
 **Rule**: while definitions are read, `\input` of a file whose request has a directory or an extension no binding uses
 (`.clo`, `.txt`, none) reads it as TeX's `\input` does, under the current catcodes; `@` is not forced to a letter. The
-log's `Processing definitions w/@ other <file>` note is printed only when `@` is then read as other.
+log's `Processing definitions w/@ other <file>` note is printed only when `@` is not a letter as the read starts
+(other, or the escape character as CoverPage.sty makes it).
 **Perl behavior**: such an `\input` goes to `InputDefinitions` (Package.pm:2287-2288), whose `loadTeXDefinitions`
 defaults `at_letter => 1` (Package.pm:2346), so the mouth makes `@` a letter for the file (Mouth.pm:98-100); its note
 says `w/@ other` exactly when the mouth does not force `@` (Mouth.pm:94-96), i.e. only for `xy.tex.ltxml:24`.

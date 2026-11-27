@@ -53,7 +53,7 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     aligned display's rows lined up in a box as outside, the title page's margin notes beside the text on very wide
     screens, and a zero-width text-mode `\vphantom`.
   - **The log no longer says `w/@ other` for a file a package `\input`s while `@` is a letter** (issue 1024):
-    `Processing definitions <path>` again, as Perl and 0.7.6; the suffix stays where `@` is read as other (`xy.tex`).
+    `Processing definitions <path>` again, as Perl and 0.7.6; the suffix stays where `@` is not a letter (`xy.tex`).
     OXIDIZED_DESIGN_DIVERGENCES #1172; guard `cluster_cli::log_note_nesting::definitions_note_says_at_other_only_where_it_is`.
 
 ### 0.8.0-rc5

@@ -786,7 +786,7 @@ impl Mouth {
         "content"
       };
       // Perl Mouth.pm:94-96 says `w/@ other` for a reader that does not force `@`; a package's `\input` keeps the
-      // catcodes (content.rs), where `@` is mostly a letter already, so the note asks the catcode too (issue #1024).
+      // catcodes (content.rs), so it also needs `@` not a letter as the read starts (other, or an escape; #1024).
       let at_note = if self.fordefinitions
         && !self.at_letter
         && !matches!(lookup_catcode('@'), Some(Catcode::LETTER))
