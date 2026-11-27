@@ -99,7 +99,7 @@ const ROWS: &[Row] = &[
     block:    &[],
   },
   // (red on 842364fc86c: cy@a.edu a nameless creator's beside every author's "Univ A, Town"; fix 1-2 kept the class's
-  // lines; fix 3: the line the block's as it prints, no Kind step reading its mark, `_unread`, 2212.12190)
+  // lines; fix 3: the line the block's as it prints, the flush's Kind step not reading its mark, `_unread`, 2212.12190)
   Row {
     repro:    "aaailabel_mark_inside_address_continuation_line_is_the_blocks",
     tex:      repro!("aaailabel_mark_inside_address_continuation_line_is_the_blocks"),
@@ -247,6 +247,19 @@ const ROWS: &[Row] = &[
       &["Ann Able", "affiliation=1 Univ A", "email=ann.able@a.edu"],
       &["Dan Dorn", "affiliation=1 Univ A", "email=dan.dorn@a.edu"],
       &["Bob Baker", "affiliation=2 Univ B", "email=12345@b.edu"],
+    ],
+    block:    &[],
+  },
+  // (red on this round's first build: 12345@b.edu the block's; the entry's marked paragraphs are several entries,
+  // 2102.11492)
+  Row {
+    repro:    "aaailabel_labelled_paragraphs_closing_line_is_the_blocks",
+    tex:      repro!("aaailabel_labelled_paragraphs_closing_line_is_the_blocks"),
+    warnings: 0,
+    creators: &[
+      &["Ann Able", "affiliation=1 Univ A", "email=ann.able@a.edu"],
+      &["Bob Baker", "affiliation=2 Univ B", "email=12345@b.edu"],
+      &["Cy Cole", "affiliation=2 Univ B", "email=cy.cole@b.edu"],
     ],
     block:    &[],
   },

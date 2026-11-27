@@ -3314,9 +3314,9 @@ fn displaced_entries(arg: &Tokens, store: Option<&str>) -> Result<Vec<DisplacedE
     }
   }
   let addresses = |piece: &EntryPiece| piece.reading == Some(AddressLineReading::Addresses);
-  // (the closing move: the last entry labelled, the list with more than one labelled entry — a line of several
-  // requested marked entries is several, 2511.02997 — and no line of addresses under an earlier one, t11's per-label
-  // e-mail lines; affiliations.rs `place_address_runs`' `under_affiliations`)
+  // (the closing move: the last entry labelled, the list with more than one labelled entry — one holding several
+  // requested marked entries is several: 2511.02997's one line, 2102.11492's paragraphs — and no line of addresses
+  // under an earlier one, t11's per-label e-mail lines; affiliations.rs `place_address_runs`' `under_affiliations`)
   let last = entries.len() - 1;
   let labelled: Vec<usize> = (0..entries.len())
     .filter(|e| entries[*e].1 == EntryExtent::Labelled)
@@ -3328,9 +3328,7 @@ fn displaced_entries(arg: &Tokens, store: Option<&str>) -> Result<Vec<DisplacedE
       .zip(&entries)
       .any(|(read, (_, extent))| *extent == EntryExtent::Labelled && read.iter().any(addresses))
     && match labelled.as_slice() {
-      [one] => pieces[*one].first().map_or(Ok(false), |lead| {
-        holds_requested_marked_entries(&lead.tokens)
-      })?,
+      [one] => holds_requested_marked_entries(&entries[*one].0)?,
       _ => true,
     };
   let mut out: Vec<DisplacedEntry> = Vec::with_capacity(entries.len() + 1);
@@ -3793,7 +3791,7 @@ fn hand_displaced_stores() -> Result<Vec<Digested>> {
 
 /// `head`'s call (`\lx@add@affiliation`, `\lx@add@address`) of a displaced entry's piece the frontmatter does not
 /// read ([`displaced_entries`]): a contact of the author block's creator (`label={addresses:block}`), as
-/// [`contact_line_call`] hands a line of marks it cannot cut, which no Kind step reads (`_unread`): its marks and
+/// [`contact_line_call`] hands a line of marks it cannot cut, which the flush's Kind step does not read (`_unread`): its marks and
 /// addresses place no one (2212.12190's `\{licc.cs09, \textsuperscript{\rm 1}wwdu.cs10\}@…` read as mark 1's).
 fn block_contact_call(head: &str, piece: &Tokens) -> Tokens {
   let mut call = mouth::tokenize_internal(TeXString::assembled(s!("{head}"))).unlist();

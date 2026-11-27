@@ -14311,9 +14311,9 @@ bypassed under raw loading; the class's `\@maketitle` never runs under the locke
     the Kind step leaves such a line (`kind_entry_addresses`; astro-ph9805051, 2610.17630).
   - A piece printing an `@` after local parts alone that the frontmatter reads as no line of addresses (a mark in it,
     or neither `email_addresses` nor the Kind step's `address_line_cut` reading it: `{a, b} @x`, a nested brace list) is
-    an entry of its own, a contact of the author block's creator (`label={addresses:block}`) that no Kind step reads
-    (`_unread`: its mark places no address, 2212.12190); the frontmatter observer's text reading still gives an address
-    the name it spells (2211.16869, 2412.03107, 2408.10349, 2212.12190; DG ruling of 2026-11-26). A line printing no `@`
+    an entry of its own, a contact of the author block's creator (`label={addresses:block}`) that the flush's Kind
+    step does not read (`_unread`: its mark places no address, 2212.12190); the frontmatter observer's text reading
+    still gives an address the name it spells (2211.16869, 2412.03107, 2408.10349, 2212.12190; DG ruling of 2026-11-26). A line printing no `@`
     is no address to any reader: `\{a,b\}\@x` prints none (latex.ltx:9422), so it goes on with its entry as a city line
     does (RED `aaailabel_no_at_brace_address_line_reads_as_a_city_line_red`).
   - The pieces of the last labelled entry past its lead that are lines of addresses (`[a, b]@x`, `a, b, c@x`,

@@ -1050,6 +1050,9 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
   ("_share= package/llncs_cls.rs", 2),
   ("_store= frontmatter_stores.rs", 11),
   ("_unmarked= base_utilities/defs/frontmatter_fields.rs", 1),
+  // (AAAILABEL fix 3: a displaced store's line the frontmatter does not read, the author block's as it prints, which
+  // the flush's Kind step does not read — DG ruling 1 of 2026-11-26; its marks had placed 2212.12190's licc.cs09@ by mark 1)
+  ("_unread= frontmatter_stores.rs", 1),
   ("_unsplit= frontmatter_stores.rs", 1),
   ("_unsplit= package/revtex4_support_sty.rs", 1),
   ("_withsup= base_utilities/frontmatter/observer/ledger.rs", 2),
@@ -1323,6 +1326,7 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
     "declared _unmarked base_utilities/defs/frontmatter_api.rs",
     1,
   ),
+  ("declared _unread base_utilities/defs/frontmatter_api.rs", 1),
   (
     "declared _unsplit base_utilities/defs/frontmatter_api.rs",
     1,

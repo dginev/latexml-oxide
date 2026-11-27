@@ -297,8 +297,8 @@ pub(crate) const FRONTMATTER_INTERNAL_KEYS: &[(&str, &str)] = &[
   ("_store", ""),
   ("_unmarked", ""),
   ("_unsplit", ""),
-  // (a displaced store's line the frontmatter does not read, the author block's as it prints: no Kind step takes its
-  // addresses out, `kind::kind_entry_addresses`, `insert::kind_address_lines`; frontmatter_stores.rs `displaced_entries`)
+  // (a displaced store's line the frontmatter does not read, the author block's as it prints: the flush's Kind step takes
+  // none of its addresses out, `insert::kind_address_lines`; frontmatter_stores.rs `displaced_entries`)
   ("_unread", ""),
   ("_withsup", ""),
   ("_zone", ""),
