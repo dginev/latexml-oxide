@@ -1,0 +1,18 @@
+% shape:   REVTeX `\author{A and B}` and one affiliation
+% witness: synthetic (REVTeX)
+% oracle:  pdflatex 0 errors; "Ann Able and Bob Baker / Department of Physics"
+% engines: rust rc6: two authors sharing it
+% expect:  0 errors, 0 warnings; two authors sharing it
+% status:  GREEN (rc6 fe76f5268af); guard perfect_kernel_batchfmwitness::author_segmentation_witnesses
+% preload: ar5iv.sty
+\documentclass{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able and Bob Baker}
+\affiliation{Department of Physics, Univ A, City A}
+\begin{abstract}
+A.
+\end{abstract}
+\maketitle
+Text.
+\end{document}

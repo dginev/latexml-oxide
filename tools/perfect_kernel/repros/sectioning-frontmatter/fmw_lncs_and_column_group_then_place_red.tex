@@ -1,0 +1,17 @@
+% shape:   llncs `A \and B \and Speech Group, CERN`
+% witness: TEAMAUTH review S1 probe l1
+% oracle:  pdflatex 0 errors; "Ann Able, Bob Baker, and Speech Group, CERN"
+% engines: rust rc6: Ann 'Speech Group', Bob 'CERN' (split, garbled)
+% expect:  0 errors, 0 warnings; both names one affiliation 'Speech Group, CERN' (TEAMAUTH fix1 rule 2: llncs `\and
+%          Speech Group, CERN` is an affiliation)
+% status:  RED (rc6 fe76f5268af); ruling: TEAMAUTH fix1 rule 2/4: a group followed by a place is one affiliation of
+%          the list
+% moves:   post-merge
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able \and Bob Baker \and Speech Group, CERN}
+\maketitle
+Text.
+\end{document}

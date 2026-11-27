@@ -1,0 +1,14 @@
+% shape:   `\quad`-separated marked names; a `\quad`-separated marked affiliation line
+% witness: 2602.20323 (suit marks, `\quad` separators)
+% oracle:  pdflatex 0 errors; "Ann Able♠ Bob Baker♣ / ♣Univ A ♠Univ B"
+% engines: rust rc6: Ann Univ B, Bob Univ A (by marks)
+% expect:  0 errors, 0 warnings; by marks: Ann Univ B, Bob Univ A
+% status:  GREEN (rc6 fe76f5268af); guard perfect_kernel_batchfmwitness::author_segmentation_witnesses
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{\spadesuit}$ \quad Bob Baker$^{\clubsuit}$\\ $^{\clubsuit}$Univ A \quad $^{\spadesuit}$Univ B}
+\maketitle
+Text.
+\end{document}

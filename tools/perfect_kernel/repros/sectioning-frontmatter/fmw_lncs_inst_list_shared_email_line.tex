@@ -1,0 +1,16 @@
+% shape:   llncs `\inst{1,2}`, the last institute ending in `\email{a,b}`
+% witness: 1401.4739
+% oracle:  pdflatex 0 errors; two institutes, an address list
+% engines: rust rc6: by `\inst`; e-mails by spelling
+% expect:  0 errors, 0 warnings; by `\inst`; e-mails by spelling
+% status:  GREEN (rc6 fe76f5268af); guard perfect_kernel_batchfmwitness::author_segmentation_witnesses
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1,2} \and Bob Baker\inst{2}}
+\institute{Department of Computer Science, Univ A, City A
+\and Department of Mathematics, Univ B, City B\\ \email{ann@a.edu,bob@b.edu}}
+\maketitle
+Text.
+\end{document}

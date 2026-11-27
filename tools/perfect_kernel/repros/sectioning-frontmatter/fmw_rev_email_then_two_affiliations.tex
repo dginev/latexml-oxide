@@ -1,0 +1,22 @@
+% shape:   REVTeX `\email` before `\affiliation`; a second author with two
+% witness: 2108.05755
+% oracle:  pdflatex 0 errors; affiliations under names
+% engines: rust rc6: each author its calls
+% expect:  0 errors, 0 warnings; each author its calls
+% status:  GREEN (rc6 fe76f5268af); guard perfect_kernel_batchfmwitness::author_segmentation_witnesses
+% preload: ar5iv.sty
+\documentclass{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\email{ann@a.edu}
+\affiliation{Quantum Research Group, School of Physics, Univ A, City A}
+\author{Bob Baker}
+\affiliation{Quantum Research Group, School of Physics, Univ A, City A}
+\affiliation{National Institute for Sciences (NIS), Country B}
+\begin{abstract}
+A.
+\end{abstract}
+\maketitle
+Text.
+\end{document}

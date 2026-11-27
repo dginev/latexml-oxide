@@ -1,0 +1,20 @@
+% shape:   amsart: two names in one `\author`, one shared `\address`, two `\email`s
+% witness: 2308.10076
+% oracle:  pdflatex 0 errors; "ANN ABLE, BOB BAKER … Department of Mathematics, Univ X / Email address: annable@ /
+%          Email address: bbaker@"
+% engines: rust rc6: the address Bob Baker's alone
+% expect:  0 errors, 0 warnings; the address both names' (one call, one address); each e-mail its spelled author
+% status:  RED (rc6 fe76f5268af); ruling: charter 4 ('an author's own call'): the call holds both names, so its
+%          address is both's
+% moves:   post-merge
+% preload: ar5iv.sty
+\documentclass{amsart}
+\begin{document}
+\title{T}
+\author{Ann Able, Bob Baker}
+\address{Department of Mathematics, Univ X, City}
+\email{annable@x.edu}
+\email{bbaker@x.edu}
+\maketitle
+Text.
+\end{document}

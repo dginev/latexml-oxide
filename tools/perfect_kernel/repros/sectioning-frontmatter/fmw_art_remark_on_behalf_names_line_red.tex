@@ -1,0 +1,15 @@
+% shape:   `A and B on behalf of the XYZ Collaboration` on the names line
+% witness: 1311.7305, hep-ex0611001 (`on behalf of` remarks; TEAMAUTH fix1 rule 5)
+% oracle:  pdflatex 0 errors; "Ann Able and Bob Baker on behalf of the XYZ Collaboration"
+% engines: rust rc6: both names a collaboration contact, but 2 Warnings 'markup lost'
+% expect:  0 errors, 0 warnings; 0 warnings; both names the collaboration contact
+% status:  RED (rc6 fe76f5268af); ruling: the rule-5 reading with no Warning on pdflatex-clean input (fixtures 0 W)
+% moves:   post-merge
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able and Bob Baker on behalf of the XYZ Collaboration}
+\maketitle
+Text.
+\end{document}

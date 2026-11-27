@@ -1,0 +1,17 @@
+% shape:   IEEEtran compsoc `\IEEEcompsocitemizethanks` items after the names
+% witness: 1605.04039
+% oracle:  pdflatex 0 errors; "Ann Able, Bob Baker, and Cat Cole✦", bulleted items in the footnote
+% engines: rust rc6: three authors; the items one unmarked note on a nameless (block) creator
+% expect:  0 errors, 0 warnings; the block's note carries the mark it prints, ✦ (the mark rule)
+% status:  RED (rc6 fe76f5268af); ruling: the mark rule (charter 4, OD #1053)
+% moves:   post-merge
+% preload: ar5iv.sty
+\documentclass[10pt,journal,compsoc]{IEEEtran}
+\begin{document}
+\title{T}
+\author{Ann Able, Bob Baker, and Cat Cole
+\IEEEcompsocitemizethanks{\IEEEcompsocthanksitem A. Able and B. Baker are with the School of Computing, Univ A, City A. Email: ann@a.edu; bob@a.edu.
+\IEEEcompsocthanksitem C. Cole is with the Department of Computing, Univ C, City C. Email: cat@c.edu.}}
+\maketitle
+Text.
+\end{document}

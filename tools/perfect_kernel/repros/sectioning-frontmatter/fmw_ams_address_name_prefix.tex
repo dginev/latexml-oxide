@@ -1,0 +1,19 @@
+% shape:   amsart marked names, `\address{Name: …}`
+% witness: 1812.11938
+% oracle:  pdflatex 0 errors; "Ann Able1 and Bob Baker2 … Ann Able: Institute …"
+% engines: rust rc6: each address its author, the printed prefix kept
+% expect:  0 errors, 0 warnings; each address its author
+% status:  GREEN (rc6 fe76f5268af); guard perfect_kernel_batchfmwitness::author_segmentation_witnesses
+% preload: ar5iv.sty
+\documentclass{amsart}
+\begin{document}
+\title{T}
+\author[Ann Able]{Ann Able$^1$}
+\author[Bob Baker]{Bob Baker$^2$}
+\address{Ann Able: Institute of Mathematics, Univ A, City A}
+\email{ann@a.edu}
+\address{Bob Baker: Mathematical Science Center, Univ B, City B}
+\email{bob@b.edu}
+\maketitle
+Text.
+\end{document}

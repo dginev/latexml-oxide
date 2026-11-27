@@ -1,0 +1,14 @@
+% shape:   amsart `\author{A and B}`
+% witness: 2511.19297
+% oracle:  pdflatex 0 errors; "ANN ABLE AND BOB BAKER"
+% engines: rust rc6: two authors
+% expect:  0 errors, 0 warnings; two authors
+% status:  GREEN (rc6 fe76f5268af); guard perfect_kernel_batchfmwitness::author_segmentation_witnesses
+% preload: ar5iv.sty
+\documentclass{amsart}
+\begin{document}
+\title{T}
+\author{Ann Able and Bob Baker}
+\maketitle
+Text.
+\end{document}

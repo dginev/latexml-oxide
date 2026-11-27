@@ -1,0 +1,14 @@
+% shape:   a `Theory Group` line of its own, its address on the next line
+% witness: ADV_TEAMAUTH2 probe (round-1 regression: a Group line with its address on the next line)
+% oracle:  pdflatex 0 errors; "Ann Able and Bob Baker / Theory Group / Department of Physics, Univ X"
+% engines: rust rc6: both lines both names'
+% expect:  0 errors, 0 warnings; both lines both names' (DG ruling 2026-11-27 TEAMAUTH fix1 rule 2)
+% status:  GREEN (rc6 fe76f5268af); guard perfect_kernel_batchfmwitness::author_segmentation_witnesses
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able and Bob Baker\\ Theory Group\\ Department of Physics, Univ X}
+\maketitle
+Text.
+\end{document}

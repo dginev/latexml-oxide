@@ -1,0 +1,15 @@
+% shape:   a comma-joined `Theory Group` closing the names line, its address on the next line
+% witness: ADV_TEAMAUTH2 probe (round-1 regression: the group became an author)
+% oracle:  pdflatex 0 errors; "Ann Able, Bob Baker, Cat Cole, Theory Group / Department of Physics, Univ X"
+% engines: rust rc6: three authors; Theory Group the last name's affiliation; the address every name's
+% expect:  0 errors, 0 warnings; as rc6 (DG ruling 2026-11-27 TEAMAUTH fix1 rule 2: a group with an address is an
+%          affiliation, as rc6 reads it)
+% status:  GREEN (rc6 fe76f5268af); guard perfect_kernel_batchfmwitness::author_segmentation_witnesses
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able, Bob Baker, Cat Cole, Theory Group\\ Department of Physics, Univ X}
+\maketitle
+Text.
+\end{document}

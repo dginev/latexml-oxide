@@ -214,3 +214,35 @@ an affiliation block's argument closes it and starts the next author; `thanks_vs
 the document's notes (`document_notes`); `ordinal_names` (2503.04159, 1806.11431, 2406.04658) the CONTROL that the gate's API exemption needs one holder of today's and no name opening with a mark (a re-part would take the IEEE ordinal's `\textsuperscript{st}` out). RED, no guard: `mixed_grid_column_major` (a grid left in its columns gives
 column-major creators; SYNC row 104a). Guards `perfect_kernel_batch104a` (9).
 
+
+## FMWITNESS — the author-segmentation witness bank (2026-11-27)
+
+`fmw_*.tex`: one minimal pdflatex-checked repro per real arXiv author-block shape (witness ids in each header) over
+article/authblk, amsart, revtex4-2, aastex631, elsarticle, IEEEtran, llncs, svjour3, iopart, acmart, neurips, icml and an
+unknown class (OmniBus). The 51 rc6 reads right are rows of `perfect_kernel_batchfmwitness::author_segmentation_witnesses`
+(whole creators: role, `before=`, name, every contact and note; the text outside the creators; exact E/W). The group
+shapes `art_comma_company_group`, `art_group_then_address_next_line`, `art_and_column_group_alone` and
+`art_group_own_line_then_address` pin rc6's affiliation reading (DG 2026-11-27, TEAMAUTH fix1 rule 2). RED, no guard
+(`moves: post-merge`):
+- `fmw_art_marked_names_affiliations_one_line_red` — `A$^1$, B$^2$, $^1$Univ A, $^2$Group` on one line: Bob's mark-only
+  note reads `2,1` (the next item's label taken as his mark).
+- `fmw_art_parenthetical_affiliations_red` — `Ann Able (Univ A) and Bob Baker (Univ B)`: the parentheses stay in the names
+  (no ruling yet).
+- `fmw_art_and_column_shared_group_with_and_red` (1407.0386) — `\and Databases and Information Systems Group\\ Univ X`: a
+  creator "Databases" with a collaboration "Information Systems Group".
+- `fmw_art_remark_on_behalf_names_line_red` (1311.7305 family) — `A and B on behalf of the XYZ Collaboration`: the right
+  contacts, but 2 Warnings "markup lost" on clean input.
+- `fmw_ams_two_names_one_call_two_emails_red` (2308.10076) — amsart one `\author{A, B}`: the shared `\address` is the last
+  name's alone.
+- `fmw_aas_orcid_altaffiliation_email_first_red` (2211.09822) — AASTeX 6.31 `\email` before every `\author`: a nameless
+  creator holds the address that spells Ann Able.
+- `fmw_els_labelled_then_unlabelled_address_red` (2103.09929) — elsarticle: the unlabelled `\address` beside labelled ones
+  goes to the last author, not the block.
+- `fmw_ieee_compsoc_itemizethanks_red` (1605.04039) — the block's `\IEEEcompsocitemizethanks` note lacks its printed ✦.
+- `fmw_lncs_and_column_group_then_place_red` (TEAMAUTH review S1) — llncs `\and Speech Group, CERN` splits into Ann's
+  "Speech Group" and Bob's "CERN".
+- `fmw_svj_institute_several_names_at_red` (2010.08109) — svjour3 `\institute{A \and B \and C \at place}`: the names
+  before `\at` become a nameless creator's affiliations; the place is the last author's.
+- `fmw_iop_unmarked_shared_address_red` (1105.1742, 1205.6912) — iopart unmarked shared `\address`: the last name's only.
+- `fmw_iop_dag_ddag_footnotes_red` (hep-th0406174) — iopart `\footnote[n]` e-mails: notes without their printed marks
+  and 2 Warnings "markup lost".

@@ -1,0 +1,14 @@
+% shape:   `\footnote` per name, a `\footnotemark[1]` sharing the first
+% witness: 1508.02003
+% oracle:  pdflatex 0 errors; "Ann Able*, Bob Baker* and Cat Cole†", two footnotes
+% engines: rust rc6: each name its note; Bob Baker the first one's copy (mark *)
+% expect:  0 errors, 0 warnings; Ann and Bob note * (Univ X), Cat note † (Univ Y)
+% status:  GREEN (rc6 fe76f5268af); guard perfect_kernel_batchfmwitness::author_segmentation_witnesses
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able\footnote{Institute of Mathematics, Univ X.}, Bob Baker\footnotemark[1] $\,$ and Cat Cole\footnote{Department of Physics, Univ Y.}}
+\maketitle
+Text.
+\end{document}

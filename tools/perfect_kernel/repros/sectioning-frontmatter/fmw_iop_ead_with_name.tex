@@ -1,0 +1,17 @@
+% shape:   iopart `\ead{address (Name)}` per author
+% witness: 2205.14019
+% oracle:  pdflatex (with 1306.5608's own iopart file; TL 2025 ships none) 0 errors; "E-mail: ann@a.edu (Ann Able)"
+% engines: rust rc6: each e-mail its author, as printed
+% expect:  0 errors, 0 warnings; each e-mail its author, as printed
+% status:  GREEN (rc6 fe76f5268af); guard perfect_kernel_batchfmwitness::author_segmentation_witnesses
+% preload: ar5iv.sty
+\documentclass{iopart}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^2$}
+\address{$^1$Department of Physics, Univ A, City A}
+\address{$^2$Area de Fisica, Univ B, City B}
+\ead{ann@a.edu (Ann Able)}
+\ead{bob@b.edu (Bob Baker)}
+Text.
+\end{document}
