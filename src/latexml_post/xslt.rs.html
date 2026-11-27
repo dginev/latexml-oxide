@@ -1852,169 +1852,181 @@
 <a href=#1852 id=1852 data-nosnippet>1852</a>
 <a href=#1853 id=1853 data-nosnippet>1853</a>  <span class="attr">#[test]
 <a href=#1854 id=1854 data-nosnippet>1854</a>  </span><span class="kw">fn </span>constrained_equation_overflow_delta_stays_present() {
-<a href=#1855 id=1855 data-nosnippet>1855</a>    <span class="kw">let </span>css = bundled_latexml_css();
-<a href=#1856 id=1856 data-nosnippet>1856</a>    <span class="macro">assert!</span>(
-<a href=#1857 id=1857 data-nosnippet>1857</a>      css.contains(<span class="string">"#533"</span>)
-<a href=#1858 id=1858 data-nosnippet>1858</a>        &amp;&amp; css.contains(<span class="string">".ltx_inline-block .ltx_eqn_table"</span>)
-<a href=#1859 id=1859 data-nosnippet>1859</a>        &amp;&amp; css.contains(<span class="string">".ltx_td .ltx_eqn_table"</span>)
-<a href=#1860 id=1860 data-nosnippet>1860</a>        &amp;&amp; css.contains(<span class="string">"display:block; overflow-x:auto; max-width:100%;"</span>),
-<a href=#1861 id=1861 data-nosnippet>1861</a>      <span class="string">"the constrained-equation containment delta (issue #533) is missing from LaTeXML.css: \
-<a href=#1862 id=1862 data-nosnippet>1862</a>       display math inside a p{{}} cell / parbox / minipage / table cell would escape its \
-<a href=#1863 id=1863 data-nosnippet>1863</a>       box and scatter across the page instead of scrolling within the cell"</span>,
-<a href=#1864 id=1864 data-nosnippet>1864</a>    );
-<a href=#1865 id=1865 data-nosnippet>1865</a>  }
-<a href=#1866 id=1866 data-nosnippet>1866</a>
-<a href=#1867 id=1867 data-nosnippet>1867</a>  <span class="attr">#[test]
-<a href=#1868 id=1868 data-nosnippet>1868</a>  </span><span class="kw">fn </span>equation_tag_and_mathjax_deltas_stay_present() {
-<a href=#1869 id=1869 data-nosnippet>1869</a>    <span class="comment">// Issues #810 (a one-row equation centred in the full line, its tag beside it: Chrome/Firefox at
-<a href=#1870 id=1870 data-nosnippet>1870</a>    // 375 px, the long `\tag` over its formula -&gt; beside it; multi-row tables keep a tag column) and
-<a href=#1871 id=1871 data-nosnippet>1871</a>    // #475 (MathJax 2.1 offline: consecutive displays 53 -&gt; 21 px apart, native 18, in a table or a
-<a href=#1872 id=1872 data-nosnippet>1872</a>    // minipage); the browser half is `cluster_cli::browser_render_eqn_tags`.
-<a href=#1873 id=1873 data-nosnippet>1873</a>    </span><span class="kw">let </span>css = bundled_latexml_css();
-<a href=#1874 id=1874 data-nosnippet>1874</a>    <span class="kw">for </span>(issue, rule) <span class="kw">in </span>[
-<a href=#1875 id=1875 data-nosnippet>1875</a>      (<span class="string">"#810"</span>, <span class="string">".ltx_eqn_eqno { max-width:none; }"</span>),
-<a href=#1876 id=1876 data-nosnippet>1876</a>      (
-<a href=#1877 id=1877 data-nosnippet>1877</a>        <span class="string">"#810"</span>,
-<a href=#1878 id=1878 data-nosnippet>1878</a>        <span class="string">".ltx_equation.ltx_eqn_table &gt; * &gt; .ltx_eqn_row:only-child:has(&gt; .ltx_eqn_center_padleft) {\n  \
-<a href=#1879 id=1879 data-nosnippet>1879</a>         display:grid; grid-template-columns:minmax(2em,1fr) auto 1fr; align-items:center; }"</span>,
-<a href=#1880 id=1880 data-nosnippet>1880</a>      ),
-<a href=#1881 id=1881 data-nosnippet>1881</a>      (
-<a href=#1882 id=1882 data-nosnippet>1882</a>        <span class="string">"#475"</span>,
-<a href=#1883 id=1883 data-nosnippet>1883</a>        <span class="string">".ltx_eqn_table .ltx_eqn_cell &gt; mjx-container[display=\"true\"],\n\
-<a href=#1884 id=1884 data-nosnippet>1884</a>         .ltx_eqn_table .ltx_eqn_cell &gt; .MathJax_Display { margin-top:0; margin-bottom:0; }"</span>,
-<a href=#1885 id=1885 data-nosnippet>1885</a>      ),
-<a href=#1886 id=1886 data-nosnippet>1886</a>    ] {
-<a href=#1887 id=1887 data-nosnippet>1887</a>      <span class="macro">assert!</span>(
-<a href=#1888 id=1888 data-nosnippet>1888</a>        css.contains(issue) &amp;&amp; css.contains(rule),
-<a href=#1889 id=1889 data-nosnippet>1889</a>        <span class="string">"LaTeXML.css lost the issue {issue} rule `{rule}`"
-<a href=#1890 id=1890 data-nosnippet>1890</a>      </span>);
-<a href=#1891 id=1891 data-nosnippet>1891</a>    }
-<a href=#1892 id=1892 data-nosnippet>1892</a>  }
-<a href=#1893 id=1893 data-nosnippet>1893</a>
-<a href=#1894 id=1894 data-nosnippet>1894</a>  <span class="attr">#[test]
-<a href=#1895 id=1895 data-nosnippet>1895</a>  </span><span class="kw">fn </span>equation_rows_in_inline_context_delta_stays_present() {
-<a href=#1896 id=1896 data-nosnippet>1896</a>    <span class="comment">// Issue #972: a display in a p{} cell, \parbox or minipage is written as spans; its tbody spans are row groups
-<a href=#1897 id=1897 data-nosnippet>1897</a>    // (Chrome/Firefox: the rows of an `aligned` ran side by side, scrolled out of the cell), the tabular's cell padding
-<a href=#1898 id=1898 data-nosnippet>1898</a>    // stays off its cells, and the align column gap is keyed on classes; its cells keep the UA's 1px &lt;td&gt; padding
-<a href=#1899 id=1899 data-nosnippet>1899</a>    // (Chrome: a gather*'s rows touched) and a row of one colspan cell (\intertext) is a block (it wrapped in the first
-<a href=#1900 id=1900 data-nosnippet>1900</a>    // column), as is the span table itself in a note or minipage, where no `ltx_inline-block`/`ltx_td` boxes it. The
-<a href=#1901 id=1901 data-nosnippet>1901</a>    // browser half is `cluster_cli::browser_render_eqn_rows_in_cells`.
-<a href=#1902 id=1902 data-nosnippet>1902</a>    </span><span class="kw">let </span>css = bundled_latexml_css();
-<a href=#1903 id=1903 data-nosnippet>1903</a>    <span class="kw">for </span>rule <span class="kw">in </span>[
-<a href=#1904 id=1904 data-nosnippet>1904</a>      <span class="string">"span.ltx_eqn_table &gt; span:not([class]) { display:table-row-group; }"</span>,
-<a href=#1905 id=1905 data-nosnippet>1905</a>      <span class="string">"span.ltx_eqn_table { display:block; overflow-x:auto; max-width:100%; }"</span>,
-<a href=#1906 id=1906 data-nosnippet>1906</a>      <span class="string">".ltx_tabular .ltx_eqn_cell { padding:0; }"</span>,
-<a href=#1907 id=1907 data-nosnippet>1907</a>      <span class="string">".ltx_eqn_align .ltx_equation &gt; .ltx_align_left + .ltx_align_right,"</span>,
-<a href=#1908 id=1908 data-nosnippet>1908</a>      <span class="string">".ltx_eqn_eqnarray .ltx_eqn_lefteqn + .ltx_eqn_row &gt; .ltx_align_right { min-width:2em; }"</span>,
-<a href=#1909 id=1909 data-nosnippet>1909</a>      <span class="string">"span.ltx_eqn_table .ltx_eqn_cell { padding:1px; }"</span>,
-<a href=#1910 id=1910 data-nosnippet>1910</a>      <span class="string">"span.ltx_eqn_table &gt; span:not([class]):has(&gt; .ltx_eqn_row &gt; .ltx_eqn_cell[colspan]:only-child),\n\
-<a href=#1911 id=1911 data-nosnippet>1911</a>       span.ltx_eqn_table &gt; span:not([class]) &gt; .ltx_eqn_row:has(&gt; .ltx_eqn_cell[colspan]:only-child),\n\
-<a href=#1912 id=1912 data-nosnippet>1912</a>       span.ltx_eqn_table &gt; span:not([class]) &gt; .ltx_eqn_row &gt; .ltx_eqn_cell[colspan]:only-child { display:block; }"</span>,
-<a href=#1913 id=1913 data-nosnippet>1913</a>    ] {
-<a href=#1914 id=1914 data-nosnippet>1914</a>      <span class="macro">assert!</span>(
-<a href=#1915 id=1915 data-nosnippet>1915</a>        css.contains(<span class="string">"#972"</span>) &amp;&amp; css.contains(rule),
-<a href=#1916 id=1916 data-nosnippet>1916</a>        <span class="string">"LaTeXML.css lost the issue #972 rule `{rule}`"
-<a href=#1917 id=1917 data-nosnippet>1917</a>      </span>);
-<a href=#1918 id=1918 data-nosnippet>1918</a>    }
-<a href=#1919 id=1919 data-nosnippet>1919</a>  }
-<a href=#1920 id=1920 data-nosnippet>1920</a>
-<a href=#1921 id=1921 data-nosnippet>1921</a>  <span class="attr">#[test]
-<a href=#1922 id=1922 data-nosnippet>1922</a>  </span><span class="kw">fn </span>framed_verbatim_responsive_delta_stays_present() {
-<a href=#1923 id=1923 data-nosnippet>1923</a>    <span class="kw">let </span>css = bundled_latexml_css();
-<a href=#1924 id=1924 data-nosnippet>1924</a>    <span class="macro">assert!</span>(
-<a href=#1925 id=1925 data-nosnippet>1925</a>      css.contains(<span class="string">"#525"</span>)
-<a href=#1926 id=1926 data-nosnippet>1926</a>        &amp;&amp; css.contains(
-<a href=#1927 id=1927 data-nosnippet>1927</a>          <span class="string">".ltx_framed_verbatim { max-width:100%; overflow-x:auto; box-sizing:border-box; }"
-<a href=#1928 id=1928 data-nosnippet>1928</a>        </span>),
-<a href=#1929 id=1929 data-nosnippet>1929</a>      <span class="string">"the framed-verbatim responsive-containment delta (issue #525) is missing from \
-<a href=#1930 id=1930 data-nosnippet>1930</a>       LaTeXML.css: a fancyvrb frame=single box spans the print \\linewidth and would push \
-<a href=#1931 id=1931 data-nosnippet>1931</a>       its border off-screen and scroll the whole page on a phone"</span>,
-<a href=#1932 id=1932 data-nosnippet>1932</a>    );
-<a href=#1933 id=1933 data-nosnippet>1933</a>  }
-<a href=#1934 id=1934 data-nosnippet>1934</a>
-<a href=#1935 id=1935 data-nosnippet>1935</a>  <span class="attr">#[test]
-<a href=#1936 id=1936 data-nosnippet>1936</a>  </span><span class="kw">fn </span>title_pubnote_content_stays_collapsed() {
-<a href=#1937 id=1937 data-nosnippet>1937</a>    <span class="comment">// arXiv/html_feedback#6888 (+ #6886): a title footnote (`\thanks`/`\titlenote`,
-<a href=#1938 id=1938 data-nosnippet>1938</a>    // role=note/thanks) stays in the `&lt;h1&gt;` as a `.ltx_pubnotes` block. The bundled
-<a href=#1939 id=1939 data-nosnippet>1939</a>    // CSS must render ONLY the dagger MARK and keep the footnote CONTENT hidden by
-<a href=#1940 id=1940 data-nosnippet>1940</a>    // default, so the title text is the sole rendered language — the reporter saw the
-<a href=#1941 id=1941 data-nosnippet>1941</a>    // footnote text rendered inline in the title (an older deployed build). Guard both
-<a href=#1942 id=1942 data-nosnippet>1942</a>    // halves so a re-vanilla / cleanup sweep cannot silently drop the collapse.
-<a href=#1943 id=1943 data-nosnippet>1943</a>    </span><span class="kw">let </span>css = bundled_latexml_css();
-<a href=#1944 id=1944 data-nosnippet>1944</a>    <span class="macro">assert!</span>(
-<a href=#1945 id=1945 data-nosnippet>1945</a>      css.contains(<span class="string">".ltx_pubnotes:before {\n    content:\"\\24D8\""</span>),
-<a href=#1946 id=1946 data-nosnippet>1946</a>      <span class="string">"the title-footnote handle rule (.ltx_pubnotes:before, ⓘ since OXIDIZED_DESIGN_DIVERGENCES #1069) is missing \
-<a href=#1947 id=1947 data-nosnippet>1947</a>       from LaTeXML.css (arXiv/html_feedback#6888)"</span>,
-<a href=#1948 id=1948 data-nosnippet>1948</a>    );
-<a href=#1949 id=1949 data-nosnippet>1949</a>    <span class="macro">assert!</span>(
-<a href=#1950 id=1950 data-nosnippet>1950</a>      css.contains(<span class="string">".ltx_pubnotes .ltx_pubnotes_content"</span>)
-<a href=#1951 id=1951 data-nosnippet>1951</a>        &amp;&amp; css.contains(<span class="string">"visibility:hidden; opacity:0"</span>),
-<a href=#1952 id=1952 data-nosnippet>1952</a>      <span class="string">"the title-footnote CONTENT-hidden rule (.ltx_pubnotes .ltx_pubnotes_content \
-<a href=#1953 id=1953 data-nosnippet>1953</a>       {{ visibility:hidden }}) is missing from LaTeXML.css: the `\\thanks` text would \
-<a href=#1954 id=1954 data-nosnippet>1954</a>       render inline in the title instead of collapsing to its handle \
-<a href=#1955 id=1955 data-nosnippet>1955</a>       (arXiv/html_feedback#6888)"</span>,
-<a href=#1956 id=1956 data-nosnippet>1956</a>    );
-<a href=#1957 id=1957 data-nosnippet>1957</a>  }
-<a href=#1958 id=1958 data-nosnippet>1958</a>
-<a href=#1959 id=1959 data-nosnippet>1959</a>  <span class="attr">#[test]
-<a href=#1960 id=1960 data-nosnippet>1960</a>  </span><span class="kw">fn </span>no_xsl_key_match_has_a_predicated_descendant_step() {
-<a href=#1961 id=1961 data-nosnippet>1961</a>    <span class="comment">// libxslt builds every key at the first key() call, evaluating each `match` as an XPath; libxml2 runs `//X` as
-<a href=#1962 id=1962 data-nosnippet>1962</a>    // one descendant pass only when X has no predicate, so `…//ltx:p[not(ancestor::…)]` ran once per root child:
-<a href=#1963 id=1963 data-nosnippet>1963</a>    // O(children × nodes), a 180 s timeout on a document with no section (0707.2621, 0711.3849, 1806.00577; run 397;
-<a href=#1964 id=1964 data-nosnippet>1964</a>    // WISDOM #105). Keep an exclusion in the key's `use`, not in a predicated `//` step.
-<a href=#1965 id=1965 data-nosnippet>1965</a>    </span><span class="kw">for </span>(name, xsl) <span class="kw">in </span>[(
-<a href=#1966 id=1966 data-nosnippet>1966</a>      <span class="string">"LaTeXML-meta-xhtml.xsl"</span>,
-<a href=#1967 id=1967 data-nosnippet>1967</a>      <span class="macro">include_str!</span>(<span class="string">"../resources/XSLT/LaTeXML-meta-xhtml.xsl"</span>),
-<a href=#1968 id=1968 data-nosnippet>1968</a>    )] {
-<a href=#1969 id=1969 data-nosnippet>1969</a>      <span class="kw">for </span>key <span class="kw">in </span>xsl.split(<span class="string">"&lt;xsl:key "</span>).skip(<span class="number">1</span>) {
-<a href=#1970 id=1970 data-nosnippet>1970</a>        <span class="kw">let </span>matched = key
-<a href=#1971 id=1971 data-nosnippet>1971</a>          .split(<span class="string">"match=\""</span>)
-<a href=#1972 id=1972 data-nosnippet>1972</a>          .nth(<span class="number">1</span>)
-<a href=#1973 id=1973 data-nosnippet>1973</a>          .and_then(|m| m.split(<span class="string">'"'</span>).next())
-<a href=#1974 id=1974 data-nosnippet>1974</a>          .unwrap_or(<span class="string">""</span>);
-<a href=#1975 id=1975 data-nosnippet>1975</a>        <span class="kw">let </span>flat: String = matched.split_whitespace().collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;().join(<span class="string">" "</span>);
-<a href=#1976 id=1976 data-nosnippet>1976</a>        <span class="kw">for </span>step <span class="kw">in </span>flat.split(<span class="string">"//"</span>).skip(<span class="number">1</span>) {
-<a href=#1977 id=1977 data-nosnippet>1977</a>          <span class="kw">let </span>head: String = step
-<a href=#1978 id=1978 data-nosnippet>1978</a>            .chars()
-<a href=#1979 id=1979 data-nosnippet>1979</a>            .take_while(|c| !<span class="macro">matches!</span>(c, <span class="string">'[' </span>| <span class="string">'|' </span>| <span class="string">'/' </span>| <span class="string">' '</span>))
-<a href=#1980 id=1980 data-nosnippet>1980</a>            .collect();
-<a href=#1981 id=1981 data-nosnippet>1981</a>          <span class="macro">assert!</span>(
-<a href=#1982 id=1982 data-nosnippet>1982</a>            !step[head.len()..].starts_with(<span class="string">'['</span>),
-<a href=#1983 id=1983 data-nosnippet>1983</a>            <span class="string">"{name}: an xsl:key match has the predicated descendant step `//{head}[…]`: {flat}"
-<a href=#1984 id=1984 data-nosnippet>1984</a>          </span>);
-<a href=#1985 id=1985 data-nosnippet>1985</a>        }
-<a href=#1986 id=1986 data-nosnippet>1986</a>      }
-<a href=#1987 id=1987 data-nosnippet>1987</a>    }
-<a href=#1988 id=1988 data-nosnippet>1988</a>  }
-<a href=#1989 id=1989 data-nosnippet>1989</a>
-<a href=#1990 id=1990 data-nosnippet>1990</a>  <span class="attr">#[test]
-<a href=#1991 id=1991 data-nosnippet>1991</a>  </span><span class="kw">fn </span>css_draws_no_footnote_mark_glyph() {
-<a href=#1992 id=1992 data-nosnippet>1992</a>    <span class="comment">// DG 2026-11-17 (OXIDIZED_DESIGN_DIVERGENCES #1069): the page carries every mark the PDF prints, and a generated
-<a href=#1993 id=1993 data-nosnippet>1993</a>    // mark only where it prints none, unique against them; a glyph the stylesheet draws is neither, so it is never one
-<a href=#1994 id=1994 data-nosnippet>1994</a>    // of the marks' glyphs. The hover handles for an author's hidden contacts and for the title notes draw ⓘ (Perl:
-<a href=#1995 id=1995 data-nosnippet>1995</a>    // `*` and `†`, which read as a second mark beside a printed one: 2606.00446's "Park**", 2605.10496's title †).
-<a href=#1996 id=1996 data-nosnippet>1996</a>    </span><span class="kw">let </span>css = bundled_latexml_css();
-<a href=#1997 id=1997 data-nosnippet>1997</a>    <span class="kw">for </span>glyph <span class="kw">in </span>[
-<a href=#1998 id=1998 data-nosnippet>1998</a>      <span class="string">"*"</span>, <span class="string">"\\2217"</span>, <span class="string">"∗"</span>, <span class="string">"\\002020"</span>, <span class="string">"\\2020"</span>, <span class="string">"†"</span>, <span class="string">"\\2021"</span>, <span class="string">"‡"</span>, <span class="string">"\\00A7"</span>, <span class="string">"§"</span>, <span class="string">"\\00B6"</span>, <span class="string">"¶"</span>,
-<a href=#1999 id=1999 data-nosnippet>1999</a>      <span class="string">"\\2016"</span>, <span class="string">"‖"</span>,
-<a href=#2000 id=2000 data-nosnippet>2000</a>    ] {
-<a href=#2001 id=2001 data-nosnippet>2001</a>      <span class="kw">for </span>spaced <span class="kw">in </span>[<span class="string">""</span>, <span class="string">" "</span>] {
-<a href=#2002 id=2002 data-nosnippet>2002</a>        <span class="kw">let </span>rule = <span class="macro">format!</span>(<span class="string">"content:{spaced}\"{glyph}\""</span>);
-<a href=#2003 id=2003 data-nosnippet>2003</a>        <span class="macro">assert!</span>(
-<a href=#2004 id=2004 data-nosnippet>2004</a>          !css.contains(<span class="kw-2">&amp;</span>rule),
-<a href=#2005 id=2005 data-nosnippet>2005</a>          <span class="string">"LaTeXML.css draws the footnote-mark glyph `{rule}`"
-<a href=#2006 id=2006 data-nosnippet>2006</a>        </span>);
-<a href=#2007 id=2007 data-nosnippet>2007</a>      }
-<a href=#2008 id=2008 data-nosnippet>2008</a>    }
-<a href=#2009 id=2009 data-nosnippet>2009</a>    <span class="kw">for </span>handle <span class="kw">in </span>[
-<a href=#2010 id=2010 data-nosnippet>2010</a>      <span class="string">".ltx_author_notes:before {\n    content:\"\\24D8\""</span>,
-<a href=#2011 id=2011 data-nosnippet>2011</a>      <span class="string">".ltx_pubnotes:before {\n    content:\"\\24D8\""</span>,
+<a href=#1855 id=1855 data-nosnippet>1855</a>    <span class="comment">// Issue #533: display math in a p{} cell, \parbox, minipage or table cell is a block within its box (it escaped
+<a href=#1856 id=1856 data-nosnippet>1856</a>    // and scattered across the page). Issue #972: that block is no scroll box (Chrome drew a phantom vertical
+<a href=#1857 id=1857 data-nosnippet>1857</a>    // scrollbar on every in-cell display, and a lowered \raisebox was clipped); the box grows to its display, and a
+<a href=#1858 id=1858 data-nosnippet>1858</a>    // note scrolls a too-wide one. The browser half is `cluster_cli::browser_render_eqn_rows_in_cells`.
+<a href=#1859 id=1859 data-nosnippet>1859</a>    </span><span class="kw">let </span>css = bundled_latexml_css();
+<a href=#1860 id=1860 data-nosnippet>1860</a>    <span class="kw">for </span>rule <span class="kw">in </span>[
+<a href=#1861 id=1861 data-nosnippet>1861</a>      <span class="string">".ltx_inline-block .ltx_eqn_table,\n.ltx_td .ltx_eqn_table { display:block; max-width:100%; }"</span>,
+<a href=#1862 id=1862 data-nosnippet>1862</a>      <span class="string">":is(.ltx_inline-block, .ltx_inline-logical-block, .ltx_minipage, .ltx_parbox):has(.ltx_eqn_table) {\n  \
+<a href=#1863 id=1863 data-nosnippet>1863</a>       min-width:min-content; }"</span>,
+<a href=#1864 id=1864 data-nosnippet>1864</a>      <span class="string">":is(.ltx_inline-block, .ltx_inline-logical-block, .ltx_minipage, .ltx_parbox, .ltx_td) :is(.ltx_eqn_center_padleft, .ltx_eqn_center_padright) {\n  \
+<a href=#1865 id=1865 data-nosnippet>1865</a>       min-width:0; }"</span>,
+<a href=#1866 id=1866 data-nosnippet>1866</a>      <span class="string">".ltx_note_content:has(.ltx_eqn_table) { overflow-x:auto; }"</span>,
+<a href=#1867 id=1867 data-nosnippet>1867</a>    ] {
+<a href=#1868 id=1868 data-nosnippet>1868</a>      <span class="macro">assert!</span>(
+<a href=#1869 id=1869 data-nosnippet>1869</a>        css.contains(<span class="string">"#533"</span>) &amp;&amp; css.contains(<span class="string">"#972"</span>) &amp;&amp; css.contains(rule),
+<a href=#1870 id=1870 data-nosnippet>1870</a>        <span class="string">"LaTeXML.css lost the constrained-equation rule `{rule}` (issues #533, #972)"
+<a href=#1871 id=1871 data-nosnippet>1871</a>      </span>);
+<a href=#1872 id=1872 data-nosnippet>1872</a>    }
+<a href=#1873 id=1873 data-nosnippet>1873</a>    <span class="macro">assert!</span>(
+<a href=#1874 id=1874 data-nosnippet>1874</a>      !css.contains(<span class="string">"display:block; overflow-x:auto; max-width:100%;"</span>),
+<a href=#1875 id=1875 data-nosnippet>1875</a>      <span class="string">"a display in a box is a scroll container again (issue #972: phantom vertical scrollbars)"
+<a href=#1876 id=1876 data-nosnippet>1876</a>    </span>);
+<a href=#1877 id=1877 data-nosnippet>1877</a>  }
+<a href=#1878 id=1878 data-nosnippet>1878</a>
+<a href=#1879 id=1879 data-nosnippet>1879</a>  <span class="attr">#[test]
+<a href=#1880 id=1880 data-nosnippet>1880</a>  </span><span class="kw">fn </span>equation_tag_and_mathjax_deltas_stay_present() {
+<a href=#1881 id=1881 data-nosnippet>1881</a>    <span class="comment">// Issues #810 (a one-row equation centred in the full line, its tag beside it: Chrome/Firefox at
+<a href=#1882 id=1882 data-nosnippet>1882</a>    // 375 px, the long `\tag` over its formula -&gt; beside it; multi-row tables keep a tag column) and
+<a href=#1883 id=1883 data-nosnippet>1883</a>    // #475 (MathJax 2.1 offline: consecutive displays 53 -&gt; 21 px apart, native 18, in a table or a
+<a href=#1884 id=1884 data-nosnippet>1884</a>    // minipage); the browser half is `cluster_cli::browser_render_eqn_tags`.
+<a href=#1885 id=1885 data-nosnippet>1885</a>    </span><span class="kw">let </span>css = bundled_latexml_css();
+<a href=#1886 id=1886 data-nosnippet>1886</a>    <span class="kw">for </span>(issue, rule) <span class="kw">in </span>[
+<a href=#1887 id=1887 data-nosnippet>1887</a>      (<span class="string">"#810"</span>, <span class="string">".ltx_eqn_eqno { max-width:none; }"</span>),
+<a href=#1888 id=1888 data-nosnippet>1888</a>      (
+<a href=#1889 id=1889 data-nosnippet>1889</a>        <span class="string">"#810"</span>,
+<a href=#1890 id=1890 data-nosnippet>1890</a>        <span class="string">".ltx_equation.ltx_eqn_table &gt; * &gt; .ltx_eqn_row:only-child:has(&gt; .ltx_eqn_center_padleft) {\n  \
+<a href=#1891 id=1891 data-nosnippet>1891</a>         display:grid; grid-template-columns:minmax(2em,1fr) auto 1fr; align-items:center; }"</span>,
+<a href=#1892 id=1892 data-nosnippet>1892</a>      ),
+<a href=#1893 id=1893 data-nosnippet>1893</a>      (
+<a href=#1894 id=1894 data-nosnippet>1894</a>        <span class="string">"#475"</span>,
+<a href=#1895 id=1895 data-nosnippet>1895</a>        <span class="string">".ltx_eqn_table .ltx_eqn_cell &gt; mjx-container[display=\"true\"],\n\
+<a href=#1896 id=1896 data-nosnippet>1896</a>         .ltx_eqn_table .ltx_eqn_cell &gt; .MathJax_Display { margin-top:0; margin-bottom:0; }"</span>,
+<a href=#1897 id=1897 data-nosnippet>1897</a>      ),
+<a href=#1898 id=1898 data-nosnippet>1898</a>    ] {
+<a href=#1899 id=1899 data-nosnippet>1899</a>      <span class="macro">assert!</span>(
+<a href=#1900 id=1900 data-nosnippet>1900</a>        css.contains(issue) &amp;&amp; css.contains(rule),
+<a href=#1901 id=1901 data-nosnippet>1901</a>        <span class="string">"LaTeXML.css lost the issue {issue} rule `{rule}`"
+<a href=#1902 id=1902 data-nosnippet>1902</a>      </span>);
+<a href=#1903 id=1903 data-nosnippet>1903</a>    }
+<a href=#1904 id=1904 data-nosnippet>1904</a>  }
+<a href=#1905 id=1905 data-nosnippet>1905</a>
+<a href=#1906 id=1906 data-nosnippet>1906</a>  <span class="attr">#[test]
+<a href=#1907 id=1907 data-nosnippet>1907</a>  </span><span class="kw">fn </span>equation_rows_in_inline_context_delta_stays_present() {
+<a href=#1908 id=1908 data-nosnippet>1908</a>    <span class="comment">// Issue #972: a display in a p{} cell, \parbox or minipage is written as spans; its tbody spans are row groups
+<a href=#1909 id=1909 data-nosnippet>1909</a>    // (Chrome/Firefox: the rows of an `aligned` ran side by side, scrolled out of the cell), the tabular's cell padding
+<a href=#1910 id=1910 data-nosnippet>1910</a>    // stays off its cells, and the align column gap is keyed on classes; its cells keep the UA's 1px &lt;td&gt; padding
+<a href=#1911 id=1911 data-nosnippet>1911</a>    // (Chrome: a gather*'s rows touched) and a row of one colspan cell (\intertext) is a block (it wrapped in the first
+<a href=#1912 id=1912 data-nosnippet>1912</a>    // column), as is the span table itself in a note or minipage, where no `ltx_inline-block`/`ltx_td` boxes it. The
+<a href=#1913 id=1913 data-nosnippet>1913</a>    // browser half is `cluster_cli::browser_render_eqn_rows_in_cells`.
+<a href=#1914 id=1914 data-nosnippet>1914</a>    </span><span class="kw">let </span>css = bundled_latexml_css();
+<a href=#1915 id=1915 data-nosnippet>1915</a>    <span class="kw">for </span>rule <span class="kw">in </span>[
+<a href=#1916 id=1916 data-nosnippet>1916</a>      <span class="string">"span.ltx_eqn_table &gt; span:not([class]) { display:table-row-group; }"</span>,
+<a href=#1917 id=1917 data-nosnippet>1917</a>      <span class="string">"span.ltx_eqn_table { display:block; max-width:100%; }"</span>,
+<a href=#1918 id=1918 data-nosnippet>1918</a>      <span class="string">".ltx_tabular .ltx_eqn_cell { padding:0; }"</span>,
+<a href=#1919 id=1919 data-nosnippet>1919</a>      <span class="string">".ltx_eqn_align .ltx_equation &gt; .ltx_align_left + .ltx_align_right,"</span>,
+<a href=#1920 id=1920 data-nosnippet>1920</a>      <span class="string">".ltx_eqn_eqnarray .ltx_eqn_lefteqn + .ltx_eqn_row &gt; .ltx_align_right { min-width:2em; }"</span>,
+<a href=#1921 id=1921 data-nosnippet>1921</a>      <span class="string">"span.ltx_eqn_table .ltx_eqn_cell { padding:1px; }"</span>,
+<a href=#1922 id=1922 data-nosnippet>1922</a>      <span class="string">"span.ltx_eqn_table &gt; span:not([class]):has(&gt; .ltx_eqn_row &gt; .ltx_eqn_cell[colspan]:only-child),\n\
+<a href=#1923 id=1923 data-nosnippet>1923</a>       span.ltx_eqn_table &gt; span:not([class]) &gt; .ltx_eqn_row:has(&gt; .ltx_eqn_cell[colspan]:only-child),\n\
+<a href=#1924 id=1924 data-nosnippet>1924</a>       span.ltx_eqn_table &gt; span:not([class]) &gt; .ltx_eqn_row &gt; .ltx_eqn_cell[colspan]:only-child { display:block; }"</span>,
+<a href=#1925 id=1925 data-nosnippet>1925</a>    ] {
+<a href=#1926 id=1926 data-nosnippet>1926</a>      <span class="macro">assert!</span>(
+<a href=#1927 id=1927 data-nosnippet>1927</a>        css.contains(<span class="string">"#972"</span>) &amp;&amp; css.contains(rule),
+<a href=#1928 id=1928 data-nosnippet>1928</a>        <span class="string">"LaTeXML.css lost the issue #972 rule `{rule}`"
+<a href=#1929 id=1929 data-nosnippet>1929</a>      </span>);
+<a href=#1930 id=1930 data-nosnippet>1930</a>    }
+<a href=#1931 id=1931 data-nosnippet>1931</a>  }
+<a href=#1932 id=1932 data-nosnippet>1932</a>
+<a href=#1933 id=1933 data-nosnippet>1933</a>  <span class="attr">#[test]
+<a href=#1934 id=1934 data-nosnippet>1934</a>  </span><span class="kw">fn </span>framed_verbatim_responsive_delta_stays_present() {
+<a href=#1935 id=1935 data-nosnippet>1935</a>    <span class="kw">let </span>css = bundled_latexml_css();
+<a href=#1936 id=1936 data-nosnippet>1936</a>    <span class="macro">assert!</span>(
+<a href=#1937 id=1937 data-nosnippet>1937</a>      css.contains(<span class="string">"#525"</span>)
+<a href=#1938 id=1938 data-nosnippet>1938</a>        &amp;&amp; css.contains(
+<a href=#1939 id=1939 data-nosnippet>1939</a>          <span class="string">".ltx_framed_verbatim { max-width:100%; overflow-x:auto; box-sizing:border-box; }"
+<a href=#1940 id=1940 data-nosnippet>1940</a>        </span>),
+<a href=#1941 id=1941 data-nosnippet>1941</a>      <span class="string">"the framed-verbatim responsive-containment delta (issue #525) is missing from \
+<a href=#1942 id=1942 data-nosnippet>1942</a>       LaTeXML.css: a fancyvrb frame=single box spans the print \\linewidth and would push \
+<a href=#1943 id=1943 data-nosnippet>1943</a>       its border off-screen and scroll the whole page on a phone"</span>,
+<a href=#1944 id=1944 data-nosnippet>1944</a>    );
+<a href=#1945 id=1945 data-nosnippet>1945</a>  }
+<a href=#1946 id=1946 data-nosnippet>1946</a>
+<a href=#1947 id=1947 data-nosnippet>1947</a>  <span class="attr">#[test]
+<a href=#1948 id=1948 data-nosnippet>1948</a>  </span><span class="kw">fn </span>title_pubnote_content_stays_collapsed() {
+<a href=#1949 id=1949 data-nosnippet>1949</a>    <span class="comment">// arXiv/html_feedback#6888 (+ #6886): a title footnote (`\thanks`/`\titlenote`,
+<a href=#1950 id=1950 data-nosnippet>1950</a>    // role=note/thanks) stays in the `&lt;h1&gt;` as a `.ltx_pubnotes` block. The bundled
+<a href=#1951 id=1951 data-nosnippet>1951</a>    // CSS must render ONLY the dagger MARK and keep the footnote CONTENT hidden by
+<a href=#1952 id=1952 data-nosnippet>1952</a>    // default, so the title text is the sole rendered language — the reporter saw the
+<a href=#1953 id=1953 data-nosnippet>1953</a>    // footnote text rendered inline in the title (an older deployed build). Guard both
+<a href=#1954 id=1954 data-nosnippet>1954</a>    // halves so a re-vanilla / cleanup sweep cannot silently drop the collapse.
+<a href=#1955 id=1955 data-nosnippet>1955</a>    </span><span class="kw">let </span>css = bundled_latexml_css();
+<a href=#1956 id=1956 data-nosnippet>1956</a>    <span class="macro">assert!</span>(
+<a href=#1957 id=1957 data-nosnippet>1957</a>      css.contains(<span class="string">".ltx_pubnotes:before {\n    content:\"\\24D8\""</span>),
+<a href=#1958 id=1958 data-nosnippet>1958</a>      <span class="string">"the title-footnote handle rule (.ltx_pubnotes:before, ⓘ since OXIDIZED_DESIGN_DIVERGENCES #1069) is missing \
+<a href=#1959 id=1959 data-nosnippet>1959</a>       from LaTeXML.css (arXiv/html_feedback#6888)"</span>,
+<a href=#1960 id=1960 data-nosnippet>1960</a>    );
+<a href=#1961 id=1961 data-nosnippet>1961</a>    <span class="macro">assert!</span>(
+<a href=#1962 id=1962 data-nosnippet>1962</a>      css.contains(<span class="string">".ltx_pubnotes .ltx_pubnotes_content"</span>)
+<a href=#1963 id=1963 data-nosnippet>1963</a>        &amp;&amp; css.contains(<span class="string">"visibility:hidden; opacity:0"</span>),
+<a href=#1964 id=1964 data-nosnippet>1964</a>      <span class="string">"the title-footnote CONTENT-hidden rule (.ltx_pubnotes .ltx_pubnotes_content \
+<a href=#1965 id=1965 data-nosnippet>1965</a>       {{ visibility:hidden }}) is missing from LaTeXML.css: the `\\thanks` text would \
+<a href=#1966 id=1966 data-nosnippet>1966</a>       render inline in the title instead of collapsing to its handle \
+<a href=#1967 id=1967 data-nosnippet>1967</a>       (arXiv/html_feedback#6888)"</span>,
+<a href=#1968 id=1968 data-nosnippet>1968</a>    );
+<a href=#1969 id=1969 data-nosnippet>1969</a>  }
+<a href=#1970 id=1970 data-nosnippet>1970</a>
+<a href=#1971 id=1971 data-nosnippet>1971</a>  <span class="attr">#[test]
+<a href=#1972 id=1972 data-nosnippet>1972</a>  </span><span class="kw">fn </span>no_xsl_key_match_has_a_predicated_descendant_step() {
+<a href=#1973 id=1973 data-nosnippet>1973</a>    <span class="comment">// libxslt builds every key at the first key() call, evaluating each `match` as an XPath; libxml2 runs `//X` as
+<a href=#1974 id=1974 data-nosnippet>1974</a>    // one descendant pass only when X has no predicate, so `…//ltx:p[not(ancestor::…)]` ran once per root child:
+<a href=#1975 id=1975 data-nosnippet>1975</a>    // O(children × nodes), a 180 s timeout on a document with no section (0707.2621, 0711.3849, 1806.00577; run 397;
+<a href=#1976 id=1976 data-nosnippet>1976</a>    // WISDOM #105). Keep an exclusion in the key's `use`, not in a predicated `//` step.
+<a href=#1977 id=1977 data-nosnippet>1977</a>    </span><span class="kw">for </span>(name, xsl) <span class="kw">in </span>[(
+<a href=#1978 id=1978 data-nosnippet>1978</a>      <span class="string">"LaTeXML-meta-xhtml.xsl"</span>,
+<a href=#1979 id=1979 data-nosnippet>1979</a>      <span class="macro">include_str!</span>(<span class="string">"../resources/XSLT/LaTeXML-meta-xhtml.xsl"</span>),
+<a href=#1980 id=1980 data-nosnippet>1980</a>    )] {
+<a href=#1981 id=1981 data-nosnippet>1981</a>      <span class="kw">for </span>key <span class="kw">in </span>xsl.split(<span class="string">"&lt;xsl:key "</span>).skip(<span class="number">1</span>) {
+<a href=#1982 id=1982 data-nosnippet>1982</a>        <span class="kw">let </span>matched = key
+<a href=#1983 id=1983 data-nosnippet>1983</a>          .split(<span class="string">"match=\""</span>)
+<a href=#1984 id=1984 data-nosnippet>1984</a>          .nth(<span class="number">1</span>)
+<a href=#1985 id=1985 data-nosnippet>1985</a>          .and_then(|m| m.split(<span class="string">'"'</span>).next())
+<a href=#1986 id=1986 data-nosnippet>1986</a>          .unwrap_or(<span class="string">""</span>);
+<a href=#1987 id=1987 data-nosnippet>1987</a>        <span class="kw">let </span>flat: String = matched.split_whitespace().collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;().join(<span class="string">" "</span>);
+<a href=#1988 id=1988 data-nosnippet>1988</a>        <span class="kw">for </span>step <span class="kw">in </span>flat.split(<span class="string">"//"</span>).skip(<span class="number">1</span>) {
+<a href=#1989 id=1989 data-nosnippet>1989</a>          <span class="kw">let </span>head: String = step
+<a href=#1990 id=1990 data-nosnippet>1990</a>            .chars()
+<a href=#1991 id=1991 data-nosnippet>1991</a>            .take_while(|c| !<span class="macro">matches!</span>(c, <span class="string">'[' </span>| <span class="string">'|' </span>| <span class="string">'/' </span>| <span class="string">' '</span>))
+<a href=#1992 id=1992 data-nosnippet>1992</a>            .collect();
+<a href=#1993 id=1993 data-nosnippet>1993</a>          <span class="macro">assert!</span>(
+<a href=#1994 id=1994 data-nosnippet>1994</a>            !step[head.len()..].starts_with(<span class="string">'['</span>),
+<a href=#1995 id=1995 data-nosnippet>1995</a>            <span class="string">"{name}: an xsl:key match has the predicated descendant step `//{head}[…]`: {flat}"
+<a href=#1996 id=1996 data-nosnippet>1996</a>          </span>);
+<a href=#1997 id=1997 data-nosnippet>1997</a>        }
+<a href=#1998 id=1998 data-nosnippet>1998</a>      }
+<a href=#1999 id=1999 data-nosnippet>1999</a>    }
+<a href=#2000 id=2000 data-nosnippet>2000</a>  }
+<a href=#2001 id=2001 data-nosnippet>2001</a>
+<a href=#2002 id=2002 data-nosnippet>2002</a>  <span class="attr">#[test]
+<a href=#2003 id=2003 data-nosnippet>2003</a>  </span><span class="kw">fn </span>css_draws_no_footnote_mark_glyph() {
+<a href=#2004 id=2004 data-nosnippet>2004</a>    <span class="comment">// DG 2026-11-17 (OXIDIZED_DESIGN_DIVERGENCES #1069): the page carries every mark the PDF prints, and a generated
+<a href=#2005 id=2005 data-nosnippet>2005</a>    // mark only where it prints none, unique against them; a glyph the stylesheet draws is neither, so it is never one
+<a href=#2006 id=2006 data-nosnippet>2006</a>    // of the marks' glyphs. The hover handles for an author's hidden contacts and for the title notes draw ⓘ (Perl:
+<a href=#2007 id=2007 data-nosnippet>2007</a>    // `*` and `†`, which read as a second mark beside a printed one: 2606.00446's "Park**", 2605.10496's title †).
+<a href=#2008 id=2008 data-nosnippet>2008</a>    </span><span class="kw">let </span>css = bundled_latexml_css();
+<a href=#2009 id=2009 data-nosnippet>2009</a>    <span class="kw">for </span>glyph <span class="kw">in </span>[
+<a href=#2010 id=2010 data-nosnippet>2010</a>      <span class="string">"*"</span>, <span class="string">"\\2217"</span>, <span class="string">"∗"</span>, <span class="string">"\\002020"</span>, <span class="string">"\\2020"</span>, <span class="string">"†"</span>, <span class="string">"\\2021"</span>, <span class="string">"‡"</span>, <span class="string">"\\00A7"</span>, <span class="string">"§"</span>, <span class="string">"\\00B6"</span>, <span class="string">"¶"</span>,
+<a href=#2011 id=2011 data-nosnippet>2011</a>      <span class="string">"\\2016"</span>, <span class="string">"‖"</span>,
 <a href=#2012 id=2012 data-nosnippet>2012</a>    ] {
-<a href=#2013 id=2013 data-nosnippet>2013</a>      <span class="macro">assert!</span>(
-<a href=#2014 id=2014 data-nosnippet>2014</a>        css.contains(handle),
-<a href=#2015 id=2015 data-nosnippet>2015</a>        <span class="string">"LaTeXML.css lacks the ⓘ hover handle `{handle}`"
-<a href=#2016 id=2016 data-nosnippet>2016</a>      </span>);
-<a href=#2017 id=2017 data-nosnippet>2017</a>    }
-<a href=#2018 id=2018 data-nosnippet>2018</a>  }
-<a href=#2019 id=2019 data-nosnippet>2019</a>}
+<a href=#2013 id=2013 data-nosnippet>2013</a>      <span class="kw">for </span>spaced <span class="kw">in </span>[<span class="string">""</span>, <span class="string">" "</span>] {
+<a href=#2014 id=2014 data-nosnippet>2014</a>        <span class="kw">let </span>rule = <span class="macro">format!</span>(<span class="string">"content:{spaced}\"{glyph}\""</span>);
+<a href=#2015 id=2015 data-nosnippet>2015</a>        <span class="macro">assert!</span>(
+<a href=#2016 id=2016 data-nosnippet>2016</a>          !css.contains(<span class="kw-2">&amp;</span>rule),
+<a href=#2017 id=2017 data-nosnippet>2017</a>          <span class="string">"LaTeXML.css draws the footnote-mark glyph `{rule}`"
+<a href=#2018 id=2018 data-nosnippet>2018</a>        </span>);
+<a href=#2019 id=2019 data-nosnippet>2019</a>      }
+<a href=#2020 id=2020 data-nosnippet>2020</a>    }
+<a href=#2021 id=2021 data-nosnippet>2021</a>    <span class="kw">for </span>handle <span class="kw">in </span>[
+<a href=#2022 id=2022 data-nosnippet>2022</a>      <span class="string">".ltx_author_notes:before {\n    content:\"\\24D8\""</span>,
+<a href=#2023 id=2023 data-nosnippet>2023</a>      <span class="string">".ltx_pubnotes:before {\n    content:\"\\24D8\""</span>,
+<a href=#2024 id=2024 data-nosnippet>2024</a>    ] {
+<a href=#2025 id=2025 data-nosnippet>2025</a>      <span class="macro">assert!</span>(
+<a href=#2026 id=2026 data-nosnippet>2026</a>        css.contains(handle),
+<a href=#2027 id=2027 data-nosnippet>2027</a>        <span class="string">"LaTeXML.css lacks the ⓘ hover handle `{handle}`"
+<a href=#2028 id=2028 data-nosnippet>2028</a>      </span>);
+<a href=#2029 id=2029 data-nosnippet>2029</a>    }
+<a href=#2030 id=2030 data-nosnippet>2030</a>  }
+<a href=#2031 id=2031 data-nosnippet>2031</a>}
 </code></pre></div></section></main></body></html>
