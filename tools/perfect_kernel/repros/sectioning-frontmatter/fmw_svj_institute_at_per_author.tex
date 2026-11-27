@@ -1,0 +1,16 @@
+% shape:   svjour3 `\institute{Name \at place \\ \email{…} \and …}`
+% witness: 1402.5988, 1912.08325
+% oracle:  pdflatex (with 1301.5787's own svjour3 file; TL 2025 ships none) 0 errors; institutes at the foot
+% engines: rust rc6: each institute its named author
+% expect:  0 errors, 0 warnings; each institute its named author
+% status:  GREEN (rc6 fe76f5268af); guard perfect_kernel_batchfmwitness::author_segmentation_witnesses
+% preload: ar5iv.sty
+\documentclass{svjour3}
+\begin{document}
+\title{T}
+\author{Ann Able \and Bob Baker}
+\institute{Ann Able \at Univ A, City A \\ \email{ann@a.edu}
+\and Bob Baker \at Univ B, City B \\ \email{bob@b.edu}}
+\maketitle
+Text.
+\end{document}

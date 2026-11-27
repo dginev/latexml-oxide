@@ -1,0 +1,19 @@
+% shape:   authblk labelled authors and affiliations, one name with two labels
+% witness: 2005.13982 (authblk `\author[n]`/`\affil[n]`)
+% oracle:  pdflatex 0 errors; "Ann Able1, Bob Baker2, Cat Cole1,2 / 1Univ A / 2Univ B"
+% engines: rust rc6: each name its labels' affiliations
+% expect:  0 errors, 0 warnings; each name its labels' affiliations
+% status:  GREEN (rc6 fe76f5268af); guard perfect_kernel_batchfmwitness::author_segmentation_witnesses
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author[1]{Ann Able}
+\author[2]{Bob Baker}
+\author[1,2]{Cat Cole}
+\affil[1]{Univ A, City A}
+\affil[2]{Univ B, City B}
+\maketitle
+Text.
+\end{document}

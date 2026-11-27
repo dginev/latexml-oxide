@@ -1,0 +1,24 @@
+% shape:   AASTeX 6.31: `\email` before every `\author`, ORCID ids, an `\altaffiliation`
+% witness: 2211.09822
+% oracle:  pdflatex (with 2211.09822's own aastex631 file; TL 2025 ships none) 0 errors; "Ann Able and Bob Baker1,*",
+%          the address a bare footnote (author 0's)
+% engines: rust rc6: a third, nameless creator holding aable@a.edu
+% expect:  0 errors, 0 warnings; the address Ann Able's (it spells her; charter 4)
+% status:  RED (rc6 fe76f5268af); ruling: charter 4: an e-mail goes to the author whose name it spells
+% moves:   post-merge
+% preload: ar5iv.sty
+\documentclass{aastex631}
+\begin{document}
+\title{T}
+\email{aable@a.edu}
+\author[0000-0001-2345-6789]{Ann Able}
+\affiliation{Department of Astronomy, Univ A, City A}
+\author[0000-0002-3456-7890]{Bob Baker}
+\altaffiliation{51 Pegasi b Fellow}
+\affiliation{Department of Astronomy, Univ A, City A}
+\begin{abstract}
+A.
+\end{abstract}
+\section{Intro}
+Text.
+\end{document}

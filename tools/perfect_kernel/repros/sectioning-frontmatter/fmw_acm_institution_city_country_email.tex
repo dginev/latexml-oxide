@@ -1,0 +1,24 @@
+% shape:   acmart `\email` and `\affiliation{\institution\city\country}` per author
+% witness: 2104.10017, 2004.14245
+% oracle:  pdflatex 0 errors; names over affiliations
+% engines: rust rc6: each author his calls
+% expect:  0 errors, 0 warnings; each author his calls
+% status:  GREEN (rc6 fe76f5268af); guard perfect_kernel_batchfmwitness::author_segmentation_witnesses
+% preload: ar5iv.sty
+\documentclass[sigconf]{acmart}
+\setcopyright{none}
+\settopmatter{printacmref=false}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\email{ann@a.edu}
+\affiliation{\institution{Univ A}\city{City A}\state{State A}\country{USA}}
+\author{Bob Baker}
+\email{bob@b.edu}
+\affiliation{\institution{Univ B}\city{City B}\country{Italy}}
+\begin{abstract}
+A.
+\end{abstract}
+\maketitle
+Text.
+\end{document}

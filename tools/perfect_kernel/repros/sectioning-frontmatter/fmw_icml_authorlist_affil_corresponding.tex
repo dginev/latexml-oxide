@@ -1,0 +1,25 @@
+% shape:   icml `\icmlauthor{N}{keys}`, `\icmlaffiliation`, `\icmlcorrespondingauthor`
+% witness: 2410.10347
+% oracle:  pdflatex (with 2410.10347's own icml file; TL 2025 ships none) 0 errors; "Ann Able1 Bob Baker1 2 …
+%          Correspondence to: Ann Able <ann@a.edu>"
+% engines: rust rc6: by keys; Ann the e-mail
+% expect:  0 errors, 0 warnings; by keys; Ann the e-mail
+% status:  GREEN (rc6 fe76f5268af); guard perfect_kernel_batchfmwitness::author_segmentation_witnesses
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[accepted]{icml2025}
+\begin{document}
+\twocolumn[
+\icmltitle{T}
+\begin{icmlauthorlist}
+\icmlauthor{Ann Able}{eth}
+\icmlauthor{Bob Baker}{eth,lab}
+\end{icmlauthorlist}
+\icmlaffiliation{eth}{Department of Computer Science, Univ A, City A}
+\icmlaffiliation{lab}{Lab B, City B}
+\icmlcorrespondingauthor{Ann Able}{ann@a.edu}
+\vskip 0.3in
+]
+\printAffiliationsAndNotice{}
+Text.
+\end{document}

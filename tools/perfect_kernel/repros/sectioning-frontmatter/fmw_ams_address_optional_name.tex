@@ -1,0 +1,19 @@
+% shape:   amsart `\address[Name]{…}`
+% witness: 2212.14330, 2408.09569
+% oracle:  pdflatex 0 errors; "(Ann Able) Department of …"
+% engines: rust rc6: each address its author (the optional name not repeated)
+% expect:  0 errors, 0 warnings; each address its author
+% status:  GREEN (rc6 fe76f5268af); guard perfect_kernel_batchfmwitness::author_segmentation_witnesses
+% preload: ar5iv.sty
+\documentclass{amsart}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\address[Ann Able]{Department of Mathematical Sciences, Univ A, City A}
+\email{ann@a.edu}
+\author{Bob Baker}
+\address[Bob Baker]{Graduate School of Mathematics, Univ B, City B}
+\email{bob@b.edu}
+\maketitle
+Text.
+\end{document}

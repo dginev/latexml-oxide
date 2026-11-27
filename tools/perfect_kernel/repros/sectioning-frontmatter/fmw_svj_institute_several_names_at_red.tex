@@ -1,0 +1,21 @@
+% shape:   svjour3 one `\institute{A \and B \and C \at place \\ \email{a, c}}`
+% witness: 2010.08109
+% oracle:  pdflatex (with 1301.5787's own svjour3 file; TL 2025 ships none) 0 errors; "A. Able · B. Baker · C. Cole /
+%          Department of Physics … / E-mail: ann@a.edu, cat@a.edu"
+% engines: rust rc6: Ann the e-mail only, Bob nothing, Cat the place; a nameless creator with affiliations 'A. Able',
+%          'B. Baker'
+% expect:  0 errors, 0 warnings; every name the place; ann@ Ann's, cat@ Cat's; no nameless creator
+% status:  RED (rc6 fe76f5268af); ruling: svjour3's `\at` names its institute's authors; the `\and` inside the
+%          institute separates those names
+% moves:   post-merge
+% preload: ar5iv.sty
+\documentclass{svjour3}
+\begin{document}
+\title{T}
+\author{Ann Able \and Bob Baker \and Cat Cole}
+\institute{A. Able \and B. Baker \and C. Cole \at
+Department of Physics, Univ A, City A\\
+\email{ann@a.edu, cat@a.edu}}
+\maketitle
+Text.
+\end{document}

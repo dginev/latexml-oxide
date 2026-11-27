@@ -1,0 +1,14 @@
+% shape:   `\and` columns, each name over its affiliation and e-mail lines
+% witness: synthetic (kernel `\and` columns)
+% oracle:  pdflatex 0 errors; two columns: name / Univ / address
+% engines: rust rc6: each column its author
+% expect:  0 errors, 0 warnings; each column its author
+% status:  GREEN (rc6 fe76f5268af); guard perfect_kernel_batchfmwitness::author_segmentation_witnesses
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able\\ Univ A\\ \texttt{ann@a.edu} \and Bob Baker\\ Univ B\\ \texttt{bob@b.edu}}
+\maketitle
+Text.
+\end{document}

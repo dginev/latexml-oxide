@@ -1,0 +1,17 @@
+% shape:   marked names and their marked affiliations on ONE line
+% witness: ADV_TEAMAUTH2 probe (round-1 regression: an affiliation lost)
+% oracle:  pdflatex 0 errors; "Ann Able1, Bob Baker2, 1Univ A, 2Robotics Group"
+% engines: rust rc6: Ann Univ A, Bob Robotics Group; Bob's mark-only note reads mark="2,1"
+% expect:  0 errors, 0 warnings; Bob's printed mark is 2 alone: Ann note mark 1 + Univ A, Bob note mark 2 + Robotics
+%          Group
+% status:  RED (rc6 fe76f5268af); ruling: the mark rule (charter 4, OD #1053): a note carries the mark it prints; `1`
+%          labels the next item, not Bob
+% moves:   post-merge
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$, Bob Baker$^2$, $^1$Univ A, $^2$Robotics Group}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,15 @@
+% shape:   an unknown class: marked names over marked affiliation lines
+% witness: int158a lesson (the OmniBus path)
+% oracle:  pdflatex stops on the missing class (invalid by design: the OmniBus path); as article 0 errors: "Ann Able1,
+%          Bob Baker2 / 1Univ A, City A / 2Univ B, City B"
+% engines: rust rc6: each name its marked line, mark-only notes 1 and 2
+% expect:  0 errors, 1 warning (the missing class); each name its marked line
+% status:  GREEN (rc6 fe76f5268af); guard perfect_kernel_batchfmwitness::author_segmentation_witnesses
+% preload: ar5iv.sty
+\documentclass{nosuchclass}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{2}$\\ $^{1}$Univ A, City A\\ $^{2}$Univ B, City B}
+\maketitle
+Text.
+\end{document}

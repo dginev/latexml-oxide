@@ -1,0 +1,16 @@
+% shape:   each name followed by its parenthesised institution
+% witness: synthetic (TEAMAUTH fix1 rule 5's `Ann Able (MIT)` parenthetical)
+% oracle:  pdflatex 0 errors; "Ann Able (Univ A) and Bob Baker (Univ B)"
+% engines: rust rc6: names 'Ann Able (Univ A)', 'Bob Baker (Univ B)'
+% expect:  0 errors, 0 warnings; names Ann Able, Bob Baker; each parenthesis that name's affiliation (Univ A / Univ B)
+% status:  RED (rc6 fe76f5268af); ruling: open (charter silent; a parenthetical holding an institution word read as
+%          that name's affiliation)
+% moves:   post-merge
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able (Univ A) and Bob Baker (Univ B)}
+\maketitle
+Text.
+\end{document}

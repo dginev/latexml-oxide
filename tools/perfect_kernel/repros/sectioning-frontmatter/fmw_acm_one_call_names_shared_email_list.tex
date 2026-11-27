@@ -1,0 +1,21 @@
+% shape:   acmart three names in one `\author`, one affiliation, a `{a,c}@host, b@other` list
+% witness: 1911.01005
+% oracle:  pdflatex 0 errors; "Ann Able, Bob Baker*, Cat Cole"
+% engines: rust rc6: every name the affiliation; addresses by spelling
+% expect:  0 errors, 0 warnings; every name the affiliation; addresses by spelling
+% status:  GREEN (rc6 fe76f5268af); guard perfect_kernel_batchfmwitness::author_segmentation_witnesses
+% preload: ar5iv.sty
+\documentclass[sigconf]{acmart}
+\setcopyright{none}
+\settopmatter{printacmref=false}
+\begin{document}
+\title{T}
+\author{Ann Able, Bob Baker$^*$, Cat Cole}
+\affiliation{\institution{Department of Computer Science, Univ A}\country{USA}}
+\email{{ann,cat}@a.edu, bob@b.com}
+\begin{abstract}
+A.
+\end{abstract}
+\maketitle
+Text.
+\end{document}

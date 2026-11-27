@@ -1,0 +1,14 @@
+% shape:   `\&` between two names, a shared line
+% witness: 1412.2470 (`\&` between names, here in article)
+% oracle:  pdflatex 0 errors; "Ann Able & Bob Baker / Univ X"
+% engines: rust rc6: two authors sharing Univ X
+% expect:  0 errors, 0 warnings; two authors sharing Univ X
+% status:  GREEN (rc6 fe76f5268af); guard perfect_kernel_batchfmwitness::author_segmentation_witnesses
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able \& Bob Baker\\ Univ X}
+\maketitle
+Text.
+\end{document}

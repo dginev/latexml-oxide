@@ -1,0 +1,19 @@
+% shape:   amsart: both `\author`s first, then address+email pairs
+% witness: 1110.0141
+% oracle:  pdflatex 0 errors; addresses at the end, in order
+% engines: rust rc6: each pair its spelled author
+% expect:  0 errors, 0 warnings; each address+email the author its address spells
+% status:  GREEN (rc6 fe76f5268af); guard perfect_kernel_batchfmwitness::author_segmentation_witnesses
+% preload: ar5iv.sty
+\documentclass{amsart}
+\begin{document}
+\title{T}
+\author[Able]{Ann Able}
+\author[Baker]{Bob Baker}
+\address{Department of Mathematics, Univ A, City A}
+\email{aable@a.edu}
+\address{Department of Mathematics, Univ B, City B}
+\email{bbaker@b.edu}
+\maketitle
+Text.
+\end{document}

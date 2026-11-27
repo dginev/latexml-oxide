@@ -1,0 +1,21 @@
+% shape:   IEEEtran `\IEEEauthorrefmark` names; two marked blocks, an `Email:` list line
+% witness: 1408.1688
+% oracle:  pdflatex 0 errors; two marked address blocks
+% engines: rust rc6: by marks; each e-mail its spelled author
+% expect:  0 errors, 0 warnings; by marks; e-mails by spelling
+% status:  GREEN (rc6 fe76f5268af); guard perfect_kernel_batchfmwitness::author_segmentation_witnesses
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able\IEEEauthorrefmark{1},
+Bob Baker\IEEEauthorrefmark{1},
+Cat Cole\IEEEauthorrefmark{2} and
+Dan Dale\IEEEauthorrefmark{1}}
+\IEEEauthorblockA{\IEEEauthorrefmark{1}Computer Science Department\\
+Univ A, City A\\ Email: ann@a.edu; bob@a.edu; dan@a.edu}
+\IEEEauthorblockA{\IEEEauthorrefmark{2}Lab B, City B\\
+Email: cat@b.com}}
+\maketitle
+Text.
+\end{document}

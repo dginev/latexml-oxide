@@ -1,0 +1,20 @@
+% shape:   IEEEtran `\IEEEauthorblockN`/`A` columns joined by `\and`
+% witness: 1506.02686, 1907.07228
+% oracle:  pdflatex 0 errors; two columns
+% engines: rust rc6: each column its author
+% expect:  0 errors, 0 warnings; each column its author
+% status:  GREEN (rc6 fe76f5268af); guard perfect_kernel_batchfmwitness::author_segmentation_witnesses
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able}
+\IEEEauthorblockA{Machine Learning Department\\
+Univ A\\ City A\\ \texttt{ann@a.edu}}
+\and
+\IEEEauthorblockN{Bob Baker}
+\IEEEauthorblockA{Statistics Department\\
+Univ A\\ City A\\ \texttt{bob@a.edu}}}
+\maketitle
+Text.
+\end{document}

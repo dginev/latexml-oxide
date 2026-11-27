@@ -1,0 +1,16 @@
+% shape:   amsart `\address{Name\\ lines}`
+% witness: 2007.05260
+% oracle:  pdflatex 0 errors; "Ann Able / School of … / Univ A / City A"
+% engines: rust rc6: one address, its lines and the printed name kept
+% expect:  0 errors, 0 warnings; one address, as printed
+% status:  GREEN (rc6 fe76f5268af); guard perfect_kernel_batchfmwitness::author_segmentation_witnesses
+% preload: ar5iv.sty
+\documentclass{amsart}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\address{Ann Able\\ School of Mathematical Sciences\\ Univ A\\ City A}
+\email{ann@a.edu}
+\maketitle
+Text.
+\end{document}

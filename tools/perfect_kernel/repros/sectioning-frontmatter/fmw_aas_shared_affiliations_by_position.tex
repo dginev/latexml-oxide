@@ -1,0 +1,23 @@
+% shape:   AASTeX 6.31 consecutive authors sharing two affiliations
+% witness: 2204.06176
+% oracle:  pdflatex (with 2211.09822's own aastex631 file; TL 2025 ships none) 0 errors; "Ann Able1,2, Bob Baker1,2
+%          and Cat Cole3"
+% engines: rust rc6: Ann and Bob both, Cat hers
+% expect:  0 errors, 0 warnings; Ann and Bob both, Cat hers
+% status:  GREEN (rc6 fe76f5268af); guard perfect_kernel_batchfmwitness::author_segmentation_witnesses
+% preload: ar5iv.sty
+\documentclass{aastex631}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\author{Bob Baker}
+\affiliation{Nobeyama Radio Observatory, City A}
+\affiliation{The Graduate University for Advanced Studies, City B}
+\author{Cat Cole}
+\affiliation{Department of Physics, Univ C, City C}
+\begin{abstract}
+A.
+\end{abstract}
+\section{Intro}
+Text.
+\end{document}

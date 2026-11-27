@@ -1,0 +1,22 @@
+% shape:   REVTeX consecutive `\author`s sharing the affiliations after them
+% witness: 2403.09205, 2105.06854
+% oracle:  pdflatex 0 errors; grouped names over their affiliations
+% engines: rust rc6: Ann and Bob both affiliations, Cat one
+% expect:  0 errors, 0 warnings; Ann and Bob both, Cat one
+% status:  GREEN (rc6 fe76f5268af); guard perfect_kernel_batchfmwitness::author_segmentation_witnesses
+% preload: ar5iv.sty
+\documentclass{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\author{Bob Baker}
+\affiliation{Department of Physics, Univ A, City A}
+\affiliation{Center for Quantum Physics, Univ A, City A}
+\author{Cat Cole}
+\affiliation{Department of Physics, Univ A, City A}
+\begin{abstract}
+A.
+\end{abstract}
+\maketitle
+Text.
+\end{document}

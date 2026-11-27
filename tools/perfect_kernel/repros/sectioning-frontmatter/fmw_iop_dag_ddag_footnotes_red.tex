@@ -1,0 +1,18 @@
+% shape:   iopart `\dag`/`\ddag` marks with `\footnote[n]` e-mails, `\dag`-led addresses
+% witness: hep-th0406174
+% oracle:  pdflatex (with 1306.5608's own iopart file; TL 2025 ships none) 0 errors; "Ann Able††, Bob Baker‡¶",
+%          footnotes † and ¶ with the e-mails
+% engines: rust rc6: addresses by marks; each footnote an unmarked note; 2 Warnings 'markup lost' (\texttt)
+% expect:  0 errors, 0 warnings; 0 warnings; each footnote note carries its printed mark († / ¶)
+% status:  RED (rc6 fe76f5268af); ruling: fixtures 0 W on pdflatex-clean input; the mark rule
+% moves:   post-merge
+% preload: ar5iv.sty
+\documentclass{iopart}
+\begin{document}
+\title{T}
+\author{Ann Able\dag\footnote[1]{e-mail address: \texttt{ann@a.it}},
+Bob Baker\ddag\footnote[5]{e-mail address: \texttt{bob@b.it}}}
+\address{\dag\ Sezione INFN A,\\ City A}
+\address{\ddag\ Department of Physics,\\ Univ B, City B}
+Text.
+\end{document}

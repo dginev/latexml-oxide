@@ -1,0 +1,15 @@
+% shape:   a department group alone in the last `\and` column
+% witness: ADV_TEAMAUTH2 probe (`\and Machine Learning Group`)
+% oracle:  pdflatex 0 errors; "Ann Able  Bob Baker  Machine Learning Group"
+% engines: rust rc6: two authors, the group both names' affiliation
+% expect:  0 errors, 0 warnings; as rc6 (DG ruling 2026-11-27 TEAMAUTH fix1 rule 2: a bare `\and` group column keeps
+%          rc6's shared affiliation)
+% status:  GREEN (rc6 fe76f5268af); guard perfect_kernel_batchfmwitness::author_segmentation_witnesses
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able \and Bob Baker \and Machine Learning Group}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,16 @@
+% shape:   `\thanks{affiliation (\url{email})}` per name, comma-separated
+% witness: 2501.18226
+% oracle:  pdflatex 0 errors; "Ann Able*, Bob Baker†", two notes
+% engines: rust rc6: each name its own note, marks * and †
+% expect:  0 errors, 0 warnings; each name its note, kept whole
+% status:  GREEN (rc6 fe76f5268af); guard perfect_kernel_batchfmwitness::author_segmentation_witnesses
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{hyperref}
+\begin{document}
+\title{T}
+\author{Ann Able\thanks{School of Mathematics, Univ X, City (\url{ann@x.edu})},
+Bob Baker\thanks{Graduate School of Engineering, Univ Y, Town (\url{bob@y.edu})}}
+\maketitle
+Text.
+\end{document}
