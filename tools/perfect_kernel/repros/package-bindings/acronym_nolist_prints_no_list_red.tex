@@ -1,0 +1,26 @@
+% mechanism: acronym.sty's `nolist` (:79 `\AC@nolisttrue\AC@nohyperlinkstrue`) makes `{acronym}` open no list (:261, :271, :277)
+%   and `\AC@acro` print no `\item` while still writing `\newacro` (:291-293), so the acronyms stay defined and nothing is listed.
+%   Perl's `{acronym}` (acronym.sty.ltxml:180-189) always emits a visible `ltx:glossary`/`glossarylist`; ours sets the
+%   `\ifAC@nolist` switch (`acronym_sty.rs` `DeclareOption!("nolist")`) but the environment never tests it. PERL-ORIGIN.
+%   Fix plan: under `\ifAC@nolist`, `\acro` → the `\lx@acro@@def` path (`ltx:glossarydefinition`, Meta: kept for `\ac`'s text,
+%   not shown) and no glossary list; no backmatter note.
+% witness: 2504.20545 (`\usepackage[nolist,nohyperlinks]{acronym}`; 32 entries listed, the PDF lists none); 1309.2752, 1601.07124,
+%   2108.09753, 2302.14661, 2609.31611; ~52/30k
+% oracle:  pdflatex (TL 2025, -no-shell-escape, two passes): "ultra-wideband (UWB) radios; UWB again." — no list
+% engines: rust INT081TR and Perl: E=0, three visible <glossaryentry> (UWB, ESA, RTT) in <glossary lists="acronym">
+% expect:  0 errors; no ltx:glossary; three ltx:glossarydefinition (UWB, ESA, RTT); the text "ultra-wideband (UWB) radios; UWB again."
+% status:  RED
+% moves:   post-merge (row R ACRONOLIST; DG: TeX's `nolist` vs the charter's "generated content follows Perl")
+\documentclass{article}
+% 2504.20545: [nolist,nohyperlinks]{acronym}; its {acronym} list (in the preamble) is never printed.
+\usepackage[nolist]{acronym}
+\begin{acronym}
+\acro{UWB}{ultra-wideband}
+\acro{ESA}{European Space Agency}
+\end{acronym}
+\begin{document}
+\ac{UWB} radios; \ac{UWB} again.
+\begin{acronym}
+\acro{RTT}{round-trip time}
+\end{acronym}
+\end{document}

@@ -89,7 +89,7 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (445 items on 2026-11-27 on `int/towards_v0_8_1`: 445 open, weight 973, 36 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (449 items on 2026-11-27 on `int/towards_v0_8_1`: 449 open, weight 981, 36 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
 
 
   - ODR6 — OD ruling 12 (recorded in OD #449): `dump_reader.rs`'s "add-only" docstrings (:365, :574) corrected, then a removal trial of the skip lists against CLAUDE.md rule 2; 1
@@ -1431,22 +1431,43 @@ Rules that keep this file honest and mergeable:
     RED `ieeetran_textwidth_red`; the aspect distortion → IMGINTENT); converted SVGs lose their text labels and
     are mis-scaled (1605.07806; root-caused: labels kept, the SVG is drawn at its file size, not the target — RUST-ONLY, the PDF→SVG
     path writes the target only on `<object width height>`, which ar5iv.css's `width:auto` overrides; 7 % of calibration papers —
-    SVGSCALE writer); an image overflows its 243-px figure onto a neighbour (hep-ex0703011); "Latin-1 bytes in the
+    SVGSCALE writer); an image overflows its 243-px figure onto a neighbour (hep-ex0703011 → PANELOVERFLOW, ar5iv.css); "Latin-1 bytes in the
     bibliography become U+FFFD" REFUTED (1107.2598's own source carries UTF-8 U+FFFD, transcoded before submission; arXiv's
     PDF drops the letters too; Latin-1/9/2, cp1252, ansinew and undeclared Latin-1 all decode right) — FFFDWARN: a Warning for a
     U+FFFD the author typed (`mouth.rs` `decode_bytes`, valid-UTF-8 branch; ~1 % of sources) awaits a ruling, Perl turns it into a
-    space with a misleading "input isn't valid" Info (`Core/Mouth/file.pm:72-77`); plain-TeX math without alttext (1803.09981). RC6's word bags (13 real of 45 flags) add: a proof and the references lost after
+    space with a misleading "input isn't valid" Info (`Core/Mouth/file.pm:72-77`); plain-TeX math without alttext (1803.09981 → EQNOALT: only its `\leqno` tag). RC6's word bags (13 real of 45 flags) add: a proof and the references lost after
     10 Errors (1706.02701; root-caused: our mathpartir stub passes `\inferrule`'s conclusion `\\` raw into `\frac`, which ends a
     table row with math open — GENUINE-RUST-ONLY, writer MPRCONCL; 2403.15122's undefined `\mpr@inferrule` is a separate root); the author block missing (2608.05442 → AUTHGDEF); revtex footnotes printed again as
     bibliography notes (1512.02132); unused acronyms printed (2504.20545); "a table row doubled" REFUTED (astro-ph0702279: a rotated deluxetable's `\tablerefs` runs off arXiv's page 20, so the
     PDF's visible text lacks words our HTML keeps — a RENDERCMP false flag, `PDF_OFFPAGE` in the kit); table notes
-    (astro-ph0108146); an uncited entry printed (1803.09981); acmart's CCS block and `\Description` text (2009.11100); 3
+    (astro-ph0108146); "an uncited entry printed" REFUTED (1803.09981: arXiv serves v3, `/data` holds the 2018 source with 10 entries — version
+    skew); acmart's CCS block and `\Description` text (2009.11100); 3
   - SUBTYPEAS — subcaption treats a sub-float as `sub\@captype` and caption's hook steps `\@captype` (subcaption.sty:97-106,
     caption.sty:642): a `{subtable}` in a figure or a `{subfigure}` in a table is the OUTER float's sub-float. Ours steps or labels
     from the inner type's counter: a wrong sub-label, the wrong counter, subcaption's Warning missing (2310.08672's appendix figures
     still 8→10 after FIGNUM); a sub-table in a sub-figure after a table with sub-tables joins that table's ids ("(c)"). REDs
     `captions-floats/subtable_in_a_figure_is_a_subfigure_red`, `…/subtable_in_a_subfigure_after_a_table_with_subtables_red`; 0 of
     2,313 subcaption papers carry the nested shape; 1
+  - FOOTINBIB — REVTeX 4.1/4.2 with aps/aip/sor/aapm and numeric citations moves footnotes into the bibliography (`footinbib`,
+    default on: aps4-1.rtx:612, aps4-2.rtx:649; `\make@footnote@endnote` revtex4-1.cls:7231-7239 makes `\footnote` a `\cite{Note<n>}`);
+    Perl ignores the option (revtex4-1.cls.ltxml:27), so the text is printed TWICE — a footnote and the `.bbl`'s Note entry
+    (PERL-ORIGIN, silent). ~207/30k (1512.02132). DG to choose: follow TeX (the footnote becomes a cite of its note) or keep the
+    footnote and drop the Note bibitem; fix plan in `agent_reports/BRIEF_RC_FOOTINBIB_2026-11-27.md`'s root-causer report (MED; only
+    when the bibliography comes from the `.bbl`). RED `class-bindings/revtex_footinbib_prints_a_footnote_once_red`; 3
+  - ACRONOLIST — acronym's `nolist` prints no list (acronym.sty:79, :261-293); Perl's and our `{acronym}` always emit a visible
+    glossary (`acronym_sty.rs` sets `\ifAC@nolist`, never tests it): 2504.20545 lists 32 entries its PDF never shows (PERL-ORIGIN).
+    ~52/30k. EASY: under `nolist` the entries become Meta `ltx:glossarydefinition` (`\ac` keeps its text), no list — DG (the
+    charter's "generated content follows Perl"). `printonlyused` (8/30k) deferred: post lists only referenced entries but reads
+    other roles and sorts. RED `package-bindings/acronym_nolist_prints_no_list_red`; 2
+  - EQNOALT — every `\eqno`/`\leqno` tag that is math has an `ltx:Math` with no `tex=`, so its HTML `<math>` has no alttext
+    (Perl the same: `add_body_TeX` reads a `body` the `\lx@eqno` whatsit lacks; ours tex_math.rs:921-946, :1956-1961). Surpass
+    (accessibility; math parked — DG): give the whatsit its digested `#1` as body. RED `math-parse/eqno_tag_math_carries_its_tex_red`;
+    1803.09981; 1
+  - PANELOVERFLOW — (ar5iv.css) an image in a `\parbox` inside a minipage/subfigure panel renders at its natural size over the
+    next panel: the generic `.ltx_img_*{width:auto}` checks two ancestor levels for a flex cell and outranks the panel rule
+    (specificity 0,3,2 vs 0,2,0), and the parbox stays fixed-width (hep-ex0703011: 9 images; 9/206 calibration papers exposed). Shared
+    with Perl; the converter is right. Tested patch `/home/deyan/data/pk_wt/scratch_rcOVERFLOW/fix/ar5iv.css` — an ar5iv-css PR
+    with IMGCAP320 and the scalebox exemption, DG reviews CSS; 2
   - AUTHGDEF — a class/style that fills `\@author` by `\gdef` and prints it from its own `\@maketitle`, with no `\author` call
     (ismir.sty `\oneauthor`; icmc2025, LaurentianThesis.cls): no `ltx:creator`, the words counted by `Warning:frontmatter:unclaimed`;
     Perl the same, silent (PERL-ORIGIN). Fix plan (EASY, MED risk): `hand_offtable_stores` hands a raw `\@author` on as

@@ -1,0 +1,15 @@
+\begin{thebibliography}{2}%
+\makeatletter
+\providecommand \BibitemOpen [0]{}%
+\providecommand \bibitemStop [0]{.}%
+\providecommand \bibitemNoStop [0]{.\EOS\space}%
+\providecommand \EOS [0]{\spacefactor3000\relax}%
+\providecommand \BibitemShut  [1]{\csname bibitem#1\endcsname}%
+\let\auto@bib@innerbib\@empty
+\bibitem [{Note1()}]{Note1}%
+  \BibitemOpen
+  \bibinfo {note} {Footnote prose here.}\BibitemShut {Stop}%
+\bibitem [{Ref1()}]{Ref1}%
+  \BibitemOpen
+  \bibinfo {author} {A.~Author},\ \bibinfo {journal} {J}\BibitemShut {NoStop}%
+\end{thebibliography}%

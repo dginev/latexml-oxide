@@ -1,0 +1,21 @@
+% mechanism: REVTeX 4.1/4.2 moves footnotes into the bibliography for aps/aip/sor/aapm with numeric citations (`footinbib`,
+%   default on in aps4-1.rtx:612, aps4-2.rtx:649; `\make@footnote@endnote` revtex4-1.cls:7231-7239 makes `\footnote` a
+%   `\cite{Note<n>}` and writes its text to `\jobname Notes.bib`, so the `.bbl` carries `Note<n>` entries). Perl ignores the
+%   option (revtex4-1.cls.ltxml:27 lists `footinbib nofootinbib` as ignorable) and keeps the kernel `\footnote`, so the text is
+%   printed twice: as a footnote and again as the `.bbl`'s Note entry. Ours copies Perl (`revtex4_1_cls.rs:9`). PERL-ORIGIN.
+% witness: 1512.02132 (revtex4-1 aps,prl; three footnotes doubled); ~207/30k papers (7.8 % of revtex 4.1/4.2 carry Note entries,
+%   less 36 with `nofootinbib`, where the PDF also prints both)
+% oracle:  pdflatex (TL 2025, -no-shell-escape): "Body text.[1] More text [2]." and "[1] Footnote prose here. [2] A. Author, J." —
+%   no footnote
+% engines: rust INT081TR and Perl: E=0, <note role="footnote">Footnote prose here.</note> AND <bibitem key="Note1">…Footnote prose
+%   here.…</bibitem>
+% expect:  the text once — per TeX: a <cite> of Note1 where the footnote stood, the bibitem kept, no footnote note (DG to choose
+%   between this and keeping the footnote while dropping the Note bibitem: row R FOOTINBIB)
+% status:  RED
+% moves:   post-merge (row R FOOTINBIB)
+\documentclass[aps,prl]{revtex4-1}
+\begin{document}
+\title{T}\maketitle
+Body text.\footnote{Footnote prose here.} More text~\cite{Ref1}.
+\bibliography{revtex_footinbib_prints_a_footnote_once_red}
+\end{document}

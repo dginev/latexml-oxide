@@ -1,0 +1,16 @@
+% mechanism: `\lx@eqno` (Perl TeX_Math.pool.ltxml:1268-1270; ours tex_math.rs:1956-1961) builds its tag's `ltx:Math` inside its
+%   own template with `reversion => ''`; the Math afterClose hook `add_body_TeX` (Perl :175-186; ours tex_math.rs:921-946) writes
+%   `tex` only from the box's `body` property, which the `\lx@eqno` whatsit lacks — so every `\eqno`/`\leqno` tag's math has no
+%   `tex=` and its HTML `<math>` no `alttext` (an accessibility gap). PERL-ORIGIN; a surpass (row R EQNOALT). Fix plan: give the
+%   whatsit a `body` of its digested `#1` in after_digest; `reversion => ''` keeps the display's own `tex=` unchanged.
+% witness: 1803.09981 (`omega-n-y.tex:62`, `$$…\leqno{(H_\varepsilon)}$$`: 1 of its 242 maths without alttext); `\eqno|\leqno`
+%   in 1,874 of 35,942 papers (uses, an upper bound)
+% oracle:  pdftex (TL 2025, -no-shell-escape) 0 errors: "(Hε)  x=1" and "y=2  (1.3)"
+% engines: rust INT081TR and Perl: E=0; the tag maths `<Math text="H _ varepsilon">`, `<Math text="1.3">` with no `tex`; HTML
+%   `<math display="inline">` with no `alttext` (the displays carry `alttext="x=1"`, `"y=2"`)
+% expect:  every `ltx:tag/ltx:Math` with a non-empty `@tex` (`(H_\varepsilon)`-like, `(1.3)`); every HTML `<math>` with alttext
+% status:  RED
+% moves:   post-merge (row R EQNOALT; surpass — DG)
+$$x=1\leqno(H_\varepsilon)$$
+$$y=2\eqno(1.3)$$
+\bye
