@@ -1362,7 +1362,8 @@ Rules that keep this file honest and mergeable:
     biblatex links) whitelisted and listed for rulings. Study `agent_reports/ADV_RENDERCMP_2026-11-26.md` (prototype flagged
     #220, #408, #127, #419 at the right object; 8 false flags on 5 clean papers from two named mechanisms). Batches: RC1
     render (DevTools pipe client), RC2 pdf (stext tokens, drawing-operator regions, validity check), RC3 compare, RC4 A/B
-    hook, in a workspace tool crate; open: the crate and the `command-fds` dependency (DG); 5
+    hook — in the shared kit, NOT in this repository (DG 2026-11-26: development comparison tools are not checked in at
+    present); 5
   - NATBIBRES — residuals of the natbib apalike-label fix (OD #1161; review 2026-11-24). (a) An authoryear label with an
     empty author, `\bibitem[, 1998]{l}`, prints the key as the author: "(l, 1998)" / "l (1998)", where pdflatex prints "(, 1998)" /
     "(1998)". It is the general fallback for an entry with no authors; synthetic, with no corpus witness; RED repro first.
