@@ -16,6 +16,12 @@ LoadDefinitions!({
   // dmtcs-specific setters below are defined AFTER and override OmniBus.
   // Witness 1904.12329 (`\received{}`/`\revised{}`/`\acknowledgements`).
   LoadClass!("OmniBus");
+  // dmtcs-episciences.cls:304-316 (1601.03710): `\maketitle` marks the title block's notes in `\fnsymbol` and resets the
+  // counter after it.
+  latexml_package::engine::latex_constructs::declare_fnsymbol_title_block(
+    "dmtcs-episciences",
+    None,
+  )?;
   // dmtcs-episciences.cls loads no amsmath (1904.05533's, 2209.09223's copies): amsmath's commands for papers that use
   // them unloaded, its "Old form" error once the paper loads it; the paper's copy decides
   // (`amsmath_sty::require_amsmath_beyond_original`, KNOWN_PERL_ERRORS #993).

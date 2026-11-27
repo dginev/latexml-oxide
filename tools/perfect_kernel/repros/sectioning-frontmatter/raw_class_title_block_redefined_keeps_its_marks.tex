@@ -1,0 +1,23 @@
+% mechanism: a raw class over the article binding is served by it only where the rest of its file leaves the title
+%   block as the binding made it (`settle_title_block_after_class_load`: `\maketitle`'s refusal, `\@maketitle`,
+%   `\thefootnote`, `\@makefnmark`, `\thanks`, `\footnotemark`); this one's own `\maketitle` prints no marks
+%   (IEEEtranTCOM.cls:3399's `\def\thefootnote{}` shape), so article's fnsymbol block is not declared: the notes stay
+%   unmarked. The class with nothing after its `\LoadClassWithOptions{article}` is served (scrarticle's,
+%   footnoterecall_counter_defined_by_an_earlier_creator)
+% witness: synthetic (the IEEE-clone counter-examples of row R OMNT: IEEEtranTCOM 1912.13300, ieeecolor2)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: "Ann One Bob Two" unmarked, "The University"; "Body1"
+% engines: rust INT081EP, OMNT 0 errors, 0 warnings, both notes unmarked, body 1
+% expect:  0 errors, 0 warnings; Ann One's and Bob Two's notes with no mark, the body's note 1
+% status:  GREEN (INT081EP, OMNT)
+\begin{filecontents*}[overwrite]{plainnomark.cls}
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesClass{plainnomark}
+\LoadClass{article}
+\renewcommand\maketitle{\par\begingroup
+  \def\thefootnote{}\def\@makefnmark{}%
+  \@maketitle\@thanks\endgroup
+  \setcounter{footnote}{0}\global\let\thanks\relax\global\let\maketitle\relax}
+\end{filecontents*}
+\documentclass{plainnomark}
+\title{T}\author{Ann One\thanks{The University} \and Bob Two\footnotemark[1]}
+\begin{document}\maketitle Body\footnote{Body note.}.\end{document}

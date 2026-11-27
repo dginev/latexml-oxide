@@ -7,7 +7,9 @@
 % status:   RED -> GREEN (MARKSAFEb: perfect_kernel_batchshmark::a_mark_whose_glyph_is_unknown_prints_none); ∗ and † RED
 %   (row R SHAUTO)
 % preload:  ar5iv.sty
-\documentclass{scrartcl}
+% class:   proc (proc.cls:97-110 `\maketitle` sets `\fnsymbol`, no binding declares it) since OMNT, whose scrartcl
+%          binding declares its marks (koma_title_footnotemark_prints_fnsymbol); pdflatex the same under proc
+\documentclass{proc}
 \title{T}
 \author{Ann Able\footnotemark[1] \and Bob Baker\footnotemark[2]}
 \date{}

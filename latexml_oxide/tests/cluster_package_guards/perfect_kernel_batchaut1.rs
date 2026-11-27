@@ -107,28 +107,28 @@ fn a_macro_of_names_is_read_as_its_inline_twin() {
         r#"<creator before="  " role="author"><personname>Bob Baker</personname><contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ B</contact></creator>"#,
       ]),
     },
-    // (the macro printing two names and a note, `cl9`'s overlap shape until AUT1: each name its creator, Univ Z both's)
+    // (the macro printing two names and a note, `cl9`'s overlap shape until AUT1: each name its creator, Univ Z both's;
+    // OMNT: the note's mark ∗, as pdflatex, scrartcl's binding declaring its title block)
     Row {
       repro:    repro!("sectioning-frontmatter/cl9_shared_macro_note"),
       files:    &[],
       counts:   (0, 0),
       lines:    &[],
       creators: Creators::Whole(&[
-        r#"<creator role="author"><personname><text fontsize="91%">Ann Able</text></personname><note class="ltx_note_frontmatter ltx_thanks_note" role="thanks"><text fontsize="91%">Univ X.</text></note><contact class="ltx_author_line" name="Affiliation: " role="affiliation"><text fontsize="91%">Univ Z</text></contact></creator>"#,
+        r#"<creator role="author"><personname><text fontsize="91%">Ann Able</text></personname><note class="ltx_note_frontmatter ltx_thanks_note" mark="*" role="thanks"><text fontsize="91%">Univ X.</text></note><contact class="ltx_author_line" name="Affiliation: " role="affiliation"><text fontsize="91%">Univ Z</text></contact></creator>"#,
         r#"<creator before="  " role="author"><personname><text fontsize="91%">Bob Baker</text></personname><contact class="ltx_author_line" name="Affiliation: " role="affiliation"><text fontsize="91%">Univ Z</text></contact></creator>"#,
       ]),
     },
     Row {
       repro:    repro!("sectioning-frontmatter/cl9_shared_macro_note_and_marks"),
       files:    &[],
-      // (scrartcl's own `\maketitle` prints the bare `\footnotemark`s † and ‡, no "1" and "2": their glyph unknown here,
-      // their notes never placed, each mark dropped and counted — MARKSAFEb, `insert::count_unknown_marks`; never an
-      // empty mark, revMTREDUCEc S2)
-      counts:   (0, 2),
+      // (scrartcl's `\maketitle` prints the bare `\footnotemark`s † and ‡, as pdflatex "Ann Able,†∗ Bob Baker‡": OMNT
+      // declares its title block, so each is its name's mark; MARKSAFEb dropped and counted them, glyph unknown)
+      counts:   (0, 0),
       lines:    &[],
       creators: Creators::Whole(&[
-        r#"<creator role="author"><personname><text fontsize="91%">Ann Able</text></personname><note class="ltx_note_frontmatter ltx_thanks_note" role="thanks"><text fontsize="91%">Univ X.</text></note><contact class="ltx_author_line" name="Affiliation: " role="affiliation"><text fontsize="91%"> Univ Z</text></contact></creator>"#,
-        r#"<creator before="  " role="author"><personname><text fontsize="91%">Bob Baker</text></personname><contact class="ltx_author_line" name="Affiliation: " role="affiliation"><text fontsize="91%"> Univ Z</text></contact></creator>"#,
+        r#"<creator role="author"><personname><text fontsize="91%">Ann Able</text></personname><note mark="†" role="footnotemark"><tags><tag>†</tag><tag role="refnum">†</tag><tag role="typerefnum">footnote †</tag></tags></note><note class="ltx_note_frontmatter ltx_thanks_note" mark="*" role="thanks"><text fontsize="91%">Univ X.</text></note><contact class="ltx_author_line" name="Affiliation: " role="affiliation"><text fontsize="91%"> Univ Z</text></contact></creator>"#,
+        r#"<creator before="  " role="author"><personname><text fontsize="91%">Bob Baker</text></personname><note mark="‡" role="footnotemark"><tags><tag>‡</tag><tag role="refnum">‡</tag><tag role="typerefnum">footnote ‡</tag></tags></note><contact class="ltx_author_line" name="Affiliation: " role="affiliation"><text fontsize="91%"> Univ Z</text></contact></creator>"#,
       ]),
     },
     // (a kept mark past a gap or a comma shown as a request; the glued ones' italic is RED

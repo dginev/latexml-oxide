@@ -3,7 +3,9 @@
 % witness:  sibling of review revMARKSAFE / ADVGEN I-3
 % oracle:   pdflatex 0 errors; "Ann Able∗ Bob Baker", footnote "∗ Note A."
 % engines:  rust MARKSAFEb merge 16e5e53b4a4 = 0 errors, 0 Warnings; Ann's contact role=note "Note A."
-% expect:   0 errors, 0 Warnings; the contact; HTML no glyph
+% omnt:     OMNT: scrartcl's title block is declared (koma_title_footnotemark_prints_fnsymbol), so the name's
+%           `\footnote`, its `\thanks` there, is the note ∗, as pdflatex; the unbound path is the proc repros
+% expect:   0 errors, 0 Warnings; Ann's note ∗ "Note A."; HTML the ∗
 % status:   GREEN (perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
 % preload:  ar5iv.sty
 \documentclass{scrartcl}

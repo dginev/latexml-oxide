@@ -403,7 +403,7 @@ const ROWS: &[Row] = &[
             <para xml:id="S0.I2.i2.p1"><p>raw2</p></para></item></itemize></bibblock></bibitem>"#,
     )],
   ),
-  // The control of footnoterecall_counter_defined_by_an_earlier_creator_red: B's `\footnoterecall` reads A's counter
+  // The control of footnoterecall_counter_defined_by_an_earlier_creator: B's `\footnoterecall` reads A's counter
   // (the block written in order, 1 counted Warning); no Error since `\value` is `\csname` (2407.13730, 2606.19583).
   (
     None,

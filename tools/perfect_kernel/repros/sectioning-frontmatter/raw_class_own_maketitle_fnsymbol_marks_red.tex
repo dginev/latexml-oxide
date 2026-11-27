@@ -1,0 +1,14 @@
+% mechanism: a raw class over the article binding whose own `\maketitle` sets `\thefootnote` to `\fnsymbol`
+%   (proc.cls:97-110, LaTeX's own, `\LoadClass{article}`): the lock keeps the binding's `\maketitle`, and the refusal
+%   is a change of the title block (`settle_title_block_after_class_load`), so no glyph is declared and the notes stay
+%   unmarked, the safe side (DG 2026-11-16: a wrong glyph is worse than none); pdflatex prints ∗. A raw class leaving
+%   the title block alone (nih.cls) prints ∗ here too
+% witness: synthetic (proc.cls in TL 2025; the raw-loaded article-derived classes of row R OMNT: paper, jacow, jpsj3)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: "Ann One∗", "Bob Two∗", "∗ The University", "Body1"
+% engines: rust INT081EP, OMNT 0 errors, 0 warnings, both notes unmarked
+% expect:  0 errors, 0 warnings; Ann One's and Bob Two's notes ∗, the body's note 1
+% status:  RED (INT081EP, OMNT)
+% moves:   post-merge (the marks a raw class's own `\maketitle` sets, `read_title_marks_in_force`)
+\documentclass{proc}
+\title{T}\author{Ann One\thanks{The University} \and Bob Two\footnotemark[1]}
+\begin{document}\maketitle Body\footnote{Body note.}.\end{document}

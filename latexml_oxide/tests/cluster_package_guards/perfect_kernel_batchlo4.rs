@@ -131,9 +131,11 @@ fn an_email_call_in_a_note_is_its_owners() {
   let tex = repro!("emit_note_email_calls_are_the_note_owners");
   let (log, xml) = run(tex);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  // (OMNT: the notes' marks ∗ and †, as pdflatex prints them: siamart250211 is answered by the siamart binding, whose
+  // title block is declared)
   let want = [
-    vec!["Ann Able", "email=ann@a.org"],
-    vec!["Bob Baker", "email=cy@b.org", "email=dy@b.org"],
+    vec!["Ann Able", "mark=*", "email=ann@a.org"],
+    vec!["Bob Baker", "mark=†", "email=cy@b.org", "email=dy@b.org"],
     vec!["Cy Cole", "email=ey@c.org", "email=fy@c.org"],
   ];
   assert_eq!(creators(&xml), want);

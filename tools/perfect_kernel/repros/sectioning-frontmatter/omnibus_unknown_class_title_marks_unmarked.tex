@@ -1,0 +1,17 @@
+% mechanism: OmniBus, the fallback for a class with no binding and no file (Perl Package.pm:2717-2728), declares no
+%   fnsymbol title block: it fronts classes whose titles print no such marks (birkjour.cls:1001 `\@setthanks`, the AMS
+%   classes, IEEEtranTCOM.cls:3399 `\def\thefootnote{}`), so the title's notes stay unmarked; only a binding serving the
+%   document's class declares one (`serves_document_class`; the negative control of row R OMNT)
+% witness: 1506.03138 (birkjour), 1912.13300 (IEEEtranTCOM); synthetic shape
+% oracle:  pdflatex (TL 2025, -no-shell-escape, 1506.03138's birkjour.cls beside it) 0 `!`: "Ann One and Bob Two",
+%   unmarked; the note "Univ A." in the author line; "Body1", "1 Body note."
+% engines: rust INT081EP and OMNT 1 warning (missing_file, birkjour.cls absent: OmniBus), both notes unmarked, body 1
+% expect:  0 errors, 1 warning (missing_file); Ann One's and Bob Two's notes with no mark, the body's note 1
+% status:  GREEN (INT081EP, OMNT)
+\documentclass{birkjour}
+\title{T}
+\author{Ann One\thanks{Univ A.} \and Bob Two\footnotemark[1]}
+\begin{document}
+\maketitle
+Body\footnote{Body note.}.
+\end{document}

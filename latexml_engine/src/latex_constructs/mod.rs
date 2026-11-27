@@ -527,6 +527,25 @@ pub(crate) fn footnote_tag<'a>(
 /// load the article binding) is not the document's class, and its own title block is not in force.
 pub fn is_document_class(class: &str) -> bool { lookup_string("lx@document@class") == class }
 
+/// The document class's binding, the first class binding loaded outside any other binding's load
+/// (`ledger::note_binding_load`), and the request it answers: a versioned or prefix fallback's (`fallback_request`:
+/// `siamltex1213` → siamltex, `siamonline220329` → siamonline; Perl Package.pm:2194-2228, :2717-2725), else its own name.
+pub const DOCUMENT_CLASS_BINDING: &str = "lx@document@class@binding";
+/// The request [`DOCUMENT_CLASS_BINDING`] answers.
+pub const DOCUMENT_CLASS_BINDING_REQUEST: &str = "lx@document@class@binding@request";
+/// Set where the document class's binding is the base its raw class file loads (`\LoadClass`) and that file leaves the
+/// binding's title block as the binding made it ([`settle_title_block_after_class_load`]): scrarticle.cls, scrreport.cls.
+const DOCUMENT_CLASS_BINDING_BASE: &str = "lx@document@class@binding@base";
+
+/// Does the binding `class` serve the document's class — its own name, the request a fallback answered with it, or the
+/// base of the document's raw class file that leaves its title block alone (`DOCUMENT_CLASS_BINDING_BASE`)?
+pub fn serves_document_class(class: &str) -> bool {
+  is_document_class(class)
+    || (lookup_string(DOCUMENT_CLASS_BINDING) == class
+      && (lookup_string(DOCUMENT_CLASS_BINDING_REQUEST) == lookup_string("lx@document@class")
+        || lookup_bool(DOCUMENT_CLASS_BINDING_BASE)))
+}
+
 /// The title block's own `\thefootnote`, the one hook a binding declares its title's footnote marks with: defined, the
 /// marks of the notes made in the title, the authors and the date are it (`enter_title_footnotes`), and so are the
 /// frontmatter observer's Mark labels (`observer/rehearsal.rs` `TITLE_FOOTNOTE_HOOK`, OXIDIZED_DESIGN_DIVERGENCES #837,
@@ -540,8 +559,11 @@ pub const TITLE_THEFOOTNOTE: &str = "\\lx@title@thefootnote";
 /// The title block of a class whose `\maketitle` marks its notes in `\@fnsymbol` — article, report and book (and
 /// extarticle, extreport, extbook, copies of them; article.cls:203-205, report.cls:211, book.cls:217, in the
 /// `\if@titlepage` false branch: `titlepage`, report's and book's default (:50-51) and an option of all three, keeps
-/// `\thefootnote`, `titlepage_default` `Some(..)`, the fallback for the binding's `\if@titlepage` after its options), siamltex (siamltex.cls:156-159, no title-page form, `None`) — when
-/// that class is the document's (`is_document_class`): the notes of the title, the authors and the date are marked so,
+/// `\thefootnote`, `titlepage_default` `Some(..)`, the fallback for the binding's `\if@titlepage` after its options);
+/// `None` where it marks them so in every form: siamltex (siamltex.cls:156-159), siamart and siamonline
+/// (siamonline220329.cls:508-513), dmtcs-episciences (dmtcs-episciences.cls:304-307) and KOMA's, on its title page too
+/// (scrartcl.cls:2860, :2985; scrreprt.cls:3081, :3206; scrbook.cls:3084, :3209) — when that binding serves the
+/// document's class (`serves_document_class`): the notes of the title, the authors and the date are marked so,
 /// and the footnote counter is set back to 0 after `\maketitle` (article.cls:190, :223; siamltex.cls:175), so the body's
 /// notes count from 1. The marks are made where the frontmatter digests the fields (`enter_title_footnotes`):
 /// `\footnotemark[1]` in an `\author` prints "∗" as the text `\footnotetext[1]` gives after
@@ -551,7 +573,8 @@ pub const TITLE_THEFOOTNOTE: &str = "\\lx@title@thefootnote";
 /// page too (article.cls:173, :241, report.cls:179, :247, book.cls:185, :253; latex.ltx:17215 `\thanks`): the
 /// block's frontmatter notes step it as the `\maketitle` digests them (`lx_title_counts_footnotes`,
 /// `\lx@title@footnote@step`), and `\footnotemark[\arabic{footnote}]` after an author's `\footnote` is that note's "∗"
-/// (2201.11183 "Zhenan Fan∗1, Huang Fang∗2"; 2111.13260 "Suhani Vora1 *, Noha Radwan1 *").
+/// (2201.11183 "Zhenan Fan∗1, Huang Fang∗2"; 2111.13260 "Suhani Vora1 *, Noha Radwan1 *"; scrarticle's
+/// `\footnoterecall`, 2407.13730, 2606.19583).
 pub fn declare_fnsymbol_title_block(class: &str, titlepage_default: Option<bool>) -> Result<()> {
   // (the class's `\if@titlepage` after its options, as the class reads it to define its `\maketitle`: article.cls:169,
   // report.cls:175, book.cls:181; the binding declares it and its options, its default the fallback)
@@ -564,20 +587,37 @@ pub fn declare_fnsymbol_title_block(class: &str, titlepage_default: Option<bool>
   if let Some(titlepage) = titlepage {
     assign_value(&class_titlepage_key(class), titlepage, Some(Scope::Global));
   }
-  if !is_document_class(class) {
-    return Ok(());
+  if serves_document_class(class) {
+    return enter_fnsymbol_title_block(titlepage);
   }
+  // (the base a raw class file loads, `scrarticle.cls`'s `\LoadClassWithOptions{scrartcl}`: in force unless the rest of
+  // that file redefines the title block, `settle_title_block_after_class_load`)
+  let document_class = lookup_string("lx@document@class");
+  if lookup_string(DOCUMENT_CLASS_BINDING) == class && raw_loaded(&s!("{document_class}.cls")) {
+    let pending = PendingTitleBlock {
+      titlepage,
+      meanings: title_block_meanings(),
+    };
+    assign_value(
+      PENDING_TITLE_BLOCK,
+      Stored::Opaque(Rc::new(pending)),
+      Some(Scope::Global),
+    );
+  }
+  Ok(())
+}
+
+/// [`declare_fnsymbol_title_block`]'s declaration, for the binding serving the document's class.
+fn enter_fnsymbol_title_block(titlepage: Option<bool>) -> Result<()> {
   // (its `\thanks` steps the counter under a title page too, and its `\maketitle` sets it back: article.cls:173, :190,
   // :223, :241, latex.ltx:17215)
   declare_title_footnote_counting(true)?;
-  // (its title marks take no width, `\def\@makefnmark{\rlap{…}}` in the same branch, article.cls:206, report.cls:212,
-  // book.cls:218 — siamltex's, `None`, keep latex.ltx's `\hbox`: the frontmatter's overprints, `mark_ledger::overprints`)
-  if titlepage == Some(false) {
-    assign_value(TITLE_MARKS_ZERO_WIDTH, true, Some(Scope::Global));
-  }
   // (a title page sets no `\thefootnote`, report.cls:176-198: it prints the one in force, which a package may have set
   // (titling's `\thanksmarkseries`) or emptied; no hook, no mark: row R TITLEPAGEMARKS, 1501.00599, 1110.6706)
   if titlepage != Some(true) {
+    // (its title marks take no width where it marks them: article.cls:206, report.cls:212, book.cls:218,
+    // scrartcl.cls:2862 `\rlap`; siamltex.cls:158, dmtcs-episciences.cls:307 `\hbox to\z@`; `mark_ledger::overprints`)
+    assign_value(TITLE_MARKS_ZERO_WIDTH, true, Some(Scope::Global));
     def_macro(
       T_CS!(TITLE_THEFOOTNOTE),
       None,
@@ -589,6 +629,63 @@ pub fn declare_fnsymbol_title_block(class: &str, titlepage_default: Option<bool>
     )?;
   }
   Ok(())
+}
+
+/// The commands a class's title block is made of, whose meanings a raw class file's code after its `\LoadClass` keeps
+/// where the base's title block stays in force (latex.ltx:17215 `\thanks`; article.cls:169-223).
+const TITLE_BLOCK_COMMANDS: [&str; 5] = [
+  "\\@maketitle",
+  "\\thefootnote",
+  "\\@makefnmark",
+  "\\thanks",
+  "\\footnotemark",
+];
+
+/// The meanings of [`TITLE_BLOCK_COMMANDS`], and the `\maketitle` the lock refused last (a refusal is the class file's
+/// `\maketitle`, which the lock keeps from replacing the binding's).
+fn title_block_meanings() -> Vec<Option<Rc<dyn Definition>>> {
+  let mut meanings: Vec<_> = TITLE_BLOCK_COMMANDS
+    .iter()
+    .map(|cs| lookup_definition(&T_CS!(*cs)).ok().flatten())
+    .collect();
+  meanings.push(refused_maketitle());
+  meanings
+}
+
+/// The state key of a raw class file's base's title block, declared while the file loads it
+/// ([`declare_fnsymbol_title_block`]).
+const PENDING_TITLE_BLOCK: &str = "lx@pending@title@block";
+
+/// A base's fnsymbol title block, and the title block's meanings as the base left them.
+struct PendingTitleBlock {
+  titlepage: Option<bool>,
+  meanings:  Vec<Option<Rc<dyn Definition>>>,
+}
+
+/// After the document's class loaded (`\documentclass`): the base binding a raw class file loaded serves it where the
+/// rest of the file left the base's title block alone (scrarticle.cls, scrreport.cls: KOMA's aliases, 2407.13730,
+/// 2606.19583); its fnsymbol title block, if it declared one, is then entered.
+pub fn settle_title_block_after_class_load() -> Result<()> {
+  let Some(Stored::Opaque(pending)) = lookup_value(PENDING_TITLE_BLOCK) else {
+    return Ok(());
+  };
+  assign_value(PENDING_TITLE_BLOCK, Stored::None, Some(Scope::Global));
+  let Ok(pending) = pending.downcast::<PendingTitleBlock>() else {
+    return Ok(());
+  };
+  let kept = title_block_meanings()
+    .iter()
+    .zip(&pending.meanings)
+    .all(|(now, then)| match (now, then) {
+      (Some(now), Some(then)) => Rc::ptr_eq(now, then),
+      (None, None) => true,
+      _ => false,
+    });
+  if !kept {
+    return Ok(());
+  }
+  assign_value(DOCUMENT_CLASS_BINDING_BASE, true, Some(Scope::Global));
+  enter_fnsymbol_title_block(pending.titlepage)
 }
 
 /// The state key under which [`declare_fnsymbol_title_block`] records that the document class's title prints its
@@ -825,9 +922,9 @@ pub fn class_maketitle_in_force() -> bool {
       None => return !document,
     },
   };
-  // (the class file's own, or its copy's)
+  // (the class file's own, or its copy's; the file of a binding serving the class, scrartcl.cls under scrarticle)
   let file = file.rsplit(['/', '\\']).next().unwrap_or_default();
-  file.rsplit_once('.').map_or(file, |(stem, _)| stem) == lookup_string("lx@document@class")
+  serves_document_class(file.rsplit_once('.').map_or(file, |(stem, _)| stem))
     || reaches_class_maketitle(
       body.unlist_ref(),
       &class,

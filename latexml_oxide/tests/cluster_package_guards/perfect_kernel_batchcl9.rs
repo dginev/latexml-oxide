@@ -52,7 +52,8 @@ const OVERLAP: &str = "the block is written whole, as Perl's whole-block creator
 /// which reads a parameterless one unfolded, each name its own run (`perfect_kernel_batchaut1`).
 #[test]
 fn overlapping_names_write_the_block_whole_with_its_note() {
-  let note = "<note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id2\"><text \
+  // (OMNT: the note's mark ∗, as pdflatex prints it: scrartcl's binding declares its title block)
+  let note = "<note class=\"ltx_note_frontmatter ltx_thanks_note\" mark=\"*\" role=\"thanks\" xml:id=\"id2\"><text \
               fontsize=\"91%\" xml:id=\"id2.1\">Univ X.</text></note>";
   let (log, xml) = run(repro!("cl9_shared_parameter_macro_note"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
@@ -68,20 +69,27 @@ fn overlapping_names_write_the_block_whole_with_its_note() {
 /// FN1 (OD #1001; the user's ruling 2026-11-11, which accepts this shape): a block written whole holds its notes
 /// after the joint name, each with its mark, so the name reads without their tags; pin updated (the notes' move
 /// only; the marks' tags lose the `fontsize="110%"` they had against the name's 91 %, set at the creator's size).
-/// MTREDUCEd: under scrartcl's own `\maketitle` the marks' glyph is unknown and nothing answers them, so each is
-/// dropped and counted, never an empty mark (revMTREDUCEc S2); the note kept.
+/// MTREDUCEd: under scrartcl's own `\maketitle` the marks' glyph was unknown, each mark dropped and counted (revMTREDUCEc
+/// S2); OMNT: scrartcl's binding declares its fnsymbol title block, so the bare `\footnotemark`s print † and ‡, as
+/// pdflatex ("Ann Able,†∗ Bob Baker‡"), kept with the note ∗; pin updated (3 Warnings to the overlap's 1).
 #[test]
 fn overlapping_names_keep_the_macros_marks() {
-  // (scrartcl's own `\maketitle` prints the bare `\footnotemark`s † and ‡: their glyph unknown here, their notes never
-  // placed, each mark dropped and counted — MARKSAFEb, `insert::count_unknown_marks`; never an empty mark, revMTREDUCEc S2)
-  let note = "<note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id2\"><text \
+  let mark = |glyph: &str, n: u8| {
+    format!(
+      "<note mark=\"{glyph}\" role=\"footnotemark\" xml:id=\"footnote{n}\"><tags> <tag>{glyph}</tag> <tag \
+       role=\"refnum\">{glyph}</tag> <tag role=\"typerefnum\">footnote {glyph}</tag> </tags></note>"
+    )
+  };
+  let note = "<note class=\"ltx_note_frontmatter ltx_thanks_note\" mark=\"*\" role=\"thanks\" xml:id=\"id2\"><text \
               fontsize=\"91%\" xml:id=\"id2.1\">Univ X.</text></note>";
   let (log, xml) = run(repro!("cl9_shared_parameter_macro_note_and_marks"));
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 3), "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert_eq!(log.matches(OVERLAP).count(), 1, "{log}");
   assert_eq!(creator_elements(&xml), [format!(
     "<creator role=\"author\"> <personname><text fontsize=\"91%\" xml:id=\"id1\">Ann Able, Bob Baker<break/>Univ \
-     Z</text></personname> {note} </creator>"
+     Z</text></personname> {} {} {note} </creator>",
+    mark("†", 2),
+    mark("‡", 3)
   )]);
 }
 

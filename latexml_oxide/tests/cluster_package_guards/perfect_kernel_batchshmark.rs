@@ -129,14 +129,19 @@ fn a_notes_mark_is_never_in_its_text() {
       row(&["Bob Baker", "thanks[*]=Corresponding author."]),
     ]
   );
-  // (an unbound class's hand-typed legend, the generic path alone: scrartcl read raw, and an unknown class through
-  // OmniBus, its Warning the missing binding's — the `$^*$` its carriers' mark, out of its text. The `\thanks` is still
-  // unmarked there though scrartcl prints ∗: no binding declares its title marks, the behaviour test is open, OD #1053)
+  // (a hand-typed legend, the generic path alone: scrartcl read raw, and an unknown class through OmniBus, its Warning
+  // the missing binding's — the `$^*$` its carriers' mark, out of its text. The `\thanks` is marked ∗ under scrartcl,
+  // whose binding declares its title block since OMNT (OD #851), as pdflatex; OmniBus declares none, OD #1053)
   // (OmniBus's `1` no contact of the name answers: a mark-only note after the name, which holds the name alone — PURE,
   // OD #1055; its `∗` the legend's)
-  for (class, warnings, unanswered) in [
-    ("scrartcl", 0, None),
-    ("zzunknownclass", 1, Some("footnotemark[1]=")),
+  for (class, warnings, unanswered, funded) in [
+    ("scrartcl", 0, None, "thanks[*]=Funded by X."),
+    (
+      "zzunknownclass",
+      1,
+      Some("footnotemark[1]="),
+      "thanks[]=Funded by X.",
+    ),
   ] {
     let tex = format!(
       r"\documentclass{{{class}}}
@@ -157,10 +162,7 @@ Text.
     assert_eq!(
       marked_notes(&tex, warnings),
       [
-        named("Ann Able", &[
-          "thanks[]=Funded by X.",
-          "thanks[∗]=Equal contribution"
-        ]),
+        named("Ann Able", &[funded, "thanks[∗]=Equal contribution"]),
         named("Bob Baker", &["thanks[∗]=Equal contribution"]),
       ],
       "{class}"
@@ -654,7 +656,7 @@ Body.
 }
 
 /// A mark whose glyph is unknown here prints none, in the XML or on the page (DG 2026-11-16: a wrong or invented glyph is
-/// worse than none; the generic engine never invents one): under an unbound class (scrartcl's own `\maketitle` prints
+/// worse than none; the generic engine never invents one): under an unbound class (proc's own `\maketitle` prints
 /// `\fnsymbol`, `latex_constructs::title_marks_unknown`) a name's `\thanks` is written unmarked and the XSLT shows its text
 /// under the name with no `†` (`LaTeXML-meta-xhtml.xsl`'s unmarked creator note, OD #990; revMARKSAFE B1); a name's
 /// `\footnotemark[1]` is no "1" (Perl's number key, the advisor's I-3) — its note no number key names yet, a counted

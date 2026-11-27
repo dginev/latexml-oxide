@@ -631,6 +631,9 @@ mod perfect_kernel_batchoc1;
 /// OC1c: an API creator call parts at its own `\and` (acmart's `\author` with no comma, authblk's spelling-test
 /// fallback), the reading cutting it inside its `\lx@personname` and the emitter writing a call per piece (OD #993).
 mod perfect_kernel_batchoc1c;
+/// OMNT: the fnsymbol title block of the binding serving the document's class — a versioned fallback's request, a raw
+/// class file's base (scrarticle) — KOMA's in both title forms, siamonline's and dmtcs's (OD #851).
+mod perfect_kernel_batchomnt;
 mod perfect_kernel_batchp1;
 mod perfect_kernel_batchp1c;
 mod perfect_kernel_batchp1e;

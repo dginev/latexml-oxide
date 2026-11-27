@@ -6,6 +6,7 @@
 % oracle:  pdflatex 0 errors: "Ann Able*, Bob Baker / Univ Z"; footnote "* Univ X."
 % engines: CL9b to AUT1 the block whole, the note kept, Warning 1
 % expect:  0 errors, 1 warning (the overlap); one creator holding "Univ X."
+% omnt:    OMNT: scrartcl's title block declared, the note marked ∗ (pdflatex's "Ann Able*")
 % status:  GREEN (CL9b; guard perfect_kernel_batchcl9)
 \documentclass{scrartcl}
 \newcommand{\myauthors}[1]{Ann Able\thanks{Univ X.}, Bob Baker#1}

@@ -1,0 +1,18 @@
+% mechanism: dmtcs-episciences' `\maketitle` marks the title's notes `\fnsymbol` (dmtcs-episciences.cls:304-316, its
+%   `\@makefnmark` of no width, the reset :316): its binding, over OmniBus, declares the fnsymbol title block
+%   (dmtcs_episciences_cls.rs); OmniBus itself declares none (omnibus_unknown_class_title_marks_unmarked)
+% witness: 1601.03710 (`\author{Jessica Striker\thanks{…}}`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape, 1601.03710's or 1810.10099's dmtcs-episciences.cls beside it) 4 `!`:
+%   3 from the class's hyperref against TL 2025's (harness limit, "Missing \begin{document}", `\Hy@colorlink`), 1 its
+%   `\@affil` undefined without an `\affiliation` (dmtcs_two_authors_affiliation_lost_red); "Ann One*", "Bob Two*",
+%   "∗ Univ A."
+% engines: rust INT081EP 0 errors, 0 warnings, both notes unmarked; OMNT 0 errors, 0 warnings, ∗, ∗
+% expect:  0 errors, 0 warnings; Ann One's and Bob Two's notes ∗
+% status:  GREEN (OMNT)
+\documentclass[nohyperref]{dmtcs-episciences}
+\title{T}
+\author{Ann One\thanks{Univ A.} \and Bob Two\footnotemark[1]}
+\begin{document}
+\maketitle
+Body text.
+\end{document}

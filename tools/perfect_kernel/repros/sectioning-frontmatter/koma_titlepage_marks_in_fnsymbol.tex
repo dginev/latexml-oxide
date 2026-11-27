@@ -1,0 +1,11 @@
+% mechanism: scrreprt's title page (its default, scrreprt.cls:949) marks the title's notes `\@fnsymbol\c@footnote`
+%   too (scrreprt.cls:3080-3083 with the title page, :3206 without, the reset :3259), unlike report.cls's (report.cls:176
+%   keeps `\thefootnote`): scrreprt_cls.rs declares the fnsymbol title block in both forms (`titlepage_default` `None`)
+% witness: synthetic (the shape of omnibus row R OMNT; scrbook.cls:3084, :3209 the same)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: "Ann One∗", "Bob Two∗"; title note ∗ The University; body 1
+% engines: rust INT081EP 0 errors, 0 warnings, both notes unmarked; OMNT 0 errors, 0 warnings, ∗, ∗, body 1
+% expect:  0 errors, 0 warnings; Ann One's and Bob Two's notes ∗, the body's note 1
+% status:  GREEN (OMNT)
+\documentclass{scrreprt}
+\title{T}\author{Ann One\thanks{The University} \and Bob Two\footnotemark[1]}
+\begin{document}\maketitle Body\footnote{Body note.}.\end{document}

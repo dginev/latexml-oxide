@@ -1,0 +1,16 @@
+% mechanism: `siamonline220329` is answered by the siamart binding under its `siamonline` name (the versioned fallback,
+%   `fallback_request`), which declares its fnsymbol title block (siamart_cls.rs, from `\@currname`):
+%   siamonline220329.cls:508-528 `\maketitle` marks the title's notes `\fnsymbol` and resets the counter after it
+% witness: 2408.02805 (siamonline220329), 2105.04194 (siamart)
+% oracle:  pdflatex (TL 2025, -no-shell-escape, 2408.02805's siamonline220329.cls beside it) 0 `!`:
+%   "Ann One∗ and Bob Two∗", "∗ Univ A.", "Body1", "1 Body note."
+% engines: rust INT081EP 0 errors, 0 warnings, both notes unmarked; OMNT 0 errors, 0 warnings, ∗, ∗, body 1
+% expect:  0 errors, 0 warnings; Ann One's and Bob Two's notes ∗, the body's note 1
+% status:  GREEN (OMNT)
+\documentclass{siamonline220329}
+\title{T}
+\author{Ann One\thanks{Univ A.} \and Bob Two\footnotemark[1]}
+\begin{document}
+\maketitle
+Body\footnote{Body note.}.
+\end{document}

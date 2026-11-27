@@ -24,7 +24,9 @@ use super::{
   resolver::{ink_words, printed_words, reads_as},
   *,
 };
-use crate::latex_constructs::class_titlepage_key;
+use crate::latex_constructs::{
+  DOCUMENT_CLASS_BINDING, DOCUMENT_CLASS_BINDING_REQUEST, class_titlepage_key,
+};
 
 /// How a block's tokens got their positions in the author field. Positions are per call: a block's start where the
 /// field's own stamps end (`lx_field_base_2`, which the document's tokens carry: a block printing `\@author` reads them
@@ -512,16 +514,21 @@ pub fn note_binding_load<R>(name: &str, extension: &str, load: impl FnOnce() -> 
   }
   let before: [Option<Rc<dyn Definition>>; OWNED] = std::array::from_fn(tracked_meaning);
   let owners_before: [Option<Rc<dyn Definition>>; OWNED] = std::array::from_fn(owned_meaning);
-  CLASS_BINDINGS.with(|c| {
+  let first_class = CLASS_BINDINGS.with(|c| {
     let (names, depth, in_class) = &mut *c.borrow_mut();
-    if *depth == 0 && extension == "cls" && names.is_empty() {
+    let first_class = *depth == 0 && extension == "cls" && names.is_empty();
+    if first_class {
       *in_class = true;
     }
     if *in_class && extension != "pool" {
       names.push(s!("{name}.{extension}"));
     }
     *depth += 1;
+    first_class
   });
+  if first_class {
+    note_document_class_binding(name);
+  }
   let value = load();
   CLASS_BINDINGS.with(|c| {
     let (_, depth, in_class) = &mut *c.borrow_mut();
@@ -552,6 +559,29 @@ pub fn note_binding_load<R>(name: &str, extension: &str, load: impl FnOnce() -> 
     }
   }
   value
+}
+
+/// The document class's binding `name` and the request it answers: the one a fallback answered with it
+/// (`fallback_request` while `fallback_target` names it, content.rs `input_definitions`, `load_class`), else its name.
+fn note_document_class_binding(name: &str) {
+  // (its basename, as `note_document_class` records the document's)
+  let stem = |file: &str| {
+    let file = file.rsplit('/').next().unwrap_or(file);
+    file.strip_suffix(".cls").unwrap_or(file).to_string()
+  };
+  let request = lookup_string("fallback_request");
+  let request =
+    if !request.is_empty() && stem(&lookup_string("fallback_target")).eq_ignore_ascii_case(name) {
+      stem(&request)
+    } else {
+      name.to_string()
+    };
+  assign_value(
+    DOCUMENT_CLASS_BINDING,
+    name.to_string(),
+    Some(Scope::Global),
+  );
+  assign_value(DOCUMENT_CLASS_BINDING_REQUEST, request, Some(Scope::Global));
 }
 
 /// Forget the tracked commands' owners and the class's bindings (a conversion's start).

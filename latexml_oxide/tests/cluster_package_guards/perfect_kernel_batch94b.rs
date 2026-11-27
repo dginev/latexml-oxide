@@ -783,9 +783,11 @@ fn a_line_in_doubt_prints_where_it_is_called() {
     repro!("raw_class_line_in_doubt_prints_where_called.tex"),
     &[&["Ann Able", "address=Univ A, Town"]],
     None,
+    // (OMNT: the body's footnote 1, as pdflatex: article's title block is the raw class's, which leaves it alone, so
+    // `\maketitle` resets the counter; it was 2)
     Some(
-      "( 9 ) Univ Z, Zed Pre text. (c, d) Lab C, Place We thank X. ( 8 ) Univ Y 1 1 footnote 1 Y note. Body. 2 2 \
-       footnote 2 Body note.",
+      "( 9 ) Univ Z, Zed Pre text. (c, d) Lab C, Place We thank X. ( 8 ) Univ Y 1 1 footnote 1 Y note. Body. 1 1 \
+       footnote 1 Body note.",
     ),
   );
 }

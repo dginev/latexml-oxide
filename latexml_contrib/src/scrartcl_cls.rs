@@ -31,4 +31,7 @@ LoadDefinitions!({
   crate::koma_script::koma_pre_load()?;
   InputDefinitions!("scrartcl", noltxml => true, extension => Some(Cow::Borrowed("cls")));
   crate::koma_script::koma_post_load(crate::koma_script::KomaClass::Article)?;
+  // (scrartcl.cls:2859-2862, :2985-2987, :3038: `\maketitle` marks its notes `\@fnsymbol` with or without a title page,
+  // and resets the counter after it; scrarticle.cls's `\LoadClassWithOptions{scrartcl}` too, 2407.13730, 2606.19583)
+  latexml_package::engine::latex_constructs::declare_fnsymbol_title_block("scrartcl", None)?;
 });
