@@ -89,7 +89,7 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (444 items on 2026-11-27 on `int/towards_v0_8_1`: 444 open, weight 972, 36 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (445 items on 2026-11-27 on `int/towards_v0_8_1`: 445 open, weight 973, 36 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
 
 
   - ODR6 — OD ruling 12 (recorded in OD #449): `dump_reader.rs`'s "add-only" docstrings (:365, :574) corrected, then a removal trial of the skip lists against CLAUDE.md rule 2; 1
@@ -1436,9 +1436,17 @@ Rules that keep this file honest and mergeable:
     PDF drops the letters too; Latin-1/9/2, cp1252, ansinew and undeclared Latin-1 all decode right) — FFFDWARN: a Warning for a
     U+FFFD the author typed (`mouth.rs` `decode_bytes`, valid-UTF-8 branch; ~1 % of sources) awaits a ruling, Perl turns it into a
     space with a misleading "input isn't valid" Info (`Core/Mouth/file.pm:72-77`); plain-TeX math without alttext (1803.09981). RC6's word bags (13 real of 45 flags) add: a proof and the references lost after
-    10 Errors (1706.02701); the author block missing (2608.05442 → AUTHGDEF); revtex footnotes printed again as
-    bibliography notes (1512.02132); unused acronyms printed (2504.20545); a table row doubled (astro-ph0702279); table notes
+    10 Errors (1706.02701; root-caused: our mathpartir stub passes `\inferrule`'s conclusion `\\` raw into `\frac`, which ends a
+    table row with math open — GENUINE-RUST-ONLY, writer MPRCONCL; 2403.15122's undefined `\mpr@inferrule` is a separate root); the author block missing (2608.05442 → AUTHGDEF); revtex footnotes printed again as
+    bibliography notes (1512.02132); unused acronyms printed (2504.20545); "a table row doubled" REFUTED (astro-ph0702279: a rotated deluxetable's `\tablerefs` runs off arXiv's page 20, so the
+    PDF's visible text lacks words our HTML keeps — a RENDERCMP false flag, `PDF_OFFPAGE` in the kit); table notes
     (astro-ph0108146); an uncited entry printed (1803.09981); acmart's CCS block and `\Description` text (2009.11100); 3
+  - SUBTYPEAS — subcaption treats a sub-float as `sub\@captype` and caption's hook steps `\@captype` (subcaption.sty:97-106,
+    caption.sty:642): a `{subtable}` in a figure or a `{subfigure}` in a table is the OUTER float's sub-float. Ours steps or labels
+    from the inner type's counter: a wrong sub-label, the wrong counter, subcaption's Warning missing (2310.08672's appendix figures
+    still 8→10 after FIGNUM); a sub-table in a sub-figure after a table with sub-tables joins that table's ids ("(c)"). REDs
+    `captions-floats/subtable_in_a_figure_is_a_subfigure_red`, `…/subtable_in_a_subfigure_after_a_table_with_subtables_red`; 0 of
+    2,313 subcaption papers carry the nested shape; 1
   - AUTHGDEF — a class/style that fills `\@author` by `\gdef` and prints it from its own `\@maketitle`, with no `\author` call
     (ismir.sty `\oneauthor`; icmc2025, LaurentianThesis.cls): no `ltx:creator`, the words counted by `Warning:frontmatter:unclaimed`;
     Perl the same, silent (PERL-ORIGIN). Fix plan (EASY, MED risk): `hand_offtable_stores` hands a raw `\@author` on as

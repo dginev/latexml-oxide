@@ -1,0 +1,18 @@
+% mechanism: subcaption treats a sub-float by `sub\@captype` and caption's hook steps `\@captype` (subcaption.sty:97-106,
+%   caption.sty:642): a `{subtable}` inside a figure's `{subfigure}` is that figure's sub-figure. Ours (FIGNUM) no longer steps a
+%   counter for a sub-type inside a sub-type (caption.sty:325-331), but still labels the inner `{subtable}` from the TABLE counter,
+%   which was never stepped for it: it joins the previous table's ids ("(c)", `S0.T1.st3`). Row R SUBTYPEAS.
+% witness: synthetic (FIGNUM review S1; 0 of the 2,313 subcaption papers of its A/B; sibling RED subtable_in_a_figure_is_a_subfigure_red)
+% oracle:  pdflatex (TL 2025, -no-shell-escape): "(a) SA (b) SB Table 1: T1 C (a) Sub (b) Mid Figure 1: F1 Refs 1a, 1b, 1, 1a, 1b, 1, 2."
+% engines: FIGNUM (e7927c2e9e0): the inner sub-table `S0.T1.st3` "(c)"; INT081AU: `S0.T2.st1` "(a)" (the next table then one too high)
+% expect:  the inner sub-float is Figure 1's first sub-figure, "(a)" (ref "1a"), the middle sub-figure "(b)" (ref "1b"); Table 2 is 2
+% status:  RED
+% moves:   post-merge (row R SUBTYPEAS)
+\documentclass{article}
+\usepackage{subcaption}
+\begin{document}
+\begin{table}\begin{subtable}{0.4\textwidth}A\caption{SA}\label{ta}\end{subtable}\begin{subtable}{0.4\textwidth}B\caption{SB}\label{tb}\end{subtable}\caption{T1}\label{t1}\end{table}
+\begin{figure}\begin{subfigure}{0.4\textwidth}\begin{subtable}{\linewidth}C\caption{Sub}\label{st}\end{subtable}\caption{Mid}\label{fm}\end{subfigure}\caption{F1}\label{f1}\end{figure}
+\begin{table}D\caption{T2}\label{t2}\end{table}
+Refs \ref{ta}, \ref{tb}, \ref{t1}, \ref{st}, \ref{fm}, \ref{f1}, \ref{t2}.
+\end{document}
