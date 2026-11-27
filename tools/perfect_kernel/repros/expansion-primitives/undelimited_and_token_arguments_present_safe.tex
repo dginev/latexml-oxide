@@ -1,0 +1,14 @@
+% mechanism: the safe side of undelimited_true_end_recursive_scanner.tex and the `Token` rows: the same
+%   `{}` and `Token` readers (a four-parameter macro, `\futurelet`, `\afterassignment`) with every
+%   argument present are clean; only a reader that runs out at the true end of input errs.
+% witness: synthetic
+% oracle:  pdflatex 0 `!`, "before [abcd] x after"; Perl 0 errors
+% engines: rust=0 errors (EOFPUTBACK-rel, 2026-11-26)
+% expect:  0 errors, 0 warnings, "before [abcd] x after"
+% status:  GREEN (EOFPUTBACK; guard error_boundary::perfect_kernel_error_boundary)
+\documentclass{article}
+\long\def\sw#1#2#3#4{[#1#2#3#4]}
+\def\tl{\futurelet\next\relax}
+\begin{document}
+before \sw{a}{b}{c}{d} \tl x\afterassignment\relax\count255=1{} after
+\end{document}

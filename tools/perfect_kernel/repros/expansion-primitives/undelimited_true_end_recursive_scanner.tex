@@ -1,0 +1,19 @@
+% mechanism: an undelimited (`{}`) argument missed at the TRUE end of all input is reported as Perl reports
+%   every required reader's undef (Parameter.pm:93-97) and the call runs on the empty argument, so a
+%   self-recursive scanner whose other parameters are undelimited re-misses to the error cap, keeping the
+%   text before it. Before, only an `Until:` miss was reported: the `{}` misses were silent and the loop
+%   ran to the gullet's cycle guard (`Fatal:Timeout:Recursion`), which keeps nothing.
+% witness: synthetic (review of EOFPUTBACK; the shape of pgf's `\pgfutil@switch@@`, pgfutil-common.tex:290-295)
+% oracle:  pdflatex 3 `!` ("File ended while scanning use of \swend", Emergency stop), no PDF;
+%          Perl 101 errors (99 "Missing argument {}", 1 "Until:\mark", 1 "Until:\stop") and
+%          Fatal:too_many_errors:100, no XML
+% engines: rust=2 errors + Fatal:Timeout:Recursion, a 39-byte document (EOFPUTBACK-rel, 2026-11-26)
+% expect:  102 (99 "Missing argument {} at end of input" + 1 Until:\mark + 1 Until:\stop +
+%          Fatal:TooManyErrors:MaxLimit(100)), "before d"
+% status:  GREEN (EOFPUTBACK; guard error_boundary::perfect_kernel_error_boundary)
+\documentclass{article}
+\long\def\sw#1#2#3#4{\ifx#2#3\swend{#4}\else\expandafter\sw\fi{#1}{#2}}
+\long\def\swend#1#2#3\mark#4#5\stop{#1#4}
+\begin{document}
+before \sw{x}{a}{b}{c}{a}{d}
+\end{document}

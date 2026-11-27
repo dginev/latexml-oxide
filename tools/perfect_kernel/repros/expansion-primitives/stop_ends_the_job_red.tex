@@ -1,0 +1,15 @@
+% mechanism: latex.ltx:15343 `\def\stop{\clearpage\deadcycles\z@\let\par\@@par\@@end}` ends the job at once, so
+%   nothing after it is typeset. Perl's `\stop` closes the mouth at once, `closeMouth(1)`
+%   (latex_constructs.pool.ltxml:5757), "before" alone; ours `\let`s it to `\endinput` (sect13.rs:884, a Rust-only
+%   divergence), which reads the rest of the line first (tex.web §362), so "more" is typeset. Port target: Perl's
+%   `closeMouth`. Met by EOFPUTBACK's ring probe (`\def\y#1\stop\stop` run off the end puts its `\stop` back).
+% witness: synthetic (found writing EOFPUTBACK)
+% oracle:  pdflatex 0 `!`, "before"; Perl 0 errors, "before "
+% engines: rust=0 errors, "before more" (EOFBIND-rel and EOFPUTBACK, 2026-11-26)
+% expect:  0 errors, "before"
+% status:  RED
+% moves:   post-merge (`\stop` as Perl's `closeMouth(1)`, then latex.ltx's `\@@end`)
+\documentclass{article}
+\begin{document}
+before \stop more
+\end{document}

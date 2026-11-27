@@ -1,0 +1,16 @@
+% mechanism: the Unicode-engine primitives `\Umathcharnumdef`, `\Umathcodenum` (LuaTeX/XeTeX) are
+%   undefined under pdfTeX, and packages test for them: amsmath.sty:431 (and :688) picks its `\dots`
+%   look-ahead by `\ifx\Umathcharnumdef\@undefined`. Ours defines them for every profile
+%   (latex_constructs_rust_only.rs, for mathfont under the luatex profile), so a raw-loaded amsmath copy
+%   takes the Unicode branch, whose `\Umathch@#1#2#3#4"#5"#6\Umathch@` finds no `"` in our `\meaning`
+%   and reads on to the end of the document, where the read is put back (DG 2026-11-26).
+% witness: a paper's renamed amsmath copy (its :431-444); this minimal is synthetic
+% oracle:  pdflatex 0 `!`, "[U][U]"; Perl 0 errors
+% engines: rust=0 errors, "[D][D]" (EOFPUTBACK, 2026-11-26)
+% expect:  0 errors, "[U][U]"
+% status:  RED
+% moves:   post-merge (the `\U…` primitives only under the profiles that have them)
+\documentclass{article}
+\begin{document}
+[\ifx\Umathcharnumdef\undefined U\else D\fi][\ifx\Umathcodenum\undefined U\else D\fi]
+\end{document}

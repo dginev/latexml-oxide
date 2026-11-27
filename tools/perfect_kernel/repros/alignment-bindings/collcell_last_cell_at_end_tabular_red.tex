@@ -1,0 +1,23 @@
+% mechanism: a collcell column `>{\collectcell\fbox}c<{\endcollectcell}` whose last cell is ended by
+%   `\end{tabular}` (no `\\`): TeX inserts the cell's v-part, `\endcollectcell`, at the `\crcr` of
+%   `\end{tabular}` (collcell.sty reads to it), so the cell is clean. Ours reports "Missing } inserted"
+%   at the cell's end; the cells are kept. With a `C{c}` column of tikz `\pgfqkeys` cells and `\\[0.9em]`
+%   rows, the last cell's collection (`\collect@cell@look`, a `\futurelet` loop) takes in our
+%   `\end{tabular}`'s expansion, hidden `\crcr` and all, where TeX inserts the v-part at the `\crcr`
+%   (tex.web §342): the collected text goes to pgfkeys as a key, and the alignment stays open to the end
+%   of input, where its text is dropped and counted by a Warning
+%   (alignment_open_at_end_of_input_drops_its_text_red.tex).
+% witness: an arXiv paper's risk-matrix table (named in the EOFPUTBACK report); this minimal is synthetic
+% oracle:  pdflatex 0 `!`, the four framed cells, "before" and "after"
+% engines: rust=1 error "Missing } inserted", the four framed cells (EOFBIND-rel and EOFPUTBACK, 2026-11-26)
+% expect:  0 errors, the four framed cells, "before", "after"
+% status:  RED
+% moves:   post-merge (collcell's cell end at `\end{tabular}`; then the risk-matrix paper's run-off read)
+\documentclass{article}
+\usepackage{collcell}
+\newcolumntype{C}{>{\collectcell\fbox}c<{\endcollectcell}}
+\begin{document}
+before
+\begin{tabular}{CC} a & b \\ c & d \end{tabular}
+after
+\end{document}

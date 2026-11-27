@@ -1,0 +1,18 @@
+% mechanism: a `{VerbatimOut}` left open at the end of the file: fancyvrb's `\FV@Scan` reads one
+%   `Until:^^M` line per iteration (fancyvrb.sty:1090) and writes it, so each miss at the true end of
+%   input (put back, Perl's "Missing argument", the empty line; DG 2026-11-26) starts the next
+%   iteration: the loop ends at the error cap, as Perl's does.
+% witness: fancyvrb/fancyvrb-doc cut at its open {SideBySideExample} (line 183)
+% oracle:  pdflatex 2 `!` ("File ended while scanning use of \FancyVerbGetLine", Emergency stop),
+%          no PDF; Perl 101 errors "Missing argument Until: for ...[\FancyVerbGetLine Until:]" and
+%          Fatal:too_many_errors:100, no XML
+% engines: rust=1 error + Fatal:Mouth:EoF (EOFBIND-rel, 2026-11-26)
+% expect:  102 (101 errors "Missing argument Until:^^M at end of input" + Fatal:TooManyErrors:MaxLimit(100)),
+%          "before" kept
+% status:  GREEN (EOFPUTBACK; guard perfect_kernel_batch48::until_miss_at_true_eof_errors_like_perl)
+\documentclass{article}
+\usepackage{fancyvrb}
+\begin{document}
+before
+\begin{VerbatimOut}{\jobname.tmp}
+never closed

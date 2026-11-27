@@ -1170,7 +1170,157 @@ const BOUNDARY: &[Row] = &[
        xml:id=\"p1.1.1.1\"><td align=\"center\" xml:id=\"p1.1.1.1.1\">k</td></tr></tbody></tabular>]</p>",
     )],
   ),
+  // --- A delimited argument run off the TRUE end of input: Perl's put-back (DG 2026-11-26, EOFPUTBACK). Perl errs ---
+  (
+    "Until: miss at the true end (repro expansion-primitives/until_true_end_puts_back)",
+    "pdflatex 2 `!` (File ended while scanning use of \\x; Emergency stop), no PDF; Perl 1 error (Missing argument \
+     Until:\\stop), \"before []after\"",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/expansion-primitives/until_true_end_puts_back.tex"
+    ),
+    &[],
+    (1, 0),
+    &[UNTIL_STOP],
+    &[("p", "p1.1", r#"<p xml:id="p1.1">before []after</p>"#)],
+  ),
+  (
+    "Until: miss at the true end, the call inside a group (repro \
+     expansion-primitives/until_true_end_puts_back_in_a_group)",
+    "pdflatex 2 `!` (File ended while scanning use of \\x; Emergency stop), no PDF; Perl 1 error (Missing argument \
+     Until:\\stop), \"before <bold>[]after</bold> more\"",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/expansion-primitives/until_true_end_puts_back_in_a_group.tex"
+    ),
+    &[],
+    (1, 0),
+    &[UNTIL_STOP],
+    &[(
+      "p",
+      "p1.1",
+      r#"<p xml:id="p1.1">before <text font="bold" xml:id="p1.1.1">[]after</text> more</p>"#,
+    )],
+  ),
+  (
+    "Until: miss at the true end, the put-back read by the next delimiter (repro \
+     expansion-primitives/until_eof_fatal)",
+    "pdflatex 1 `!` (File ended while scanning use of \\grab); Perl 1 error (Missing argument Until:,), \"[]\"",
+    include_str!("../../../tools/perfect_kernel/repros/expansion-primitives/until_eof_fatal.tex"),
+    &[],
+    (1, 0),
+    &["Error:expected:Until: Missing argument Until:, at end of input"],
+    &[("p", "p1.1", r#"<p xml:id="p1.1">[]</p>"#)],
+  ),
+  (
+    "Until: miss at the true end, a `\\long` macro across paragraphs (repro \
+     parameter-conditional/delimited_argument_at_end_of_input_keeps_the_text_before; the Mouth:EoF shape of the \
+     CorTeX Fatals hep-th9308151, 1911.06585, astro-ph0012068, math-ph0012031, a Fatal before EOFPUTBACK)",
+    "pdflatex 2 `!` (File ended while scanning use of \\grab; Emergency stop), no PDF; Perl 1 error, the three \
+     paragraphs",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/parameter-conditional/delimited_argument_at_end_of_input_keeps_the_text_before.tex"
+    ),
+    &[],
+    (1, 0),
+    &[UNTIL_STOP],
+    &[
+      (
+        "para",
+        "p2",
+        r#"<para xml:id="p2"><p xml:id="p2.1">Before []after.</p></para>"#,
+      ),
+      (
+        "para",
+        "p3",
+        r#"<para xml:id="p3"><p xml:id="p3.1">Second paragraph.</p></para>"#,
+      ),
+    ],
+  ),
+  // --- the same delimited calls, safe side: the delimiter comes, pdflatex clean ---
+  (
+    "Until: delimiter found, in a group too (repro expansion-primitives/until_true_end_safe)",
+    "pdflatex 0 `!`, \"before [after] more [in] end\"; Perl 0 errors",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/expansion-primitives/until_true_end_safe.tex"
+    ),
+    &[],
+    (0, 0),
+    &[],
+    &[(
+      "p",
+      "p1.1",
+      r#"<p xml:id="p1.1">before [after] more <text font="bold" xml:id="p1.1.1">[in]</text> end</p>"#,
+    )],
+  ),
+  // --- every required reader that runs out at the true end errs as Perl's (Parameter.pm:93-97; EOFPUTBACK fix 1) ---
+  (
+    "`{}` misses at the true end, a self-recursive scanner to the error cap (repro \
+     expansion-primitives/undelimited_true_end_recursive_scanner; pgf's `\\pgfutil@switch@@` shape)",
+    "pdflatex 3 `!` (File ended while scanning use of \\swend; Emergency stop), no PDF; Perl 101 errors (99 \
+     \"Missing argument {}\", 1 Until:\\mark, 1 Until:\\stop) and Fatal:too_many_errors:100",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/expansion-primitives/undelimited_true_end_recursive_scanner.tex"
+    ),
+    &[],
+    (102, 0),
+    &[
+      r"Error:expected:Until: Missing argument Until:\mark at end of input",
+      r"Error:expected:Until: Missing argument Until:\stop at end of input",
+      TOO_MANY_ERRORS,
+    ],
+    &[("p", "p1.1", r#"<p xml:id="p1.1">before d</p>"#)],
+  ),
+  (
+    "a primitive's `Token` missed at the true end (repro expansion-primitives/token_true_end_single_miss)",
+    "pdflatex 2 `!` (*** job aborted, no legal \\end found; Emergency stop), no PDF; Perl 1 error \"Missing \
+     argument Token\", \"before after \"",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/expansion-primitives/token_true_end_single_miss.tex"
+    ),
+    &[],
+    (1, 0),
+    &["Error:expected:Token Missing argument Token at end of input"],
+    &[("p", "p1.1", r#"<p xml:id="p1.1">before after </p>"#)],
+  ),
+  // --- the same `{}` and `Token` readers, safe side: every argument present, pdflatex clean ---
+  (
+    "`{}` and `Token` arguments present (repro expansion-primitives/undelimited_and_token_arguments_present_safe)",
+    "pdflatex 0 `!`, \"before [abcd] x after\"; Perl 0 errors",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/expansion-primitives/undelimited_and_token_arguments_present_safe.tex"
+    ),
+    &[],
+    (0, 0),
+    &[],
+    &[("p", "p1.1", r#"<p xml:id="p1.1">before [abcd] x after</p>"#)],
+  ),
+  // --- an alignment open at the end of input: its last cell's dropped text is counted (EOFPUTBACK fix 2; the drop
+  // itself stays RED, so the pinned cell `p1.1.1.2.2` is empty) ---
+  (
+    "an alignment open at the end of input drops its last cell, counted (RED \
+     alignment-bindings/alignment_open_at_end_of_input_drops_its_text_red)",
+    "pdflatex 2 `!` (*** job aborted, no legal \\end found; Emergency stop), no PDF; Perl drops the text too \
+     (with `\\end{document}`: 4 errors + 1 warning)",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/alignment-bindings/alignment_open_at_end_of_input_drops_its_text_red.tex"
+    ),
+    &[],
+    (1, 1),
+    &[
+      r"Error:unexpected:\@@tabular Attempt to end mode restricted_horizontal",
+      "Warning:unexpected:alignment An alignment still open at the end of input drops its last cell's text, 5 \
+       word(s): d after one after two",
+    ],
+    &[(
+      "tr",
+      "p1.1.1.2",
+      r#"<tr xml:id="p1.1.1.2"><td align="center" xml:id="p1.1.1.2.1">c</td><td xml:id="p1.1.1.2.2"/></tr>"#,
+    )],
+  ),
 ];
+
+const TOO_MANY_ERRORS: &str = "Fatal:TooManyErrors:MaxLimit(100) Too many errors (> 100)!";
+
+const UNTIL_STOP: &str = r"Error:expected:Until: Missing argument Until:\stop at end of input";
 
 const NINE_M1: &str = "Error:misdefined:[-1] You already have nine parameters";
 

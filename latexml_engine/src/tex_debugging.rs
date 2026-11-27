@@ -157,7 +157,7 @@ LoadDefinitions!({
   // The token is read at `normal` scanner status (tex.web §471, as for
   // `\string`): at a file's end it is the first token of the enclosing input.
   DefMacro!(T_CS!("\\meaning"), None, {
-    let token = read_token_across_input_ends()?.unwrap_or_else(|| T_CS!("\\relax"));
+    let token = token_or_relax(read_token_across_input_ends()?, "Token")?;
     let mut meaning = String::from("undefined");
     // A `\noexpand` marker (the `\special_relax` family) is tex.web §358's
     // `relax` variant with chr `no_expand_flag`, and `print_meaning` shows it

@@ -797,10 +797,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
       body => (body, Vec::new()),
     };
     if moved.iter().any(typesets_content) {
-      let mut text = String::new();
-      moved.iter().for_each(|d| ink_word_text(d, &mut text));
-      let text = text.replace(INK_SEAM, "");
-      let words = text.split_whitespace().filter(|w| w.chars().any(char::is_alphanumeric)).count();
+      let words = ink_words(&moved).len();
       Warn!(
         "unexpected",
         "\\abstract",

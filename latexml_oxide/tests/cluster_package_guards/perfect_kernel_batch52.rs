@@ -93,36 +93,45 @@ D \bazA[x] and E \bazA[x]{} and G.
   assert!(!xml.contains("bazx  and"), "{xml}");
 }
 
-/// A delimited scan that runs off the TRUE end of all input is reported
-/// ONCE and then ends the job: tex.web §338 abandons the macro call after
-/// the "File ended while scanning" report and §360 aborts with no `\end`
-/// left to find (pdflatex: one report, emergency stop). Perl hands the
-/// caller an empty argument instead, so l3prg's self-recursive
-/// `\prg_map_break:Nn` (expl3-code.tex:2452-2458; reached when
-/// `\prop_map_inline:cn` names an undefined prop) re-misses to the error
-/// cap (Perl 100 → too_many_errors; ours 513 under tikz's raised
-/// `MAX_ERRORS`). Witness: stex/stex-doc.
+/// A delimited scan that runs off the TRUE end of all input follows Perl's
+/// put-back (Gullet.pm:686-688, Parameter.pm:93-97; DG 2026-11-26): the
+/// miss is reported, the tokens go back and the call runs on the empty
+/// argument. l3prg's self-recursive `\prg_map_break:Nn` (expl3-code.tex:
+/// 2452-2458; reached when `\prop_map_inline:cn` names an undefined prop)
+/// then re-misses to the error cap, as in Perl: 101 misses, Perl's split of
+/// 37 `Until:` and 64 `{}` (each required reader that runs out errs), and
+/// `Fatal:TooManyErrors` (pdflatex: one "File ended while scanning use of
+/// \prg_map_break:Nn" and the emergency stop). Witness: stex/stex-doc.
+/// Repro `expansion-primitives/until_true_end_l3prg_loop.tex`.
 #[test]
-fn until_miss_at_eof_is_fatal_once() {
+fn until_miss_at_eof_reaches_the_error_cap() {
   let (stderr, _xml) = convert(
-    r"\documentclass{article}
-\usepackage{expl3}
-\ExplSyntaxOn
-\prop_map_inline:cn { l_no_such_prop_xyz } { [#1=#2] }
-\ExplSyntaxOff
-\begin{document}
-text
-\end{document}
-",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/expansion-primitives/until_true_end_l3prg_loop.tex"
+    ),
     true,
   );
-  // One `Error:` (the missing Until argument) plus the one `Fatal:Mouth:EoF`.
-  assert_eq!(error_count(&stderr), 2, "{stderr}");
-  assert!(
-    stderr.contains("Missing argument Until:\\prg_break_point:Nn at end of input"),
+  let misses = stderr
+    .lines()
+    .filter(|l| {
+      l.starts_with(
+        r"Error:expected:Until: Missing argument Until:\prg_break_point:Nn at end of input",
+      )
+    })
+    .count();
+  assert_eq!(misses, 37, "{stderr}");
+  let undelimited = stderr
+    .lines()
+    .filter(|l| *l == "Error:expected:{} Missing argument {} at end of input")
+    .count();
+  assert_eq!(undelimited, 64, "{stderr}");
+  assert_eq!(
+    stderr.matches("Fatal:TooManyErrors:MaxLimit(100)").count(),
+    1,
     "{stderr}"
   );
-  assert!(stderr.contains("Fatal:Mouth:EoF"), "{stderr}");
+  assert!(!stderr.contains("Fatal:Mouth:EoF"), "{stderr}");
+  assert_eq!(error_count(&stderr), 102, "{stderr}");
 }
 
 /// `\input{pkg.sty}` of a package an earlier `\usepackage` already

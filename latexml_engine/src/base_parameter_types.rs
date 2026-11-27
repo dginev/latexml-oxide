@@ -196,7 +196,14 @@ pub(crate) fn reread_sanitized_entry(arg: &Tokens) -> (Tokens, Vec<Token>) {
 
 LoadDefinitions!({
   DefParameterType!(Plain, sub[inner, _extra] {
-    let mut value = ArgWrap::Tokens(read_arg(ExpansionLevel::Off)?);
+    let arg = match read_arg_or_none(ExpansionLevel::Off)? {
+      Some(arg) => arg,
+      None => {
+        note_missing_argument("{}", "{}")?;
+        Tokens::default()
+      },
+    };
+    let mut value = ArgWrap::Tokens(arg);
     // An argument that ran off a file's end is dropped with its call: no re-parse.
     if let Some(inner_ps) = inner.filter(|_| !argument_runaway()) {
       // TODO: How many arguments can we expect back? One? Many?
@@ -324,27 +331,12 @@ LoadDefinitions!({
     // regressed 63 corpus docs (sweep 23). Zero-progress delimited-scan
     // loops terminate via the stomach cycle guard.
     //
-    // EXCEPT at the TRUE end of all input (`gullet::at_end_of_all_input`:
-    // no mouth beneath, no `reading_from_mouth` open): that miss IS tex.web
-    // §338's "File ended while scanning use of" runaway argument and is
-    // reported like Perl (Parameter.pm L93-97). Without it a per-line
-    // `\write` loop such as fancyvrb `\FV@Scan` over a `{VerbatimOut}` left
-    // open at end of file makes progress forever — each empty read still
-    // writes a line — which no zero-progress guard sees; Perl's 100 `Missing
-    // argument` errors → `too_many_errors` Fatal is the parity outcome
-    // (witness: fancyvrb/fancyvrb-doc cut mid-`{SideBySideExample}`,
-    // batch-48 guard `until_miss_at_true_eof_errors_like_perl`).
-    //
-    // The report is followed by a FATAL, not by the empty argument: tex.web
-    // §338 abandons the macro call after the runaway report and, the input
-    // being exhausted, §360 ends the job (`*** (job aborted, no legal \end
-    // found)`) — pdflatex stops at the first miss. Perl delivers the empty
-    // argument and re-runs the caller, so a self-recursive scanner such as
-    // l3prg `\prg_map_break:Nn` (expl3-code.tex:2452-2458, reached when
-    // `\prop_map_inline:cn` names an undefined prop — stex/stex-doc, 513
-    // errors under the tikz-raised `MAX_ERRORS`, Perl 100 → too_many_errors)
-    // re-misses until the error cap; same Fatal outcome, one report instead
-    // of hundreds. Guard: `perfect_kernel_batch52::until_miss_at_eof_is_fatal_once`.
+    // EXCEPT at the TRUE end of all input (`gullet::at_end_of_all_input`), where Perl's put-back is the outcome (DG
+    // 2026-11-26): the scanned tokens are back in the input (Gullet.pm:686-688), Perl's `Missing argument` Error is
+    // raised (Parameter.pm:93-97, `note_missing_argument`, as for every required reader that runs out: `{}`, the
+    // token readers) and the call runs on the empty argument. A self-recursive scanner re-misses to the
+    // error cap, as in Perl: fancyvrb `\FV@Scan` over an open `{VerbatimOut}` (fancyvrb/fancyvrb-doc), l3prg
+    // `\prg_map_break:Nn` via `\prop_map_inline:cn` on an undefined prop (stex/stex-doc). OD #304.
     match read_until(&until_extra[0])? {
       Some(tokens) => {
         // A delimiter ending in `{` comes only from a parameter text's closing `#{`, whose brace TeX also appends to
@@ -356,19 +348,7 @@ LoadDefinitions!({
         Ok(ArgWrap::Tokens(tokens))
       },
       None => {
-        if at_end_of_all_input() {
-          let caller = get_current_token()
-            .map(|t| t.to_string())
-            .unwrap_or_default();
-          Error!(
-            "expected",
-            "Until:",
-            s!("Missing argument Until:{} at end of input", until_extra[0]),
-            s!("while reading the arguments of {caller}")
-          );
-          latch_too_many_errors();
-          Fatal!(Mouth, EoF, s!("File ended while scanning use of a Until:{} argument (job aborted, no legal \\end found)", until_extra[0]));
-        }
+        note_missing_argument("Until:", &s!("Until:{}", until_extra[0]))?;
         Ok(ArgWrap::Tokens(Tokens::default()))
       },
     }
@@ -397,10 +377,10 @@ LoadDefinitions!({
   DefParameterType!(Token, sub[_inner, _extra] {
     // Perl Base_ParameterTypes.pool.ltxml L91:
     //   DefParameterType('Token', sub { $_[0]->readToken; });
-    // No error raised on EOF — silently returns undef. Our prior impl
-    // raised an error, which manifested as a cascade after upstream
-    // recovery (e.g. \^ with no argument in math mode). EOF fallback
-    // returns `\relax` (a no-op token) so downstream `try_to_token`
+    // At EOF the reader returns undef, which Parameter.pm:93-97 reports; we
+    // report it at the true end only (an isolated mouth's end is artificial:
+    // a cascade after upstream recovery, e.g. \^ with no argument in math
+    // mode). EOF fallback returns `\relax` (a no-op token) so downstream `try_to_token`
     // succeeds — using empty Tokens here would cascade
     // "Error:expected:argument: try_to_token: empty Tokens" at the
     // primitive's arg-coerce step (witness: 0910.2125 sub/superscript
@@ -410,11 +390,8 @@ LoadDefinitions!({
     // …) is its `get_token`, which at `normal` scanner status crosses the end
     // of an input level (tex.web §362): `read_primitive_token`. A macro's
     // `Token` argument, read at `matching`, stops at the file's end and the
-    // macro gets `\relax`.
-    match read_primitive_token()? {
-      Some(t) => Ok(ArgWrap::Token(t)),
-      None => Ok(ArgWrap::Token(T_CS!("\\relax"))),
-    }
+    // macro gets `\relax`, after Perl's Error at the true end (Parameter.pm:93-97).
+    Ok(ArgWrap::Token(token_or_relax(read_primitive_token()?, "Token")?))
   });
 
   // A `\left`/`\middle`/`\right` delimiter (Perl `TeXDelimiter`, TeX_Math.pool.ltxml:712-724): scanned by tex.web
@@ -436,10 +413,7 @@ LoadDefinitions!({
   // last line compares `\foo` with the next file's first token, pdflatex).
   // Guard: `token_kernel_gaps::ifx_reads_at_normal_status_in_a_definition`.
   DefParameterType!(NormalToken, sub[_inner, _extra] {
-    match read_token_across_input_ends()? {
-      Some(t) => Ok(ArgWrap::Token(t)),
-      None => Ok(ArgWrap::Token(T_CS!("\\relax"))),
-    }
+    Ok(ArgWrap::Token(token_or_relax(read_token_across_input_ends()?, "NormalToken")?))
   });
 
   // The name a definition gives: tex.web §1215 `get_r_token`, the next
@@ -448,10 +422,7 @@ LoadDefinitions!({
   // `\countdef` family, `\read … to`, `\font`; a bare `\def` as a file's last
   // token names the first non-space token after the file.
   DefParameterType!(RedefinableToken, sub[_inner, _extra] {
-    match read_redefinable_token()? {
-      Some(t) => Ok(ArgWrap::Token(t)),
-      None => Ok(ArgWrap::Token(T_CS!("\\relax"))),
-    }
+    Ok(ArgWrap::Token(token_or_relax(read_redefinable_token()?, "RedefinableToken")?))
   });
 
   // Read the next token, after expanding any expandable ones.
@@ -459,11 +430,7 @@ LoadDefinitions!({
     // Perl Base_ParameterTypes.pool.ltxml L94:
     //   DefParameterType('XToken', sub { $_[0]->readXToken; });
     // Same `\relax`-sentinel passthrough on EOF — see Token comment above.
-    if let Some(t) = read_x_token(None, false, None)? {
-      Ok(ArgWrap::Token(t))
-    } else {
-      Ok(ArgWrap::Token(T_CS!("\\relax")))
-    }
+    Ok(ArgWrap::Token(token_or_relax(read_x_token(None, false, None)?, "XToken")?))
   });
 
   // Perl (2026-03-18): Relation parameter type for numeric comparisons (<, =, >)

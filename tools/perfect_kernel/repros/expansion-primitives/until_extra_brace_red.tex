@@ -1,0 +1,18 @@
+% mechanism: an unmatched `}` inside a delimited macro argument is TeX's "Argument of \x has an extra }"
+%   (tex.web §395): TeX inserts `\par` and the call is abandoned there ("Paragraph ended before \x was
+%   complete", §396), so the group closes and "more" follows. Our `read_until` (gullet.rs) and Perl's
+%   readUntil (Gullet.pm:658-668) take the `}` into the argument and read on to the end of the file,
+%   where the put-back (DG 2026-11-26) types "after" after all. Not implemented: OD #442 lists §395.
+% witness: synthetic (found writing EOFPUTBACK's group row)
+% oracle:  pdflatex 2 `!` ("Argument of \x has an extra }", "Paragraph ended before \x was complete"),
+%          "before more"; Perl 1 error "Missing argument Until:\stop", "before <bold>[]after</bold> more"
+% engines: rust=1 error + Fatal:Mouth:EoF, "before " (EOFBIND-rel, 2026-11-26); 1 error
+%          "Missing argument Until:\stop at end of input", "before <bold>[]after</bold> more" (EOFPUTBACK)
+% expect:  2 errors (the extra `}`, the paragraph ended), "before more" (the call dropped at the `}`)
+% status:  RED
+% moves:   post-merge (KERNEL_CAPABILITIES G3: a §395 check in the gullet's argument readers)
+\documentclass{article}
+\def\x#1\stop{[#1]}
+\begin{document}
+before {\bfseries\x after} more
+\end{document}

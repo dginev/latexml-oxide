@@ -159,6 +159,7 @@ type SalvageRow<'a> = (
 /// it (`core_interface::finish_digestion_fatal`; Perl keeps the innermost list, Common/Error.pm:336-338, OD #251); the
 /// run stays Fatal and reads nothing past it. A `document` environment is one body, so a Fatal in it kept no text at all
 /// before DIGFATAL. (row, repro, its side files, the `Fatal:` line's head, `Error:` and `Warning:` lines, every `<p>`)
+/// A delimited argument run off the end of input is no Fatal since EOFPUTBACK: `error_boundary`'s `Until:` rows.
 #[test]
 fn a_digestion_fatal_keeps_the_text_before_it() {
   const KEPT: &[&str] = &["<p>First paragraph.</p>", "<p>Before </p>"];
@@ -175,19 +176,6 @@ fn a_digestion_fatal_keeps_the_text_before_it() {
       )],
       "Fatal:unexpected:Internal lxmbf gives up",
       0,
-      0,
-      KEPT,
-    ),
-    (
-      // TeX's emergency stop after "File ended while scanning use of \grab" (hep-th9308151, astro-ph0012068;
-      // CorTeX's hep-th0008096 no longer reaches it)
-      "Mouth:EoF",
-      include_str!(
-        "../../../tools/perfect_kernel/repros/parameter-conditional/delimited_argument_at_end_of_input_keeps_the_text_before.tex"
-      ),
-      &[],
-      "Fatal:Mouth:EoF File ended while scanning use of a Until:\\stop argument",
-      1,
       0,
       KEPT,
     ),

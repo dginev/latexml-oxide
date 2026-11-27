@@ -390,7 +390,15 @@ fn the_doors_stay_the_formats_macros() {
     r"\T{1+1\s__fp_expr_mark\__fp_parse_infix_end:N 3}",
   ));
   assert_answered(answered, 1, "the fixture");
-  assert_eq!(fatal_count(&log), 1, "{log}");
+  // `\__fp_parse_after:ww` scans for its `@…\s__fp_expr_stop` to the end of input: Perl's put-back (DG 2026-11-26),
+  // one "Missing argument" Error and the "Missing number" Warning after it, where the Until reader was a Fatal.
+  assert_eq!(fatal_count(&log), 0, "{log}");
+  assert_eq!(error_count(&log), 1, "{log}");
+  assert!(
+    log.contains(r"Error:expected:Until: Missing argument Until:@\__fp_parse_infix_end:N\s__fp_expr_stop at end of input"),
+    "{log}"
+  );
+  assert_eq!(warning_count(&log), 1, "{log}");
 }
 
 /// Only a canonical stored form is a value to the native path: a short block's arithmetic, a form handed on as it stands.

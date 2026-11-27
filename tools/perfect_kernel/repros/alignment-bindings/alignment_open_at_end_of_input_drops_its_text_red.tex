@@ -1,0 +1,23 @@
+% mechanism: an alignment still open when the input ends (no `\end{tabular}`, no `\end{document}`)
+%   is closed with one "Attempt to end mode restricted_horizontal" Error, and the text digested in its
+%   last cell is dropped (tex_tables.rs `digest_alignment_column`, the input-end return); one Warning
+%   counts the drop, naming its words. The drop path of a paper whose collcell cell collected
+%   `\end{tabular}` (collcell_last_cell_at_end_tabular_red.tex). The same alignment ended by
+%   `\end{document}` drops the text too, as Perl does; a plain `\halign` left open drops it with no Error.
+% witness: synthetic (EOFPUTBACK fix 1, B2); the counted Warning EOFPUTBACK fix 2
+% oracle:  pdflatex 2 `!` ("*** (job aborted, no legal \end found)", Emergency stop), no PDF;
+%          Perl drops "after one"/"after two" (the `\end{document}` variant, 4 errors + 1 warning)
+% engines: rust=1 error + 1 Warning "… drops its last cell's text, 5 word(s): d after one after two",
+%          "d", "after one" and "after two" lost (EOFPUTBACK, 2026-11-26)
+% guard:   error_boundary::perfect_kernel_error_boundary (the count; the text stays RED)
+% expect:  1 error (the mode end), the cells' text kept
+% status:  RED
+% moves:   post-merge (keep an unfinished alignment's cells at the end of input)
+\documentclass{article}
+\begin{document}
+before
+\begin{tabular}{cc} a & b \\ c & d
+
+after one
+
+after two

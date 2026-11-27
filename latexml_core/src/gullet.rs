@@ -3499,6 +3499,35 @@ pub fn at_end_of_all_input() -> bool {
   g.mouthstack.is_empty() && g.ctx_stack.is_empty()
 }
 
+/// A required argument of `spec` whose reader ran out: at the true end of all input Perl's "Missing argument" Error
+/// (Parameter.pm:93-97), the call then running on the reader's empty value; an isolated mouth's end stays quiet.
+pub fn note_missing_argument(object: &str, spec: &str) -> Result<()> {
+  if at_end_of_all_input() {
+    let caller = get_current_token()
+      .map(|t| t.to_string())
+      .unwrap_or_default();
+    Error!(
+      "expected",
+      object,
+      s!("Missing argument {spec} at end of input"),
+      s!("while reading the arguments of {caller}")
+    );
+  }
+  Ok(())
+}
+
+/// A token argument, or `\relax` when the input ran out (after [`note_missing_argument`]): the no-op stand-in a
+/// primitive's coercion accepts.
+pub fn token_or_relax(token: Option<Token>, spec: &str) -> Result<Token> {
+  match token {
+    Some(token) => Ok(token),
+    None => {
+      note_missing_argument(spec, spec)?;
+      Ok(T_CS!("\\relax"))
+    },
+  }
+}
+
 /// Whether a `\par` read after the tokens in `ring` continues a partial match of the delimiter `want`: some prefix
 /// of `want` ends in `\par` and the ring's last tokens are the rest of that prefix (tex.web §397's partial match).
 fn continues_partial_match(ring: &VecDeque<Token>, want: &[Token]) -> bool {
@@ -4088,23 +4117,27 @@ pub fn read_next_conditional() -> Result<Option<(Token, ConditionalType)>> {
 /// In the case of a single unbraced expandable token,
 ///  it will **not** read any macro arguments from the following input!
 pub fn read_arg(expansion_level: ExpansionLevel) -> Result<Tokens> {
+  Ok(read_arg_or_none(expansion_level)?.unwrap_or_default())
+}
+
+/// [`read_arg`], or `None` when the input ran out before the argument (Perl `readArg`'s undef, Gullet.pm:735).
+pub fn read_arg_or_none(expansion_level: ExpansionLevel) -> Result<Option<Tokens>> {
   match read_non_space()? {
     None => {
       // `\foo` as a file's last token, `\foo` taking an argument: a runaway
       // argument (tex.web §392), which abandons the call.
-      argument_ran_off_a_file()?;
-      Ok(Tokens!())
+      Ok(argument_ran_off_a_file()?.then(Tokens::default))
     },
     // An undelimited argument that is `\par` ends a non-`\long` macro's call (tex.web §392).
     Some(token) if is_par_ending_argument(&token) => {
       abandon_argument_at_par(token);
-      Ok(Tokens!())
+      Ok(Some(Tokens!()))
     },
     Some(token) => {
       // Perl: $$token[1] == CC_BEGIN — checks actual catcode, NOT defined_as.
       // \bgroup (catcode CS) does NOT match here; only literal { does.
       if token.get_catcode() == Catcode::BEGIN {
-        read_balanced(expansion_level, false, false)
+        read_balanced(expansion_level, false, false).map(Some)
       } else if matches!(expansion_level, ExpansionLevel::Off) {
         // A `\noexpand`'d token captured as an (undelimited) macro argument
         // reverts to its plain shadowed identity — faithful to TeX, where the
@@ -4113,7 +4146,7 @@ pub fn read_arg(expansion_level: ExpansionLevel) -> Result<Tokens> {
         // `\def\XINTfstop{\noexpand\XINTfstop}` f-stop, witness 1804.01117).
         // `\let`/`\ifx` of the LIVE token read via `read_token` (the `Token`
         // param), NOT here, so their relax-meaning capture is unaffected.
-        Ok(Tokens!(token.noexpand_shadowed().unwrap_or(token)))
+        Ok(Some(Tokens!(token.noexpand_shadowed().unwrap_or(token))))
       } else {
         // Perl Gullet.pm `readArg`:
         //   return $self->readingFromMouth(Tokens(T_BEGIN, $token, T_END), sub {
@@ -4126,6 +4159,7 @@ pub fn read_arg(expansion_level: ExpansionLevel) -> Result<Tokens> {
           unread(synth);
           read_balanced(expansion_level, false, true)
         })
+        .map(Some)
       }
     },
   }

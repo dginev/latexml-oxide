@@ -1,0 +1,12 @@
+% mechanism: the safe twin of until_true_end_puts_back.tex: the delimiter comes, in the paragraph and
+%   inside a group, so nothing is reported.
+% witness: synthetic (DIGFATAL-EOF)
+% oracle:  pdflatex 0 `!`, "before [after] more [in] end"; Perl 0 errors
+% engines: rust=0 errors, "before [after] more <bold>[in]</bold> end" (EOFBIND-rel, 2026-11-26)
+% expect:  0 errors, 0 warnings, "before [after] more <bold>[in]</bold> end"
+% status:  GREEN (guard error_boundary::perfect_kernel_error_boundary)
+\documentclass{article}
+\def\x#1\stop{[#1]}
+\begin{document}
+before \x after\stop{} more {\bfseries\x in\stop} end
+\end{document}

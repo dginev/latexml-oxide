@@ -3396,15 +3396,17 @@ const KERNEL_TOKEN_SPELLINGS: &[(&str, usize)] = &[
   ("latexml_engine/src/setup_binding_language.rs", 15),
   ("latexml_engine/src/tex.rs", 8),
   ("latexml_engine/src/tex_box.rs", 11),
-  ("latexml_engine/src/tex_character.rs", 10),
-  ("latexml_engine/src/tex_debugging.rs", 19),
+  // (EOFPUTBACK fix 1, -1 each: `\string`'s and `\meaning`'s end-of-input `\relax` is `gullet::token_or_relax`'s)
+  ("latexml_engine/src/tex_character.rs", 9),
+  ("latexml_engine/src/tex_debugging.rs", 18),
   ("latexml_engine/src/tex_file_io.rs", 4),
   // (PDFPRIM, 16 -> 12: `read_font_ident` tells `\font` and the family ranges by meaning, `defined_as`)
   ("latexml_engine/src/tex_fonts.rs", 12),
   ("latexml_engine/src/tex_inserts.rs", 4),
   ("latexml_engine/src/tex_job.rs", 2),
   ("latexml_engine/src/tex_logic.rs", 5),
-  ("latexml_engine/src/tex_macro.rs", 15),
+  // (EOFPUTBACK fix 1, 15 -> 12: `\let`'s and `\expandafter`'s end-of-input `\relax`, `gullet::token_or_relax`)
+  ("latexml_engine/src/tex_macro.rs", 12),
   ("latexml_engine/src/tex_math.rs", 80),
   ("latexml_engine/src/tex_paragraph.rs", 2),
   ("latexml_engine/src/tex_registers.rs", 5),

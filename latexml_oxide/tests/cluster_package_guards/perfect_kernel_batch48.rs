@@ -153,33 +153,41 @@ v `w'
 
 /// A `{VerbatimOut}` left open at end of input. `\FV@Scan` re-reads one
 /// `Until:^^M` line per iteration (fancyvrb.sty:1090); at true end of all
-/// input the `Until` reader must report the runaway (tex.web §338 "File
-/// ended while scanning"; Perl Parameter.pm:93-97 → `Missing argument
-/// Until:` ×100 → `Fatal:TooManyErrors`; since batch 52 one report then
-/// the tex.web §360 job-abort Fatal, see `until_miss_at_eof_is_fatal_once`).
-/// RED: the reader mapped the miss
-/// to an empty line quietly, so the loop spun forever while each `\write`
+/// input the `Until` reader reports the miss and puts the tokens back, as Perl
+/// does (Gullet.pm:686-688, Parameter.pm:93-97; DG 2026-11-26), so the loop
+/// re-misses to the error cap: 101 `Missing argument Until:` then
+/// `Fatal:TooManyErrors`, Perl's count. RED (batch 48): the reader mapped
+/// the miss to an empty line quietly, so the loop spun forever while each `\write`
 /// re-pinned the whole growing file in the never-freed interner — the
 /// buffer offset overran `u32` and the binary ABORTED (`string-interner
 /// get_unchecked` precondition). Witness: fancyvrb/fancyvrb-doc cut at
-/// its open `{SideBySideExample}`.
+/// its open `{SideBySideExample}`; repro
+/// `expansion-primitives/until_true_end_fancyvrb_loop.tex`.
 #[test]
 fn until_miss_at_true_eof_errors_like_perl() {
-  let (stderr, _xml) = convert(
-    r"\documentclass{article}
-\usepackage{fancyvrb}
-\begin{document}
-\begin{VerbatimOut}{\jobname.tmp}
-never closed
-",
+  let (stderr, xml) = convert(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/expansion-primitives/until_true_end_fancyvrb_loop.tex"
+    ),
     true,
   );
+  // The salvaged paragraph (no ids: the conversion ended in the Fatal).
   assert!(
-    stderr.contains("Error:expected:Until: Missing argument Until:"),
+    xml.contains("<para xml:id=\"p1\">\n    <p>before\n</p>"),
+    "{xml}"
+  );
+  let misses = stderr
+    .lines()
+    .filter(|l| l.starts_with("Error:expected:Until: Missing argument Until:"))
+    .count();
+  assert_eq!(misses, 101, "{stderr}");
+  assert_eq!(
+    stderr.matches("Fatal:TooManyErrors:MaxLimit(100)").count(),
+    1,
     "{stderr}"
   );
-  assert!(stderr.contains("Fatal:Mouth:EoF"), "{stderr}");
-  assert_eq!(error_count(&stderr), 2, "{stderr}");
+  assert!(!stderr.contains("Fatal:Mouth:EoF"), "{stderr}");
+  assert_eq!(error_count(&stderr), 102, "{stderr}");
   assert!(
     !stderr.contains("panicked") && !stderr.contains("precondition"),
     "{stderr}"

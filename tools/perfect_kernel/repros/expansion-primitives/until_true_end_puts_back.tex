@@ -1,0 +1,16 @@
+% mechanism: a delimited (`Until:`) argument that runs off the TRUE end of all input (the main file, no
+%   enclosing input) follows Perl's put-back (DG 2026-11-26): the scanned tokens go back to the input
+%   (Gullet.pm:686-688), "Missing argument" is reported (Parameter.pm:93-97) and the call runs on the
+%   empty argument, so the text after the call is typeset. TeX instead reports the runaway, drops the
+%   call (tex.web §338, §392) and, with no `\end` left, aborts the job (§360).
+% witness: synthetic (DIGFATAL-EOF: 81 CorTeX Fatal papers end in the Until reader's Fatal:Mouth:EoF)
+% oracle:  pdflatex 2 `!` ("File ended while scanning use of \x", Emergency stop), no PDF;
+%          Perl 1 error "Missing argument Until:\stop for ...[\x Until:\stop]", "before []after"
+% engines: rust=1 error + Fatal:Mouth:EoF, "before " (EOFBIND-rel, 2026-11-26)
+% expect:  1 error "Missing argument Until:\stop at end of input", 0 Fatal, "before []after"
+% status:  GREEN (EOFPUTBACK; guard error_boundary::perfect_kernel_error_boundary)
+\documentclass{article}
+\def\x#1\stop{[#1]}
+\begin{document}
+before \x after
+\end{document}

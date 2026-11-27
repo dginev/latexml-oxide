@@ -208,7 +208,7 @@ LoadDefinitions!({
   // normal; get_token`), so at a file's end it is the first token of the
   // enclosing input: `read_token_across_input_ends`, as `\noexpand` reads.
   DefMacro!(T_CS!("\\string"), None, {
-    let token = read_token_across_input_ends()?.unwrap_or_else(|| T_CS!("\\relax"));
+    let token = token_or_relax(read_token_across_input_ends()?, "Token")?;
     // A live \special_relax-family token is TeX's `\noexpand` marker (tex.web
     // §358: cmd `relax`, chr `no_expand_flag`, with `cur_cs` = the shadowed
     // control sequence), and `\string` prints `cur_cs`'s name (§472

@@ -145,7 +145,7 @@ LoadDefinitions!({
       }
     }
     // TeX's `\let`, never declined by a provide-only load (`let_definition`).
-    let_i(&token1, &token2.unwrap_or_else(|| T_CS!("\\relax")), None);
+    let_i(&token1, &token_or_relax(token2, "Token")?, None);
   });
   DefPrimitive!("\\futurelet RedefinableToken Token Token", sub[(cs, token1, token2)] {
     // NOT expandable, but puts tokens back
@@ -164,8 +164,8 @@ LoadDefinitions!({
   // is crossed, so a file ending in `\expandafter\x` expands the first token
   // after it (`read_primitive_token`).
   DefMacro!(T_CS!("\\expandafter"), None, {
-    let tok = read_primitive_token()?.unwrap_or_else(|| T_CS!("\\relax"));
-    let mut xtok = read_primitive_token()?.unwrap_or_else(|| T_CS!("\\relax"));
+    let tok = token_or_relax(read_primitive_token()?, "Token")?;
+    let mut xtok = token_or_relax(read_primitive_token()?, "Token")?;
     let mut skipped: Vec<Token> = vec![tok];
     while xtok.defined_as(&TOKEN_EXPANDAFTER) {
       if let Some(ntok) = read_primitive_token()? {

@@ -6190,9 +6190,10 @@ the pipeline Perl-shaped rather than by admitting more post-Fatal messages:
      TeX's `max_in_open`); on 2605.25400 the salvage revived the loop in the
      build, an 8.7 s Fatal became a 2 m 12 s timeout writing a zero-byte file;
    - a salvage of `STOMACH_CYCLE_ACTIVATE` boxes or more is refused.
-   `TooManyErrors`, `Mouth:EoF` (hep-th9308151, astro-ph0012068),
-   `Stomach:Misdefined`, `ParamSpec:Expected`, `TargetUnexpected:Endgroup` and a
-   binding's own Fatal keep every level. One helper serves every digestion loop:
+   `TooManyErrors`, `Stomach:Misdefined`, `ParamSpec:Expected`,
+   `TargetUnexpected:Endgroup` and a binding's own Fatal keep every level
+   (hep-th9308151 and astro-ph0012068, the `Mouth:EoF` witnesses, reach no Fatal
+   since the true-end put-back, OD #304). One helper serves every digestion loop:
    the eager steps, a Fatal stashed in the last step (`digest_adaptive`,
    `digest_internal`) and streaming pass 1.
 2. **`Fatal!` / `fatal!` write their `Fatal:` line at the raise** (Perl L312);
@@ -7326,6 +7327,27 @@ reset per conversion; `\long` survives the dump.
   catchfile's opener. A package or class read through `reading_from_mouth` (not autoclose) and the main document keep
   Perl's stop. `\scantokens` stays crossable (cprotect wraps text in it without `\protect`, cprotect.sty:180-185), as does
   any `\everyeof{\noexpand}` read (56ix). A runaway argument now loses what Perl kept, as pdfTeX does.
+- **The true end of all input** (`gullet::at_end_of_all_input`: no mouth beneath, no `reading_from_mouth`; DG
+  2026-11-26): an `Until:` argument that misses there follows Perl's put-back, not TeX's §338/§392 drop and §360 job
+  abort — the tokens go back (Gullet.pm:686-688), "Missing argument" is an Error (Parameter.pm:93-97) and the call
+  runs on the empty argument (`base_parameter_types.rs` `Until`). The `{}` reader and the token readers that run out
+  there err the same way (`gullet::note_missing_argument`; the token readers run on `\relax`); the other required
+  readers built on `read_arg` (`Semiverbatim`, `Undigested`, `HBoxArgContents`, …: `\label`, `\ref`, `\cite`,
+  `\section`, `\mbox`) still return an empty argument silently, where Perl errs (RED
+  `expansion-primitives/required_reader_true_end_silent_red.tex`; row R TRUEENDREADERS). A
+  self-recursive scanner re-misses to the error cap, as Perl's: fancyvrb `\FV@Scan` (fancyvrb/fancyvrb-doc), l3prg
+  `\prg_map_break:Nn` (stex/stex-doc; Perl's 37 `Until:` + 64 `{}` misses), pgf's `\pgfutil@switch@@` shape. A
+  `\futurelet` peek loop does not: its missed token comes back as `\relax`, where Perl's `unread` skips the undef
+  (RED `expansion-primitives/token_true_end_futurelet_loop_red.tex`); nor does one whose re-reads double the
+  put-back: it reaches `Fatal:Timeout:PushbackLimit`, which keeps nothing (RED
+  `expansion-primitives/until_true_end_pushback_growth_red.tex`). An alignment the run-off leaves open to the end
+  drops its last cell's text, as Perl does; one Warning counts the words dropped (`tex_tables.rs`
+  `digest_alignment_column`, `base_utilities::ink_words`; RED
+  `alignment-bindings/alignment_open_at_end_of_input_drops_its_text_red.tex` for the text). This supersedes batch
+  52's one report then `Fatal:Mouth:EoF`. Guards
+  `error_boundary::perfect_kernel_error_boundary` (the `Until:`, `{}`, `Token` and open-alignment rows),
+  `perfect_kernel_batch48::until_miss_at_true_eof_errors_like_perl`,
+  `perfect_kernel_batch52::until_miss_at_eof_reaches_the_error_cap`.
 - **Measured**: error counts, messages and text equal pdflatex's on the six cases of `vfs_file_end`, the 56ix control
   and the repros `expansion-primitives/file_end_*` (before, a file on disk errred once more than pdflatex: the
   document's `}` then stray).

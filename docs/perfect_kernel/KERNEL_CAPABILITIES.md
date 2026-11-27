@@ -544,7 +544,8 @@ unexpandable `\let`, :1756-1760). Evidence and per-step tests: [`KERNEL_CAPABILI
   carries the K9 code `\left` (`\lx@math@left@group`); `\middle`/`\right` give §1192 "Extra \right." at the formula's
   group and §1064 `off_save` against a document `{`/`\begingroup`. OD #530.
 - **G3:** `read_until` on a catcode-2 token at depth 0 backs it up with the §395 Error; non-`\long` takes 62h's
-  `abandon_argument_at_par`, `\long` appends `\par` (today: Fatal Mouth:EoF, Rust-only; Perl reads on, `Gullet.pm:654-665`).
+  `abandon_argument_at_par`, `\long` appends `\par` (today: the read runs on to the end of the file, then Perl's put-back, DG
+  2026-11-26; Perl reads on, `Gullet.pm:654-665`; RED `expansion-primitives/until_extra_brace_red.tex`).
 - **G1:** a definition whose first TeX step is an unexpandable assignment expands to one unexpandable `\lx@peek⟨id⟩`
   step; executing it runs the peek. Retires the per-reader patches (`scan_stops_at_futurelet_peek`,
   `optional_arg_protected`, `AlignPeekMode`). Measure the dump's own `\@ifnextchar` first; G1 is on the hot path.

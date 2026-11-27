@@ -919,6 +919,19 @@ pub fn ink_word_text(d: &Digested, out: &mut String) {
   }
 }
 
+/// The words `boxes` typeset ([`ink_word_text`], the pieces of a word joined across a seam): what a Warning counting
+/// dropped text counts and names.
+pub fn ink_words(boxes: &[Digested]) -> Vec<String> {
+  let mut text = String::new();
+  boxes.iter().for_each(|d| ink_word_text(d, &mut text));
+  text
+    .replace(INK_SEAM, "")
+    .split_whitespace()
+    .filter(|w| w.chars().any(char::is_alphanumeric))
+    .map(str::to_string)
+    .collect()
+}
+
 /// The constructors that print a verbatim argument as it is — a URL, an e-mail address, a DOI —, each with which of its
 /// arguments it shows (by position), for [`shown_arguments`]: llncs.cls's `\url` (llncs_cls.rs), hyperref's
 /// `\nolinkurl`, aas's `\@@email`, the OmniBus `\lx@doi`, natbib's `\harvardurl`. A constructor's replacement is

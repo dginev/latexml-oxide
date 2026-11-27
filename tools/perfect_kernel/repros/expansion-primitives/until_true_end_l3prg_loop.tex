@@ -1,0 +1,21 @@
+% mechanism: l3prg's self-recursive `\prg_map_break:Nn #1#2#3\prg_break_point:Nn #4#5`
+%   (expl3-code.tex:2452-2458), reached when `\prop_map_inline:cn` names an undefined prop, scans for
+%   a `\prg_break_point:Nn` that never comes: each miss at the true end of input is put back with
+%   Perl's "Missing argument" and the call re-runs (DG 2026-11-26), so the loop ends at the error cap.
+% witness: stex/stex-doc (513 errors under tikz's raised MAX_ERRORS before batch 52; on TL 2025 it
+%   stops earlier, at stex's missing-archive `\read`)
+% oracle:  pdflatex 2 `!` ("File ended while scanning use of \prg_map_break:Nn", Emergency stop),
+%          no PDF; Perl 101 errors (37 "Missing argument Until:\prg_break_point:Nn", 64 "Missing
+%          argument {}") and Fatal:too_many_errors:100, no XML
+% engines: rust=1 error + Fatal:Mouth:EoF, empty document (EOFBIND-rel, 2026-11-26)
+% expect:  102 (37 errors "Missing argument Until:\prg_break_point:Nn at end of input", 64 "Missing
+%          argument {} at end of input" + Fatal:TooManyErrors:MaxLimit(100)), Perl's split
+% status:  GREEN (EOFPUTBACK; guard perfect_kernel_batch52::until_miss_at_eof_reaches_the_error_cap)
+\documentclass{article}
+\usepackage{expl3}
+\ExplSyntaxOn
+\prop_map_inline:cn { l_no_such_prop_xyz } { [#1=#2] }
+\ExplSyntaxOff
+\begin{document}
+text
+\end{document}

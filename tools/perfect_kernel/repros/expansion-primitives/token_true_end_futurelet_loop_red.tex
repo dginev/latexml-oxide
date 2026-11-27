@@ -1,0 +1,21 @@
+% mechanism: a `\futurelet` peek loop at the TRUE end of all input. Perl reports each missed `Token`
+%   (Parameter.pm:93-97) and its `unread` skips the undef (TeX_Macro.pool.ltxml:189-192), so the loop
+%   re-misses to the error cap, keeping the text before it. Ours reports the first miss, but the token
+%   comes back as `\relax` and is put back, so the loop never meets the end again and runs to the
+%   gullet's cycle guard (`Fatal:Timeout:Recursion`), which keeps nothing. Reading the two tokens in
+%   `\futurelet`'s body (only the read ones put back) fixes this shape but changed a clean control
+%   paper's conditionals (an `\ifx` left open at `\end{document}`, cause not found): not landed.
+% witness: synthetic (the `Token` twin of undelimited_true_end_recursive_scanner.tex)
+% oracle:  pdflatex 2 `!` ("*** (job aborted, no legal \end found)", Emergency stop), no PDF;
+%          Perl 101 errors "Missing argument Token for ...[\futurelet Token Token Token]" and
+%          Fatal:too_many_errors:100
+% engines: rust=1 error "Missing argument Token at end of input" + Fatal:Timeout:Recursion, a 39-byte
+%          document (EOFPUTBACK fix 1, 2026-11-26; EOFPUTBACK round 0: 0 errors + the same Fatal)
+% expect:  102 (101 "Missing argument Token at end of input" + Fatal:TooManyErrors:MaxLimit(100)),
+%          "before"
+% status:  RED
+% moves:   post-merge (`\futurelet`'s put-back of a missed token, with the control's `\ifx` explained)
+\documentclass{article}
+\def\tl{\futurelet\next\tl}
+\begin{document}
+before \tl

@@ -1550,10 +1550,29 @@ pub fn digest_alignment_column(alignment: &RefCell<Alignment>, lastwascr: bool) 
       // \end{eqnarray*}`, 1206.1393, where `\eqnarray` set `\@currentlabel` and pdflatex resolves it) — has no next
       // cell to carry it: the row above keeps what must reach the document (`alignmentPreserve`), as `\noalign`
       // material after the last row stays in the list after it. Perl drops it (KNOWN_PERL_ERRORS #1182).
-      let trailing: Vec<Digested> = expire_local_box_list()
+      let (trailing, dropped): (Vec<Digested>, Vec<Digested>) = expire_local_box_list()
         .into_iter()
-        .filter(|item| item.get_property_bool("alignmentPreserve"))
-        .collect();
+        .partition(|item| item.get_property_bool("alignmentPreserve"));
+      // The input ran out inside a cell (pdflatex: "no legal \end found"): its text is dropped, as Perl drops it, and
+      // counted (RED alignment_open_at_end_of_input_drops_its_text_red; 2404.16055).
+      if last_token.is_none() && dropped.iter().any(typesets_content) {
+        let words = ink_words(&dropped);
+        let first = words
+          .iter()
+          .take(8)
+          .map(String::as_str)
+          .collect::<Vec<_>>()
+          .join(" ");
+        Warn!(
+          "unexpected",
+          "alignment",
+          s!(
+            "An alignment still open at the end of input drops its last cell's text, {} word(s): {first}{}",
+            words.len(),
+            if words.len() > 8 { " …" } else { "" }
+          )
+        );
+      }
       if !trailing.is_empty()
         && let Some(row) = alignment
           .borrow_mut()

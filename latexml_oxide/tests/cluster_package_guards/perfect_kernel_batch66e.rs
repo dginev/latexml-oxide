@@ -628,34 +628,48 @@ fn amstex_row_tag_open_group_stops_at_the_row_end() {
 /// document ends. pdftex: `$$\align a&=b\tag{5 c\enddocument` 3 errors ("Forbidden control sequence found while
 /// scanning use of \align", "Missing $ inserted", "Display math should end with $$"), `$$ a=b\tag{5 c\enddocument` 3
 /// (the first `… use of \tag`). The open row's last cells at `\enddocument` are dropped with or without a tag (RED
-/// `amstex/amstex_align_unclosed_at_enddocument`). OXIDIZED_DESIGN_DIVERGENCES #575.
+/// `amstex/amstex_align_unclosed_at_enddocument`), and one Warning counts the drop (EOFPUTBACK fix 2: the `\align`
+/// rows, `=d` and the tag). OXIDIZED_DESIGN_DIVERGENCES #575.
 #[test]
 fn amstex_tag_stops_at_the_document_end() {
   const MISSING: &str = "Missing } inserted before the row's end in \\tag";
   const FORBIDDEN: &str = "Forbidden control sequence found while scanning use of \\tag";
   const FILE_ENDED: &str = "File ended while scanning use of \\tag";
   const UNCLOSED: &str = "Closing tag \"ltx:document\" whose open descendents do not auto-close";
-  // (body, errors, the equation id and its math)
-  type Case<'a> = (&'a str, Vec<(&'a str, usize)>, (&'a str, &'a str));
+  const DROPS_D: &str = "Warning:unexpected:alignment An alignment still open at the end of input drops its last cell's \
+                         text, 4 word(s): =d(5 e )5 e";
+  const DROPS_B: &str = "Warning:unexpected:alignment An alignment still open at the end of input drops its last cell's \
+                         text, 4 word(s): =b(5 c )5 c";
+  // (body, errors, warnings, the equation id and its math)
+  type Case<'a> = (
+    &'a str,
+    Vec<(&'a str, usize)>,
+    Vec<&'a str>,
+    (&'a str, &'a str),
+  );
   let cases: [Case; 6] = [
     (
       "$$\\align a&=b\\\\ c&=d\\tag{5 e\n\\enddocument\n",
       vec![(MISSING, 1)],
+      vec![DROPS_D],
       ("id2.1.1", "<Math tex=\"\\displaystyle a=b\" text=\"a = b\""),
     ),
     (
       "$$\\align a&=b\\\\ c&=d\\tag{5 e\n\\bye\n",
       vec![(MISSING, 1)],
+      vec![DROPS_D],
       ("id2.1.1", "<Math tex=\"\\displaystyle a=b\" text=\"a = b\""),
     ),
     (
       "$$\\align a&=b\\tag{5 c\n",
       vec![(FILE_ENDED, 1)],
+      vec![DROPS_B],
       ("id2.1.1", "<Math tex=\"\\displaystyle a\" text=\"a\""),
     ),
     (
       "$$ a=b\\tag{5 c\n\\enddocument\n",
       vec![(FORBIDDEN, 1), (UNCLOSED, 1)],
+      vec![],
       // the display never ends: `\enddocument` is read in it, as without the tag
       (
         "id2.1",
@@ -665,24 +679,33 @@ fn amstex_tag_stops_at_the_document_end() {
     (
       "$$ a=b\\tag 5 c\n\\bye\n",
       vec![(FORBIDDEN, 1)],
+      vec![],
       ("id2.1", "<Math mode=\"display\" tex=\"a=b\" text=\"a = b\""),
     ),
     (
       "$$ a=b\\tag{5 c\n",
       vec![(FILE_ENDED, 1)],
+      vec![],
       ("id2.1", "<Math mode=\"display\" tex=\"a=b\" text=\"a = b\""),
     ),
   ];
-  for (body, errors, (id, math)) in cases {
+  for (body, errors, warnings, (id, math)) in cases {
     let tex =
       format!("\\input amstex\n\\input amsppt.sty\n\\document\nBefore paragraph.\n\n{body}");
     let (log, xml) = convert_counted(&tex);
     let total: usize = errors.iter().map(|(_, n)| n).sum();
     assert_eq!(
       (error_count(&log), warning_count(&log)),
-      (total, 0),
+      (total, warnings.len()),
       "{body}\n{log}"
     );
+    for warning in warnings {
+      assert_eq!(
+        log.lines().filter(|line| *line == warning).count(),
+        1,
+        "{body}: {warning}\n{log}"
+      );
+    }
     for (message, n) in errors {
       assert_eq!(log.matches(message).count(), n, "{body}: {message}\n{log}");
     }

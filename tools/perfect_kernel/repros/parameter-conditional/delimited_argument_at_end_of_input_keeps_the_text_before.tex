@@ -1,15 +1,19 @@
 % mechanism: a delimited argument read past the end of all input is TeX's "File ended while scanning use of" and its
-%   emergency stop (tex.web §338, §360), our `Fatal:Mouth:EoF` (base_parameter_types.rs, the `Until:` reader); the
-%   digestion salvage (`core_interface::finish_digestion_fatal`) keeps the text of every level digested before it
-%   (Perl's `hardYankProcessing` the innermost list, Common/Error.pm:336-338; OD #251)
+%   emergency stop (tex.web §338, §360). Since EOFPUTBACK (DG 2026-11-26) the `Until:` reader (base_parameter_types.rs)
+%   follows Perl's put-back instead: the tokens go back (Gullet.pm:686-688), one "Missing argument" Error
+%   (Parameter.pm:93-97), the call runs on the empty argument and the document goes on. Before it this was our
+%   `Fatal:Mouth:EoF`, whose digestion salvage (`core_interface::finish_digestion_fatal`, OD #251) kept the text
+%   before the call only.
 % witness: synthetic (the Mouth:EoF shape of 126 CorTeX Fatals, 68 of them salvaged in the DIGFATAL A/B: hep-th9308151,
 %   1911.06585, astro-ph0012068, math-ph0012031; hep-th0008096 no longer reaches it on INT081RC6)
 % oracle:  pdflatex (TL 2025, -no-shell-escape) "! File ended while scanning use of \grab.", "! Emergency stop.", no
 %   PDF; under -output-format=dvi 1 page shipped before the stop: "First paragraph."; Perl 0.8.8: 1 error
 %   (an empty argument, no Fatal): <p>First paragraph.</p> <p>Before []after.</p> <p>Second paragraph.</p>
-% engines: INT081RC6: a 39-byte document, 1 error, 1 fatal error, status 3
-% expect:  1 error, 1 fatal error, status 3; <p>First paragraph.</p> <p>Before </p> kept, nothing after \grab
-% status:  RED (INT081RC6) -> GREEN (DIGFATAL)
+% engines: INT081RC6: a 39-byte document, 1 error, 1 fatal error, status 3; DIGFATAL: 1 error, 1 fatal error,
+%   <p>First paragraph.</p> <p>Before </p>
+% expect:  1 error, no Fatal, status 2; <p>First paragraph.</p> <p>Before []after.</p> <p>Second paragraph.</p>
+% status:  RED (INT081RC6) -> GREEN (DIGFATAL, the salvage) -> GREEN (EOFPUTBACK, Perl's put-back; guard
+%   error_boundary::perfect_kernel_error_boundary)
 \documentclass{article}
 \long\def\grab#1\stop{[#1]}
 \begin{document}

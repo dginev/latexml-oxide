@@ -15,6 +15,21 @@ top of its group.
     too much (ar5iv issue 220, 2011.13011). It is now cut at the render density, the same value the render and its cache
     key use; a PNG or JPEG keeps its own resolution (OXIDIZED_DESIGN_DIVERGENCES #337). Guard
     `latexml_post graphics::tests::a_vector_render_is_cropped_at_its_density`.
+  - **A delimited argument that runs off the end of the document no longer ends the conversion (`Fatal:Mouth:EoF`).**
+    As in LaTeXML's Perl original, the tokens read go back to the input, the miss is an Error ("Missing argument
+    Until:…") and the macro runs on an empty argument, so the text after the call is kept. A plain `{}` argument
+    and a token argument that find no input left at the end of the document are Errors too ("Missing argument {}",
+    "Missing argument Token"); the other required readers (a `\label`, `\ref`, `\cite`, `\section` or `\mbox`
+    argument) still run on an empty argument silently there, which Perl reports. A scanner that calls itself again
+    after each miss (an open fancyvrb `{VerbatimOut}`, l3prg's map break over an undefined prop, a macro whose other
+    arguments are undelimited) stops at the error cap, `Fatal:TooManyErrors`, keeping the text before it — except a
+    `\futurelet` peek loop (it ends in `Fatal:Timeout:Recursion`) and a scanner whose re-reads double the put-back (it
+    ends in `Fatal:Timeout:PushbackLimit`, which keeps nothing). An alignment left open to the end of the
+    input still drops its last cell's text, as the Perl original does, and a Warning now counts it ("An alignment
+    still open at the end of input drops its last cell's text, N word(s): …"). Guards
+    `error_boundary::perfect_kernel_error_boundary` (the `Until:`, `{}`, `Token` and open-alignment rows),
+    `perfect_kernel_batch48::until_miss_at_true_eof_errors_like_perl`,
+    `perfect_kernel_batch52::until_miss_at_eof_reaches_the_error_cap`.
   - **Four bindings no longer read a delimited argument to the end of the file (`Fatal:Mouth:EoF`).** algpseudocodex
     loads algorithmicx and its own `pseudocodex` language, as the package does, with its keywords and blocks, so a
     nested `\Call` no longer runs ifthen's `\equal` loop off the end and its commands no longer give way to

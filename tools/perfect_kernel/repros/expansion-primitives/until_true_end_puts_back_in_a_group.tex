@@ -1,0 +1,15 @@
+% mechanism: until_true_end_puts_back.tex inside a group opened before the call: the put-back tokens
+%   close the group (`\endgroup`), so the bold ends where the source ends it and the text after the
+%   group is typeset outside it, as in Perl.
+% witness: synthetic (DIGFATAL-EOF)
+% oracle:  pdflatex 2 `!` ("File ended while scanning use of \x", Emergency stop), no PDF;
+%          Perl 1 error "Missing argument Until:\stop", "before <bold>[]after</bold> more"
+% engines: rust=1 error + Fatal:Mouth:EoF, "before " (EOFBIND-rel, 2026-11-26)
+% expect:  1 error "Missing argument Until:\stop at end of input", 0 Fatal,
+%          "before <bold>[]after</bold> more"
+% status:  GREEN (EOFPUTBACK; guard error_boundary::perfect_kernel_error_boundary)
+\documentclass{article}
+\def\x#1\stop{[#1]}
+\begin{document}
+before \begingroup\bfseries\x after\endgroup\ more
+\end{document}

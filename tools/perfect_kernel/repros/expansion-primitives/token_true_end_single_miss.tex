@@ -1,0 +1,11 @@
+% mechanism: a primitive's `Token` argument missed at the TRUE end of all input is reported as Perl
+%   reports a required reader's undef (Parameter.pm:93-97); the primitive runs on `\relax`.
+% witness: synthetic (the `Token` reader's single miss; its loop twin is token_true_end_futurelet_loop_red.tex)
+% oracle:  pdflatex 2 `!` ("*** (job aborted, no legal \end found)", Emergency stop), no PDF;
+%          Perl 1 error "Missing argument Token for ...[\afterassignment Token]", "before after "
+% engines: rust=0 errors, "before after" (EOFPUTBACK-rel, 2026-11-26)
+% expect:  1 error "Missing argument Token at end of input", "before after"
+% status:  GREEN (EOFPUTBACK; guard error_boundary::perfect_kernel_error_boundary)
+\documentclass{article}
+\begin{document}
+before after \afterassignment
