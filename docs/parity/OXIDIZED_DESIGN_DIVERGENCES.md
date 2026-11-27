@@ -24546,3 +24546,22 @@ absolute or `../` path) is read where it lies, as a document's `\input` is.
 `whatsinout::archive_readme_main_outside_the_archive_is_ignored`, `cortex_worker_ignores_a_readme_main_outside_the_source`,
 `xslt::css_copy_containment_tests::{css_imports_stay_inside_their_roots, a_found_stylesheet_resolves_inside_its_search_path}`,
 `cli_css_resource_copy::{archive_css_imports_stay_inside_the_destination, css_copies_follow_no_link_out}`.
+
+### 1172. A package's `\input` of a file no binding answers reads under the current catcodes (issue 1024)
+
+Related: #312 (the same `\input`, re-read), #1029 (under `\everyeof`), KNOWN_PERL_ERRORS #457 (the Perl defect).
+**Rule**: while definitions are read, `\input` of a file whose request has a directory or an extension no binding uses
+(`.clo`, `.txt`, none) reads it as TeX's `\input` does, under the current catcodes; `@` is not forced to a letter. The
+log's `Processing definitions w/@ other <file>` note is printed only when `@` is then read as other.
+**Perl behavior**: such an `\input` goes to `InputDefinitions` (Package.pm:2287-2288), whose `loadTeXDefinitions`
+defaults `at_letter => 1` (Package.pm:2346), so the mouth makes `@` a letter for the file (Mouth.pm:98-100); its note
+says `w/@ other` exactly when the mouth does not force `@` (Mouth.pm:94-96), i.e. only for `xy.tex.ltxml:24`.
+**TeX source**: `\input` (tex.web §537) changes no catcode; CoverPage.sty:58-70 makes `@` the escape character and
+inputs `\jobname.BibTeX.txt` so that `@article{…}` runs `\article` (pdflatex "Title: Some Waste of Paper", Perl "title
+undefined").
+**Rust behavior**: `content::input` passes `at_letter: false` on that branch; the `is_binding_extension` branch above it
+still forces `@` to a letter, as Perl. `mouth.rs` `initialize` asks `@`'s catcode for the note, so a raw package's
+`\input{size10.clo}` logs `Processing definitions <path>` as Perl and 0.7.6 do, a package that set `@` other first logs
+`w/@ other`, and `\usepackage{xy}` keeps Perl's `w/@ other xy.tex`.
+**Witness** coverpage/SimpleSample. **Guards** `perfect_kernel_batch61::input_from_a_package_keeps_the_catcodes`,
+`cluster_cli::log_note_nesting::definitions_note_says_at_other_only_where_it_is`.

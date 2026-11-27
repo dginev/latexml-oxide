@@ -5533,6 +5533,62 @@ mod log_note_nesting {
       "the binding's message printed before its (Loading note\n{stderr}"
     );
   }
+
+  /// Issue #1024: a definitions file's note says `w/@ other` only where `@` is read as other (Perl Mouth.pm:94-96).
+  /// A raw package's `\input` keeps the current catcodes, so its file reads `@` as the package's letter, or as other
+  /// where the package made it so; each `.clo` records the catcode it was read under. `xy_sty.rs` reads xy.tex with
+  /// `@` other, as Perl's `xy.tex.ltxml:24` (`at_letter => 0`), and both say so.
+  #[test]
+  fn definitions_note_says_at_other_only_where_it_is() {
+    let xy = latexml::util::test::kpse_has("xy.tex");
+    if !xy {
+      eprintln!(
+        "SKIP the xy row of definitions_note_says_at_other_only_where_it_is: xy.tex is not in this TeX Live"
+      );
+    }
+    let tex = format!(
+      "\\documentclass{{article}}\n\\usepackage{{atnotea}}\n\\usepackage{{atnoteb}}\n{}\\begin{{document}}\n\
+       \\atnoteax{{}} \\atnotebx{{}}\n\\end{{document}}\n",
+      if xy { "\\usepackage{xy}\n" } else { "" }
+    );
+    let (log, xml) = latexml::util::test::convert_files_with(
+      &tex,
+      &[
+        (
+          "atnotea.sty",
+          "\\ProvidesPackage{atnotea}\n\\input{atnotea.clo}\n",
+        ),
+        ("atnotea.clo", "\\edef\\atnoteax{\\the\\catcode`\\@}\n"),
+        (
+          "atnoteb.sty",
+          "\\ProvidesPackage{atnoteb}\n\\catcode`\\@=12\n\\input{atnoteb.clo}\n\\catcode`\\@=11\n",
+        ),
+        ("atnoteb.clo", "\\edef\\atnotebx{\\the\\catcode`\\@}\n"),
+      ],
+      Some("[rawstyles]latexml.sty"),
+    );
+    let skeleton = note_skeleton(&log);
+    assert!(
+      skeleton.contains(
+        "(Processing definitions atnotea.sty(Processing definitions atnotea.clo))(Processing definitions \
+         atnoteb.sty(Processing definitions w/@ other atnoteb.clo))"
+      ),
+      "{skeleton}\n{log}"
+    );
+    assert!(
+      !xy || skeleton.contains("(Processing definitions w/@ other xy.tex"),
+      "{skeleton}\n{log}"
+    );
+    assert!(xml.contains("<p>11 12</p>"), "{xml}");
+    assert_eq!(
+      (
+        latexml::util::test::error_count(&log),
+        latexml::util::test::warning_count(&log)
+      ),
+      (0, 0),
+      "{log}"
+    );
+  }
 }
 
 mod streaming_opt_out {
