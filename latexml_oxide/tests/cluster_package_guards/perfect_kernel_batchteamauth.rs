@@ -1872,6 +1872,46 @@ fn a_promotion_no_check_finds_worse_than_rc6() {
         "collaboration=ABC Collaboration",
       ]],
     ),
+    // (the mark is the stomach's: a `\collaboration` expanded and never digested marks no later block — Gemini
+    // TEAMAUTH.21 1)
+    row(
+      "an undigested revtex collaboration marks no later block",
+      doc(
+        r"\documentclass{revtex4-2}",
+        concat!(
+          r#"\author{Ann Able}\affiliation{CERN}"#,
+          r#"\expandafter\def\expandafter\x\expandafter{\collaboration{Unused Collaboration}}"#,
+          r#"\author{Bob Baker and the GAPS Team}\affiliation{DESY}"#,
+          r#"\collaboration{XYZ Collaboration and ABC Collaboration}"#,
+        ),
+      ),
+      (0, 0),
+      &[
+        &["role=author", "Ann Able", "affiliation=CERN"],
+        &["role=author", SEP, "Bob Baker", "affiliation=DESY"],
+        &["role=author", SEP, "the GAPS Team", "affiliation=DESY"],
+        &[
+          "role=author",
+          SEP,
+          "XYZ Collaboration",
+          "collaboration=ABC Collaboration",
+        ],
+      ],
+    ),
+    // (only lost ink moves to another creator: an ORCID icon's block keeps its promotion, W as rc6's — Gemini
+    // TEAMAUTH.21 2)
+    row(
+      "an ORCID icon keeps the promotion",
+      doc(
+        "\\documentclass{article}\n\\usepackage{graphicx,hyperref}",
+        r#"\author{Ann Able\href{https://orcid.org/0000-0002-1825-0097}{\includegraphics[height=1ex]{example-image}} and the GAPS Team \\ CERN}"#,
+      ),
+      (0, 0),
+      &[
+        &["role=author", "Ann Able", "orcid=", "affiliation=CERN"],
+        &["role=author", SEP, "the GAPS Team", "affiliation=CERN"],
+      ],
+    ),
   ]);
 }
 

@@ -4103,7 +4103,7 @@ struct Checks {
   calls:     BTreeMap<usize, CallCheck>,
   marks:     BTreeMap<usize, Vec<String>>,
   merged:    BTreeMap<usize, Vec<String>>,
-  unspelled: BTreeMap<usize, usize>,
+  unspelled: BTreeMap<usize, [usize; 2]>,
 }
 
 impl Checks {
@@ -4132,10 +4132,10 @@ impl Checks {
 
   /// Whether these, the checks of `reading`, are worse than `than`, rc6's, in any one check, each judged by its own
   /// counts, never a sum: a block's names fail where they did not, or it loses more ink, writes more in excess or leaves
-  /// more pictures — or any, where its creators differ: the emitter keeps lost ink by its block's creators, a sole
+  /// more pictures — or loses any where its creators differ: the emitter keeps lost ink by its block's creators, a sole
   /// author's note, else a nameless creator (`Dan Dore$^{1}$; the Machine Learning Group$^{1}$ \\ … \\ Bob Baker`,
-  /// harness); a call loses more words or writes more in excess; a block fails more marks, parts more names or writes
-  /// more names from their text.
+  /// harness); a call loses more words or writes more in excess; a block fails more marks, parts more names, or writes
+  /// more names unspelled or overlapping from their text.
   fn worse(&self, reading: &Resolved, than: &Self, rc6: &Resolved) -> bool {
     let creators = |reading: &Resolved, block: usize| {
       reading
@@ -4165,7 +4165,8 @@ impl Checks {
         || inks
           .iter()
           .zip(had)
-          .any(|(&ink, had)| ink > had || (moved && ink > 0))
+          .enumerate()
+          .any(|(k, (&ink, had))| ink > had || (k == 0 && moved && ink > 0))
     });
     let calls = self.calls.iter().any(|(index, (words, excess))| {
       than.calls.get(index).is_none_or(|(had_words, had_excess)| {
@@ -4176,10 +4177,10 @@ impl Checks {
       on.iter()
         .any(|(block, failed)| off.get(block).map_or(0, Vec::len) < failed.len())
     };
-    let unspelled = self
-      .unspelled
-      .iter()
-      .any(|(block, &n)| than.unspelled.get(block).copied().unwrap_or(0) < n);
+    let unspelled = self.unspelled.iter().any(|(block, n)| {
+      let had = than.unspelled.get(block).copied().unwrap_or_default();
+      n.iter().zip(had).any(|(&n, had)| n > had)
+    });
     blocks
       || calls
       || unspelled
@@ -4205,9 +4206,10 @@ fn overlapping_names(tokens: &[BlockName]) -> BTreeSet<usize> {
     .collect()
 }
 
-/// Per author block with events, how many of `reading`'s names its events don't spell ([`block_names`]) or spell from
-/// runs that overlap ([`overlapping_names`]): each is written from its text, a Warning (`\author{\def\G{GAPS}Ann Able and the \G{} Team \\ CERN}`, advisor TEAMAUTH6 C).
-fn unspelled_names(reading: &Resolved) -> BTreeMap<usize, usize> {
+/// Per author block with events, how many of `reading`'s names its events don't spell ([`block_names`]), and how many
+/// they spell from runs that overlap ([`overlapping_names`]): each written from its text, a Warning
+/// (`\author{\def\G{GAPS}Ann Able and the \G{} Team \\ CERN}`, advisor TEAMAUTH6 C).
+fn unspelled_names(reading: &Resolved) -> BTreeMap<usize, [usize; 2]> {
   let mut by_block: BTreeMap<usize, Vec<String>> = BTreeMap::new();
   for c in &reading.creators {
     by_block.entry(c.source).or_default().push(c.name.clone());
@@ -4230,9 +4232,11 @@ fn unspelled_names(reading: &Resolved) -> BTreeMap<usize, usize> {
         per_author_marks(source),
         &mut on_names,
       );
-      let n = written.iter().filter(|(name, ..)| name.is_none()).count()
-        + overlapping_names(&written).len();
-      (n > 0).then_some((source, n))
+      let n = [
+        written.iter().filter(|(name, ..)| name.is_none()).count(),
+        overlapping_names(&written).len(),
+      ];
+      (n != [0, 0]).then_some((source, n))
     })
     .collect()
 }

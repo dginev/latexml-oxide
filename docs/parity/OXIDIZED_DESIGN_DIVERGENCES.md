@@ -9601,13 +9601,14 @@ author's contact, never part of the name and never a creator.
   prints its words); the two readings run only where a decision of the first departs from rc6's, and the emitter keeps
   the first only where none of its checks is worse than rc6's, each check by its own counts, never a sum
   (`emit::Checks::worse`, `Readings::keep`): per block, names failing that did not, more ink lost, more words in
-  excess or more pictures unwritten, or any one of the three at all where the block's creators differ (lost ink is
-  kept by its block's creators); per call, more words lost or in excess; per block, more marks no contact answers,
-  more names a separator parts or more names written from their text (Gemini TEAMAUTH.17, advisor TEAMAUTH6 C); the
+  excess or more pictures unwritten, or any ink lost where the block's creators differ (lost ink is kept by its
+  block's creators); per call, more words lost or in excess; per block, more marks no contact answers,
+  more names a separator parts, or more names written from their text, unspelled or overlapping, each counted apart
+  (Gemini TEAMAUTH.17, advisor TEAMAUTH6 C); the
   chosen reading's checks are the ones the emitter uses. A run promotes all its teams or none: a names line's
   collaboration a person keeps in a block where a team was promoted keeps rc6's reading (`-- the X Collaboration and
   the Y Collaboration`, its `;` form); revtex's `\collaboration` block (`\author{#1}` as Perl's, marked
-  `AuthorBlock::collaboration`) enumerates nothing (0705.3322, 2010.14527). Only the kept reading's log calls are
+  `AuthorBlock::collaboration`, set and cleared by the stomach around its `\author`) enumerates nothing (0705.3322, 2010.14527). Only the kept reading's log calls are
   emitted (`reading_log`). A `;` is no enumeration's comma (the lexer's `Sep(Comma)` keeps
   it as its text);
   an `\IEEEmembership` grade is the name's it follows (formerly #1016, #950);
