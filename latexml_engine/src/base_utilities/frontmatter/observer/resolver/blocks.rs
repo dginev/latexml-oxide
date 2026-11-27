@@ -281,6 +281,8 @@ impl Resolver {
           .max()
       })
     };
+    // the columns a team's name alone holds, an author the enumeration made ([`LISTED_GROUP`]: `\and R Core Team`)
+    let mut team_columns: Vec<usize> = Vec::new();
     for (n, line) in lines.iter().enumerate() {
       if n > 0 && n <= skip_to {
         continue;
@@ -333,17 +335,21 @@ impl Resolver {
       // `\institute` reads the same way, revP21d)
       // (nor a column that is a team's name alone, an author as the PDF prints it: `\and R Core Team`, DG 2026-11-27 —
       // `\and Machine Learning Group`, `The Theory Group \\ CERN, Geneva` under the names stay theirs, OD #459)
-      let shared_column = column_first
+      let own = (column_first
         && line.column > 0
         && last_named().is_some_and(|named| line.column > named)
-        && self.out.creators.len() > block_creators_start
-        && {
-          let own = column_own_text(&line.events);
-          let alone = lines.iter().filter(|l| l.column == line.column).count() == 1;
-          is_institution(&own)
-            && !names_collaboration(&own)
-            && !(alone && reads_as_collaboration(&own, true) && !names_a_group(&own))
-        };
+        && self.out.creators.len() > block_creators_start)
+        .then(|| column_own_text(&line.events))
+        .filter(|own| is_institution(own) && !names_collaboration(own));
+      let rc6_shared = own.is_some();
+      let team_alone = self.enumerating
+        && own.is_some_and(|own| reads_as_collaboration(&own, true) && !names_a_group(&own))
+        && lines.iter().filter(|l| l.column == line.column).count() == 1;
+      if team_alone {
+        self.enumeration_fired = true;
+        team_columns.push(line.column);
+      }
+      let shared_column = rc6_shared && !team_alone;
       if shared_column {
         let every: Vec<usize> = (block_creators_start..self.out.creators.len()).collect();
         run_above.push((line.column, every.clone()));
@@ -554,6 +560,16 @@ impl Resolver {
             if led_names[n] {
               for &c in &made.creators {
                 self.out.creators[c].rule.push_str(" mark:prefix");
+              }
+            }
+            if team_columns.contains(&line.column) {
+              // (a name the column holds beside the team is no team: `\and Fay Fox: R Core Team`, harness-found)
+              for &c in &made.creators {
+                let creator = &mut self.out.creators[c];
+                if reads_as_collaboration(&creator.name, true) {
+                  creator.rule.push_str(LISTED_GROUP);
+                  creator.rule.push_str(COLUMN_GROUP);
+                }
               }
             }
             // (a later column's first name is parted from the name before by the `\and` (or `&`) that opened the
@@ -1681,17 +1697,19 @@ const COUNTED_BLOCKS: &str = "lx_fm_mark_led_names_counted";
 /// Count a block whose lines its marks lead read as names but as no names row (`names_led_by_marks`): the names its
 /// lines print are affiliations of an unnamed creator.
 fn warn_mark_led_names_unread(index: usize, lines: usize) {
-  let once = s!("{index}");
-  if lookup_mapping(COUNTED_BLOCKS, &once).is_some() {
-    return;
-  }
-  assign_mapping(COUNTED_BLOCKS, &once, Some(Stored::Bool(true)));
-  Warn!(
-    "unexpected",
-    "frontmatter",
-    s!(
-      "The frontmatter reading makes no name of an author block whose {lines} line(s) led by marks read as names: they \
-       are read as labelled affiliations"
-    )
-  );
+  reading_log(move || {
+    let once = s!("{index}");
+    if lookup_mapping(COUNTED_BLOCKS, &once).is_some() {
+      return;
+    }
+    assign_mapping(COUNTED_BLOCKS, &once, Some(Stored::Bool(true)));
+    Warn!(
+      "unexpected",
+      "frontmatter",
+      s!(
+        "The frontmatter reading makes no name of an author block whose {lines} line(s) led by marks read as names: \
+         they are read as labelled affiliations"
+      )
+    );
+  });
 }

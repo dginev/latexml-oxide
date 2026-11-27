@@ -130,8 +130,8 @@ fn check(rows: &[Row]) {
   assert!(bad.is_empty(), "{}", bad.join("\n"));
 }
 
-/// Rule 1 and 6: a team or collaboration enumerated by `,` (a list of three), "and", "and the", `&` or `\and` is its
-/// own author, first, middle or last, each marked one with its own address; a lone one is the creator. rc6: a
+/// Rule 1 and 6: a team or collaboration enumerated by "and", "and the", `&` or `\and` (a bare comma only as rc6's
+/// `the` collaboration after two names; an unframed one after it keeps rc6's reading, DG 2026-11-27) is its own author, first, middle or last, each marked one with its own address; a lone one is the creator. rc6: a
 /// `collaboration` contact on each name (the `\and` column an affiliation); round 0 split two listed groups, the first a
 /// contact and the second an author (review B1).
 #[test]
@@ -177,11 +177,12 @@ fn an_enumerated_team_is_an_author() {
       "a team before a name",
       doc(ARTICLE, r#"\author{Ann Able, R Core Team and Bob Baker}"#),
       (0, 0),
-      &[
-        &["role=author", "Ann Able"],
-        &["role=author", SEP, "R Core Team"],
-        &["role=author", SEP, "Bob Baker"],
-      ],
+      // (rc6's reading: an unframed team after a bare comma (DG 2026-11-27, revisit in 0.8.1))
+      &[&["role=author", "Ann Able", "affiliation=R Core Team"], &[
+        "role=author",
+        SEP,
+        "Bob Baker",
+      ]],
     ),
     row(
       "two teams, Oxford comma",
@@ -190,11 +191,16 @@ fn an_enumerated_team_is_an_author() {
         r#"\author{Ann Able, Bob Baker, R Core Team, and the GAPS Team}"#,
       ),
       (0, 0),
+      // (rc6's reading: an unframed team after a bare comma (DG 2026-11-27))
       &[
-        &["role=author", "Ann Able"],
-        &["role=author", SEP, "Bob Baker"],
-        &["role=author", SEP, "R Core Team"],
-        &["role=author", SEP, "the GAPS Team"],
+        &["role=author", "Ann Able", "collaboration=the GAPS Team"],
+        &[
+          "role=author",
+          SEP,
+          "Bob Baker",
+          "affiliation=R Core Team",
+          "collaboration=the GAPS Team",
+        ],
       ],
     ),
     row(
@@ -204,11 +210,16 @@ fn an_enumerated_team_is_an_author() {
         r#"\author{Ann Able, Bob Baker, R Core Team and the GAPS Team}"#,
       ),
       (0, 0),
+      // (rc6's reading: an unframed team after a bare comma (DG 2026-11-27))
       &[
-        &["role=author", "Ann Able"],
-        &["role=author", SEP, "Bob Baker"],
-        &["role=author", SEP, "R Core Team"],
-        &["role=author", SEP, "the GAPS Team"],
+        &["role=author", "Ann Able", "collaboration=the GAPS Team"],
+        &[
+          "role=author",
+          SEP,
+          "Bob Baker",
+          "affiliation=R Core Team",
+          "collaboration=the GAPS Team",
+        ],
       ],
     ),
     row(
@@ -270,11 +281,13 @@ fn an_enumerated_team_is_an_author() {
         r#"\author{Ann Able, the ATLAS Collaboration, the CMS Collaboration}"#,
       ),
       (0, 0),
-      &[
-        &["role=author", "Ann Able"],
-        &["role=author", SEP, "the ATLAS Collaboration"],
-        &["role=author", SEP, "the CMS Collaboration"],
-      ],
+      // (rc6's reading: one name's comma lists no team (DG 2026-11-27, revisit in 0.8.1))
+      &[&[
+        "role=author",
+        "Ann Able",
+        "collaboration=the ATLAS Collaboration",
+        "collaboration=the CMS Collaboration",
+      ]],
     ),
     row(
       "two marked collaborations (review s5)",
@@ -307,11 +320,20 @@ fn an_enumerated_team_is_an_author() {
         r#"\author{Ann Able, Bob Baker, R Core Team and Stan Development Team}"#,
       ),
       (0, 0),
+      // (rc6's reading: an unframed team after a bare comma, nothing enumerated after the institution it is read as (DG 2026-11-27))
       &[
-        &["role=author", "Ann Able"],
-        &["role=author", SEP, "Bob Baker"],
-        &["role=author", SEP, "R Core Team"],
-        &["role=author", SEP, "Stan Development Team"],
+        &[
+          "role=author",
+          "Ann Able",
+          "collaboration=Stan Development Team",
+        ],
+        &[
+          "role=author",
+          SEP,
+          "Bob Baker",
+          "affiliation=R Core Team",
+          "collaboration=Stan Development Team",
+        ],
       ],
     ),
     row(
@@ -976,12 +998,17 @@ fn a_framed_collaboration_and_an_institution_keep_their_reading() {
         r#"\author{Ann Able and Bob Baker and Theory Group, CERN}"#,
       ),
       (0, 0),
-      &[&["role=author", "Ann Able", "affiliation=Theory Group"], &[
-        "role=author",
-        SEP,
-        "Bob Baker",
-        "affiliation=CERN",
-      ]],
+      // (the guard returns rc6's reading: the group is no author before a place)
+      &[
+        &["role=author", "Ann Able", "collaboration=Theory Group"],
+        &[
+          "role=author",
+          SEP,
+          "Bob Baker",
+          "collaboration=Theory Group",
+          "affiliation=CERN",
+        ],
+      ],
     ),
     // (an unframed team or collaboration before a place keeps rc6's contact on each name — round 1 made it the first
     // name's affiliation, review S1 m1, m3)
@@ -1136,18 +1163,9 @@ fn a_framed_collaboration_and_an_institution_keep_their_reading() {
         r#"\author{Ann Able and the XYZ Team and Bob Baker for the ATLAS Collaboration}"#,
       ),
       (0, 2),
+      // (the guard returns rc6's reading: the promotion would give Ann Bob's remark)
       &[
-        &[
-          "role=author",
-          "Ann Able",
-          "collaboration=for the ATLAS Collaboration",
-        ],
-        &[
-          "role=author",
-          SEP,
-          "the XYZ Team",
-          "collaboration=for the ATLAS Collaboration",
-        ],
+        &["role=author", "Ann Able", "collaboration=the XYZ Team"],
         &[
           "role=author",
           SEP,
@@ -1227,7 +1245,8 @@ fn a_framed_collaboration_and_an_institution_keep_their_reading() {
 
 /// Round 3 (DG's bar: rc6 where the rules are not reached): the look-ahead that makes a list go on. A run of groups
 /// that ends in a place is a chain of the person's affiliations, and a framed remark after a team is no list's next
-/// piece (`lines.rs` `place_after`, `list_goes_on`). f09ffb5d88e made the first group an author holding the place
+/// piece (`lines.rs` `place_after`; the comma route and its `list_goes_on` deleted in round 4, the guard
+/// `resolver::enumeration`). f09ffb5d88e made the first group an author holding the place
 /// (review B1, ADV_TEAMAUTH4 §4) or the team an author beside its remark (Gemini TEAMAUTH.10).
 #[test]
 fn a_group_run_before_a_place_or_a_remark_keeps_rc6() {
@@ -1745,4 +1764,90 @@ fn a_listed_group_owns_no_address_of_the_person() {
     ),
   ]);
   check(&rows);
+}
+
+/// Hand-picked lines of the generated harness (kit `teamauth_fuzz`), one behaviour each, every one red on round 3
+/// (3689214c83b) and green here: the reading with the enumeration is rc6's plus its teams, else rc6's whole
+/// (`resolver::enumeration`, OXIDIZED_DESIGN_DIVERGENCES #459). Each pdflatex-clean.
+#[test]
+fn harness_picks_keep_rc6_or_add_only_the_team() {
+  check(&[
+    // (a framed remark ends a run of groups after one name's commas: rc6's affiliations, no invented co-authors —
+    // round 3's blocker B1 r02)
+    row(
+      "a team run before a framed remark",
+      doc(
+        ARTICLE,
+        r#"\author{Bob Baker, Google Brain Team, DeepMind Team, on behalf of the CMS Collaboration}"#,
+      ),
+      (0, 0),
+      &[&[
+        "role=author",
+        "Bob Baker",
+        "affiliation=Google Brain Team",
+        "affiliation=DeepMind Team",
+        "collaboration=on behalf of the CMS Collaboration",
+      ]],
+    ),
+    // (the team an author, the place after it the last person's, as rc6's: a names line's institution never lands on a
+    // listed group — ADV5 section 5)
+    row(
+      "a place after the listed team stays the person's",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able, Bob Baker and the XYZ Collaboration, Theory Group}"#,
+      ),
+      (0, 0),
+      &[
+        &["role=author", "Ann Able"],
+        &["role=author", SEP, "Bob Baker", "affiliation=Theory Group"],
+        &["role=author", SEP, "the XYZ Collaboration"],
+      ],
+    ),
+    // (an unframed team after a bare comma keeps rc6's reading, DG 2026-11-27; `author_team_comma_only_list_of_three_red`)
+    row(
+      "a bare comma keeps rc6's reading",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able, Bob Baker, Google Brain Team}"#,
+      ),
+      (0, 0),
+      &[&["role=author", "Ann Able"], &[
+        "role=author",
+        SEP,
+        "Bob Baker",
+        "affiliation=Google Brain Team",
+      ]],
+    ),
+    // (a team's name holding a label before a colon is no author: rc6's reading, no safety-net Warning — harness-found)
+    row(
+      "a colon-labelled team falls back to rc6",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able and R Core Team: KM3NeT Consortium}"#,
+      ),
+      (0, 0),
+      &[&[
+        "role=author",
+        "Ann Able",
+        "collaboration=R Core Team: KM3NeT Consortium",
+      ]],
+    ),
+    // (an e-mail never moves to a team: the guard returns rc6's reading whole — 1611.07751, 1108.4847;
+    // `author_team_thanks_email_is_the_persons_red` keeps the better reading's expectation)
+    row(
+      "an e-mail note on the team falls back to rc6",
+      doc(
+        ARTICLE,
+        r#"\author{J.-F. Donati and the BCool Collaboration\thanks{E-mail: jf@a.edu}}"#,
+      ),
+      (0, 0),
+      &[&[
+        "role=author",
+        "J.-F. Donati",
+        "collaboration=the BCool Collaboration",
+        "note:thanks[*]=E-mail: jf@a.edu",
+      ]],
+    ),
+  ]);
 }

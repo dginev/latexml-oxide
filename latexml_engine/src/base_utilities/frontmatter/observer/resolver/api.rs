@@ -1387,23 +1387,25 @@ fn warn_whole_entry_of_keyed_parts(index: usize, keys: &[String], creators: &[RC
   if distinct.len() < 2 || !creators.iter().any(partial) {
     return;
   }
-  let once = s!("{index}");
-  if lookup_mapping(COUNTED_ENTRIES, &once).is_some() {
-    return;
-  }
-  assign_mapping(COUNTED_ENTRIES, &once, Some(Stored::Bool(true)));
-  let labels: Vec<&str> = distinct
+  let labels: Vec<String> = distinct
     .iter()
-    .map(|k| k.trim_start_matches("ref:"))
+    .map(|k| k.trim_start_matches("ref:").to_string())
     .collect();
-  Warn!(
-    "unexpected",
-    "frontmatter",
-    s!(
-      "The frontmatter reading places an entry holding {} label targets ({}) whole: each name whose reference requests one \
-       of them holds them all",
-      labels.len(),
-      labels.join(", ")
-    )
-  );
+  reading_log(move || {
+    let once = s!("{index}");
+    if lookup_mapping(COUNTED_ENTRIES, &once).is_some() {
+      return;
+    }
+    assign_mapping(COUNTED_ENTRIES, &once, Some(Stored::Bool(true)));
+    Warn!(
+      "unexpected",
+      "frontmatter",
+      s!(
+        "The frontmatter reading places an entry holding {} label targets ({}) whole: each name whose reference requests \
+         one of them holds them all",
+        labels.len(),
+        labels.join(", ")
+      )
+    );
+  });
 }

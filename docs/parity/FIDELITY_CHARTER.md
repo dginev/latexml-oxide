@@ -200,11 +200,11 @@ missing image, a broken `\ref` or `\cite`, and the like — the fixes are usuall
   `\author` enumeration (pieces parted by `,`, `and`, `and the`, `&`, an inline `\and`, or `\and` columns):
   1. a team or collaboration (`… Team`, `… Collaboration(s)`, `… Consortium`) in any enumerated position is an author
      (`role="author"`, its text the personname), each its own creator with its own mark and address:
-     `Friedrich Leisch, Vincent Goulet and R Core Team` and its `\and` form give three, `A, B, R Core Team, and the GAPS
-     Team` four, `A, B, the TCV team$^3$ and the WPTE team$^4$` five (2502.17397); after one name's comma only where the
-     list goes on, a group after it no remark frames or a person after its `and` (`Ann Able, R Core Team and Bob Baker`)
-     — else it keeps rc6's reading: `Chris Howard, SNO Collaboration, \texttt{…}` (0906.0040), `Bob Baker, Google Brain
-     Team, Palo Alto`, `Bob Baker, ALICE Trigger Team, for the ALICE Collaboration`, and the commas-only `A, R Core Team, B` (RED `author_team_comma_only_list_of_three_red`); what a class gives its
+     `Friedrich Leisch, Vincent Goulet and R Core Team` and its `\and` form give three, `A, B, the TCV team$^3$ and the WPTE team$^4$` five (2502.17397); after a bare comma only as rc6's
+     collaboration after two names (`…, the TCV Team`) or marked — an unframed team after a comma keeps rc6's reading
+     (DG 2026-11-27, revisit in 0.8.1): `A, B, Google Brain Team` (1408.5896, astro-ph0608009; RED
+     `author_team_comma_only_list_of_three_red`), `A, B, R Core Team, and the GAPS Team`, `Chris Howard, SNO Collaboration, \texttt{…}` (0906.0040), `Bob Baker,
+     Google Brain Team, Palo Alto`, `Ann Able, R Core Team and Bob Baker`; what a class gives its
      sole or last author, and a contact line under the names, stays its holder's before the split (`\author{J.T.
      Mitchell and the PHENIX Collaboration}\address{BNL}`: Mitchell's; svjour3's `\institute` every listed group's too);
      an unmarked address a class shares among its line's names (llncs's or aa's institute, an `\affil` or a line under
@@ -221,8 +221,7 @@ missing image, a broken `\ref` or `\cite`, and the like — the fixes are usuall
      REVTeX's `\collaboration{Fermilab Lattice, HPQCD, and MILC Collaborations}` does (2412.18491, RED
      `revtex_collaboration_list_is_one_contact_red`);
   4. institutions and places keep their reading, an affiliation: `\and The R Foundation`, `\and University of X`, a group
-     before a place (`and Theory Group, CERN`, split over the names as rc6 splits `and Univ A, CERN`: RED
-     `author_group_before_place_every_name_red`), and nothing after an institution the line read is enumerated; a team or
+     before a place (`and Theory Group, CERN`, rc6's reading: RED `author_group_before_place_every_name_red`), and nothing after an institution the line read is enumerated; a team or
      collaboration before a place keeps rc6's contact (`A, B and XYZ Collaboration, CERN`), and a run of groups that ends
      in a place is a chain of the name's affiliations, as rc6 reads it (`Ann Able, XYZ Team, ABC Collaboration, CERN`;
      `A, B, the XYZ Collaboration and the ABC Collaboration, CERN`);
@@ -230,7 +229,11 @@ missing image, a broken `\ref` or `\cite`, and the like — the fixes are usuall
      hep-ex0611001, 2009.04166), a bracketed line `(XYZ Collaboration)`, a dash (hep-ex0106079), a collaboration line of
      its own (BESIII's), AASTeX's `\collaboration`; a bracket the piece closes is no remark (`Ann Able (MIT), Bob Baker
      and R Core Team`: three authors);
-  6. a lone collaboration is the creator (`\author{The IceCube Collaboration}`).
+  6. a lone collaboration is the creator (`\author{The IceCube Collaboration}`);
+  7. the reading with these authors is kept only where it is rc6's plus them: every person keeps all rc6 gave it but
+     the team's piece (a team's own mark or note moves with it, never an e-mail), no nameless creator rc6 did not
+     have (one rc6 had may heal onto the team), each new author a piece rc6 read as the names' collaboration or a
+     column's own affiliation; anything else is rc6's reading whole.
 - **An address no author's name spells, in a boxed author block, is a block-level contact** (2026-11-01): a shared `contact@lab.org` line in a `tabular`/`minipage` block goes to no person; it is kept once at the block level (dev census M1, 2605.09461).
   **Amended 2026-11-05 (user: "block addresses may live on the #159 block creator"):** the block level is the shared
   nameless creator below the authors (OD #159, `label=addresses:block`) — the one nameless creator allowed, holding

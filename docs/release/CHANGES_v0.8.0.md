@@ -57,9 +57,9 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     two authors; the team was a hover-only collaboration note on each name (the `\and` form an affiliation). A "group"
     is an author only after "and" or with its own mark (`A, B, Quantum Optics Group` stays an affiliation). A shared head
     lists each group: `The ATLAS and CMS Collaborations` gives the authors "The ATLAS" and "CMS Collaborations", as
-    printed. A team after one name's comma stays that name's (`A, Google Brain Team, Palo Alto`), as do groups listed
-    before a place or a `for the … Collaboration` remark, and the person a team is listed beside keeps
-    the address and e-mail printed for them. A team a name
+    printed. A team after a comma alone keeps its reading (`A, B, Google Brain Team`), as do groups listed before a
+    place or a `for the … Collaboration` remark; the person a team is listed beside keeps everything printed for them —
+    a reading that would take anything from a person keeps the earlier one. A team a name
     speaks for (`for the ATLAS Collaboration`), a bracketed line under the names, AASTeX's `\collaboration` and
     institutions keep their reading; REVTeX's `\collaboration` list is still read as before (a known residual).
     FIDELITY_CHARTER (amended 2026-11-27), OXIDIZED_DESIGN_DIVERGENCES #459; guards `perfect_kernel_batchteamauth`.

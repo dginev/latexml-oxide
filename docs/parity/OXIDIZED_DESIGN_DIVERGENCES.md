@@ -9582,7 +9582,7 @@ author's contact, never part of the name and never a creator.
   collaboration`; formerly #946, #967) where the line frames it — a name's `for`/`on behalf of`/`representing` remark,
   brackets, dashes, a line of its own, a remark left open earlier on the line; in an author enumeration a team or
   collaboration is an author wherever it stands (after `and`, `and the`, `&`, an inline `\and`, an `\and` column alone,
-  or a comma of a list of two names, or of one where the list goes on: a group no remark frames, or a person after its `and`), a "group"
+  or a comma after two names where rc6 read the names' collaboration, `…, the TCV Team`), a "group"
   only after `and`/`&` with no address under it or with its own mark, each group a shared head noun lists by its own text
   (beside names the block printed), never after an institution the line read nor before a place, past a run of groups (a team there keeps its
   contact; the run is a chain of affiliations, `Ann Able, XYZ Team, ABC Collaboration, CERN`), as article.cls:246-247 prints them and Perl's `@authorsplits` (Base_Utility.pool.ltxml:679) splits them
@@ -9591,7 +9591,13 @@ author's contact, never part of the name and never a creator.
   last author, or a contact line under the names, goes to its owner before the split (`post.rs
   sole_author_takes_the_block`, `api.rs` `annotate:last`, `blocks.rs place_line_contacts`, `resolver::LISTED_GROUP`;
   svjour3's `\institute`, amsart's and jpconf's `\address` (nucl-ex0510076, astro-ph0311630), PoS's e-mail line
-  (1411.6086); a marked group the reading made a creator before stays the holder, 2404.07458);
+  (1411.6086); a marked group the reading made a creator before stays the holder, 2404.07458); a names line's
+  institution is the last name's the line did not list as a group (`lines.rs`, as `api.rs` `annotate:last`). The reading
+  with the enumeration is kept only where it is rc6's reading (the enumeration off, `Resolver::enumerating`) plus the
+  teams, else rc6's whole (`resolver::enumeration::promotion_only`: persons keep all but the team's piece, a team's own
+  mark or note moving with it and never an e-mail; no new nameless creator, one rc6 had healed onto a team; each new
+  creator a collaboration-arm contact or a lone column's affiliation in rc6's reading); the two readings run only
+  where a decision of the first departs from rc6's, and only the chosen reading's log calls are emitted (`reading_log`);
   an `\IEEEmembership` grade is the name's it follows (formerly #1016, #950);
   IEEEtran's blocks under authblk's `\author` are read as the class reads them (formerly #987).
 

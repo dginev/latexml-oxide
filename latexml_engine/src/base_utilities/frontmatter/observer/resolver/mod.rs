@@ -265,6 +265,8 @@ pub enum Input {
 mod api;
 pub(in crate::base_utilities::frontmatter::observer) use api::is_creator_call;
 mod blocks;
+mod enumeration;
+pub(super) use enumeration::reading_log;
 mod labels;
 mod lines;
 mod mark_ledger;
@@ -635,6 +637,11 @@ struct Resolver {
   /// the names line being read has a line under it in its column that reads as no names (a place, `Theory Group \\
   /// CERN`): `names_line`'s enumeration of a group
   place_under:        bool,
+  /// whether the names lines enumerate their teams as authors (OXIDIZED_DESIGN_DIVERGENCES #459): off, the reading is
+  /// rc6's, which [`resolve_with`] checks the reading with it on against
+  enumerating:        bool,
+  /// whether a decision of the reading departed from rc6's by the enumeration
+  enumeration_fired:  bool,
   /// the block being read's marks and notes beside spacing, each with the name it goes to ([`mark_ledger`])
   mark_ledger:        MarkLedger,
   /// the pending entries (their place in `pending`) a `_share=authors` call made (llncs's one `\institute`, no `\and`
@@ -758,6 +765,8 @@ impl Resolver {
       outside_labels:     Vec::new(),
       marks_lead:         false,
       place_under:        false,
+      enumerating:        true,
+      enumeration_fired:  false,
       mark_ledger:        MarkLedger::default(),
       shared:             Vec::new(),
       row_units:          Vec::new(),
@@ -1188,6 +1197,8 @@ pub(in crate::base_utilities) const RUN_LEFTOVER: &str = " api:run-leftover";
 /// The rule tag of a creator a names line's enumeration made of a group (`… and R Core Team`, OXIDIZED_DESIGN_DIVERGENCES
 /// #459): what a class gives its sole or last author stays that author's, as before (`sole_named`).
 pub(super) const LISTED_GROUP: &str = " line:listed-group";
+/// The rule tag beside [`LISTED_GROUP`] of a team a column of its own holds (`\and R Core Team`): the column rule's.
+pub(super) const COLUMN_GROUP: &str = " line:column-group";
 
 /// The one of `names` an address spells (`spelled_owners`), if one — none for a list of local parts the address reader
 /// could not part (`lists_local_parts`); each name read as an address spells it, by its base letters ([`base_letters`])
@@ -1285,7 +1296,17 @@ pub fn resolve_with(
   inputs: &[Input],
   conventions: &dyn Fn(&str, &str) -> &'static Policy,
 ) -> Resolved {
+  enumeration::checked(|enumerating| read(inputs, conventions, enumerating))
+}
+
+/// [`resolve_with`]'s reading, its names lines `enumerating` their teams or not, and whether that departed from rc6's.
+fn read(
+  inputs: &[Input],
+  conventions: &dyn Fn(&str, &str) -> &'static Policy,
+  enumerating: bool,
+) -> (Resolved, bool) {
   let mut resolver = Resolver::new();
+  resolver.enumerating = enumerating;
   resolver.outside_labels = affiliation_set_labels(inputs, conventions);
   let mut policy: &'static Policy = &policy::KERNEL;
   // (the blocks a later clear removed, a nameless one too: none of their items is kept)
@@ -1492,7 +1513,7 @@ pub fn resolve_with(
     in_source_order(&mut creator.contacts);
   }
   in_source_order(&mut out.block);
-  out
+  (out, resolver.enumeration_fired)
 }
 
 /// Whether a contact call is every author's share unless marks pick it (`_share=authors`: llncs's sole `\institute`, aa's,
