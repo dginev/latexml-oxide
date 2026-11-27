@@ -1,5 +1,7 @@
 use crate::{
-  engine::latex_constructs::{after_float, before_float_ex, preincrement_float_counter},
+  engine::latex_constructs::{
+    after_float, before_float_ex, in_caption_subtype, preincrement_float_counter,
+  },
   package::caption_sty::run_caption_subtype_hook,
   prelude::*,
 };
@@ -10,7 +12,7 @@ use crate::{
 /// `\caption@ifsubtype`: in a `{subcaptiongroup}` or another sub-float); entering it runs `\caption@subtypehook`
 /// after the minipage opened (`begin_subfloat_body`).
 fn begin_subfloat(float_type: &str, parent: &str, double: bool) -> Result<()> {
-  let entering = !in_caption_subtype()?;
+  let entering = !in_caption_subtype();
   before_float_ex(float_type, Some(parent), double)?;
   assign_value(SUBTYPE_HOOK_DUE, entering, Some(Scope::Local));
   Ok(())
@@ -30,18 +32,6 @@ fn begin_subfloat_body(whatsit: &mut Whatsit) -> Result<Vec<Digested>> {
 
 /// The sub-float `begin_subfloat` opened entered the sub-type: `begin_subfloat_body` runs its hook.
 const SUBTYPE_HOOK_DUE: &str = "lx@subcaption@subtypehook@due";
-
-/// `\@captype` is a sub-type already (`sub…`): the model's `\caption@ifsubtype` (caption.sty:346), the bindings setting
-/// `\@captype`, not caption's `\@subcaptype`.
-fn in_caption_subtype() -> Result<bool> {
-  Ok(
-    has_meaning(&T_CS!("\\@captype"))
-      && do_expand(Tokens!(T_CS!("\\@captype")))?
-        .to_string()
-        .trim()
-        .starts_with("sub"),
-  )
-}
 
 /// Perl subcaption.sty.ltxml L66/76/86/96: `properties => sub { (width => $_[2]) }`.
 /// Perl sets this on ALL four sub-float envs ({subfigure}, {subfigure*},

@@ -5311,6 +5311,9 @@ fn begin_float(
   xfloat: bool,
 ) -> Result<()> {
   set_aside_pending_caption(float_type);
+  // A sub-float opened in a sub-float leaves the sub-type as it is and steps no counter (caption.sty:325-331
+  // `\@setcaptionsubtype`, the hook's `\caption@stepcounter` at :642 not run); read before `\@captype` is set.
+  let in_subtype = preincrement.is_some() && in_caption_subtype();
   // The boxes open in this float (`begin_caption_box`) end before it does; `after_float` unwinds any whose end an
   // error recovery skipped.
   assign_value(
@@ -5405,10 +5408,24 @@ fn begin_float(
   } else if typed {
     begin_float_continuation(float_type);
   }
-  if let Some(main_counter) = preincrement {
+  if let Some(main_counter) = preincrement
+    && !in_subtype
+  {
     preincrement_float_counter(float_type, main_counter);
   }
   Ok(())
+}
+/// `\@captype`'s expansion, where it is defined.
+fn current_captype() -> Option<String> {
+  has_meaning(&T_CS!("\\@captype"))
+    .then(|| do_expand(T_CS!("\\@captype")).ok())
+    .flatten()
+    .map(|captype| captype.to_string())
+}
+/// `\@captype` is a sub-type already (`sub…`): the model's `\caption@ifsubtype` (caption.sty:346), the bindings setting
+/// `\@captype`, not caption's `\@subcaptype`.
+pub fn in_caption_subtype() -> bool {
+  current_captype().is_some_and(|captype| captype.trim().starts_with("sub"))
 }
 /// The state value (and the whatsit property `after_float` copies it to) of the real line a float's panels are set in
 /// rows against, and the frame of the float that installed it.
@@ -6580,10 +6597,7 @@ const OUTER_PENDING_CAPTION: &str = "lx@float@outer@caption";
 /// minipage of a captioned table: its `\label` named no table). Guard
 /// `perfect_kernel_batch57::nested_float_keeps_the_outer_caption`.
 fn set_aside_pending_caption(float_type: &str) {
-  let enclosing = has_meaning(&T_CS!("\\@captype"))
-    .then(|| do_expand(T_CS!("\\@captype")).ok())
-    .flatten()
-    .map(|captype| captype.to_string());
+  let enclosing = current_captype();
   let mut outer = stored_map!();
   for captype in enclosing.iter().map(String::as_str).chain([float_type]) {
     for part in PENDING_CAPTION_PARTS {
@@ -6645,10 +6659,10 @@ fn unwind_caption_boxes() {
 
 /// The float type a box (`{minipage}`, `\parbox`) begun in a float captions for: `\@captype`, inside a float.
 fn caption_box_type() -> Option<String> {
-  (lookup_bool("lx@in@float") && has_meaning(&T_CS!("\\@captype")))
-    .then(|| do_expand(T_CS!("\\@captype")).ok())
+  lookup_bool("lx@in@float")
+    .then(current_captype)
     .flatten()
-    .map(|captype| captype.to_string().trim().to_string())
+    .map(|captype| captype.trim().to_string())
     .filter(|captype| !captype.is_empty())
 }
 
@@ -6745,8 +6759,8 @@ pub fn end_caption_box(whatsit: &mut Whatsit) -> Result<()> {
 }
 
 /// A sub-float's first opener in its float steps the float's own counter ahead of its caption
-/// (Perl beforeFloat `preincrement`): once per float — not when the last float to close was of this
-/// sub-type (`LAST_FLOATTYPE`, set by `after_float`) or the float's caption is done.
+/// (Perl beforeFloat `preincrement`): once per float — not when the last float to close or step was of this
+/// sub-type (`LAST_FLOATTYPE`, set by `after_float` and here) or the float's caption is done.
 pub fn preincrement_float_counter(float_type: &str, main_counter: &str) {
   let last_type = lookup_value("LAST_FLOATTYPE")
     .map(|s| s.to_string())
@@ -6760,6 +6774,13 @@ pub fn preincrement_float_counter(float_type: &str, main_counter: &str) {
   {
     let prekey = s!("PREINCREMENTED_{main_counter}");
     assign_value(&prekey, props, Some(Scope::Global));
+    // A sub-float still open blocks a second step, as caption steps once per float (caption.sty:639-642); Perl sets
+    // `LAST_FLOATTYPE` only at the close (KNOWN_PERL_ERRORS #324; 2502.06601, 2308.06714, 2403.16442, 2008.08136).
+    assign_value(
+      "LAST_FLOATTYPE",
+      Stored::String(pin(float_type)),
+      Some(Scope::Global),
+    );
   }
 }
 /// Perl: afterFloat (latex_constructs.pool.ltxml L3440-3448)

@@ -1,0 +1,25 @@
+% witness: synthetic (the 2502.06601 mechanism, a sub-type of another counter)
+% oracle:  pdflatex 0 errors, 1 subcaption Warning ("`subtable' is treated as `subfigure'"): "Refs: 2, 3, 2.1, 2a, 2b."
+% engines: rust INT081AU: the inner sub-table stepped the table counter, the section-2 table took the leaked step as
+%          "1.1" (S1.T1); perl 0.8.8 the same
+% expect:  0 errors, 0 warnings; Table 2.1 (S2.T1), figures 1-3; the inner sub-table S1.T0.st1 "0a" is a known-wrong pin
+%          (pdflatex makes it the sub-figure 2a: RED subtable_in_a_figure_is_a_subfigure_red)
+% status:  RED (INT081AU) -> GREEN (FIGNUM)
+\documentclass{article}
+\usepackage{subcaption}
+\counterwithin{table}{section}
+\begin{document}
+\section{One}
+\begin{figure}A\caption{First}\end{figure}
+\begin{figure}
+  \begin{subfigure}{0.45\textwidth}
+    \begin{subtable}{0.5\textwidth}X\caption{Inner}\label{sub:in}\end{subtable}
+    \caption{Outer}\label{sub:out}
+  \end{subfigure}
+  \caption{Second}\label{fig:two}
+\end{figure}
+\section{Two}
+\begin{table}B\caption{A table}\label{tab:one}\end{table}
+\begin{figure}C\caption{Third}\label{fig:three}\end{figure}
+Refs: \ref{fig:two}, \ref{fig:three}, \ref{tab:one}, \ref{sub:in}, \ref{sub:out}.
+\end{document}

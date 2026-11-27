@@ -1,0 +1,19 @@
+% witness: 2208.13192 (a sibling sub-figure closes before the nested one opens: one step already)
+% oracle:  pdflatex 0 errors: "Refs: 2, 3, 2a, 2b."
+% engines: rust INT081AU and FIGNUM the same; perl 0.8.8 the same
+% expect:  0 errors, 0 warnings; figures 1-3, the panels S0.F2.sf1 "2a" and S0.F2.sf2 "2b"
+% status:  CONTROL
+\documentclass{article}
+\usepackage{subcaption}
+\begin{document}
+\begin{figure}A\caption{First}\end{figure}
+\begin{figure}
+  \begin{subfigure}{0.45\textwidth}Y\caption{Left}\label{sub:left}\end{subfigure}
+  \begin{subfigure}{0.45\textwidth}
+    \begin{subfigure}{0.5\textwidth}X\caption{Inner}\label{sub:in}\end{subfigure}
+  \end{subfigure}
+  \caption{Second}\label{fig:two}
+\end{figure}
+\begin{figure}B\caption{Third}\label{fig:three}\end{figure}
+Refs: \ref{fig:two}, \ref{fig:three}, \ref{sub:left}, \ref{sub:in}.
+\end{document}

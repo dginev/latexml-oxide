@@ -1,0 +1,27 @@
+% witness: 2310.08672 (a {table} holding {subfigure}s: its figures 1-8, then 10-14, the PDF's 9-13); synthetic
+% oracle:  pdflatex 0 errors, 2 subcaption Warnings ("`subtable' is treated as `subfigure'", "`subfigure' is treated as
+%          `subtable'"; subcaption.sty:97-106 `\subcaption@minipage@`: a sub-float is of `sub\@captype` whatever its
+%          name, and caption's hook steps `\@captype`, caption.sty:642): "Refs: 1, 1a, 2, 2, 2a."
+% engines: rust FIGNUM (INT081AU the same): the first panel a sub-table S0.T2.st1 "2a", the table's sub-figure steps the
+%          figure counter, so the second figure is S0.F3 "3" (3a); no Warning; perl 0.8.8 the same
+% expect:  0 errors, 2 warnings; the panel the sub-figure S0.F1.sf1 "1a", Table 2 S0.T2, Figure 2 S0.F2 (2a)
+% status:  RED
+% moves:   post-merge (a sub-float takes the float's sub-type and steps `\@captype`; proposed batch)
+\documentclass{article}
+\usepackage{subcaption}
+\begin{document}
+\begin{table}A\caption{First table}\end{table}
+\begin{figure}
+  \begin{subtable}{0.45\textwidth}X\caption{Panel}\label{sub:p}\end{subtable}
+  \caption{First figure}\label{fig:one}
+\end{figure}
+\begin{table}
+  \begin{subfigure}{0.45\textwidth}Y\end{subfigure}
+  \caption{Second table}\label{tab:two}
+\end{table}
+\begin{figure}
+  \begin{subfigure}{0.45\textwidth}B\caption{Panel two}\label{sub:q}\end{subfigure}
+  \caption{Second figure}\label{fig:two}
+\end{figure}
+Refs: \ref{fig:one}, \ref{sub:p}, \ref{tab:two}, \ref{fig:two}, \ref{sub:q}.
+\end{document}

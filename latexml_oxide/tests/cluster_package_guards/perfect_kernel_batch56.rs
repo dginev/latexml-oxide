@@ -12375,8 +12375,8 @@ fn changetext_under_memoir_keeps_one_column() {
 
 /// 57l: a `\subfloat` inside a `{subfigure}` is a subfigure: the sub-float type drops a leading `sub`
 /// from `\@captype` (Perl's `\subcaption`, subcaption.sty.ltxml:50-53) and falls back to `figure`, so
-/// no `{subsubfigure}` is opened. The ids read figure 2 where pdflatex numbers 1: the nested subfigure
-/// pre-increments the figure counter a second time, as Perl's `beforeFloat` does (KPE #324).
+/// no `{subsubfigure}` is opened. The nested subfigure steps no figure counter (caption.sty:325-331): figure 1, as
+/// pdflatex numbers it, where Perl's `beforeFloat` stepped it again (KPE #324; FIGNUM repinned from `S0.F2…`).
 #[test]
 fn subfloat_in_a_subfigure_is_a_subfigure() {
   let (stderr, xml) = convert_with(
@@ -12390,8 +12390,8 @@ fn subfloat_in_a_subfigure_is_a_subfigure() {
   latexml::util::test::assert_element(
     &xml,
     "figure",
-    &[r#"xml:id="S0.F2.sf2""#],
-    r##"<figure inlist="lof" xml:id="S0.F2.sf2"><tags><tag><text fontsize="90%">(b)</text></tag><tag role="refnum">2b</tag></tags><figure inlist="lof" xml:id="S0.F2.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">2a</tag></tags><p>Nbody</p><toccaption><tag close=" ">a</tag>Nested</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">Nested</text></caption></figure><toccaption><tag close=" ">b</tag>Outer sub</toccaption><caption><tag close=" "><text fontsize="90%">(b)</text></tag><text fontsize="90%">Outer sub</text></caption></figure>"##,
+    &[r#"xml:id="S0.F1.sf2""#],
+    r##"<figure inlist="lof" xml:id="S0.F1.sf2"><tags><tag><text fontsize="90%">(b)</text></tag><tag role="refnum">1b</tag></tags><figure inlist="lof" xml:id="S0.F1.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">1a</tag></tags><p>Nbody</p><toccaption><tag close=" ">a</tag>Nested</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">Nested</text></caption></figure><toccaption><tag close=" ">b</tag>Outer sub</toccaption><caption><tag close=" "><text fontsize="90%">(b)</text></tag><text fontsize="90%">Outer sub</text></caption></figure>"##,
   );
 }
 

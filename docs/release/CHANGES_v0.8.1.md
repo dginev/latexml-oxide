@@ -21,6 +21,11 @@ top of its group.
     `rhai-bindings/digest_fatal_in_a_section_title_red`, `…_in_a_thanks_red`, `…_in_a_caption_red`,
     `…_in_a_caption_outside_a_float_red`; OXIDIZED_DESIGN_DIVERGENCES #251). Guard
     `fatal_salvages_partial_document::a_digestion_fatal_closes_each_unfinished_construct`.
+  - **A sub-float nested in another steps its float's number once, as caption.sty does.** A `{subfigure}` opened
+    inside a `{subfigure}`, the first sub-float of its figure, stepped the figure counter a second time, so the figure
+    and every later one were numbered one too high (2502.06601, 2308.06714, 2403.16442, 2008.08136); a `{subtable}`
+    inside a `{subfigure}` stepped the table counter (KNOWN_PERL_ERRORS #324). Guard
+    `caption_subtype_hook::nested_subfigure_steps_figure_once`.
   - **KOMA-Script, versioned SIAM and dmtcs title notes print their fnsymbol marks and step the footnote counter, as the
     classes do.** A binding now answers for the class it actually serves — its own name, the request a versioned or prefix
     fallback answered with it (`siamltex1213`, `siamonline220329`), or the base a raw class file `\LoadClass`es while leaving

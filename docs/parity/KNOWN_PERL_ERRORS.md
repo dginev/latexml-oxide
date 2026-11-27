@@ -8690,7 +8690,11 @@ Trigger: `\usepackage{subcaption}` … `\begin{figure}\subfloat[One]{A}\subfloat
 
 `beforeFloat` pre-increments the main counter for the first sub-float of a float (latex_constructs.pool.ltxml:3378-3381: `$type ne LAST_FLOATTYPE` and no main caption yet); `LAST_FLOATTYPE` is set only at `afterFloat` (:3391), so a `{subfigure}` opened inside another, before either ends, steps `figure` a second time.
 
-Trigger: `\usepackage{subcaption}` … `\begin{figure}\begin{subfigure}{0.4\textwidth}\begin{subfigure}{\linewidth}Inner\caption{Inner}\end{subfigure}\caption{Middle}\end{subfigure}\caption{Outer}\end{figure}` — Perl and Rust: "Figure 2: Outer" (ids `S0.F2…`); pdflatex: "Figure 1: Outer". Not fixed (task list); pinned as is by `perfect_kernel_batch56::subfloat_in_a_subfigure_is_a_subfigure`.
+caption.sty steps it once per float: `\@setcaptionsubtype` (:325-331) only logs when `\@captype` is a sub-type already, so the sub-type hook and its `\caption@stepcounter\@captype` (:639-642) do not run. A `{subtable}` in a `{subfigure}` steps the table counter, which the next table's caption takes.
+
+Trigger: `\usepackage{subcaption}` … `\begin{figure}\begin{subfigure}{0.4\textwidth}\begin{subfigure}{\linewidth}Inner\caption{Inner}\end{subfigure}\caption{Middle}\end{subfigure}\caption{Outer}\end{figure}` — Perl: "Figure 2: Outer" (ids `S0.F2…`); pdflatex: "Figure 1: Outer". Witnesses 2502.06601 (Figure 3 as `S4.F4`, every later figure one too high), 2308.06714, 2403.16442, 2008.08136. Fixed in Rust (FIGNUM): `begin_float` steps no counter when `\@captype` is a sub-type already, and `preincrement_float_counter` records the sub-type as the last float at its step (latex_constructs/mod.rs). Repros `captions-floats/{nested_subfigure_steps_the_figure_once, subtable_in_a_subfigure_steps_no_table}`.
+
+**Guard**: `caption_subtype_hook::nested_subfigure_steps_figure_once`, `perfect_kernel_batch56::subfloat_in_a_subfigure_is_a_subfigure`.
 
 ## 325. natbib: `\bibpreamble` is never typeset
 

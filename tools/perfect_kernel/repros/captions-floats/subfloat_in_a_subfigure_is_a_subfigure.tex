@@ -2,7 +2,7 @@
 %          and the first 57l cut opened an undefined `{subsubfigure}` (Error:undefined, two captions on the
 %          panel). The type drops a leading `sub`, as Perl's `\subcaption` does (subcaption.sty.ltxml:50-53),
 %          and falls back to `figure` outside a float or for a type with no `sub<type>` environment
-% oracle:  pdflatex 0 errors; "(a) Nested" inside "(a) Outer sub" inside "Figure 1: Main"
+% oracle:  pdflatex 0 errors; "(a) Nested" inside "(b) Outer sub" inside "Figure 1: Main" (FIGNUM: ids S0.F1…, were S0.F2…, KPE #324)
 % engines: rust 57l first cut: Error:undefined:{subsubfigure}; perl/57k: `\subfloat` always a subfigure
 % expect:  0 errors, 0 warnings; a subfigure "Nested" inside the subfigure "Outer sub"
 % status:  RED (57l first cut) -> GREEN (57l)

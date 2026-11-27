@@ -1,0 +1,53 @@
+% witness: 2502.06601 (Figure 3 came out S4.F4, every later figure one too high), 2308.06714, 2403.16442, 2008.08136
+% oracle:  pdflatex 0 errors: "Refs: 2 2a, 3 3a 3b, 4 4a, 5 5a, 6 6a, 7 7a, 8." — a sub-float opened in a sub-float
+%          leaves the sub-type and steps no counter (caption.sty:325-331 `\@setcaptionsubtype`; the hook's step, :642)
+% engines: rust INT081AU: F1, F3 (3a), F6 (6a 6b), F8, F9, F10, F11, F12; perl 0.8.8 the same (KNOWN_PERL_ERRORS #324)
+% expect:  0 errors, 0 warnings; figures S0.F1-S0.F8 numbered 1-8, the panels 2a, 3a 3b, 4a, 5a, 6a, 7a
+% status:  RED (INT081AU) -> GREEN (FIGNUM)
+\documentclass{article}
+\usepackage{subcaption}
+\begin{document}
+\begin{figure}A\caption{First}\end{figure}
+\begin{figure}
+  \begin{subfigure}{0.45\textwidth}
+    \begin{subfigure}{0.5\textwidth}X\caption{Inner}\label{sub:in}\end{subfigure}
+  \end{subfigure}
+  \caption{Second}\label{fig:two}
+\end{figure}
+\begin{figure}
+  \begin{subfigure}{0.45\textwidth}
+    \begin{subfigure}{0.5\textwidth}
+      \begin{subfigure}{0.5\textwidth}X\caption{Deep}\label{sub:deep}\end{subfigure}
+    \end{subfigure}
+  \end{subfigure}
+  \begin{subfigure}{0.45\textwidth}Y\caption{Right}\label{sub:right}\end{subfigure}
+  \caption{Third}\label{fig:three}
+\end{figure}
+\begin{figure*}
+  \begin{subfigure}{0.45\textwidth}
+    \begin{subfigure}{0.5\textwidth}X\caption{Wide}\label{sub:wide}\end{subfigure}
+  \end{subfigure}
+  \caption{Fourth}\label{fig:four}
+\end{figure*}
+\begin{figure}
+  \begin{subcaptiongroup}
+    \begin{subfigure}{0.5\textwidth}X\caption{Grouped}\label{sub:grp}\end{subfigure}
+  \end{subcaptiongroup}
+  \caption{Fifth}\label{fig:five}
+\end{figure}
+\begin{figure}
+  \begin{subfigure}{0.45\textwidth}
+    \begin{minipage}{0.5\textwidth}X\subcaption{Sub}\label{sub:sc}\end{minipage}
+  \end{subfigure}
+  \caption{Sixth}\label{fig:six}
+\end{figure}
+\begin{figure}
+  \caption{Seventh}\label{fig:seven}
+  \begin{subfigure}{0.45\textwidth}
+    \begin{subfigure}{0.5\textwidth}X\caption{After}\label{sub:after}\end{subfigure}
+  \end{subfigure}
+\end{figure}
+\begin{figure}B\caption{Eighth}\label{fig:eight}\end{figure}
+Refs: \ref{fig:two} \ref{sub:in}, \ref{fig:three} \ref{sub:deep} \ref{sub:right}, \ref{fig:four} \ref{sub:wide},
+\ref{fig:five} \ref{sub:grp}, \ref{fig:six} \ref{sub:sc}, \ref{fig:seven} \ref{sub:after}, \ref{fig:eight}.
+\end{document}

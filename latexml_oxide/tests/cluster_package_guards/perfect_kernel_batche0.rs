@@ -3359,7 +3359,8 @@ const KERNEL_TOKEN_SPELLINGS: &[(&str, usize)] = &[
   // of char 32, read by its catcode 10 — tex.web §347's end of line, not a spelling; cs9811025, astro-ph0207672)
   // (OMNT, 224 -> 225: `TITLE_BLOCK_COMMANDS`, the title block's commands whose meanings
   // `settle_title_block_after_class_load` compares by identity, a table of names, not a read of their spelling)
-  ("latexml_engine/src/latex_constructs/mod.rs", 225),
+  // (FIGNUM 225 -> 224: `\@captype` read through one helper, `current_captype`)
+  ("latexml_engine/src/latex_constructs/mod.rs", 224),
   ("latexml_engine/src/latex_constructs/sect01.rs", 8),
   // (REGCDE -2: the walk's `\@preamblecmds` `\let` moved to core `preamble_commands`)
   ("latexml_engine/src/latex_constructs/sect02.rs", 7),
