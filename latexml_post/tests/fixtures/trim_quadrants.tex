@@ -1,0 +1,15 @@
+% Source of trim_quadrants.pdf: `pdftex -no-shell-escape trim_quadrants.tex` (TeX Live 2025). Page 1 is 216x108 bp:
+% red and lime over blue and yellow; page 2 is 108x216 bp: cyan and magenta over black and white. Every quadrant edge
+% is a whole pixel at 120 dpi (3 bp = 5 px). The guard is graphics::tests::a_vector_render_is_cropped_at_its_density.
+\pdfcompresslevel=0 \pdfobjcompresslevel=0
+\pdfinfoomitdate=1 \pdftrailerid{} \pdfsuppressptexinfo=-1
+\hoffset=-1in \voffset=-1in
+\topskip=0pt \parindent=0pt \parskip=0pt \baselineskip=0pt \lineskip=0pt \lineskiplimit=0pt
+\nopagenumbers
+\def\quad#1#2#3{\hbox{\pdfliteral{#1 rg}\vrule width #2 height #3 depth 0pt}}
+\def\page#1#2#3#4#5#6{\pdfpagewidth=#1 \pdfpageheight=#2 \hsize=#1 \vsize=#2
+  \vbox to #2{\offinterlineskip\hbox{\quad{#3}{.5\hsize}{.5\vsize}\quad{#4}{.5\hsize}{.5\vsize}}%
+    \hbox{\quad{#5}{.5\hsize}{.5\vsize}\quad{#6}{.5\hsize}{.5\vsize}}\vss}\vfill\eject}
+\page{216bp}{108bp}{1 0 0}{0 1 0}{0 0 1}{1 1 0}
+\page{108bp}{216bp}{0 1 1}{1 0 1}{0 0 0}{1 1 1}
+\bye

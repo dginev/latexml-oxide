@@ -9,6 +9,12 @@ top of its group.
 
 ### Unreleased
 
+  - **A `trim`/`viewport` crop of a rasterized PDF, EPS or PS keeps the region the PDF shows.** The crop was cut at
+    72 pixels per inch whatever density the figure was rendered at, so at the default 120 dpi a `trim` removed 60 %
+    of what it asked for, and a large figure rendered at the 2048-pixel cap (26 dpi for a 5669 bp page) lost 2.8 times
+    too much (ar5iv issue 220, 2011.13011). It is now cut at the render density, the same value the render and its cache
+    key use; a PNG or JPEG keeps its own resolution (OXIDIZED_DESIGN_DIVERGENCES #337). Guard
+    `latexml_post graphics::tests::a_vector_render_is_cropped_at_its_density`.
   - **Four bindings no longer read a delimited argument to the end of the file (`Fatal:Mouth:EoF`).** algpseudocodex
     loads algorithmicx and its own `pseudocodex` language, as the package does, with its keywords and blocks, so a
     nested `\Call` no longer runs ifthen's `\equal` loop off the end and its commands no longer give way to
