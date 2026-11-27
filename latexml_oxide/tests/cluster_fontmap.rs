@@ -611,3 +611,101 @@ mod non_bmp_characters {
     );
   }
 }
+
+mod dingbat_family_maps {
+  //! dingbat.sty's U-encoded families `ark` and `dingbat` decode through their own maps (ark_fontmap.rs,
+  //! dingbat_fontmap.rs; witness 2303.10475, whose `\checkmark` printed "D"), and a U family TeX has but no map reads
+  //! as OT1 with a Warning, not an Info (sect13.rs `nfss_selected_font`). Repros in
+  //! `tools/perfect_kernel/repros/fonts-nfss/`.
+  use latexml::util::test::{
+    assert_element, check_requirements, convert_files_with, error_count, warning_count,
+  };
+
+  #[test]
+  fn dingbat_symbols_decode_through_their_family_maps() {
+    if !check_requirements(&["dingbat.sty"]) {
+      return;
+    }
+    let (log, xml) = convert_files_with(
+      include_str!(
+        "../../tools/perfect_kernel/repros/fonts-nfss/dingbat_symbols_are_their_glyphs.tex"
+      ),
+      &[],
+      Some("ar5iv.sty"),
+    );
+    assert_eq!(
+      (
+        error_count(&log),
+        warning_count(&log),
+        log.contains("Fatal:")
+      ),
+      (0, 0, false),
+      "{log}"
+    );
+    assert_element(
+      &xml,
+      "p",
+      &["xml:id=\"p1.1\""],
+      "<p xml:id=\"p1.1\">Ark: \u{21B5} \u{1F44E} \u{1F441} \u{261C} \u{270E} \u{261E} \u{1F44D} \u{270E} \u{1F44E} \
+       \u{1F44D}</p>",
+    );
+    assert_element(
+      &xml,
+      "p",
+      &["xml:id=\"p2.1\""],
+      "<p xml:id=\"p2.1\">Dingbat: \u{2713} \u{1F4E1} \u{261E} \u{2693} \u{25C7} \u{25C6} S Z</p>",
+    );
+    assert_element(
+      &xml,
+      "p",
+      &["xml:id=\"p3.1\""],
+      "<p xml:id=\"p3.1\">Nested: <text font=\"bold\" xml:id=\"p3.1.1\">bold \u{2713}</text> and <emph \
+       font=\"italic\" xml:id=\"p3.1.2\">italic \u{2693}</emph></p>",
+    );
+  }
+
+  /// Both sides of the severity boundary: a declared U family with no map warns once (its glyphs are read as OT1);
+  /// an undeclared one stays an Info, as TeX substitutes U/cmr there. pdflatex 0 `!`, Perl 0 warnings.
+  #[test]
+  fn u_family_without_a_map_is_a_warning() {
+    let (log, xml) = convert_files_with(
+      include_str!(
+        "../../tools/perfect_kernel/repros/fonts-nfss/u_family_without_a_map_is_reported.tex"
+      ),
+      &[],
+      Some("ar5iv.sty"),
+    );
+    assert_eq!(
+      (
+        error_count(&log),
+        warning_count(&log),
+        log.contains("Fatal:")
+      ),
+      (0, 1, false),
+      "{log}"
+    );
+    assert!(
+      log.contains(
+        "Warning:unexpected:nomap Font family \"nomap\" in encoding \"U\" has no glyph map; its characters are read \
+         as OT1."
+      ),
+      "{log}"
+    );
+    assert!(
+      log.contains("Info:unexpected:nosuchfamily Font family \"nosuchfamily\" undefined"),
+      "{log}"
+    );
+    assert_element(
+      &xml,
+      "p",
+      &["xml:id=\"p1.1\""],
+      "<p xml:id=\"p1.1\">A D B E</p>",
+    );
+    assert_element(
+      &xml,
+      "p",
+      &["xml:id=\"p2.1\""],
+      "<p xml:id=\"p2.1\">C F</p>",
+    );
+  }
+}

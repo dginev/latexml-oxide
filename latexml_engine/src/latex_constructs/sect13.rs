@@ -2621,8 +2621,19 @@ pub fn nfss_selected_font(base: &Font, report: bool) -> Result<Font> {
     series = default_series;
     shape = default_shape;
   } else if report && !already_reported(&s!("reported_unrecognized_font_family_{family}")) {
-    let message = s!("Unrecognized font family {:?}.", family);
-    Info!("unexpected", family, message);
+    // A family TeX has (an .fd) in an encoding with no map draws its own glyphs, which the OT1 fallback misreads:
+    // dingbat.sty's `\checkmark` printed "D" before its map (2303.10475). Perl: Info (latex_constructs.pool.ltxml:5219).
+    let unmapped = lookup_string_from_sym(pin!("lx@fontencoding@unmapped"));
+    if unmapped.is_empty() {
+      let message = s!("Unrecognized font family {:?}.", family);
+      Info!("unexpected", family, message);
+    } else {
+      let message = s!(
+        "Font family {family:?} in encoding {unmapped:?} has no glyph map; any text set in it is read \
+         as OT1 and may print the wrong glyphs."
+      );
+      Warn!("unexpected", family, message);
+    }
   }
   // A family named what the font table does not map keeps the font in force, but `\nullfont` holds no characters, so
   // `\selectfont` leaves it, on the serif `\lx@normalfont@base` falls back to (`\usepackage[default]{opensans}`'s

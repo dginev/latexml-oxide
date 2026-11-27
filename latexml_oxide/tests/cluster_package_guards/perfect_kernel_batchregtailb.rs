@@ -79,8 +79,9 @@ fn breqn_resets_script_catcodes_at_load() {
 
 /// fonts-nfss/tipa_accent_letter_in_math_is_a_box: t3enc.def's accent sets its letter in an `\hbox` (:270, :284), so
 /// a formula in the letter is a formula of its own inside the enclosing one (1310.2513's `\sliding{$g_4$}` in
-/// `$\gst(K)$`). Red (INT081G): "Script _ can only appear in math mode". The one Warning: tipx's slot 9 has no
-/// combining mark, the letter is printed without it.
+/// `$\gst(K)$`). Red (INT081G): "Script _ can only appear in math mode". The two Warnings: tipx's slot 9 has no
+/// combining mark, the letter is printed without it; and U/tipx has no glyph map, its slots read as OT1 (DINGBAT,
+/// OXIDIZED_DESIGN_DIVERGENCES #645; was an Info).
 #[test]
 fn tipa_accent_letter_in_math_is_a_box() {
   let (log, xml) = convert_with(
@@ -89,9 +90,13 @@ fn tipa_accent_letter_in_math_is_a_box() {
     ),
     Some("ar5iv.sty"),
   );
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 2), "{log}");
   assert!(
     log.contains("has no combining mark for the accent in slot 9"),
+    "{log}"
+  );
+  assert!(
+    log.contains("Warning:unexpected:tipx Font family \"tipx\" in encoding \"U\" has no glyph map"),
     "{log}"
   );
   assert_element(

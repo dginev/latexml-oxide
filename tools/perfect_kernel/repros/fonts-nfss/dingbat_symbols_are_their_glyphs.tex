@@ -1,0 +1,21 @@
+% witness: 2303.10475 (ar5iv #408): dingbat.sty `\checkmark` = `\dingbat@sym{'104}` in U/dingbat, a font with no map
+% oracle:  pdflatex 0 `!`; the ark10/dingbat glyphs (hands, pencils, eye, check, dish, anchor, diamonds, the S and Z
+%          border tiles); two font-shape substitutions (U/dingbat/bx/n, m/it → m/n); Perl 0.8.8: 18 Error:undefined
+%          (no binding, not raw-loaded)
+% engines: rust INT081TR 0 errors, the OT1 letters "C D E L P R U W d u" / "D I N O B C S Z", `\checkmark` "D",
+%          one Info per family
+% expect:  0 errors, 0 warnings; "Ark: ↵ 👎 👁 ☜ ✎ ☞ 👍 ✎ 👎 👍", "Dingbat: ✓ 📡 ☞ ⚓ ◇ ◆ S Z",
+%          "bold ✓" and "italic ⚓" (the `ark` and `dingbat` family maps, ark_fontmap.rs, dingbat_fontmap.rs)
+% status:  RED (INT081TR) -> GREEN (DINGBAT)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{dingbat}
+\begin{document}
+Ark: \carriagereturn\ \leftthumbsdown\ \eye\ \rightpointleft\ \smallpencil\ \leftpointright\
+\leftthumbsup\ \largepencil\ \rightthumbsdown\ \rightthumbsup
+
+Dingbat: \checkmark\ \satellitedish\ \rightpointright\ \anchor\ \squarewithdots\
+\filledsquarewithdots\ \Sborder\ \Zborder
+
+Nested: \textbf{bold \checkmark} and \emph{italic \anchor}
+\end{document}

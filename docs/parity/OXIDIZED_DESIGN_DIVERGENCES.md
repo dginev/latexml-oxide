@@ -12695,6 +12695,14 @@ under the series as written, not with a redundant `m` dropped — sect08.rs `\De
 with it, `\@font@info` and the "No file" typeout (none is in the dumpless base). KNOWN_PERL_ERRORS #845. Repros
 fonts-nfss/{amsfonts_try_load_fontshape, u_symbol_font_without_map}; guards
 `perfect_kernel_batch68v::{batch68v_try_load_fontshape_finds_amsfonts, batch68v_u_symbol_font_without_a_map_stays_undecoded}`.
+- **Text in a U family.** `\selectfont` reads an unknown family as an encoding when a map of that name exists (Perl's
+  own branch, latex_constructs.pool.ltxml:5214-5216, as pifont's `pzd`); dingbat.sty's `ark` and `dingbat` (ark10.mf,
+  dingbat.mf) have maps (`ark_fontmap.rs`, `dingbat_fontmap.rs`), so `\checkmark` is ✓ where it was OT1's "D"
+  (2303.10475, ar5iv #408). A family TeX has (declared, or its `.fd` found) in an encoding with no map draws its own
+  glyphs, which the OT1 fallback misreads, so its first `\selectfont` is a Warning (`unexpected`, sect13.rs
+  `nfss_selected_font`), not Perl's Info (:5217-5219); an undeclared family stays an Info, as TeX substitutes the
+  encoding's default (`\wrong@fontshape`, latex.ltx:10689-10705). Repros fonts-nfss/{dingbat_symbols_are_their_glyphs,
+  u_family_without_a_map_is_reported}; guards `cluster_fontmap::dingbat_family_maps`.
 
 ### 646. empheq's `left`/`right` material is kept, and `overload` gives the AMS environments the option
 

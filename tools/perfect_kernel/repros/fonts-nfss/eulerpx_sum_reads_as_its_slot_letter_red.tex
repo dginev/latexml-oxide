@@ -1,0 +1,13 @@
+% witness: 2501.18458 (arxiv-article.cls loads eulerpx): eulerpx.sty:289-290 `\epx@sum` = `\usefont{U}{zeuex}{m}{n}\char88`
+% oracle:  pdflatex 0 `!`; the Euler summation sign at both sizes
+% engines: rust DINGBAT: inline `\sum` an XMText "P", display "X" (`\epx@smallsum` slot 80, `\epx@sum` 88, read as
+%          OT1: U/zeuex has no map), one Warning:unexpected:zeuex; INT081TR: the same letters, 0 warnings (an Info)
+% expect:  0 errors, 0 warnings; ∑ (a `zeuex` map, or eulerpx's `\sum` bound to the kernel's)
+% status:  RED (DINGBAT)
+% moves:   post-merge (eulerpx binding or a `zeuex` font map)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{eulerpx}
+\begin{document}
+$\sum_{n=0}^{\infty} a_n$ and \[ \sum_{k} b_k \]
+\end{document}

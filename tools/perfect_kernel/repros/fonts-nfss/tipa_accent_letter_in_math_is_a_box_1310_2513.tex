@@ -4,8 +4,8 @@
 % witness: 1310.2513 (`\def\gst{\sliding{$g_4$}}`, `$\gst(K)$`; extraipa.sty:47 `\sliding` = `\tipxloweraccent`)
 % oracle:  pdflatex 0 `!`; "The genus g4(K) is here." (the sliding mark under g4)
 % engines: rust INT081G 1 error (Script _); perl 3 errors (`\sliding` undefined, then "Attempt to end mode math")
-% expect:  0 errors, 1 warning (tipx's slot 9 has no combining mark: printed without it); the `g_4` formula an
-%   `\hbox` inside the enclosing formula
+% expect:  0 errors, 2 warnings (tipx's slot 9 has no combining mark: printed without it; U/tipx has no glyph map,
+%   read as OT1, since DINGBAT); the `g_4` formula an `\hbox` inside the enclosing formula
 % status:  RED (INT081G) -> GREEN (REGTAILB)
 \documentclass{article}
 \usepackage{extraipa}

@@ -1,0 +1,17 @@
+% witness: 2310.14819 (emnlp2023.tex:219 `\<الرجاء الإجابة باللغة العربية>`, and its `arabtext` table cells)
+% oracle:  pdflatex 0 `!`; the Arabic printed right to left in ArabTeX's xnsh font
+% engines: rust DINGBAT: "A (ةيبرعلا ءاجرلا) B" (raw arabtex.sty reverses the letters to set them right to left; the
+%          XML keeps that visual order), and Warning:unexpected:xnsh, a false positive (the characters are not read
+%          as OT1); INT081TR: the same text, an Info
+% expect:  0 errors, 0 warnings; "A (الرجاء العربية) B", the Arabic in logical order
+% status:  RED (DINGBAT)
+% moves:   post-merge (an arabtex binding; no Perl binding)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{arabtex}
+\usepackage{utf8}
+\setcode{utf8}
+\begin{document}
+A (\<الرجاء العربية>) B
+\end{document}

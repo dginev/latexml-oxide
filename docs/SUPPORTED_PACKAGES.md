@@ -960,7 +960,7 @@ raw mode.
 | `xypic` | `.sty` | ported |  |
 | `yfonts` | `.sty` | ported |  |
 
-## Other binding files (engine pools, encodings, language and font-map files, TeX code files) (108)
+## Other binding files (engine pools, encodings, language and font-map files, TeX code files) (110)
 
 | Name | Kind | Support | Note |
 |---|---|---|---|
@@ -972,6 +972,7 @@ raw mode.
 | `amstex` | `.tex` | ported |  |
 | `applemac` | `.def` | ported, raw + overrides |  |
 | `arabic` | `.ldf` | beyond Perl, raw + overrides | babel-language stubs for `.ldf` files that aren't installed in minimal TeXLive environments. |
+| `ark` | `.fontmap` | beyond Perl |  |
 | `australian` | `.ldf` | beyond Perl, raw + overrides | babel-language stubs for `.ldf` files that aren't installed in minimal TeXLive environments. |
 | `babel` | `.def` | ported, raw + overrides |  |
 | `BibTeX` | `.pool` | ported |  |
@@ -985,6 +986,7 @@ raw mode.
 | `czech` | `.ldf` | beyond Perl, raw + overrides | babel-language stubs for `.ldf` files that aren't installed in minimal TeXLive environments. |
 | `diagrams` | `.tex` | contributed |  |
 | `ding` | `.fontmap` | ported |  |
+| `dingbat` | `.fontmap` | beyond Perl |  |
 | `dutch` | `.ldf` | beyond Perl, raw + overrides | babel-language stubs for `.ldf` files that aren't installed in minimal TeXLive environments. |
 | `english` | `.ldf` | beyond Perl, raw + overrides | *alias of* `english.sty` |
 | `epsf` | `.tex` | ported |  |

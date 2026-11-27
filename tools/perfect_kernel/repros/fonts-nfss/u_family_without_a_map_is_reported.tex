@@ -1,0 +1,17 @@
+% witness: synthetic (2303.10475's shape: a U family TeX has, with no glyph map, printed OT1 letters with only an Info)
+% oracle:  pdflatex 0 `!`; "A D B E" in cmr10 (the declared U/nomap shape), "C F" with the font warning
+%          "Font shape `U/nosuchfamily/m/n' undefined, using `U/cmr/m/n'"; Perl 0.8.8: 0 errors, 0 warnings,
+%          Info:unexpected for both families
+% engines: rust INT081TR 0 warnings, Info:unexpected for both families
+% expect:  0 errors, 1 warning: Warning:unexpected:nomap (a declared family read through OT1, whatever its font
+%          draws); `nosuchfamily` stays Info, as TeX substitutes U/cmr there; the text kept: "A D B E", "C F"
+% status:  RED (INT081TR) -> GREEN (DINGBAT)
+% preload: ar5iv.sty
+\documentclass{article}
+\DeclareFontFamily{U}{nomap}{}
+\DeclareFontShape{U}{nomap}{m}{n}{<-> cmr10}{}
+\begin{document}
+A {\usefont{U}{nomap}{m}{n}D} B {\usefont{U}{nomap}{m}{n}E}
+
+C {\usefont{U}{nosuchfamily}{m}{n}F}
+\end{document}
