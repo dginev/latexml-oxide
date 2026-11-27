@@ -1,0 +1,22 @@
+% mechanism: a team, group or collaboration an author list enumerates is an author; one a remark frames is a contact (DG 2026-11-27, OXIDIZED_DESIGN_DIVERGENCES #459)
+% witness: 1511.01102 (aastex: the names, then `\\ (The Nearby Supernova Factory)`)
+% oracle:  pdflatex 0 `!` (the paper's aastex.cls)
+% engines: rust 0.8.0-rc6: the same
+% expect:  0 errors, 0 warnings; three creators, each with the `collaboration` contact "(The Nearby Supernova Factory)" and its altaffiliations
+% status:  GREEN (rc6 and after) — TEAMAUTH fix round 1 (`perfect_kernel_batchteamauth`)
+% preload: ar5iv.sty
+\documentclass[preprint]{aastex}
+\begin{document}
+\title{T}
+\author
+{
+    A.~Able,\altaffilmark{1,2}
+    B.~Baker,\altaffilmark{1} \\
+    C.~Cole\altaffilmark{2} \\
+    (The Nearby Supernova Factory)
+}
+\altaffiltext{1}{Univ A}
+\altaffiltext{2}{Univ B}
+\maketitle
+Text.
+\end{document}

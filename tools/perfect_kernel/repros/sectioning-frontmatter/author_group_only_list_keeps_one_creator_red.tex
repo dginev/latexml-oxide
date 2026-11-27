@@ -1,0 +1,20 @@
+% mechanism: a list of groups with no person in its block is one author per group (DG 2026-11-27 ruling 3, "with no
+%            person in the list the groups are the creators"); the enumeration reads it only under names the block
+%            printed before (`person_before`), so the iopart template's `Content \& Services Team` keeps its creator
+% witness: 2508.20721 (`The LIGO Scientific Collaboration, The Virgo Collaboration, and The KAGRA Collaboration`);
+%          2508.20903 (mnras `\newauthor and The LSST DESC`, an "and"-led line); synthetic `R Core Team and the GAPS Team`
+% oracle:  pdflatex 0 `!`: "R Core Team and the GAPS Team" on one line
+% engines: rust 0.8.0-rc6 and TEAMAUTH (byte-identical): one creator "R Core Team" with `collaboration` "the GAPS
+%          Team"; 0 errors, 0 warnings
+% expect:  two creators "R Core Team" and "the GAPS Team", no contact
+% status:  RED
+% moves:   post-merge (a group-only list, advisor ADV_TEAMAUTH2 decision 4; the iopart template's
+%          `Content \& Services Team` (1807.03709, 2109.03031) must stay one creator's)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{R Core Team and the GAPS Team}
+\maketitle
+Text.
+\end{document}

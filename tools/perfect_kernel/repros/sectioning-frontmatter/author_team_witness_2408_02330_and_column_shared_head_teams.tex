@@ -1,0 +1,17 @@
+% mechanism: a team, group or collaboration an author list enumerates is an author; one a remark frames is a contact (DG 2026-11-27, OXIDIZED_DESIGN_DIVERGENCES #459)
+% witness: 2408.02330 (iau_FM.cls, not in TeX Live; its `\and` columns written with article: `\and \\the Solar Orbiter EPD and Parker Solar Probe ISIS teams`)
+% oracle:  pdflatex 0 `!`
+% engines: rust 0.8.0-rc6: three creators, "the Solar Orbiter EPD" with `collaboration` "Parker Solar Probe ISIS teams"
+% expect:  0 errors, 0 warnings; four creators, each group by its own printed text (DG 2026-11-27, a shared head noun)
+% status:  RED (rc6) -> GREEN — TEAMAUTH fix round 1 (`perfect_kernel_batchteamauth`)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$
+  \and Bob Baker$^2$
+  \and \\the Solar Orbiter EPD and Parker Solar Probe ISIS teams
+}
+\maketitle
+Text.
+\end{document}

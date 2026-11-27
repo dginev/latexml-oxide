@@ -320,7 +320,7 @@ impl Resolver {
       // B}`, is read on them. The rule is the reading's, not OmniBus's: the kernel `article` route with a document's
       // `\institute` reads the same way, revP21d)
       // (nor a column that is a team's name alone, an author as the PDF prints it: `\and R Core Team`, DG 2026-11-27 —
-      // `The Theory Group \\ CERN, Geneva` under the names stays theirs)
+      // `\and Machine Learning Group`, `The Theory Group \\ CERN, Geneva` under the names stay theirs, OD #459)
       let shared_column = column_first
         && line.column > 0
         && last_named().is_some_and(|named| line.column > named)
@@ -330,7 +330,7 @@ impl Resolver {
           let alone = lines.iter().filter(|l| l.column == line.column).count() == 1;
           is_institution(&own)
             && !names_collaboration(&own)
-            && !(alone && reads_as_collaboration(&own, true))
+            && !(alone && reads_as_collaboration(&own, true) && !names_a_group(&own))
         };
       if shared_column {
         let every: Vec<usize> = (block_creators_start..self.out.creators.len()).collect();
@@ -533,7 +533,11 @@ impl Resolver {
               open_rows.push(line.column);
             }
             self.marks_lead = led_names[n];
+            self.place_under = lines
+              .get(n + 1)
+              .is_some_and(|l| l.column == line.column && !reads_as_names(&events_text(&l.events)));
             let made = self.names_line(index, policy, cautious, line, &block_requests, group);
+            self.place_under = false;
             self.marks_lead = false;
             if led_names[n] {
               for &c in &made.creators {

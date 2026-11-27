@@ -1,0 +1,18 @@
+% mechanism: a team, group or collaboration an author list enumerates is an author; one a remark frames is a contact (DG 2026-11-27, OXIDIZED_DESIGN_DIVERGENCES #459)
+% witness: 2502.17397 (iopart: `…, Vlado Menkovski$^{2}$, the TCV team$^3$ and the WPTE team$^{4}$}`; review B1)
+% oracle:  pdflatex: with article and `\address`, `\ead` as paragraphs 0 `!`
+% engines: rust 0.8.0-rc6: three creators each with both teams as `collaboration` contacts, addresses 3 and 4 on a nameless creator; TEAMAUTH round 0: the TCV team a contact, the WPTE team an author
+% expect:  0 errors, 0 warnings; five creators, "the TCV team" with address 3, "the WPTE team" with address 4
+% status:  RED (rc6, round 0) -> GREEN — TEAMAUTH fix round 1 (`perfect_kernel_batchteamauth`)
+% preload: ar5iv.sty
+\documentclass[10pt]{iopart}
+\begin{document}
+\title{T}
+\author{Ann Able$^{\dagger,1,2}$, Bob Baker$^{\dagger,1}$, Cy Cole$^{2}$, the TCV team$^3$ and the WPTE team$^{4}$}
+\address{$^1$Univ A}
+\address{$^2$Univ B}
+\address{$^3$See author list of B. P. Duval \textit{et al.} 2024}
+\address{$^4$See author list of E. Joffrin \textit{et al.} 2024}
+\maketitle
+Text.
+\end{document}

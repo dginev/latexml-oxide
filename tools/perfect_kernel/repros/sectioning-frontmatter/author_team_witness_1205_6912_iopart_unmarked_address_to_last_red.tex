@@ -1,0 +1,24 @@
+% mechanism: a team, group or collaboration an author list enumerates is an author; one a remark frames is a contact (DG 2026-11-27, OXIDIZED_DESIGN_DIVERGENCES #459)
+% witness: 1205.6912 (iopart: `D. W\'agner, E. Fable$^1$, A. Pitzschke, O. Sauter, H. Weisen and the TCV team` over an unmarked first address)
+% oracle:  pdflatex: with article and `\address`, `\ead` as paragraphs 0 `!`
+% engines: rust 0.8.0-rc6: three creators each with `collaboration` "the TCV team", Univ A on Cy Cole alone; TEAMAUTH: four creators, Univ A on "the TCV team" alone
+% expect:  Univ A on every unmarked name (or the block's), the TCV team an author
+% status:  RED
+% moves:   post-merge (iopart's unmarked shared `\address` goes to the last creator, pre-existing; TEAMAUTH moves it laterally)
+% preload: ar5iv.sty
+\documentclass{iopart}
+\begin{document}
+\title{T}
+\author{
+Ann Able,
+Bob Baker$^1$,
+Cy Cole
+and the TCV team}
+\address{
+Univ A, Lausanne \\
+
+$^1$Univ B, Garching}
+\ead{ann@a.org}
+\maketitle
+Text.
+\end{document}

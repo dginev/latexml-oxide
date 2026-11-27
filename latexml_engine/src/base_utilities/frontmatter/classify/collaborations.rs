@@ -147,31 +147,34 @@ pub(in crate::base_utilities) fn collaboration_framing(
 
 /// Whether a piece of a names line names a collaboration beside the names ([`reads_as_collaboration`]) the way a line
 /// lists one: framed — "the", "for", "on behalf of", brackets — or listed with "and" (`listed`). One the line
-/// enumerates as an author (`enumerated`) only framed by more than "the": `… and R Core Team`, `and the GAPS Team`
-/// (1708.04166), each of `Fermilab Lattice, HPQCD, and MILC Collaborations` (2412.18491) are authors (DG 2026-11-27,
-/// OXIDIZED_DESIGN_DIVERGENCES #459). A piece the commas alone part from
-/// the names is no collaboration of theirs.
+/// enumerates as an author (`enumerated`: `… and R Core Team`, `and the GAPS Team`, 1708.04166) only framed by more
+/// than "the" (OXIDIZED_DESIGN_DIVERGENCES #459). A piece the commas alone part from the names is no collaboration of
+/// theirs.
 pub fn reads_as_listed_collaboration(text: &str, listed: bool, enumerated: bool) -> bool {
   collaboration_framing(text, listed, false).is_some_and(|framing| {
     framing == Framing::Framed || (!enumerated && (listed || framing != Framing::Unframed))
   })
 }
 
-/// Whether a group's name ends with a plural collaboration or team word, several groups an "and" joins (`The ATLAS and CMS
-/// Collaborations`, 1503.07589; `the Solar Orbiter EPD and Parker Solar Probe ISIS teams`, 2408.02330): no list item of
-/// its own.
+/// Whether a group's name ends with a plural collaboration or team word, several groups an "and" or a list joins (`The
+/// ATLAS and CMS Collaborations`, 1503.07589; `Fermilab Lattice, HPQCD, and MILC Collaborations`, 2412.18491).
 pub fn names_several_groups(text: &str) -> bool {
-  let last = text.split_whitespace().last().map(bare_word);
-  last.is_some_and(|w| {
-    [
-      "collaborations",
-      "consortia",
-      "teams",
-      "groups",
-      "experiments",
-    ]
-    .contains(&w.as_str())
+  text.split_whitespace().last().is_some_and(|w| {
+    matches!(
+      bare_word(w).as_str(),
+      "collaborations" | "consortia" | "teams" | "groups"
+    )
   })
+}
+
+/// Whether a piece's name ends in "group" or "groups", which names a department as often as a team: an author only where
+/// a list's "and" or its own mark enumerates it (`and LHD experimental group`, 1711.07097; OXIDIZED_DESIGN_DIVERGENCES #459).
+pub fn names_a_group(text: &str) -> bool {
+  let (core, ..) = collaboration_core(text);
+  core
+    .split_whitespace()
+    .last()
+    .is_some_and(|w| matches!(bare_word(w).as_str(), "group" | "groups"))
 }
 
 /// Whether a collaboration's text ends with a colon, a heading over the names after it (`Tam\'as Cs\"org\H{o}$^{4}$,

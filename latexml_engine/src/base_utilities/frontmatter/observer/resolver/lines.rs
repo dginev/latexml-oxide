@@ -1203,6 +1203,34 @@ pub(super) fn remark_start(text: &str) -> Option<usize> {
     .map(|at| at + skipped)
 }
 
+/// Whether a remark opens in a piece and goes on past it ([`remark_start`]): one naming whom the name speaks for, or a
+/// bracket left open (`Bob Baker (on behalf of the H1,`, 0811.3142) — not one it closes, `Ann Able (MIT),`.
+pub(super) fn remark_left_open(text: &str) -> bool {
+  let mut rest = text;
+  while let Some(at) = remark_start(rest) {
+    rest = &rest[at..];
+    let open = match rest.chars().next() {
+      Some('(') => ('(', ')'),
+      Some('[') => ('[', ']'),
+      _ => return true,
+    };
+    let mut depth = 0usize;
+    let close = rest.char_indices().find(|&(_, c)| {
+      if c == open.0 {
+        depth += 1;
+      } else if c == open.1 {
+        depth = depth.saturating_sub(1);
+      }
+      depth == 0
+    });
+    match close {
+      Some((at, c)) => rest = &rest[at + c.len_utf8()..],
+      None => return true,
+    }
+  }
+  false
+}
+
 /// Whether a names line's piece is a remark on the name before it, no name of its own: a bracket (`(on behalf of the H1
 /// and ZEUS collaborations)`, 0811.3142), or the collaboration the name speaks for (`for the Hall A DVCS
 /// collaboration`, 1502.03246; `on behalf of the ATLAS Collaboration`) — review rev94a B2, S6: a bracket at its first
@@ -1543,13 +1571,13 @@ impl Resolver {
     // after it, with where they start)
     let mut last_covered: Vec<usize> = Vec::new();
     let mut heading: Option<(String, usize)> = None;
-    // (a list's "and", `&` or an inline `\and`, llncs's)
+    let mut read_institution = false;
     let listed = |sep: Option<&Event>| {
-      sep.is_some_and(|s| match &s.kind {
-        EventKind::Sep(SepKind::Word(word)) => word.eq_ignore_ascii_case("and") || word == "&",
-        EventKind::Sep(SepKind::And(_)) => true,
-        _ => false,
-      })
+      sep.is_some_and(|s| matches!(&s.kind, EventKind::Sep(SepKind::Word(word)) if word.eq_ignore_ascii_case("and") || word == "&"))
+    };
+    // (an enumeration's: a list's "and", `&` or an inline `\and`, llncs's)
+    let enumerates = |sep: Option<&Event>| {
+      listed(sep) || sep.is_some_and(|s| matches!(s.kind, EventKind::Sep(SepKind::And(_))))
     };
     let split_rule = |sep: Option<&Event>| match sep.map(|e| &e.kind) {
       Some(EventKind::Sep(SepKind::Comma)) => "line:names sep:comma",
@@ -1559,26 +1587,66 @@ impl Resolver {
       _ => "line:names",
     };
     let events = &line.events;
-    // (a group's name a list of people enumerates — after "and", `\and` or a list's comma, a person's name before it on
-    // the line — is an author; not inside a remark a piece before it opened on the line, `… Peters for the ATLAS, CDF, CMS and D0
-    // Collaborations` (1311.7305, hep-ex0611001, 2009.04166), nor before a place it is an institution of, `and Theory
-    // Group, CERN`, nor in a list of groups, revtex's `\collaboration{Fermilab Lattice, HPQCD, and MILC Collaborations}`
-    // (2412.18491), nor a plural joining several, `The ATLAS and CMS Collaborations` (`names_several_groups`); one name's
-    // comma keeps it that name's, `Bob Baker, \TeX{} Users Group`)
-    let enumerated = |creators: &[RCreator], made: &[usize], sep: Option<&Event>, at: usize| {
+    // (a group a list of names enumerates is an author, OXIDIZED_DESIGN_DIVERGENCES #459: after "and", `&`, `\and`, or a
+    // comma of a list — a "group" only after "and" or `&`, or marked, and no address on the line under it; never once the
+    // line read an institution, inside a remark left open (1311.7305, hep-ex0611001), nor before a place)
+    // (a place after a piece on the line: its next name neither a person, a group, nor a name before its remark)
+    let place_after = |at: usize| {
+      events[at + 1..]
+        .iter()
+        .find(|e| e.kind == EventKind::Name)
+        .is_some_and(|e| {
+          !reads_as_names(&e.text)
+            && !reads_as_collaboration(&e.text, true)
+            && name_before_remark(&e.text).is_none()
+        })
+    };
+    let person_before = self
+      .uncovered_creators()
+      .iter()
+      .any(|&c| reads_as_names(&self.out.creators[c].name));
+    let next_line_place = self.place_under;
+    let enumerated = |creators: &[RCreator],
+                      made: &[usize],
+                      sep: Option<&Event>,
+                      at: usize,
+                      after_institution: bool| {
       let is_name = |e: &&&Event| e.kind == EventKind::Name;
-      (listed(sep)
-        || (made.len() >= 2 && sep.is_some_and(|s| s.kind == EventKind::Sep(SepKind::Comma))))
-        && made.iter().any(|&c| reads_as_names(&creators[c].name))
-        && !names_several_groups(&events[at].text)
+      let group = names_a_group(&events[at].text);
+      let comma = sep.is_some_and(|s| s.kind == EventKind::Sep(SepKind::Comma));
+      let by_sep = if group {
+        listed(sep) || marked_name(events, at, false, policy)
+      } else {
+        // (one name's comma alone keeps the piece that name's, `Chris Howard, SNO Collaboration`, 0906.0040)
+        enumerates(sep)
+          || (comma
+            && (made.len() >= 2
+              || events[at + 1..]
+                .iter()
+                .any(|e| enumerates(Some(e)) || e.kind == EventKind::Sep(SepKind::Comma))))
+      };
+      // (a line of groups alone enumerates two "and" joins under names the block printed before, `\and the Solar
+      // Orbiter EPD and Parker Solar Probe ISIS teams` (2408.02330); with no person in the block it keeps today's
+      // reading, the iopart template's `Content \& Services Team`)
+      let people = made.iter().any(|&c| reads_as_names(&creators[c].name))
+        || (person_before
+          && listed(sep)
+          && !events[..at]
+            .iter()
+            .any(|e| e.kind == EventKind::Sep(SepKind::Comma)));
+      // (a per-author class's `\author` listing groups under a plural is revtex's `\collaboration{Fermilab Lattice, HPQCD,
+      // and MILC Collaborations}` (2412.18491), read as today, `revtex_collaboration_list_is_one_contact_red`)
+      !made.is_empty()
+        && !(cautious && names_several_groups(&events[at].text))
+        && !after_institution
+        && by_sep
+        && people
+        && !(group && next_line_place)
         && !events[..at]
           .iter()
           .filter(is_name)
-          .any(|e| remark_start(&e.text).is_some())
-        && events[at + 1..]
-          .iter()
-          .find(is_name)
-          .is_none_or(|e| reads_as_names(&e.text))
+          .any(|e| remark_left_open(&e.text))
+        && !place_after(at)
     };
     // (a line printing only a collaboration framed for the names before it is theirs, its words as digested: a macro, a
     // `\let` copy, a font group or its own "and" — `\author{\obo{} the KM3NeT Consortium}`, 1201.5050, segaudit col1)
@@ -1722,8 +1790,8 @@ impl Resolver {
               && !self.uncovered_creators().is_empty()))
             && reads_as_listed_collaboration(
               &event.text,
-              listed(last_sep),
-              enumerated(&self.out.creators, &made, last_sep, i),
+              listed(last_sep) && !place_after(i),
+              enumerated(&self.out.creators, &made, last_sep, i, read_institution),
             ) =>
         {
           let text = event
@@ -1848,13 +1916,14 @@ impl Resolver {
             && is_institution(&event.text)
             && !is_collaboration(
               &event.text,
-              enumerated(&self.out.creators, &made, last_sep, i),
+              enumerated(&self.out.creators, &made, last_sep, i, read_institution),
             )
             && name_before_remark(&event.text).is_none()
             && !marked_name(events, i, cautious, policy) =>
         {
           let c = *made.last().expect("a name");
           institution = Some((c, self.out.creators[c].affiliations.len()));
+          read_institution = true;
           self.attach(
             Some(c),
             Assoc {

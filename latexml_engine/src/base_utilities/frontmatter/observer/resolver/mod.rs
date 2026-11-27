@@ -632,6 +632,9 @@ struct Resolver {
   outside_labels:     Vec<String>,
   /// while a names line its marks lead is read (`names_led_by_marks`): each mark after a separator the next name's
   marks_lead:         bool,
+  /// the names line being read has a line under it in its column that reads as no names (a place, `Theory Group \\
+  /// CERN`): `names_line`'s enumeration of a group
+  place_under:        bool,
   /// the block being read's marks and notes beside spacing, each with the name it goes to ([`mark_ledger`])
   mark_ledger:        MarkLedger,
   /// the pending entries (their place in `pending`) a `_share=authors` call made (llncs's one `\institute`, no `\and`
@@ -754,6 +757,7 @@ impl Resolver {
       block_thanks:       Vec::new(),
       outside_labels:     Vec::new(),
       marks_lead:         false,
+      place_under:        false,
       mark_ledger:        MarkLedger::default(),
       shared:             Vec::new(),
       row_units:          Vec::new(),

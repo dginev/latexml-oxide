@@ -1,0 +1,17 @@
+% mechanism: a team, group or collaboration an author list enumerates is an author; one a remark frames is a contact (DG 2026-11-27, OXIDIZED_DESIGN_DIVERGENCES #459)
+% witness: 1708.04166 (PoS: `{\speaker{…}$^1$\thanks{…} , …, R. Smareglia$^9$ and the GAPS Team} \\ $^1$ …`)
+% oracle:  pdflatex: PoS.cls fails on TL 2025 (its colour stack, a harness limit); with article and `\speaker`, `\email` as identity 0 `!`: "Ann Able1∗, Bob Baker1 , Cy Cole2 and the GAPS Team", the addresses under
+% engines: rust 0.8.0-rc6: three creators, "the GAPS Team" a `collaboration` contact on each
+% expect:  0 errors, 0 warnings; four creators — Ann Able (role speaker; the thanks note, Univ A, ann@a.org), Bob Baker (Univ A), Cy Cole (Univ B), the GAPS Team (no contact)
+% status:  RED (rc6) -> GREEN — TEAMAUTH fix round 1 (`perfect_kernel_batchteamauth`)
+% preload: ar5iv.sty
+\documentclass{PoS}
+\title{T}
+\author{{\speaker{Ann Able}$^1$\thanks{Funding note.} , Bob Baker$^1$, Cy Cole$^2$ and the GAPS Team} \\
+  $^1$ Univ A\\
+  $^2$ Univ B\\
+  E-mail: \email{ann@a.org}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

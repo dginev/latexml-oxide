@@ -196,20 +196,27 @@ missing image, a broken `\ref` or `\cite`, and the like — the fixes are usuall
   shell; a note whose remainder still informs stays with its printed label (`\offprints{O. Kochukhov, \email{…}}` reads
   "Send offprint requests to: O. Kochukhov," — the address is in the author list).
 - **A collaboration or team named in the author line is a contact on its authors** (2026-11-01): `\author{A$^1$, B$^2$ and the GAPS Team}`, a `(XYZ Collaboration)` line under the names, BESIII's `\author{\center BESIII Collaboration\\ … (BESIII Collaboration)}` — the names split into their creators and the collaboration is a `<contact role="collaboration">` on every name of the line it covers (Perl's aastex convention, aas_support.sty.ltxml:126 `\collaboration` → `\lx@add@contact[role=collaboration]`), not a creator of its own and not welded into the last name (dev census M4: 1708.04166, 1711.07097, 1311.7305, 1905.11825, hep-ph0502212; 2212.06489).
-  **Amended DG 2026-11-27 ("the bug is that 'R Core Team' is an author, and should be marked as an author"):** a team,
-  group or collaboration name the author list enumerates — an item after `and`, `and the`, an inline `\and` or a list's
-  `,` (two names before it), or an `\and` column that is the name alone — is an author (`role="author"`, its text the personname), as pdflatex prints it and Perl reads
-  it: `\author{A, B and R Core Team}` and `\author{A \and B \and R Core Team}` give three creators, and so does `A$^1$,
-  B$^2$ and the GAPS Team` (1708.04166; `and LHD experimental group`, 1711.07097). What the list does not enumerate stays
-  a collaboration contact: a name's `for`/`on behalf of`/`representing` remark, a bracketed line `(XYZ Collaboration)`
-  under the names, a collaboration line of its own (BESIII's), AASTeX's `\collaboration`, and a group inside a remark
-  opened earlier on the line (`… for the ATLAS, CDF, CMS and D0 Collaborations`, 1311.7305). Only a person's name before
-  the item makes the list an author list: a list of groups (REVTeX's `\collaboration{Fermilab Lattice, HPQCD, and MILC
-  Collaborations}`, 2412.18491 — one collaboration note, DG 2026-11-27, RED
-  `revtex_collaboration_list_is_one_contact_red`) and a plural joining two groups' names (`The ATLAS and CMS
-  Collaborations`) keep their reading; so do a group before a place (`and Theory Group, CERN`) and a group after one
-  name's comma (`Bob Baker, \TeX{} Users Group`, his affiliation). An institution or foundation name in an `\and`
-  column (`\and The R Foundation`) is ambiguous and keeps its reading, every name's affiliation.
+  **Amended DG 2026-11-27 ("the bug is that 'R Core Team' is an author, and should be marked as an author"):** in an
+  `\author` enumeration (pieces parted by `,`, `and`, `and the`, `&`, an inline `\and`, or `\and` columns):
+  1. a team or collaboration (`… Team`, `… Collaboration(s)`, `… Consortium`) in any enumerated position is an author
+     (`role="author"`, its text the personname), each its own creator with its own mark and address:
+     `Friedrich Leisch, Vincent Goulet and R Core Team` and its `\and` form give three, `A, B, R Core Team, and the GAPS
+     Team` four, `A, B, the TCV team$^3$ and the WPTE team$^4$` five (2502.17397); after a comma only in a list of three
+     or more (one name's comma keeps it that name's: `Chris Howard, SNO Collaboration`, 0906.0040);
+  2. a "group" is an author only after `and`, `and the` or `&` with no address under it, or with its own mark (`and LHD
+     experimental group$^2$`, 1711.07097); otherwise it is an affiliation, as rc6 reads it — after a list's comma, joined
+     to an institution, in an `\and` column, before a place on its line or the next;
+  3. a shared head noun lists one author per group, each named by its own printed text (`The ATLAS`, `CMS
+     Collaborations`; 1503.07589, 2408.02330) — never invented text; a list of groups with no person in its block keeps
+     its reading (RED `author_group_only_list_keeps_one_creator_red`), as REVTeX's `\collaboration{Fermilab Lattice,
+     HPQCD, and MILC Collaborations}` does (2412.18491, RED `revtex_collaboration_list_is_one_contact_red`);
+  4. institutions and places keep their reading, an affiliation: `\and The R Foundation`, `\and University of X`, a group
+     before a place (`and Theory Group, CERN`), and nothing after an institution the line read is enumerated;
+  5. a collaboration the line frames stays a contact: a name's `for`/`on behalf of`/`representing` remark (1311.7305,
+     hep-ex0611001, 2009.04166), a bracketed line `(XYZ Collaboration)`, a dash (hep-ex0106079), a collaboration line of
+     its own (BESIII's), AASTeX's `\collaboration`; a bracket the piece closes is no remark (`Ann Able (MIT), Bob Baker
+     and R Core Team`: three authors);
+  6. a lone collaboration is the creator (`\author{The IceCube Collaboration}`).
 - **An address no author's name spells, in a boxed author block, is a block-level contact** (2026-11-01): a shared `contact@lab.org` line in a `tabular`/`minipage` block goes to no person; it is kept once at the block level (dev census M1, 2605.09461).
   **Amended 2026-11-05 (user: "block addresses may live on the #159 block creator"):** the block level is the shared
   nameless creator below the authors (OD #159, `label=addresses:block`) — the one nameless creator allowed, holding

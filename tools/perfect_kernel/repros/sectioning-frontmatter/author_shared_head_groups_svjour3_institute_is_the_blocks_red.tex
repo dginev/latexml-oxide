@@ -1,0 +1,20 @@
+% mechanism: an unmarked svjour3 `\institute` under two or more creators is the block's shared address (a creator with no
+%            name, `_blockcreator`), as for two people (`\author{Ann Able \and Bob Baker}\institute{CERN}`, rc6 alike)
+% witness: Gemini TEAMAUTH.7 a2 (synthetic); the shared-head reading (`author_collaboration_name_with_and_stays_one`)
+%          makes the two groups creators, so CERN moves from "The ATLAS" to the block
+% oracle:  pdflatex: svjour3.cls is not in TeX Live 2025 (a harness limit); the line prints "The ATLAS and CMS
+%          Collaboration" over "CERN"
+% engines: rust 0.8.0-rc6: one creator "The ATLAS" with `collaboration` "CMS Collaboration" and CERN; TEAMAUTH: "The
+%          ATLAS", "CMS Collaboration", and a nameless block creator with CERN; 0 errors, 0 warnings
+% expect:  two creators, each with the affiliation CERN, no nameless creator
+% status:  RED
+% moves:   post-merge (svjour3's block address under several creators, people's too — not the enumeration)
+% preload: ar5iv.sty
+\documentclass{svjour3}
+\begin{document}
+\title{T}
+\author{The ATLAS and CMS Collaboration}
+\institute{CERN}
+\maketitle
+Text.
+\end{document}

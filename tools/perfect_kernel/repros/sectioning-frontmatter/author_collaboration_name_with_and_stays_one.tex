@@ -1,14 +1,17 @@
-% witness: 63h review r2 finding 4 (synthetic; llncs alike since 63e): one collaboration whose name holds " and "
-% oracle:  pdflatex (svjour3.cls) 0 errors: "The ATLAS and CMS Collaborations" on one line, over "CERN"
-% engines: rust 63h = two creators "The ATLAS", "CMS Collaborations", no diagnostic; 63g one creator flagged
-%          Error:frontmatter:merged_creators
-% expect:  one creator "The ATLAS and CMS Collaborations" (a collaboration, not two people); 0 errors
-% status:  RED (63h)
-\documentclass{svjour3}
+% mechanism: a shared head noun lists one group per name: `The ATLAS and CMS Collaborations` is two authors, each named by
+%            its own printed text (DG 2026-11-27 ruling 3, OXIDIZED_DESIGN_DIVERGENCES #459)
+% witness: 1503.07589 (cms-tdr.cls, not in TeX Live: `\author{The ATLAS and CMS Collaborations}`); 2002.12146,
+%          hep-ex9612006 alike; 63h review r2 finding 4 (synthetic)
+% oracle:  pdflatex 0 `!`: "The ATLAS and CMS Collaborations" on one line
+% engines: rust 0.8.0-rc6: one creator "The ATLAS" with `collaboration` "CMS Collaborations"
+% expect:  0 errors, 0 warnings; two creators "The ATLAS" and "CMS Collaborations", no contact
+% status:  RED (rc6) -> GREEN — TEAMAUTH fix round 1 (`perfect_kernel_batchteamauth`); svjour3's `\institute` under
+%          them: `author_shared_head_groups_svjour3_institute_is_the_blocks_red`
+% preload: ar5iv.sty
+\documentclass{article}
 \begin{document}
 \title{T}
 \author{The ATLAS and CMS Collaborations}
-\institute{CERN}
 \date{}
 \maketitle
 Text.

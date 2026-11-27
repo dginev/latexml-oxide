@@ -1,13 +1,13 @@
-//! Guards for batch TEAMAUTH (2026-11-27, DG's ruling of that day): a team, group or collaboration the author line
-//! enumerates — after a comma, "and" or "and the", or an `\and` column that is its name alone — is an author as pdflatex
-//! prints it (`resolver::lines` `reads_as_listed_collaboration`, `resolver::blocks` `shared_column`; OXIDIZED_DESIGN_DIVERGENCES
-//! #459). Two code paths, one test each with its controls: the names line (`an_enumerated_team_is_an_author`) and what keeps
-//! its reading (`a_framed_collaboration_and_an_institution_column_keep_their_reading`); a group alone stays the creator
-//! (`a_collaboration_alone_is_the_creator`).
+//! Guards for batch TEAMAUTH (DG's rulings of 2026-11-27; OXIDIZED_DESIGN_DIVERGENCES #459): in an `\author` enumeration
+//! a team or collaboration is an author wherever it stands, a "group" only after "and" or with its own mark, each group a
+//! shared head noun lists by its own text; a remark's, a bracket's or an institution's reading stays as before
+//! (`resolver::lines` `enumerated`, `resolver::blocks` `shared_column`). One table per rule, rows of synthetic shapes
+//! (each pdflatex-clean) and witness-derived fixtures (`author_team_witness_*`), every creator whole ([`whole_creators`]).
 
 use latexml::util::test::{error_count, warning_count};
+use regex::Regex;
 
-use super::{perfect_kernel_batch84b::creators, perfect_kernel_batchz4::run};
+use super::{perfect_kernel_batch84b::text, perfect_kernel_batchz4::run};
 
 macro_rules! repro {
   ($name:literal) => {
@@ -19,191 +19,1073 @@ macro_rules! repro {
   };
 }
 
-/// `tex` converted: its (Error, Warning) counts, each creator's open tag, and each creator as [`creators`] reads it.
-fn read(tex: &str) -> ((usize, usize), Vec<String>, Vec<Vec<String>>) {
-  let (log, xml) = run(tex);
-  let tags = xml
-    .match_indices("<creator ")
-    .map(|(at, _)| xml[at..at + xml[at..].find('>').expect("an open tag")].to_string())
-    .collect();
-  (
-    (error_count(&log), warning_count(&log)),
-    tags,
-    creators(&xml),
+const ARTICLE: &str = r"\documentclass{article}";
+const LLNCS: &str = r"\documentclass{llncs}";
+/// The `before=` the author line's separator leaves on every creator after the first.
+const SEP: &str = "before=\u{2003}\u{2003}";
+
+/// A document of `class` whose title block is `author` (its `\author` and what follows it).
+fn doc(class: &str, author: &str) -> String {
+  format!(
+    "{class}\n\\begin{{document}}\n\\title{{T}}\n{author}\n\\maketitle\nText.\n\\end{{document}}\n"
   )
 }
 
-/// `tex` with its `\author{…}` argument `author` (the repro headers quote the line, so it is replaced by its command).
-fn with_author(tex: &str, author: &str) -> String {
-  let at = tex.find("\\author{").expect("an author line");
-  let end = at + tex[at..].find('\n').expect("its line end");
-  let out = format!("{}\\author{{{author}}}{}", &tex[..at], &tex[end..]);
-  assert!(out.contains(&format!("\\author{{{author}}}\n")), "{out}");
-  out
-}
-
-/// The rows whose (Error, Warning) counts, creators or creator tags differ from the expected: all of them, so one run
-/// shows every row's state.
-/// A row: its name, the document, its (Error, Warning) counts and its creators as [`creators`] reads them.
-type TeamRow<'a> = (&'a str, String, (usize, usize), Vec<Vec<String>>);
-
-fn mismatches(rows: &[TeamRow]) -> Vec<String> {
-  rows
-    .iter()
-    .filter_map(|(row, tex, counts, expected)| {
-      let (got_counts, tags, got) = read(tex);
-      let roles =
-        tags.len() == expected.len() && tags.iter().all(|t| t.contains("role=\"author\""));
-      (got_counts != *counts || got != *expected || !roles).then(|| {
-        format!("{row}: got {got_counts:?} {got:?} {tags:?}, expected {counts:?} {expected:?}")
-      })
+/// Each creator of `xml`, whole: `role=`, `before=` where set, the personname, then every contact (`role=text`) and every
+/// note (`note:role[mark]=text`) it holds, in order — the notes inside a contact are its text.
+fn whole_creators(xml: &str) -> Vec<Vec<String>> {
+  let creator = Regex::new(r"(?s)<creator\b([^>]*)>(.*?)</creator>").expect("regex");
+  let attr = |tag: &str, name: &str| {
+    Regex::new(&format!(r#"\b{name}="([^"]*)""#))
+      .expect("regex")
+      .captures(tag)
+      .map(|c| c[1].to_string())
+  };
+  let item = Regex::new(r"<(contact|note)\b([^>]*?)(/?)>").expect("regex");
+  creator
+    .captures_iter(xml)
+    .map(|c| {
+      let (attrs, body) = (&c[1], &c[2]);
+      let mut out = vec![format!("role={}", attr(attrs, "role").unwrap_or_default())];
+      out.extend(attr(attrs, "before").map(|b| format!("before={b}")));
+      let name = body.find("<personname>").map(|at| {
+        &body[at + "<personname>".len()..at + body[at..].find("</personname>").expect("closed")]
+      });
+      out.push(name.map(text).unwrap_or_default());
+      let mut from = 0;
+      while let Some(found) = item.captures(&body[from..]) {
+        let whole = found.get(0).expect("match");
+        let (kind, tag) = (&found[1], &found[2]);
+        let open_end = from + whole.end();
+        let (content, next) = if &found[3] == "/" {
+          ("", open_end)
+        } else {
+          let close = open_end
+            + body[open_end..]
+              .find(&format!("</{kind}>"))
+              .expect("closed");
+          (&body[open_end..close], close)
+        };
+        let role = attr(tag, "role").unwrap_or_default();
+        out.push(if kind == "contact" {
+          format!("{role}={}", text(content))
+        } else {
+          let mark = attr(tag, "mark")
+            .map(|m| format!("[{m}]"))
+            .unwrap_or_default();
+          format!("note:{role}{mark}={}", text(content))
+        });
+        from = next;
+      }
+      out
     })
     .collect()
 }
 
-fn names(names: &[&str]) -> Vec<Vec<String>> { names.iter().map(|n| vec![n.to_string()]).collect() }
+/// The text of the title block outside every creator and the title: none, every word a creator's.
+fn outside_creators(xml: &str) -> String {
+  let from = xml.find("</title>").expect("a title");
+  let to = ["<para", "<section", "<abstract"]
+    .iter()
+    .filter_map(|tag| xml[from..].find(tag))
+    .min()
+    .map_or(xml.len(), |at| from + at);
+  let creators = Regex::new(r"(?s)<creator\b.*?</creator>").expect("regex");
+  text(&creators.replace_all(&xml[from + "</title>".len()..to], ""))
+}
 
-/// Each enumerated team is a creator `role="author"`, its text the personname, and no name carries a collaboration or an
-/// affiliation contact: `… and R Core Team` and its `\and` form (the R project's author line; Perl: three creators), `and
-/// the GAPS Team` (1708.04166, 1609.09534's `and the MAST Team`), `and LHD experimental group` (1711.07097). rc6: two
-/// creators, the team a `collaboration` contact on each (the `\and` form an `affiliation`; after a list's comma, the
-/// affiliation of the name before it — one name's comma keeps that reading, `Bob Baker, \TeX{} Users Group`,
-/// `perfect_kernel_batchlogo1`). llncs's inline `\and` too (its `the ATLAS Collaboration`:
-/// `perfect_kernel_batch77t::llncs_author_and_piece_is_names`).
+/// A row: its name, the document, its (Error, Warning) counts and its creators as [`whole_creators`] reads them.
+type Row = (&'static str, String, (usize, usize), Vec<Vec<String>>);
+
+fn row(name: &'static str, tex: String, counts: (usize, usize), creators: &[&[&str]]) -> Row {
+  let creators = creators
+    .iter()
+    .map(|c| c.iter().map(|s| (*s).to_string()).collect())
+    .collect();
+  (name, tex, counts, creators)
+}
+
+/// Every row whose counts, creators or outside text differ, so one run shows each row's state.
+fn mismatches(rows: &[Row]) -> Vec<String> {
+  rows
+    .iter()
+    .filter_map(|(name, tex, counts, expected)| {
+      let (log, xml) = run(tex);
+      let got = (
+        (error_count(&log), warning_count(&log)),
+        whole_creators(&xml),
+        outside_creators(&xml),
+      );
+      (got != (*counts, expected.clone(), String::new()))
+        .then(|| format!("{name}: got {got:?}, expected {counts:?} {expected:?}"))
+    })
+    .collect()
+}
+
+#[track_caller]
+fn check(rows: &[Row]) {
+  let bad = mismatches(rows);
+  assert!(bad.is_empty(), "{}", bad.join("\n"));
+}
+
+/// Rule 1 and 6: a team or collaboration enumerated by `,` (a list of three), "and", "and the", `&` or `\and` is its
+/// own author, first, middle or last, each marked one with its own address; a lone one is the creator. rc6: a
+/// `collaboration` contact on each name (the `\and` column an affiliation); round 0 split two listed groups, the first a
+/// contact and the second an author (review B1).
 #[test]
 fn an_enumerated_team_is_an_author() {
-  let r_core = repro!("author_enumerated_team_is_an_author");
-  let gaps = repro!("author_enumerated_the_team_is_an_author");
-  let r_core_names = names(&["Friedrich Leisch", "Vincent Goulet", "R Core Team"]);
-  let rows = [
-    (
-      "comma and",
-      r_core.to_string(),
-      (0, 0),
-      r_core_names.clone(),
-    ),
-    (
-      "\\and column",
-      with_author(
-        r_core,
-        "Friedrich Leisch \\and Vincent Goulet \\and R Core Team",
+  check(&[
+    row(
+      "comma and (the R project's line)",
+      doc(
+        ARTICLE,
+        r#"\author{Friedrich Leisch, Vincent Goulet and R Core Team}"#,
       ),
       (0, 0),
-      r_core_names,
-    ),
-    (
-      "and the",
-      gaps.to_string(),
-      (0, 0),
-      names(&["A. Author", "B. Author", "the GAPS Team"]),
-    ),
-    (
-      "and, lowercase",
-      with_author(gaps, "A. Author and LHD experimental group"),
-      (0, 0),
-      names(&["A. Author", "LHD experimental group"]),
-    ),
-    (
-      "a list's comma",
-      with_author(gaps, "A. Author, B. Author, R Core Team"),
-      (0, 0),
-      names(&["A. Author", "B. Author", "R Core Team"]),
-    ),
-    (
-      "llncs's inline \\and",
-      with_author(gaps, "A. Author \\and B. Author \\and R Core Team").replacen(
-        "{article}",
-        "{llncs}",
-        1,
-      ),
-      (0, 0),
-      names(&["A. Author", "B. Author", "R Core Team"]),
-    ),
-  ];
-  let bad = mismatches(&rows);
-  assert!(bad.is_empty(), "{}", bad.join("\n"));
-}
-
-/// A collaboration that is the line's only name is its creator, as rc6 reads it: the enumeration rule needs a person
-/// before the group, so it never leaves a block without a creator (a red-team probe of the rule).
-#[test]
-fn a_collaboration_alone_is_the_creator() {
-  let tex = with_author(
-    repro!("author_enumerated_team_is_an_author"),
-    "The IceCube Collaboration",
-  );
-  let rows = [("alone", tex, (0, 0), names(&["The IceCube Collaboration"]))];
-  let bad = mismatches(&rows);
-  assert!(bad.is_empty(), "{}", bad.join("\n"));
-}
-
-/// What the author line does not enumerate keeps its reading: a name's "for" remark is a `collaboration` contact on the
-/// names it covers (its two Warnings the emitter's markup fallback, `author_names_inline_remark_markup_fallback_red`), a
-/// bracketed line under the names too (2410.11607's shape); so is a group after a remark open on the line (1311.7305,
-/// hep-ex0611001, 2009.04166; TEAMAUTH's first build made "the Y Team" a creator) and a plural joining two groups' names
-/// (today's split pinned, RED in `author_collaboration_name_with_and_stays_one`; the first build moved "CERN" to a
-/// nameless creator); an institution's `\and` column, `The R Foundation` (DG 2026-11-27: ambiguous, today's reading), is
-/// every name's affiliation.
-#[test]
-fn a_framed_collaboration_and_an_institution_column_keep_their_reading() {
-  let gaps = repro!("author_enumerated_the_team_is_an_author");
-  let with = |name: &str, contact: &str| vec![name.to_string(), contact.to_string()];
-  let atlas = "collaboration=for the ATLAS Collaboration";
-  let r_foundation = "affiliation=The R Foundation";
-  let with2 =
-    |name: &str, one: &str, two: &str| vec![name.to_string(), one.to_string(), two.to_string()];
-  let (x_team, y_team) = (
-    "collaboration=representing the X Team",
-    "collaboration=the Y Team",
-  );
-  let rows = [
-    (
-      "for remark",
-      with_author(gaps, "A. Author and B. Author for the ATLAS Collaboration"),
-      (0, 2),
-      vec![with("A. Author", atlas), with("B. Author", atlas)],
-    ),
-    (
-      "bracketed line",
-      with_author(gaps, "A. Author \\\\ (XYZ Collaboration)"),
-      (0, 0),
-      vec![with("A. Author", "collaboration=(XYZ Collaboration)")],
-    ),
-    (
-      "a remark open on the line",
-      with_author(
-        gaps,
-        "Ann Able and Bob Baker, representing the X Team and the Y Team",
-      ),
-      (0, 0),
-      vec![
-        with2("Ann Able", x_team, y_team),
-        with2("Bob Baker", x_team, y_team),
+      &[
+        &["role=author", "Friedrich Leisch"],
+        &["role=author", SEP, "Vincent Goulet"],
+        &["role=author", SEP, "R Core Team"],
       ],
     ),
-    (
-      "a plural joining two groups",
+    row(
+      "\\and columns",
+      doc(
+        ARTICLE,
+        r#"\author{Friedrich Leisch \and Vincent Goulet \and R Core Team}"#,
+      ),
+      (0, 0),
+      &[
+        &["role=author", "Friedrich Leisch"],
+        &["role=author", SEP, "Vincent Goulet"],
+        &["role=author", SEP, "R Core Team"],
+      ],
+    ),
+    row(
+      "and the",
+      doc(ARTICLE, r#"\author{Ann Able, Bob Baker and the GAPS Team}"#),
+      (0, 0),
+      &[
+        &["role=author", "Ann Able"],
+        &["role=author", SEP, "Bob Baker"],
+        &["role=author", SEP, "the GAPS Team"],
+      ],
+    ),
+    row(
+      "a team before a name",
+      doc(ARTICLE, r#"\author{Ann Able, R Core Team and Bob Baker}"#),
+      (0, 0),
+      &[
+        &["role=author", "Ann Able"],
+        &["role=author", SEP, "R Core Team"],
+        &["role=author", SEP, "Bob Baker"],
+      ],
+    ),
+    row(
+      "two teams, Oxford comma",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able, Bob Baker, R Core Team, and the GAPS Team}"#,
+      ),
+      (0, 0),
+      &[
+        &["role=author", "Ann Able"],
+        &["role=author", SEP, "Bob Baker"],
+        &["role=author", SEP, "R Core Team"],
+        &["role=author", SEP, "the GAPS Team"],
+      ],
+    ),
+    row(
+      "two teams, no Oxford comma",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able, Bob Baker, R Core Team and the GAPS Team}"#,
+      ),
+      (0, 0),
+      &[
+        &["role=author", "Ann Able"],
+        &["role=author", SEP, "Bob Baker"],
+        &["role=author", SEP, "R Core Team"],
+        &["role=author", SEP, "the GAPS Team"],
+      ],
+    ),
+    row(
+      "two collaborations after names (review B1)",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able, Bob Baker, the ATLAS Collaboration and the CMS Collaboration}"#,
+      ),
+      (0, 0),
+      &[
+        &["role=author", "Ann Able"],
+        &["role=author", SEP, "Bob Baker"],
+        &["role=author", SEP, "the ATLAS Collaboration"],
+        &["role=author", SEP, "the CMS Collaboration"],
+      ],
+    ),
+    row(
+      "two collaborations, Oxford comma (review s1)",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able, Bob Baker, the ATLAS Collaboration, and the CMS Collaboration}"#,
+      ),
+      (0, 0),
+      &[
+        &["role=author", "Ann Able"],
+        &["role=author", SEP, "Bob Baker"],
+        &["role=author", SEP, "the ATLAS Collaboration"],
+        &["role=author", SEP, "the CMS Collaboration"],
+      ],
+    ),
+    row(
+      "llncs inline \\and, two collaborations (review l2)",
+      doc(
+        LLNCS,
+        r#"\author{Ann Able \and Bob Baker \and the ATLAS Collaboration \and the CMS Collaboration}\institute{Univ A}"#,
+      ),
+      (0, 0),
+      &[
+        &["role=author", "Ann Able", "affiliation=Univ A"],
+        &["role=author", SEP, "Bob Baker", "affiliation=Univ A"],
+        &[
+          "role=author",
+          SEP,
+          "the ATLAS Collaboration",
+          "affiliation=Univ A",
+        ],
+        &[
+          "role=author",
+          SEP,
+          "the CMS Collaboration",
+          "affiliation=Univ A",
+        ],
+      ],
+    ),
+    row(
+      "a list's commas, two collaborations",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able, the ATLAS Collaboration, the CMS Collaboration}"#,
+      ),
+      (0, 0),
+      &[
+        &["role=author", "Ann Able"],
+        &["role=author", SEP, "the ATLAS Collaboration"],
+        &["role=author", SEP, "the CMS Collaboration"],
+      ],
+    ),
+    row(
+      "two marked collaborations (review s5)",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able$^1$, Bob Baker$^2$, the ATLAS Collaboration$^1$ and the CMS Collaboration$^2$\\ $^1$Univ A\\ $^2$Univ B}"#,
+      ),
+      (0, 0),
+      &[
+        &["role=author", "Ann Able", "affiliation=Univ A"],
+        &["role=author", SEP, "Bob Baker", "affiliation=Univ B"],
+        &[
+          "role=author",
+          SEP,
+          "the ATLAS Collaboration",
+          "affiliation=Univ A",
+        ],
+        &[
+          "role=author",
+          SEP,
+          "the CMS Collaboration",
+          "affiliation=Univ B",
+        ],
+      ],
+    ),
+    row(
+      "a team, then another team",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able, Bob Baker, R Core Team and Stan Development Team}"#,
+      ),
+      (0, 0),
+      &[
+        &["role=author", "Ann Able"],
+        &["role=author", SEP, "Bob Baker"],
+        &["role=author", SEP, "R Core Team"],
+        &["role=author", SEP, "Stan Development Team"],
+      ],
+    ),
+    row(
+      "two team \\and columns",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able \and Bob Baker \and R Core Team \and the GAPS Team}"#,
+      ),
+      (0, 0),
+      &[
+        &["role=author", "Ann Able"],
+        &["role=author", SEP, "Bob Baker"],
+        &["role=author", SEP, "R Core Team"],
+        &["role=author", SEP, "the GAPS Team"],
+      ],
+    ),
+    row(
+      "an \\and column of a team",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able \and Bob Baker \and Google Brain Team}"#,
+      ),
+      (0, 0),
+      &[
+        &["role=author", "Ann Able"],
+        &["role=author", SEP, "Bob Baker"],
+        &["role=author", SEP, "Google Brain Team"],
+      ],
+    ),
+    row(
+      "the unknown-class route",
+      doc(
+        r#"\documentclass{nosuchclass}"#,
+        r#"\author{Ann Able, Bob Baker and R Core Team}"#,
+      ),
+      (0, 1),
+      &[
+        &["role=author", "Ann Able"],
+        &["role=author", SEP, "Bob Baker"],
+        &["role=author", SEP, "R Core Team"],
+      ],
+    ),
+    row(
+      "a lone collaboration (rule 6)",
+      doc(ARTICLE, r#"\author{The IceCube Collaboration}"#),
+      (0, 0),
+      &[&["role=author", "The IceCube Collaboration"]],
+    ),
+    row(
+      "1708.04166",
+      repro!("author_team_witness_1708_04166_pos_and_the_team").to_string(),
+      (0, 0),
+      &[
+        &[
+          "role=speaker",
+          "Ann Able",
+          "note:thanks=Funding note.",
+          "affiliation=Univ A",
+          "email=ann@a.org",
+        ],
+        &["role=author", "Bob Baker", "affiliation=Univ A"],
+        &["role=author", SEP, "Cy Cole", "affiliation=Univ B"],
+        &["role=author", SEP, "the GAPS Team"],
+      ],
+    ),
+    row(
+      "1609.09534",
+      repro!("author_team_witness_1609_09534_iopart_comma_and_the_team").to_string(),
+      (0, 0),
+      &[
+        &[
+          "role=author",
+          "Ann Able",
+          "email=ann@a.org",
+          "affiliation=1 Univ A",
+          "affiliation=2 Univ B",
+        ],
+        &["role=author", SEP, "Bob Baker", "affiliation=2 Univ B"],
+        &["role=author", SEP, "Cy Cole", "affiliation=1 Univ A"],
+        &["role=author", SEP, "the MAST Team"],
+      ],
+    ),
+    row(
+      "2111.00753",
+      repro!("author_team_witness_2111_00753_iopart_and_marked_team").to_string(),
+      (0, 0),
+      &[
+        &[
+          "role=author",
+          "Ann Able",
+          "affiliation=1 Univ A",
+          "email=ann@a.org",
+        ],
+        &["role=author", SEP, "Bob Baker", "affiliation=2 Univ B"],
+        &[
+          "role=author",
+          SEP,
+          "Cy Cole",
+          "note:footnotemark[∗]=",
+          "affiliation=3 Institute of Plasma Physics, Hefei, China",
+        ],
+        &[
+          "role=author",
+          SEP,
+          "Dee Dorn",
+          "affiliation=3 Institute of Plasma Physics, Hefei, China",
+        ],
+        &[
+          "role=author",
+          SEP,
+          "EAST Team",
+          "affiliation=3 Institute of Plasma Physics, Hefei, China",
+        ],
+      ],
+    ),
+    row(
+      "2509.25166",
+      repro!("author_team_witness_2509_25166_mnras_newauthor_and_the_collaboration").to_string(),
+      (0, 0),
+      &[
+        &[
+          "role=author",
+          "Ann Able",
+          "note:thanks[⋆]=E-mail: ann@a.org",
+          "affiliation=Univ A",
+        ],
+        &[
+          "role=author",
+          SEP,
+          "Bob Baker",
+          "affiliation=Univ A",
+          "affiliation=Univ B",
+        ],
+        &["role=author", SEP, "Cy Cole", "affiliation=Univ B"],
+        &["role=author", SEP, "Dee Dorn", "affiliation=Univ A"],
+        &[
+          "role=author",
+          SEP,
+          "the LSST Dark Energy Science Collaboration",
+        ],
+      ],
+    ),
+    row(
+      "astro-ph0311261",
+      repro!("author_team_witness_astro_ph0311261_and_the_collaboration_across_a_break")
+        .to_string(),
+      (0, 0),
+      &[
+        &[
+          "role=author",
+          "Ann Able",
+          "note:footnotemark[1]=",
+          "affiliation=(1) Univ A, (2) Univ B, (3) Univ C",
+        ],
+        &[
+          "role=author",
+          SEP,
+          "Bob Baker",
+          "note:footnotemark[1]=",
+          "affiliation=(1) Univ A, (2) Univ B, (3) Univ C",
+        ],
+        &[
+          "role=author",
+          SEP,
+          "the ACBAR collaboration",
+          "note:footnotemark[2,3]=",
+          "affiliation=(1) Univ A, (2) Univ B, (3) Univ C",
+        ],
+      ],
+    ),
+    row(
+      "astro-ph0509500",
+      repro!("author_team_witness_astro_ph0509500_and_the_team_two_marks").to_string(),
+      (0, 0),
+      &[
+        &["role=author", "Ann Able", "affiliation=Univ A"],
+        &["role=author", SEP, "Bob Baker", "affiliation=Univ B"],
+        &["role=author", SEP, "Cy Cole", "affiliation=Univ A"],
+        &[
+          "role=author",
+          SEP,
+          "the VVDS team",
+          "affiliation=Univ A",
+          "affiliation=Univ B",
+        ],
+      ],
+    ),
+    row(
+      "2502.17397 (review B1)",
+      repro!("author_team_witness_2502_17397_iopart_two_marked_teams").to_string(),
+      (0, 0),
+      &[
+        &[
+          "role=author",
+          "Ann Able",
+          "note:footnotemark[†]=",
+          "affiliation=1 Univ A",
+          "affiliation=2 Univ B",
+        ],
+        &[
+          "role=author",
+          SEP,
+          "Bob Baker",
+          "note:footnotemark[†]=",
+          "affiliation=1 Univ A",
+        ],
+        &["role=author", SEP, "Cy Cole", "affiliation=2 Univ B"],
+        &[
+          "role=author",
+          SEP,
+          "the TCV team",
+          "affiliation=3 See author list of B. P. Duval et al. 2024",
+        ],
+        &[
+          "role=author",
+          SEP,
+          "the WPTE team",
+          "affiliation=4 See author list of E. Joffrin et al. 2024",
+        ],
+      ],
+    ),
+  ]);
+}
+
+/// Rule 2: a "group" is an author only after "and"/`&` or with its own mark, with no address under it; after a list's
+/// comma, joined to an institution, in an `\and` column or before a place it is an affiliation, as rc6 reads it, and a
+/// line that read an institution enumerates nothing after it (round 0 failed each, Gemini a3/a4, reviews S1, G1).
+#[test]
+fn a_group_is_an_author_after_and_or_its_mark() {
+  check(&[
+    row(
+      "and, lowercase group",
+      doc(ARTICLE, r#"\author{Ann Able and LHD experimental group}"#),
+      (0, 0),
+      &[&["role=author", "Ann Able"], &[
+        "role=author",
+        SEP,
+        "LHD experimental group",
+      ]],
+    ),
+    row(
+      "a list's comma: an affiliation",
+      doc(
+        ARTICLE,
+        r#"\author{Alice Smith, Bob Jones, Quantum Optics Group}"#,
+      ),
+      (0, 0),
+      &[&["role=author", "Alice Smith"], &[
+        "role=author",
+        SEP,
+        "Bob Jones",
+        "affiliation=Quantum Optics Group",
+      ]],
+    ),
+    row(
+      "comma, the place on the next line (Gemini a3)",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able, Bob Baker, Theory Group \\ CERN, Geneva}"#,
+      ),
+      (0, 0),
+      &[&["role=author", "Ann Able", "affiliation=CERN, Geneva"], &[
+        "role=author",
+        SEP,
+        "Bob Baker",
+        "affiliation=Theory Group",
+        "affiliation=CERN, Geneva",
+      ]],
+    ),
+    row(
+      "joined to an institution (Gemini a4a)",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able, Bob Baker, Department of Physics and Quantum Optics Group}"#,
+      ),
+      (0, 0),
+      &[
+        &[
+          "role=author",
+          "Ann Able",
+          "collaboration=Quantum Optics Group",
+        ],
+        &[
+          "role=author",
+          SEP,
+          "Bob Baker",
+          "affiliation=Department of Physics",
+          "collaboration=Quantum Optics Group",
+        ],
+      ],
+    ),
+    row(
+      "an \\and column (Gemini a4b)",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able \and Bob Baker \and Machine Learning Group}"#,
+      ),
+      (0, 0),
+      &[
+        &[
+          "role=author",
+          "Ann Able",
+          "affiliation=Machine Learning Group",
+        ],
+        &[
+          "role=author",
+          SEP,
+          "Bob Baker",
+          "affiliation=Machine Learning Group",
+        ],
+      ],
+    ),
+    row(
+      "llncs inline \\and before a place (review S1)",
+      doc(
+        LLNCS,
+        r#"\author{Ann Able \and Bob Baker \and Speech Group, CERN}\institute{Univ A}"#,
+      ),
+      (0, 0),
+      &[
+        &[
+          "role=author",
+          "Ann Able",
+          "affiliation=Speech Group",
+          "affiliation=Univ A",
+        ],
+        &[
+          "role=author",
+          SEP,
+          "Bob Baker",
+          "affiliation=CERN",
+          "affiliation=Univ A",
+        ],
+      ],
+    ),
+    row(
+      "and, the place on the next line",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able and Bob Baker and Theory Group \\ CERN, Geneva}"#,
+      ),
+      (0, 0),
+      &[
+        &[
+          "role=author",
+          "Ann Able",
+          "collaboration=Theory Group",
+          "affiliation=CERN, Geneva",
+        ],
+        &[
+          "role=author",
+          SEP,
+          "Bob Baker",
+          "collaboration=Theory Group",
+          "affiliation=CERN, Geneva",
+        ],
+      ],
+    ),
+    row(
+      "its own mark after a comma",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able$^1$, Bob Baker$^1$, LHD experimental group$^2$\\ $^1$Univ A\\ $^2$NIFS}"#,
+      ),
+      (0, 0),
+      &[
+        &["role=author", "Ann Able", "affiliation=Univ A"],
+        &["role=author", SEP, "Bob Baker", "affiliation=Univ A"],
+        &[
+          "role=author",
+          SEP,
+          "LHD experimental group",
+          "affiliation=NIFS",
+        ],
+      ],
+    ),
+    row(
+      "a company group after a comma (advisor 3)",
+      doc(ARTICLE, r#"\author{Ann Able, Bob Baker, Alibaba Group}"#),
+      (0, 0),
+      &[&["role=author", "Ann Able"], &[
+        "role=author",
+        SEP,
+        "Bob Baker",
+        "affiliation=Alibaba Group",
+      ]],
+    ),
+    row(
+      "names then marked affiliations (advisor G1)",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able$^1$, Bob Baker$^2$, $^1$Univ A, $^2$Robotics Group}"#,
+      ),
+      (0, 0),
+      &[
+        &[
+          "role=author",
+          "Ann Able",
+          "note:footnotemark[1]=",
+          "affiliation=Univ A",
+        ],
+        &[
+          "role=author",
+          SEP,
+          "Bob Baker",
+          "note:footnotemark[2,1]=",
+          "affiliation=Robotics Group",
+        ],
+      ],
+    ),
+    row(
+      "names then two institutions (advisor)",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able, Bob Baker, University of X, Robotics Group}"#,
+      ),
+      (0, 0),
+      &[
+        &["role=author", "Ann Able", "affiliation=University of X"],
+        &[
+          "role=author",
+          SEP,
+          "Bob Baker",
+          "affiliation=Robotics Group",
+        ],
+      ],
+    ),
+    row(
+      "and the",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able and Bob Baker and the Theory Group}"#,
+      ),
+      (0, 0),
+      &[
+        &["role=author", "Ann Able"],
+        &["role=author", SEP, "Bob Baker"],
+        &["role=author", SEP, "the Theory Group"],
+      ],
+    ),
+    row(
+      "1711.07097",
+      repro!("author_team_witness_1711_07097_revtex_and_marked_group").to_string(),
+      (0, 0),
+      &[
+        &[
+          "role=author",
+          "Ann Able",
+          "note:footnotemark[∗]=",
+          "affiliation=1 Univ A",
+          "affiliation=2 National Institute for Fusion Science, Toki, Japan",
+        ],
+        &[
+          "role=author",
+          SEP,
+          "Bob Baker",
+          "affiliation=2 National Institute for Fusion Science, Toki, Japan",
+        ],
+        &[
+          "role=author",
+          SEP,
+          "Cy Cole",
+          "affiliation=2 National Institute for Fusion Science, Toki, Japan",
+        ],
+        &[
+          "role=author",
+          SEP,
+          "LHD experimental group",
+          "affiliation=2 National Institute for Fusion Science, Toki, Japan",
+        ],
+      ],
+    ),
+  ]);
+}
+
+/// Rule 3: a shared head noun lists one author per group, each its own printed text, beside names printed before them
+/// (1503.07589, 2408.02330, 2412.18491's shape in an `\author` list); rc6 made the last a contact. revtex's own
+/// `\collaboration` list keeps rc6's reading (`revtex_collaboration_list_is_one_contact_red`), as a group-only list does
+/// (`author_group_only_list_keeps_one_creator_red`).
+#[test]
+fn each_group_a_shared_head_lists_is_an_author() {
+  check(&[
+    row(
+      "a list of groups under one plural",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able, Bob Baker, Fermilab Lattice, HPQCD, and MILC Collaborations}"#,
+      ),
+      (0, 0),
+      &[
+        &["role=author", "Ann Able"],
+        &["role=author", SEP, "Bob Baker"],
+        &["role=author", SEP, "Fermilab Lattice"],
+        &["role=author", SEP, "HPQCD"],
+        &["role=author", SEP, "MILC Collaborations"],
+      ],
+    ),
+    row(
+      "and the, under one plural",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able, Bob Baker and the ATLAS and CMS Collaborations}"#,
+      ),
+      (0, 0),
+      &[
+        &["role=author", "Ann Able"],
+        &["role=author", SEP, "Bob Baker"],
+        &["role=author", SEP, "the ATLAS"],
+        &["role=author", SEP, "CMS Collaborations"],
+      ],
+    ),
+    row(
+      "2408.02330",
+      repro!("author_team_witness_2408_02330_and_column_shared_head_teams").to_string(),
+      (0, 0),
+      &[
+        &["role=author", "Ann Able", "note:footnotemark[1]="],
+        &["role=author", SEP, "Bob Baker", "note:footnotemark[2]="],
+        &["role=author", SEP, "the Solar Orbiter EPD"],
+        &["role=author", SEP, "Parker Solar Probe ISIS teams"],
+      ],
+    ),
+    row(
+      "1503.07589",
       repro!("author_collaboration_name_with_and_stays_one").to_string(),
       (0, 0),
-      vec![with2(
-        "The ATLAS",
-        "collaboration=CMS Collaborations",
-        "affiliation=CERN",
-      )],
+      &[&["role=author", "The ATLAS"], &[
+        "role=author",
+        SEP,
+        "CMS Collaborations",
+      ]],
     ),
-    (
-      "institution column",
-      with_author(
-        repro!("author_enumerated_team_is_an_author"),
-        "Friedrich Leisch \\and Vincent Goulet \\and The R Foundation",
+  ]);
+}
+
+/// Rules 4 and 5: an institution's `\and` column, a group before a place (an institution, paired as rc6 pairs them), a
+/// name's `for`/`on behalf of`/`representing` remark, a bracketed line, a dash keep their reading; a bracket that closes
+/// opens no remark (Gemini b1), so the team after it is an author. A remark's two Warnings are the emitter's markup
+/// fallback (`author_names_inline_remark_markup_fallback_red`).
+#[test]
+fn a_framed_collaboration_and_an_institution_keep_their_reading() {
+  check(&[
+    row(
+      "an institution's \\and column",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able \and Bob Baker \and The R Foundation}"#,
       ),
       (0, 0),
-      vec![
-        with("Friedrich Leisch", r_foundation),
-        with("Vincent Goulet", r_foundation),
+      &[
+        &["role=author", "Ann Able", "affiliation=The R Foundation"],
+        &[
+          "role=author",
+          SEP,
+          "Bob Baker",
+          "affiliation=The R Foundation",
+        ],
       ],
     ),
-  ];
-  let bad = mismatches(&rows);
-  assert!(bad.is_empty(), "{}", bad.join("\n"));
+    row(
+      "a group before a place (review S4)",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able and Bob Baker and Theory Group, CERN}"#,
+      ),
+      (0, 0),
+      &[&["role=author", "Ann Able", "affiliation=Theory Group"], &[
+        "role=author",
+        SEP,
+        "Bob Baker",
+        "affiliation=CERN",
+      ]],
+    ),
+    row(
+      "the team before a place",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able and Bob Baker and the GAPS Team, Univ A}"#,
+      ),
+      (0, 0),
+      &[
+        &["role=author", "Ann Able", "collaboration=the GAPS Team"],
+        &[
+          "role=author",
+          SEP,
+          "Bob Baker",
+          "collaboration=the GAPS Team",
+          "affiliation=Univ A",
+        ],
+      ],
+    ),
+    row(
+      "a name's for remark",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able and Bob Baker for the ATLAS Collaboration}"#,
+      ),
+      (0, 2),
+      &[
+        &[
+          "role=author",
+          "Ann Able",
+          "collaboration=for the ATLAS Collaboration",
+        ],
+        &[
+          "role=author",
+          SEP,
+          "Bob Baker",
+          "collaboration=for the ATLAS Collaboration",
+        ],
+      ],
+    ),
+    row(
+      "a bracketed line",
+      doc(ARTICLE, r#"\author{Ann Able \\ (XYZ Collaboration)}"#),
+      (0, 0),
+      &[&[
+        "role=author",
+        "Ann Able",
+        "collaboration=(XYZ Collaboration)",
+      ]],
+    ),
+    row(
+      "a bracket that is no remark (Gemini b1)",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able (MIT), Bob Baker and R Core Team}"#,
+      ),
+      (0, 0),
+      &[
+        &["role=author", "Ann Able (MIT)"],
+        &["role=author", SEP, "Bob Baker"],
+        &["role=author", SEP, "R Core Team"],
+      ],
+    ),
+    row(
+      "(deceased) (Gemini b1)",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able (deceased), Bob Baker and R Core Team}"#,
+      ),
+      (0, 0),
+      &[
+        &["role=author", "Ann Able (deceased)"],
+        &["role=author", SEP, "Bob Baker"],
+        &["role=author", SEP, "R Core Team"],
+      ],
+    ),
+    row(
+      "a remark open on the line",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able and Bob Baker, representing the X Team and the Y Team}"#,
+      ),
+      (0, 0),
+      &[
+        &[
+          "role=author",
+          "Ann Able",
+          "collaboration=representing the X Team",
+          "collaboration=the Y Team",
+        ],
+        &[
+          "role=author",
+          SEP,
+          "Bob Baker",
+          "collaboration=representing the X Team",
+          "collaboration=the Y Team",
+        ],
+      ],
+    ),
+    row(
+      "a bracket remark across commas",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able (on behalf of the H1, ZEUS and HERA Collaborations)}"#,
+      ),
+      (0, 2),
+      &[&[
+        "role=author",
+        "Ann Able",
+        "collaboration=(on behalf of the H1, ZEUS and HERA Collaborations)",
+      ]],
+    ),
+    row(
+      "a team, then a name's remark (review s8)",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able and the XYZ Team and Bob Baker for the ATLAS Collaboration}"#,
+      ),
+      (0, 2),
+      &[
+        &[
+          "role=author",
+          "Ann Able",
+          "collaboration=for the ATLAS Collaboration",
+        ],
+        &[
+          "role=author",
+          SEP,
+          "the XYZ Team",
+          "collaboration=for the ATLAS Collaboration",
+        ],
+        &[
+          "role=author",
+          SEP,
+          "Bob Baker",
+          "collaboration=for the ATLAS Collaboration",
+        ],
+      ],
+    ),
+    row(
+      "hep-ex0106079",
+      repro!("author_team_witness_hep_ex0106079_dash_collaboration_is_a_contact").to_string(),
+      (0, 0),
+      &[
+        &["role=author", "A. ABLE", "collaboration=NA50 collaboration"],
+        &["role=author", SEP, "B. Baker", "affiliation=Univ A."],
+        &["role=author", SEP, "C. Cole", "affiliation=Univ B."],
+        &["role=author", SEP, "D. Dorn", "affiliation=Univ A."],
+      ],
+    ),
+    row(
+      "1511.01102",
+      repro!("author_team_witness_1511_01102_aastex_bracketed_line_is_a_contact").to_string(),
+      (0, 0),
+      &[
+        &[
+          "role=author",
+          "A. Able",
+          "collaboration=(The Nearby Supernova Factory)",
+          "altaffiliation=Univ A",
+          "altaffiliation=Univ B",
+        ],
+        &[
+          "role=author",
+          SEP,
+          "B. Baker",
+          "collaboration=(The Nearby Supernova Factory)",
+          "altaffiliation=Univ A",
+        ],
+        &[
+          "role=author",
+          SEP,
+          "C. Cole",
+          "collaboration=(The Nearby Supernova Factory)",
+          "altaffiliation=Univ B",
+        ],
+      ],
+    ),
+    row(
+      "0712.1016, 1704.03168",
+      repro!("author_team_witness_0712_1016_shared_column_is_every_names").to_string(),
+      (0, 0),
+      &[
+        &[
+          "role=author",
+          "Ann Able",
+          "affiliation=School of Physics, Univ A",
+          "affiliation=Main Road, City",
+        ],
+        &[
+          "role=author",
+          SEP,
+          "Bob Baker",
+          "affiliation=School of Physics, Univ A",
+          "affiliation=Main Road, City",
+        ],
+        &[
+          "role=author",
+          SEP,
+          "Cy Cole",
+          "affiliation=School of Physics, Univ A",
+          "affiliation=Main Road, City",
+        ],
+      ],
+    ),
+  ]);
 }
