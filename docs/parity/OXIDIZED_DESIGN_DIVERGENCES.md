@@ -7334,7 +7334,13 @@ reset per conversion; `\long` survives the dump.
   errs the same way (`gullet::note_missing_argument`): the token readers, which run on `\relax`, and the readers
   built on `read_arg` through `gullet::read_required_arg` (`{}`, `Semiverbatim`, `Undigested`, the style and
   expanded readers, …; `\label`, `\ref`, `\cite`, `\section`) and `HBoxArgContents` (`\mbox`), which run on the
-  empty argument. An isolated mouth's end stays quiet, as TeX never reads there (an index phrase digested at
+  empty argument. Three of them follow TeX rather than Perl there: `DirectoryList` (`\graphicspath`; Perl's `ToString(undef)`
+  still returns an Array, Base_ParameterTypes.pool.ltxml:310, so Perl is quiet), `SanitizedVerbatim` (`\index`; Perl reports
+  "Gullet->readBalanced ran out of input" instead, latex_constructs.pool.ltxml:4385-4390) and `PBoxContents` (Perl's
+  `readBoxContents` always returns a List, TeX_Box.pool.ltxml:164-185) — pdflatex stops with "File ended while scanning
+  use of …" for each. The Rust-only readers (`HBoxArgContents`, `Position`, `DefaultUnits`, the URL/unexpanded/expanded
+  `Semiverbatim` variants, `ProtectedExpanded`) name themselves in the message where Perl, whose reader is `{}`, says
+  "Missing argument {}". An isolated mouth's end stays quiet, as TeX never reads there (an index phrase digested at
   `\index` time); a `\scantokens` pseudo-file's end and a constructor's read at an `\input` file's end stay quiet
   too, where TeX and Perl err (REDs `expansion-primitives/required_reader_scantokens_end_silent_red.tex`,
   `required_reader_input_file_end_silent_red.tex`). A
