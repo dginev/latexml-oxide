@@ -1,0 +1,30 @@
+% mechanism: autart.cls:1109 (`\@for\@tempa:=#1\do{\add@thanksref…}`) makes every key of `\author[a,fn1]` a thanksref, as
+%   elsart.cls does, and autart.cls:912-913 make `\thanksref` and `\corauthref` the same `\add@thanksref`, so a
+%   `\thanks[fn1]{…}` or a `\corauth[cor]{…}` is owned by the author whose key or `\thanksref` names it. The AUTART binding
+%   (`autart_cls.rs`) requests a labelled note only through `\thanksref`; the `\author[…]` keys request nothing, so the note
+%   goes to the nameless block creator, and `\corauth[cor]` reads no label (its `[` opens the note, "cor]…" spills into the
+%   page) — elsart's binding gives the key form to its author (`\lx@els@author`)
+% witness: synthetic (the AUTART review's `scratch_revAUTART/p/t3_optlist_label.tex`, `t8_thanksref_to_corauth.tex`); 0 of
+%   the 23 autart papers in the census use either shape
+% oracle:  pdflatex 0 errors (with 1610.05434's autart.cls): "Ann Able a,1 , Bob Baker a", foot "1 Ann's own note."; and
+%   (the corauth variant, t8: the ∗ on the `\thanksref` holder) foot "∗ Corresponding author."
+% engines: rust AUTART (a5ff0ab700d): Ann's note on a nameless creator (thanks contact); the `\corauth` text "cor]Corresponding
+%   author." a body paragraph, a "[" corresponding note, no mark on Bob
+% expect:  0 errors; Ann's note (and the corresponding note) on Ann, marked as the PDF
+% status:  RED
+% moves:   post-merge (row R AUTART-RESIDUAL)
+% preload: ar5iv.sty
+\documentclass{autart}
+\begin{document}
+\begin{frontmatter}
+\title{A Title}
+\author[a,fn1]{Ann Able}\ead{ann@x.org},
+\author[a]{Bob Baker\thanksref{cor}}
+\thanks[fn1]{Ann's own note.}
+\corauth[cor]{Corresponding author.}
+\address[a]{First University}
+\begin{abstract}The abstract.\end{abstract}
+\end{frontmatter}
+\section{One}
+Text.
+\end{document}

@@ -1,0 +1,24 @@
+% mechanism: the negative row of `autart_names_line_separators`: names with no separator typed between their calls,
+%   a period after the last (2008.08913's `\ead{…}.`, printed, not the list's), and a run of words between two names
+%   keep what they print — the separator query reads a separator alone or nothing (autart_cls.rs `\lx@autart@names@sep`)
+% witness: 1606.08323 (no separators), 2008.08913 (the period)
+% oracle:  pdflatex 0 errors (with 1610.05434's autart.cls): "A Title / Ann Able a Bob Baker a with Cy Cole a. / a
+%          First University / Abstract The abstract."
+% engines: rust INT081EP: 3 creators; "with" and "." as text after the abstract
+% expect:  0 errors 0 Warnings; 3 creators, the text "with" and "." kept
+% status:  GREEN (INT081EP; perfect_kernel_batchblockplace::autart_names_line_and_thanks_labels)
+% preload: ar5iv.sty
+\documentclass{autart}
+\begin{document}
+\begin{frontmatter}
+\title{A Title}
+\author[a]{Ann Able}
+\author[a]{Bob Baker} with
+\author[a]{Cy Cole}\ead{cy@example.org}.
+
+\address[a]{First University}
+\begin{abstract}The abstract.\end{abstract}
+\end{frontmatter}
+\section{One}
+Text.
+\end{document}

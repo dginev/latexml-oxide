@@ -15,6 +15,13 @@ top of its group.
     the title block alone — so `scrartcl`/`scrarticle`, `scrreprt`, `scrbook`, `siamart`/`siamonline` and `dmtcs-episciences`
     title notes are marked ∗, †, ‡ … where they were unmarked or arabic, and `\footremember`/`\footrecall` keep their notes
     (OXIDIZED_DESIGN_DIVERGENCES #851). Guard `perfect_kernel_batchomnt`.
+  - **autart's title page keeps no stray separators and no split `\thanks`.** The ", ", "and" and `\and` a template
+    types between and after its `\author` and `\ead` calls, which autart.cls prints between the names, were text after
+    the creators; they are now dropped as the names line's separators, while any other text there stays
+    (1610.05434, 2602.06569). `\thanks[label]{…}` reads its label, so the note is the title's or the author's whose
+    `\thanksref` names it, as elsart's binding links them, where the `[` was a note and the label and text ran into the
+    title page, and `\thanksref` printed the key (2505.13064, 1105.0629); an unlabelled `\thanks` stays a document
+    note. Guard `perfect_kernel_batchblockplace::autart_names_line_and_thanks_labels`.
   - **A `trim`/`viewport` crop of a rasterized PDF, EPS or PS keeps the region the PDF shows.** The crop was cut at
     72 pixels per inch whatever density the figure was rendered at, so at the default 120 dpi a `trim` removed 60 %
     of what it asked for, and a large figure rendered at the 2048-pixel cap (26 dpi for a 5669 bp page) lost 2.8 times

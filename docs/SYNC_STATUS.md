@@ -663,12 +663,14 @@ Rules that keep this file honest and mergeable:
     heading, sn-jnl and WileyNJD per version; 2504.05630), `snjnl_unmarked_note_before_any_name_above_present_address_red`,
     `wlpeerj_corrauthor_second_creator_red`, `bytedance_marks_link_names_and_lines_red` (labels and marks lost:
     2506.15211, 2511.06346); 1
-  - BLOCKPLACE-AUTART — autart's title page leaks separators and a split `\thanks` (measured 2026-11-26, Gemini
-    REACH2, checked: 16 of 17 autart papers in 30k, ≈ 1.5k): OmniBus lets `{frontmatter}` be `\@empty`
-    (`omnibus_cls.rs:212-213`), so the template's literal `, ` and `and` between `\author[…]{…}\ead{…}` calls
-    land in `ltx:titlepage` (5/30k separator-only: 1610.05434, 1907.08912, 2310.07906, 2601.13958, 2602.06569);
-    `autart_cls.rs:171-174` `\thanks{}` takes no optional `[…]`, so `[` opens the thanks note and `footnoteinfo]…`
-    spills into the same titlepage (11/30k: 1307.6041, 1611.04531, 1807.10233, 2404.08842, 2505.13064); 1
+  - AUTART-RESIDUAL — (BLOCKPLACE-AUTART landed 2026-11-27, pk/AUTART: the names line's separators dropped through the
+    separator query `separators_only`; `\thanks[label]` linked as elsart's; guard
+    `perfect_kernel_batchblockplace::autart_names_line_and_thanks_labels`) left: the keys of `\author[a,fn1]` request no note
+    and `\corauth[label]` reads no label (autart.cls:1109, :912-913; RED
+    `autart_author_key_and_corauth_labels_request_their_notes_red`; 0 of 23 census papers); a mark typed after a name call
+    (RED `autart_mark_typed_after_a_name_call_red`, 1307.6041, 2410.23435); `\ead[url]` (RED `autart_ead_url_option_red`);
+    an unrequested labelled `\thanks` holds the nameless block creator (2008.08913, 2212.04396, 2406.13374, 2410.23435,
+    2511.15034; FIDELITY_CHARTER's block-creator rule, the review's recommendation; the PDF prints an unmarked note); 1
   - AAAILABEL — (landed 2026-11-26, pk/AAAILABEL, 4 rounds) aaai's labelled `\affiliations` lines are the marked authors'
     affiliations and contacts (~95 % of modern aaai papers); the displaced-setter route's address rules mirror the API's
     for every class: numbered (`\and`) entries get neither the doubt nor the closing move, an unread piece goes ALONE to the

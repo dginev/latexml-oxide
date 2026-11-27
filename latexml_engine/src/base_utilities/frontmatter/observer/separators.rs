@@ -255,6 +255,22 @@ fn separators_of(arg: &Tokens, every_level: bool) -> Result<Option<Vec<ArgSepara
   Ok(Some(separators.collect()))
 }
 
+/// Whether the reading reads `arg` as what parts two names alone: a comma, the word "and", an `\and`, a separator glyph,
+/// with spacing, and nothing printed besides; `false` where no rehearsal could be made (autart's names line,
+/// `autart_cls.rs` `\lx@autart@names@sep`).
+pub fn separators_only(arg: &Tokens) -> Result<bool> {
+  let Some(ArgumentReading { events, .. }) = read_argument(arg)? else {
+    return Ok(false);
+  };
+  let parts = |e: &Event| {
+    matches!(
+      e.kind,
+      EventKind::Sep(SepKind::Comma | SepKind::Word(_) | SepKind::And(_))
+    )
+  };
+  Ok(events.iter().any(parts) && events.iter().all(|e| matches!(e.kind, EventKind::Sep(_))))
+}
+
 /// The TeX front-end, `\lx@fm@separators{<tokens>}`: [`argument_separators`]' meanings by name, comma-separated.
 pub(in crate::base_utilities) fn load() -> Result<()> {
   DefMacro!("\\lx@fm@separators{}", sub[(arg)] {
