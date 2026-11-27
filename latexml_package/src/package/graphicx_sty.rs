@@ -385,7 +385,7 @@ LoadDefinitions!({
           natural_display_size_pt_of_candidates(&candidates, &source_dir)
         {
           // The post-processor crops and turns the figure (`trim`/`viewport`/
-          // `angle`; latexml_post `crop_svg_inplace`, `transform_raster_inplace`),
+          // `angle`; latexml_post `crop_svg`, `transform_raster_inplace`),
           // so its box is the natural size under those ops, clamped to the page
           // as the crop is — never padded (2605.06510's colorbars,
           // `trim=0cm -4cm 0cm 0cm`).

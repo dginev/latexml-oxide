@@ -43,6 +43,17 @@ top of its group.
     paragraph and the bibliography). A `\\` inside a group or an environment (a premise's unbraced `array`, which the
     stub used to split) stays that environment's row break. Guard
     `perfect_kernel_batch69a::mathpartir_splits_only_its_own_row_breaks`.
+  - **A PDF figure converted to SVG at an author's size shows at that size under any stylesheet.** The SVG file kept
+    the converter's size and only the `<object>` carried the requested one, which a stylesheet sizing the object
+    `auto` (ar5iv.css) overrides, so `\includegraphics[height=170pt]` showed at the PDF's own size and labels a
+    `{picture}` puts over the figure fell beside it (1605.07806, 2403.09205, 1104.5392, 1509.02249, 1601.05000). A
+    scaled render's root now carries the display size, its `viewBox` kept, stretched only where graphicx scales x and
+    y apart, and each size is a file of its own (the first keeps the figure's name unless converted in place, the
+    others take `xN`), as
+    LaTeXML's Perl original scales its PNG to the size; a negative scale keeps the natural render
+    (OXIDIZED_DESIGN_DIVERGENCES #1034). Converting in place again reads the author's PDF, not the SVG the earlier run
+    wrote beside it, so the names, sizes and crops stay those of the first run (#1157). Guards `latexml_post
+    graphics::tests::{a_sized_vector_render_carries_its_display_size, a_figure_converted_in_place_again_reads_the_authors_source}`.
   - **KOMA-Script, versioned SIAM and dmtcs title notes print their fnsymbol marks and step the footnote counter, as the
     classes do.** A binding now answers for the class it actually serves — its own name, the request a versioned or prefix
     fallback answered with it (`siamltex1213`, `siamonline220329`), or the base a raw class file `\LoadClass`es while leaving

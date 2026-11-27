@@ -1689,8 +1689,12 @@ fn read_svg_size_pt(path: &Path) -> Option<(f64, f64)> {
 /// (`Util/Image.pm:86-97`); `pdftocairo`/`mutool` are our own beyond-Perl
 /// PDF→SVG pipeline, absent from Perl.
 pub fn read_svg_viewport_px(path: &Path) -> Option<(u32, u32)> {
-  let head = read_head_lossy(path)?;
-  let tag = svg_root_tag(&head)?;
+  svg_viewport_px(&read_head_lossy(path)?)
+}
+
+/// [`read_svg_viewport_px`] of an SVG's text (its head suffices) already in memory.
+pub fn svg_viewport_px(head: &str) -> Option<(u32, u32)> {
+  let tag = svg_root_tag(head)?;
   let (w, h) = svg_root_lengths_px(tag).or_else(|| svg_viewbox_extent(tag))?;
   Some((w.round().max(1.0) as u32, h.round().max(1.0) as u32))
 }

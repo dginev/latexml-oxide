@@ -189,6 +189,10 @@ struct ConvertJob {
   /// The raster's pixels per bp: a drawn source's (PDF, EPS) render density over 72, a raster's own resolution (72 dpi
   /// when it states none, as pdfTeX takes it).
   px_per_bp:    f64,
+  /// The scaling ops (`width`, `height`, `scale`) a vector render's root `width`/`height` are set by, at `dpi`
+  /// ([`Graphics::size_svg`]); empty when the render keeps its own size.
+  sizing:       Vec<GraphicxOp>,
+  dpi:          u32,
 }
 
 /// What a conversion produced.
@@ -264,6 +268,8 @@ struct ConvertDesc {
   ops:              Vec<GraphicxOp>,
   /// Whether the source is drawn (a `unit: "point"` type: PDF, PS, EPS, AI), so its pixels are the render density's.
   drawn:            bool,
+  /// The scaling ops a vector render's root is sized by ([`ConvertJob::sizing`]).
+  sizing:           Vec<GraphicxOp>,
   request:          Request,
 }
 
@@ -475,12 +481,14 @@ impl Graphics {
 
   /// Find the graphics source file for a node.
   ///
-  /// Port of `Graphics::findGraphicFile`.
+  /// Port of `Graphics::findGraphicFile`. A file `ours` names (an earlier run's output in the destination) ranks below
+  /// every other: converted in place, our `<stem>.svg` outranked the author's PDF (OD #1157 (7)).
   fn find_graphic_file(
     &self,
     _doc: &PostDocument,
     node: &Node,
     search_paths: &[String],
+    ours: &dyn Fn(&str) -> bool,
   ) -> Option<String> {
     let source = node.get_attribute("graphic")?;
 
@@ -488,7 +496,7 @@ impl Graphics {
     // Perl: findGraphicFile checks each candidate path, resolving relative to search paths.
     if let Some(candidates) = node.get_attribute("candidates") {
       // Pick the best candidate by desirability
-      let mut best: Option<(String, i32)> = None;
+      let mut best: Option<(String, (bool, i32))> = None;
       for path in candidates.split(',') {
         let path = path.trim();
         if path.is_empty() {
@@ -534,7 +542,7 @@ impl Graphics {
             .and_then(|p| p.destination_type.as_ref())
             .map(|dt| dt == &ext)
             .unwrap_or(false);
-          let desirability = if is_same_type { 10 } else { d };
+          let desirability = (!ours(&resolved_path), if is_same_type { 10 } else { d });
           if best.as_ref().is_none_or(|(_, bd)| desirability > *bd) {
             best = Some((resolved_path, desirability));
           }
@@ -557,7 +565,7 @@ impl Graphics {
     };
 
     // Try each type in search paths
-    let mut best_desirability: i32 = -1;
+    let mut best_desirability = (false, -1);
     let mut best_path: Option<String> = None;
 
     let types: Vec<String> = self
@@ -580,7 +588,10 @@ impl Graphics {
           .unwrap_or("")
           .to_lowercase();
         let props = self.type_properties.get(&ext);
-        let d = props.map(|p| p.desirability as i32).unwrap_or(5);
+        let d = (
+          !ours(&candidate),
+          props.map(|p| p.desirability as i32).unwrap_or(5),
+        );
         if d > best_desirability {
           best_desirability = d;
           best_path = Some(candidate);
@@ -596,7 +607,7 @@ impl Graphics {
             .and_then(|p| p.destination_type.as_ref())
             .map(|dt| dt == &ext.to_lowercase())
             .unwrap_or(false);
-          let desirability = if is_same_type { 10 } else { d };
+          let desirability = (!ours(&candidate), if is_same_type { 10 } else { d });
           if desirability > best_desirability {
             best_desirability = desirability;
             best_path = Some(candidate);
@@ -763,6 +774,19 @@ impl Graphics {
     None
   }
 
+  /// The pixels per inch a size is shown at: DPI × magnify / zoomout, each from the document's processing
+  /// instructions (set by latexml.sty), else the processor's (Perl `transformGraphic`, `Post/Graphics.pm` L232-236).
+  fn effective_dpi(&self, doc: &PostDocument) -> u32 {
+    let dpi = self
+      .get_parameter(doc, "DPI")
+      .map(|v| v as u32)
+      .or(self.dpi)
+      .unwrap_or(100);
+    let magnify = self.get_parameter(doc, "magnify").unwrap_or(self.magnify);
+    let zoomout = self.get_parameter(doc, "zoomout").unwrap_or(self.zoomout);
+    ((dpi as f64) * magnify / zoomout) as u32
+  }
+
   /// Read image dimensions using imagesize crate.
   /// Returns (width, height) in pixels.
   fn read_image_dimensions(path: &str) -> Option<(u32, u32)> {
@@ -874,15 +898,12 @@ impl Graphics {
   /// render's root `viewBox` spans the page in bp (`mutool`, `pdftocairo`), so
   /// the box narrows the `viewBox`, and `width`/`height` shrink with it in
   /// their own units. Clamped to the page, never padded, as the raster crop.
-  /// `Ok(false)` when the box keeps the whole page; `Err` when the root lacks a
+  /// `Ok(None)` when the box keeps the whole page; `Err` when the root lacks a
   /// usable `viewBox`, `width` or `height`, and the caller renders a raster to
-  /// crop instead. Replaces the file by rename ([`crate::writer::write_atomic`]; one an older binary
-  /// wrote may be a hard link to a cache entry). Witness 2605.06510 (`trim=0cm 0.25cm 0cm 0.1cm,clip` on PDF legends).
-  fn crop_svg_inplace(path: &str, op: &GraphicxOp) -> Result<bool, String> {
+  /// crop instead. Witness 2605.06510 (`trim=0cm 0.25cm 0cm 0.1cm,clip` on PDF legends).
+  fn crop_svg(text: &str, op: &GraphicxOp) -> Result<Option<String>, String> {
     use latexml_core::util::image::{svg_attr_value, svg_root_tag};
-    let text = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
-    let tag = svg_root_tag(&text).ok_or("no <svg> root")?;
-    let at = tag.as_ptr() as usize - text.as_ptr() as usize;
+    let tag = svg_root_tag(text).ok_or("no <svg> root")?;
     let view: Vec<f64> = svg_attr_value(tag, "viewBox")
       .ok_or("no viewBox")?
       .split(|c: char| c.is_whitespace() || c == ',')
@@ -898,13 +919,13 @@ impl Graphics {
       GraphicxOp::Clip { l, b, r, t } => {
         (l.max(0.0), (vh - t).max(0.0), r.min(vw), (vh - b).min(vh))
       },
-      _ => return Ok(false),
+      _ => return Ok(None),
     };
     if x1 - x0 <= 0.0 || y1 - y0 <= 0.0 {
       return Err("the box keeps nothing".to_string());
     }
     if x0 <= 0.0 && y0 <= 0.0 && x1 >= vw && y1 >= vh {
-      return Ok(false);
+      return Ok(None);
     }
     let number = |v: f64| {
       let v = format!("{v:.4}");
@@ -928,16 +949,55 @@ impl Graphics {
     let width = scaled("width", (x1 - x0) / vw).ok_or("no usable width")?;
     let height = scaled("height", (y1 - y0) / vh).ok_or("no usable height")?;
     let view_box = [vx + x0, vy + y0, x1 - x0, y1 - y0].map(number).join(" ");
-    let mut new_tag = tag.to_string();
-    for (name, value) in [("viewBox", view_box), ("width", width), ("height", height)] {
-      let old = svg_attr_value(&new_tag, name).ok_or("attribute vanished")?;
-      let start = old.as_ptr() as usize - new_tag.as_ptr() as usize;
-      new_tag.replace_range(start..start + old.len(), &value);
+    Self::with_svg_root_attrs(text, &[
+      ("viewBox", view_box),
+      ("width", width),
+      ("height", height),
+    ])
+    .map(Some)
+  }
+
+  /// Size a vector render's root to its display size in pixels, as Perl scales its raster to it (`Util/Image.pm`
+  /// L382-389): `width`/`height` set, the `viewBox` kept (made from the old size when the root has none). A drawing
+  /// graphicx scales x and y apart (`stretch`) fills the box (`preserveAspectRatio="none"`); any other keeps its ratio.
+  fn size_svg(text: &str, width: u32, height: u32, stretch: bool) -> Result<String, String> {
+    use latexml_core::util::image::{svg_attr_len_px, svg_attr_value, svg_root_tag};
+    let tag = svg_root_tag(text).ok_or("no <svg> root")?;
+    let mut attrs = vec![("width", width.to_string()), ("height", height.to_string())];
+    if stretch {
+      attrs.push(("preserveAspectRatio", "none".to_string()));
     }
-    let cropped = format!("{}{new_tag}{}", &text[..at], &text[at + tag.len()..]);
-    crate::writer::write_atomic(Path::new(path), cropped.as_bytes())
-      .map_err(|e| format!("{path}: {e}"))?;
-    Ok(true)
+    if svg_attr_value(tag, "viewBox").is_none() {
+      let w = svg_attr_len_px(tag, "width").ok_or("no viewBox and no usable width")?;
+      let h = svg_attr_len_px(tag, "height").ok_or("no viewBox and no usable height")?;
+      attrs.push(("viewBox", format!("0 0 {w} {h}")));
+    }
+    Self::with_svg_root_attrs(text, &attrs)
+  }
+
+  /// `text` with its root `<svg>` start tag given `attrs`: each value replaced, or appended when absent.
+  fn with_svg_root_attrs(text: &str, attrs: &[(&str, String)]) -> Result<String, String> {
+    use latexml_core::util::image::{svg_attr_value, svg_root_tag};
+    let tag = svg_root_tag(text).ok_or("no <svg> root")?;
+    let at = tag.as_ptr() as usize - text.as_ptr() as usize;
+    let mut new_tag = tag.to_string();
+    for (name, value) in attrs {
+      match svg_attr_value(&new_tag, name) {
+        Some(old) => {
+          let start = old.as_ptr() as usize - new_tag.as_ptr() as usize;
+          new_tag.replace_range(start..start + old.len(), value);
+        },
+        None => {
+          let end = new_tag.trim_end().trim_end_matches('/').trim_end().len();
+          new_tag.insert_str(end, &format!(r#" {name}="{value}""#));
+        },
+      }
+    }
+    Ok(format!(
+      "{}{new_tag}{}",
+      &text[..at],
+      &text[at + tag.len()..]
+    ))
   }
 
   /// Crop and turn the raster at `dest` in one `convert` run, as Perl's
@@ -1045,7 +1105,7 @@ impl Graphics {
     let dirs = self.page_dirs(doc);
     let mut names = std::mem::take(&mut self.names);
     let requests = self
-      .describe(doc, &nodes, &dirs, &mut names)
+      .describe(doc, &nodes, &dirs, &mut names, self.effective_dpi(doc))
       .iter()
       .filter_map(|desc| desc.request().cloned())
       .collect();
@@ -1134,13 +1194,14 @@ impl Graphics {
   }
 
   /// What each node needs: its source, and the request that names its image (Perl `transformGraphic`'s key,
-  /// `Post/Graphics.pm` L240-245, with the source's content digest).
+  /// `Post/Graphics.pm` L240-245, with the source's content digest). `dpi` is the page's ([`Self::effective_dpi`]).
   fn describe(
     &self,
     doc: &PostDocument,
     nodes: &[Node],
     dirs: &PageDirs,
     names: &mut ResourceNames,
+    dpi: u32,
   ) -> Vec<NodeDesc> {
     let PageDirs {
       search_paths,
@@ -1150,9 +1211,11 @@ impl Graphics {
       ..
     } = dirs;
     let mut descs = Vec::with_capacity(nodes.len());
+    let cache = names.cache.clone().unwrap_or_else(|| doc.cache().clone());
+    let ours = |path: &str| Self::our_output(&cache, dirs, path);
     for node in nodes {
       let options = node.get_attribute("options").unwrap_or_default();
-      let Some(source) = self.find_graphic_file(doc, node, search_paths) else {
+      let Some(source) = self.find_graphic_file(doc, node, search_paths, &ours) else {
         let graphic = node
           .get_attribute("graphic")
           .unwrap_or_else(|| "none".to_string());
@@ -1211,7 +1274,8 @@ impl Graphics {
       };
       let transform = !ops.is_empty();
       // What the file's bytes depend on besides the source, its page and type: the crop and the turn. A scale or a
-      // size (`width=0.5\textwidth`) sizes the `<img>` only, so two widths share one file, and a width edited keeps it.
+      // size (`width=0.5\textwidth`) sizes the `<img>` only, so two widths share one file, and a width edited keeps it,
+      // unless it sizes a vector render's root (`sized` below).
       let made = if transform {
         format!("{ops:?}")
       } else {
@@ -1232,14 +1296,42 @@ impl Graphics {
       );
       let key = format!("LaTeXML::Post::Graphics:{rel}.{dest_type}|{options}|{identity}");
       if needs_conversion || has_page || transform {
-        // A vector render is cropped through its `viewBox` (`crop_svg_inplace`); only a turn needs the raster. The
+        // A vector render is cropped through its `viewBox` (`crop_svg`); only a turn needs the raster. The
         // vector-SVG path is tried for small PDFs only (`should_try_svg_path`), into `<name>.svg` beside the raster.
         let turned = ops.iter().any(|op| matches!(op, GraphicxOp::Rotate(_)));
         let svg_alt = !turned && Self::should_try_svg_path(&source, self.svg_threshold_kb);
+        // A vector render is shown at its own size where a stylesheet sizes the object `auto` (ar5iv.css): sized, its
+        // root is the display size, as Perl's raster is (`Util/Image.pm` L382-389), so each size is a file of its own
+        // (Perl's key holds the transform, `Post/Graphics.pm` L244-245). Witnesses 1605.07806, 2403.09205, 1104.5392,
+        // 1509.02249, 1601.05000. A non-positive factor (`scale=-1` turns the figure at full size, `width=-100pt`
+        // reflects it at 100pt) keeps the render's own size, as the object's 1x1 would hide it.
+        let mut sizing: Vec<GraphicxOp> = if svg_alt {
+          latexml_core::util::image::parse_graphicx_options(&options)
+            .into_iter()
+            .filter(|op| matches!(op, GraphicxOp::Scale { .. } | GraphicxOp::ScaleTo { .. }))
+            .collect()
+        } else {
+          Vec::new()
+        };
+        if sizing.iter().any(|op| match *op {
+          GraphicxOp::Scale { x, y } => x <= 0.0 || y <= 0.0,
+          GraphicxOp::ScaleTo { w, h, .. } => {
+            w.is_some_and(|w| w <= 0.0) || h.is_some_and(|h| h <= 0.0)
+          },
+          _ => false,
+        }) {
+          sizing.clear();
+        }
+        let sized = if sizing.is_empty() {
+          String::new()
+        } else {
+          format!("|{sizing:?}@{dpi}")
+        };
         // The first conversion of a source keeps its stem, for readable URLs (`figures/mock1/plot.pdf` →
         // `plot.png`; witness 2606.30620, arXiv/html_feedback#6922: Figures 2/4/5 all used
-        // `figures/{mock1,mock3,jackpot}/chi2_residuals.pdf`); a page or a transform is a generated name, as Perl's
-        // every conversion is (`Post/Graphics.pm` L318-319).
+        // `figures/{mock1,mock3,jackpot}/chi2_residuals.pdf`), a sized one too (its other sizes take `xN`), unless the
+        // stem lands beside its source, where a run without the cache reads it back as the figure; a page or a
+        // transform is a generated name, as Perl's every conversion is (`Post/Graphics.pm` L318-319).
         let stem = Path::new(&source)
           .file_stem()
           .and_then(|s| s.to_str())
@@ -1248,11 +1340,14 @@ impl Graphics {
         let page_key = page.map_or(String::new(), |p| p.to_string());
         let request = Request {
           key,
-          bytes: format!("{dest_type}|{identity}|{page_key}|{made}"),
-          owner: format!("{dest_type}|{page_key}|{made}|{owned_source}"),
+          bytes: format!("{dest_type}|{identity}|{page_key}|{made}{sized}"),
+          owner: format!("{dest_type}|{page_key}|{made}{sized}|{owned_source}"),
           source: owned_source,
           identity,
-          proposal: if has_page || transform {
+          proposal: if has_page
+            || transform
+            || (!sizing.is_empty() && Self::beside(&source, dest_dir))
+          {
             Proposal::Generated
           } else {
             Proposal::Stem(stem)
@@ -1260,7 +1355,7 @@ impl Graphics {
           ext: dest_type,
           svg_alt,
           copy: false,
-          output: if transform {
+          output: if transform || !sizing.is_empty() {
             Output::Made
           } else {
             Output::Render(page)
@@ -1274,6 +1369,7 @@ impl Graphics {
           needs_conversion,
           ops,
           drawn,
+          sizing,
           request,
         })));
       } else {
@@ -1363,8 +1459,9 @@ impl Graphics {
     nodes: &[Node],
     dirs: &PageDirs,
     names: &mut ResourceNames,
+    dpi: u32,
   ) -> PagePlan {
-    let descs = self.describe(doc, nodes, dirs, names);
+    let descs = self.describe(doc, nodes, dirs, names, dpi);
     let resolved = Self::names_for(doc, &descs, dirs, names, self.cache_policy);
     let dest_dir = &dirs.dest_dir;
     let mut plans: Vec<Plan> = Vec::with_capacity(nodes.len());
@@ -1408,6 +1505,7 @@ impl Graphics {
             needs_conversion,
             ops,
             drawn,
+            sizing,
             ..
           } = *desc;
           let memo = (dest_dir.clone(), name.dest.clone());
@@ -1454,6 +1552,8 @@ impl Graphics {
                   ops,
                   density,
                   px_per_bp,
+                  sizing,
+                  dpi,
                 };
                 names.converted.insert(memo, (job.clone(), None));
                 convert_jobs.push(job);
@@ -1546,6 +1646,23 @@ impl Graphics {
     }
     // A transaction that failed in memory too (reported, an Error) names nothing: each page asks again as it renders.
     names.unwrap_or_default()
+  }
+
+  /// Whether the file at `path` is one an earlier run wrote into the destination directory: its cache names an owner for
+  /// it, and it is no copy kept at its own path (an author's file, converted in place), whose `_source_` is itself.
+  fn our_output(cache: &DocCache, dirs: &PageDirs, path: &str) -> bool {
+    use latexml_core::util::pathname::{absolute, relative};
+    let rel = relative(&absolute(path), &absolute(&dirs.dest_dir));
+    let entry = |key: &str| cache.lookup(dirs.cache_dir.as_deref(), &format!("_{key}_{rel}"));
+    entry("owner").is_some() && entry("source").as_deref() != Some(rel.as_str())
+  }
+
+  /// Whether `source` lies in `dir` itself (converting in place), so a file named after it there is its sibling.
+  fn beside(source: &str, dir: &str) -> bool {
+    let source = latexml_core::util::pathname::absolute(source);
+    Path::new(&source)
+      .parent()
+      .is_some_and(|parent| latexml_core::util::pathname::same_file(parent, dir))
   }
 
   /// Whether `part` in the destination directory is `r`'s source itself (a copy's kept path, converting in place).
@@ -3070,16 +3187,7 @@ impl Processor for Graphics {
     let dirs = self.page_dirs(&doc);
     let dest_dir = dirs.dest_dir.clone();
     let source_dir = dirs.source_dir.clone();
-    // Read DPI/magnify/zoomout from processing instructions (set by latexml.sty)
-    let dpi = self
-      .get_parameter(&doc, "DPI")
-      .map(|v| v as u32)
-      .or(self.dpi)
-      .unwrap_or(100);
-    let magnify = self.get_parameter(&doc, "magnify").unwrap_or(self.magnify);
-    let _zoomout = self.get_parameter(&doc, "zoomout").unwrap_or(self.zoomout);
-    // Perl: effective DPI = DPI * magnify / zoomout (used for scale-to transforms)
-    let effective_dpi = ((dpi as f64) * magnify / _zoomout) as u32;
+    let effective_dpi = self.effective_dpi(&doc);
     let n_to_process = nodes.len();
     latexml_core::telemetry::set_graphics_assets(n_to_process as u32);
 
@@ -3103,7 +3211,7 @@ impl Processor for Graphics {
       plans,
       jobs: convert_jobs,
       known,
-    } = self.plan_page(&doc, &nodes, &dirs, &mut names);
+    } = self.plan_page(&doc, &nodes, &dirs, &mut names, effective_dpi);
 
     // Phase 2: parallel conversions. Bounded worker count to avoid
     // oversubscribing when many images are in flight. `convert` itself
@@ -3201,6 +3309,8 @@ impl Processor for Graphics {
                       ops,
                       density,
                       px_per_bp,
+                      sizing,
+                      dpi,
                     } = jobs[i];
                     // Fresh converter-diagnostic slate for this node, so the
                     // failed_to_convert Error (if it fires) reports THIS asset's
@@ -3268,7 +3378,7 @@ impl Processor for Graphics {
                         },
                       };
                       // A browser refuses an SVG that is not UTF-8.
-                      let Ok(text) = std::str::from_utf8(&bytes) else {
+                      let Ok(mut text) = String::from_utf8(bytes) else {
                         Warn!(
                           "shell",
                           "svg",
@@ -3277,7 +3387,7 @@ impl Processor for Graphics {
                         );
                         break 'svg None;
                       };
-                      if let Some(EnlargedRaster { pixels, scale }) = svg_enlarged_raster(text) {
+                      if let Some(EnlargedRaster { pixels, scale }) = svg_enlarged_raster(&text) {
                         Info!(
                           "shell",
                           "svg",
@@ -3288,13 +3398,19 @@ impl Processor for Graphics {
                         );
                         break 'svg None;
                       }
-                      drop(bytes);
+                      // The crop and the display size rewrite the root in memory; the file is replaced once, by
+                      // rename (`writer::write_atomic`): the staged render may be a hard link to a cache entry.
                       let crop = ops
                         .iter()
                         .find(|op| matches!(op, GraphicxOp::Trim { .. } | GraphicxOp::Clip { .. }));
-                      let raw_dims = match crop.map(|op| Self::crop_svg_inplace(&stage, op)) {
-                        None | Some(Ok(false)) => dims.map(|d| (d.width, d.height)),
-                        Some(Ok(true)) => Self::read_svg_dimensions(&stage),
+                      let mut rewritten = false;
+                      let raw_dims = match crop.map(|op| Self::crop_svg(&text, op)) {
+                        None | Some(Ok(None)) => dims.map(|d| (d.width, d.height)),
+                        Some(Ok(Some(cropped))) => {
+                          text = cropped;
+                          rewritten = true;
+                          latexml_core::util::image::svg_viewport_px(&text)
+                        },
                         Some(Err(why)) => {
                           Warn!(
                             "shell",
@@ -3307,6 +3423,48 @@ impl Processor for Graphics {
                           break 'svg None;
                         },
                       };
+                      // The display size Plan::Convert gives the object, from the same size and ops.
+                      if let Some((rw, rh)) = raw_dims.filter(|_| !sizing.is_empty()) {
+                        let (w, h) = Self::apply_graphicx_op_list(rw, rh, sizing, *dpi);
+                        // graphicx's two scales differ: `xscale`/`yscale`, or a box without `keepaspectratio`.
+                        let stretch = sizing.iter().any(|op| match *op {
+                          GraphicxOp::Scale { x, y } => x != y,
+                          GraphicxOp::ScaleTo { w, h, keep_aspect } => {
+                            w.is_some() && h.is_some() && !keep_aspect
+                          },
+                          _ => false,
+                        });
+                        match Self::size_svg(&text, w, h, stretch) {
+                          Ok(sized) => {
+                            text = sized;
+                            rewritten = true;
+                          },
+                          Err(why) => {
+                            Warn!(
+                              "shell",
+                              "svg",
+                              "Graphics: can't size the vector render of {} ({}); using a raster",
+                              source,
+                              why
+                            );
+                            break 'svg None;
+                          },
+                        }
+                      }
+                      if rewritten
+                        && let Err(e) =
+                          crate::writer::write_atomic(Path::new(&stage), text.as_bytes())
+                      {
+                        Warn!(
+                          "shell",
+                          "svg",
+                          "Graphics: can't rewrite the vector render of {} ({}); using a raster",
+                          source,
+                          e
+                        );
+                        break 'svg None;
+                      }
+                      drop(text);
                       if let Err(e) = staged.install(Path::new(abs_svg)) {
                         Warn!(
                           "shell",
@@ -3632,7 +3790,7 @@ impl Processor for Graphics {
             let mut node_mut = nodes[*idx].clone();
             if let Some(imagesrc) = &out.imagesrc {
               // The worker cropped and turned the pixels once per job
-              // (`transform_raster_inplace`, `crop_svg_inplace`); `raw_dims` is
+              // (`transform_raster_inplace`, `crop_svg`); `raw_dims` is
               // the cropped size before the turn, so the display size applies
               // every op but the crop, in key order. A trim that crops nothing
               // (the whole image, or a negative one) sizes nothing either: Perl
@@ -4178,8 +4336,6 @@ endobj
   /// whole page leaves the file alone. 2605.06510 `trim=0cm 0.25cm 0cm 0cm`.
   #[test]
   fn crop_svg_narrows_the_view_box() {
-    let tmp = TempDir::new("svg_crop");
-    let svg = tmp.join("fig.svg");
     let root = |w: &str, h: &str| {
       format!(
         r#"<?xml version="1.0"?>
@@ -4189,16 +4345,15 @@ endobj
 "#
       )
     };
-    let path = svg.to_str().unwrap();
-    std::fs::write(&svg, root("200", "100")).unwrap();
     let trim = GraphicxOp::Trim {
       l: 100.0,
       b: 0.0,
       r: 0.0,
       t: 50.0,
     };
-    assert_eq!(Graphics::crop_svg_inplace(path, &trim), Ok(true));
-    let text = std::fs::read_to_string(&svg).unwrap();
+    let text = Graphics::crop_svg(&root("200", "100"), &trim)
+      .unwrap()
+      .unwrap();
     assert_eq!(
       latexml_core::util::image::svg_root_tag(&text),
       Some(
@@ -4210,15 +4365,15 @@ endobj
       text.contains(r#"<rect width="200" height="100"/>"#),
       "{text}"
     );
-    std::fs::write(&svg, root("200pt", "100pt")).unwrap();
     let viewport = GraphicxOp::Clip {
       l: 0.0,
       b: 0.0,
       r: 100.0,
       t: 50.0,
     };
-    assert_eq!(Graphics::crop_svg_inplace(path, &viewport), Ok(true));
-    let text = std::fs::read_to_string(&svg).unwrap();
+    let text = Graphics::crop_svg(&root("200pt", "100pt"), &viewport)
+      .unwrap()
+      .unwrap();
     assert_eq!(
       latexml_core::util::image::svg_root_tag(&text),
       Some(
@@ -4226,15 +4381,13 @@ endobj
       ),
       "{text}"
     );
-    std::fs::write(&svg, root("200", "100")).unwrap();
     let whole = GraphicxOp::Clip {
       l: 0.0,
       b: 0.0,
       r: 200.0,
       t: 100.0,
     };
-    assert_eq!(Graphics::crop_svg_inplace(path, &whole), Ok(false));
-    assert_eq!(std::fs::read_to_string(&svg).unwrap(), root("200", "100"));
+    assert_eq!(Graphics::crop_svg(&root("200", "100"), &whole), Ok(None));
   }
 
   /// `trim=`/`viewport=` crop a raster's pixels (Perl `Util/Image.pm` L400-418
@@ -4520,6 +4673,278 @@ endobj
       .map(|(id, _, _, size, colour)| format!("{id} {size} {colour}"))
       .collect();
     assert_eq!(got, want, "{out}");
+  }
+
+  /// Post-process `rows` (id, candidates joined by `,`, options) from `src` into `dest`, as `<graphics>` nodes; per
+  /// row the object's file and size, and an SVG's root `width`x`height`, `viewBox` and `preserveAspectRatio`, or for
+  /// another file whether it holds its first candidate's bytes. `None` when neither SVG tool is installed.
+  fn sized_render_rows(
+    test: &str,
+    src: &Path,
+    dest: &Path,
+    rows: &[(&str, &str, &str)],
+  ) -> Option<Vec<(String, bool)>> {
+    use latexml_core::util::image::{svg_attr_value, svg_root_tag};
+
+    use crate::{
+      document::{PostDocument, PostDocumentOptions},
+      graphics_cache::CachePolicy,
+    };
+    if !["mutool", "pdftocairo"]
+      .iter()
+      .any(|tool| svg_tool_or_skip(tool, test))
+    {
+      return None;
+    }
+    let nodes: String = rows
+      .iter()
+      .map(|(id, files, options)| {
+        let candidates: Vec<String> = files
+          .split(',')
+          .map(|f| src.join(f).display().to_string())
+          .collect();
+        format!(
+          r#"<graphics graphic="{}" candidates="{}" options="{options}" xml:id="{id}"/>"#,
+          files.split(',').next().unwrap(),
+          candidates.join(",")
+        )
+      })
+      .collect();
+    let xml = format!(
+      r#"<?xml version="1.0"?><document xmlns="http://dlmf.nist.gov/LaTeXML" xml:id="d">{nodes}</document>"#
+    );
+    std::fs::create_dir_all(dest.parent().unwrap()).unwrap();
+    let doc_opts = PostDocumentOptions {
+      destination: Some(dest.display().to_string()),
+      source_directory: Some(src.display().to_string()),
+      ..Default::default()
+    };
+    let doc = PostDocument::new_from_string(&xml, doc_opts).unwrap();
+    let mut graphics = Graphics::new(None, true).with_cache_policy(CachePolicy::Bypass);
+    let nodes = graphics.to_process(&doc);
+    let out = graphics.process(doc, nodes).unwrap()[0].to_xml_string();
+    let attr = |element: &str, name: &str| {
+      svg_attr_value(element, name)
+        .map(str::to_string)
+        .unwrap_or_default()
+    };
+    let seen = |&(id, files, _): &(&str, &str, &str)| {
+      let at = out.find(&format!(r#"xml:id="{id}""#)).expect(id);
+      let element = &out[out[..at].rfind('<').unwrap()..at + out[at..].find('>').unwrap()];
+      let file_src = attr(element, "imagesrc");
+      let object = format!(
+        "{file_src} {}x{}",
+        attr(element, "imagewidth"),
+        attr(element, "imageheight")
+      );
+      let file = std::fs::read(dest.parent().unwrap().join(&file_src)).unwrap();
+      if !file_src.ends_with(".svg") {
+        let first = files.split(',').next().unwrap();
+        return (object, file == std::fs::read(src.join(first)).unwrap());
+      }
+      let text = String::from_utf8(file).unwrap();
+      let root = svg_root_tag(&text).unwrap();
+      let root = format!(
+        "{} {}x{} viewBox={} par={}",
+        file_src,
+        attr(root, "width"),
+        attr(root, "height"),
+        attr(root, "viewBox"),
+        attr(root, "preserveAspectRatio")
+      );
+      (format!("{object} | {root}"), true)
+    };
+    Some(rows.iter().map(seen).collect())
+  }
+
+  /// A sized vector render is its display size, as Perl's raster is (`Util/Image.pm` L382-389): the SVG root's
+  /// `width`/`height` are the `<object>`'s, its `viewBox` the render's, and each size is a file of its own, the first
+  /// the stem. A stylesheet that sizes the object `auto` (ar5iv.css) otherwise showed the render's own size (1605.07806).
+  /// A non-positive factor (`scale=-1` turns the figure, `width=-100pt` reflects it) keeps the natural render: its root
+  /// sized 1x1 hid the figure.
+  #[test]
+  fn a_sized_vector_render_carries_its_display_size() {
+    let tmp = TempDir::new("graphics_svg_size");
+    let fixtures = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures");
+    for name in ["trim_quadrants.pdf", "grid64.png"] {
+      std::fs::copy(fixtures.join(name), tmp.join(name)).unwrap();
+    }
+    // (id, source, options); trim_quadrants.pdf's page 1 is 216x108 bp.
+    let rows = [
+      (
+        "height",
+        "trim_quadrants.pdf",
+        "height=170.0pt,keepaspectratio=true",
+      ),
+      (
+        "again",
+        "trim_quadrants.pdf",
+        "height=170.0pt,keepaspectratio=true",
+      ),
+      (
+        "width",
+        "trim_quadrants.pdf",
+        "width=345.0pt,keepaspectratio=true",
+      ),
+      ("natural", "trim_quadrants.pdf", ""),
+      (
+        "trim",
+        "trim_quadrants.pdf",
+        "trim=108.405pt 0.0pt 0.0pt 54.2025pt,clip=true,width=100.0pt",
+      ),
+      (
+        "stretch",
+        "trim_quadrants.pdf",
+        "width=100.0pt,height=100.0pt",
+      ),
+      ("scale", "trim_quadrants.pdf", "scale=0.5"),
+      ("xscale", "trim_quadrants.pdf", "xscale=0.5"),
+      ("raster", "grid64.png", "width=100.0pt,keepaspectratio=true"),
+      ("negscale", "trim_quadrants.pdf", "scale=-1"),
+      (
+        "negwidth",
+        "trim_quadrants.pdf",
+        "width=-100.0pt,keepaspectratio=true",
+      ),
+    ];
+    let dest = tmp.join("out").join("out.html");
+    let Some(got) = sized_render_rows(
+      "a_sized_vector_render_carries_its_display_size",
+      tmp.path(),
+      &dest,
+      &rows,
+    ) else {
+      return;
+    };
+    // The unsized render keeps the converter's root: mutool's `216` bp read as px, pdftocairo's `216pt` (SVGSIZE).
+    let natural = &got[3].0;
+    let (nw, nh, ow, oh) = if natural.contains(" 216ptx108pt ") {
+      ("216pt", "108pt", 288, 144)
+    } else {
+      ("216", "108", 216, 108)
+    };
+    // A non-positive factor's object is 1x1 (pre-existing); its file is the natural render.
+    let natural = format!("x2.svg {nw}x{nh} viewBox=0 0 216 108 par=");
+    let want: Vec<(String, bool)> = [
+      "trim_quadrants.svg 469x235 | trim_quadrants.svg 469x235 viewBox=0 0 216 108 par="
+        .to_string(),
+      "trim_quadrants.svg 469x235 | trim_quadrants.svg 469x235 viewBox=0 0 216 108 par="
+        .to_string(),
+      "x1.svg 476x238 | x1.svg 476x238 viewBox=0 0 216 108 par=".to_string(),
+      format!("x2.svg {ow}x{oh} | {natural}"),
+      "x3.svg 138x69 | x3.svg 138x69 viewBox=108 54 108 54 par=".to_string(),
+      "x4.svg 138x138 | x4.svg 138x138 viewBox=0 0 216 108 par=none".to_string(),
+      format!(
+        "x5.svg {0}x{1} | x5.svg {0}x{1} viewBox=0 0 216 108 par=",
+        ow / 2,
+        oh / 2
+      ),
+      format!(
+        "x6.svg {0}x{1} | x6.svg {0}x{1} viewBox=0 0 216 108 par=none",
+        ow / 2,
+        oh
+      ),
+      "grid64.png 138x138".to_string(),
+      format!("x2.svg 1x1 | {natural}"),
+      format!("x2.svg 1x1 | {natural}"),
+    ]
+    .into_iter()
+    .map(|row| (row, true))
+    .collect();
+    assert_eq!(got, want);
+  }
+
+  /// Converted again in place (the destination the source's directory), a figure reads the author's PDF, not the
+  /// `<stem>.svg` our first run wrote beside it (its cache records it, OD #1157 (7)): every run gives the same names
+  /// and roots, and a crop stays cropped (it was copied uncropped, with a Warning). The stem beside the source is the
+  /// natural render's, so a run without the cache, which reads it back, still shows the natural figure at its size.
+  #[test]
+  fn a_figure_converted_in_place_again_reads_the_authors_source() {
+    let tmp = TempDir::new("graphics_svg_inplace");
+    let fixtures = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures");
+    std::fs::copy(
+      fixtures.join("trim_quadrants.pdf"),
+      tmp.join("trim_quadrants.pdf"),
+    )
+    .unwrap();
+    let test = "a_figure_converted_in_place_again_reads_the_authors_source";
+    let dest = tmp.join("inplace.html");
+    // graphicx lists every `trim_quadrants.*` it finds, the earlier runs' outputs too.
+    let run = || {
+      let files: Vec<&str> = ["pdf", "png", "svg"]
+        .into_iter()
+        .filter(|ext| tmp.join(&format!("trim_quadrants.{ext}")).exists())
+        .map(|ext| match ext {
+          "pdf" => "trim_quadrants.pdf",
+          "png" => "trim_quadrants.png",
+          _ => "trim_quadrants.svg",
+        })
+        .collect();
+      let files = files.join(",");
+      sized_render_rows(test, tmp.path(), &dest, &[
+        ("wide", &files, "width=200.0pt,keepaspectratio=true"),
+        ("natural", &files, ""),
+        ("low", &files, "height=40.0pt,keepaspectratio=true"),
+        (
+          "trim",
+          &files,
+          "trim=108.405pt 0.0pt 0.0pt 54.2025pt,clip=true",
+        ),
+      ])
+    };
+    let Some(first) = run() else {
+      return;
+    };
+    let (nw, nh, ow, oh) = if first[1].0.contains(" 216ptx108pt ") {
+      ("216pt", "108pt", 288, 144)
+    } else {
+      ("216", "108", 216, 108)
+    };
+    let (cw, ch) = if nw == "216pt" {
+      ("108pt", "54pt")
+    } else {
+      ("108", "54")
+    };
+    let want: Vec<(String, bool)> = [
+      "x1.svg 276x138 | x1.svg 276x138 viewBox=0 0 216 108 par=".to_string(),
+      format!(
+        "trim_quadrants.svg {ow}x{oh} | trim_quadrants.svg {nw}x{nh} viewBox=0 0 216 108 par="
+      ),
+      "x2.svg 111x56 | x2.svg 111x56 viewBox=0 0 216 108 par=".to_string(),
+      format!(
+        "x3.svg {}x{} | x3.svg {cw}x{ch} viewBox=108 54 108 54 par=",
+        ow / 2,
+        oh / 2
+      ),
+    ]
+    .into_iter()
+    .map(|row| (row, true))
+    .collect();
+    assert_eq!(first, want);
+    assert_eq!(run().unwrap(), want, "the second run");
+    assert_eq!(run().unwrap(), want, "the third run");
+    let mut files: Vec<String> = std::fs::read_dir(tmp.path())
+      .unwrap()
+      .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+      .filter(|name| !name.starts_with("LaTeXML-oxide.cache") && !name.starts_with("inplace"))
+      .collect();
+    files.sort();
+    assert_eq!(files, [
+      "trim_quadrants.pdf",
+      "trim_quadrants.svg",
+      "x1.svg",
+      "x2.svg",
+      "x3.svg"
+    ]);
+    for side in ["", "-wal", "-shm"] {
+      let _ = std::fs::remove_file(tmp.join(&format!("LaTeXML-oxide.cache{side}")));
+    }
+    let natural = &run().unwrap()[1].0;
+    assert!(
+      natural.contains(&format!(" {ow}x{oh} | "))
+        && natural.ends_with(&format!(" {nw}x{nh} viewBox=0 0 216 108 par=")),
+      "without the cache: {natural}"
+    );
   }
 
   /// A crop's routing and size, with a fake `convert` that logs its arguments

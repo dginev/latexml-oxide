@@ -8491,7 +8491,7 @@ What stays Perl's:
 - a new resource file for a transformed raster (Post/Graphics.pm:318-323);
 - the `limitation` warning, trim/clip/angle dropped, for a non-raster (SVG) source.
 
-A small PDF's vector render (beyond Perl, which only rasterizes) is cropped through its root `viewBox`, which spans the page in bp; `width`/`height` shrink with it (`crop_svg_inplace`). `reflect` is still not applied.
+A small PDF's vector render (beyond Perl, which only rasterizes) is cropped through its root `viewBox`, which spans the page in bp; `width`/`height` shrink with it (`crop_svg`). `reflect` is still not applied.
 
 **Guard**: `latexml_post graphics::tests::{trim_and_viewport_crop_the_raster_into_its_own_file, a_vector_render_is_cropped_at_its_density, a_crop_gets_its_own_file_and_a_zero_trim_none, crop_svg_narrows_the_view_box}`, `perfect_kernel_batch56::a_natural_figure_box_follows_its_crop_and_turn` and `latexml_core util::image::…::{graphicx_crop_rect_follows_perl_trim_and_viewport, raster_resolution_reads_png_and_jfif_units}`. Witnesses 2510.17772 (S3.F4: `trim=90 30 50 50` on a 3000×1500 300-dpi PNG keeps 2417×1167 pixels), 2011.13011 (ar5iv issue 220: `trim=350 1400 700 10,clip` on fig3.pdf kept 998×639 of 2048×2048 pixels, 1669×1539 now). Repros `graphics-tikz/includegraphics_trim_crops_the_raster.tex`, `graphics-tikz/includegraphics_trim_crops_a_drawn_render.tex`.
 
@@ -19512,6 +19512,35 @@ longer matters (the PNG path renders such a raster as main does). **Guards**:
 `native_raster_vector.tex`, a 64×64 PNG at 48 bp, stays SVG; `mixed_raster_vector.tex`, a 4×4 tile at 1 cm, takes the
 PNG path), `graphics::tests::svg_enlarged_raster_reads_every_placement`, `graphics::tests::should_try_svg_path_auto_detect`.
 
+**A sized render carries its display size** (SVGSCALE). Rule: a vector render that graphicx scales (`width`, `height`,
+`totalheight`, `scale`; Perl's parser also reads `xscale`/`yscale`, `Util/Image.pm` L166-167, which `\includegraphics`
+rejects) by positive factors has its root `width`/`height` set to the pixels the `<object>` gets, its
+`viewBox` kept (made from the old size where it has none), and `preserveAspectRatio="none"` only where graphicx scales x
+and y apart (`xscale`≠`yscale`, or a width and a height without `keepaspectratio`); each size is a file of its own.
+Perl has no SVG path: it scales its raster to the size (`Util/Image.pm` L382-389), so the file is the display size, and
+its key holds the transform (`Post/Graphics.pm` L244-245). The standard that decides: the `<object>`'s `width`/`height`
+are presentational hints any stylesheet rule overrides (HTML §15.4.3, "Attributes for embedded content and images"),
+and `width:auto` on a replaced element is its intrinsic size (CSS 2.1 §10.3.2), which is the SVG root's. ar5iv.css
+sizes a non-flex graphic `width:auto;height:auto;max-width:100%`, so the render showed at the converter's size (251 px
+of 403 in 1605.07806, where `{picture}` labels then fell off the figure; 2403.09205, 1104.5392, 1509.02249, 1601.05000).
+- `Graphics::size_svg` rewrites the staged render's root after a crop (`crop_svg`), in memory, with one write, from the
+  same size and ops `Plan::Convert` gives the object; the request's bytes and owner hold the ops and the DPI, so one
+  size twice shares one file and two sizes take two; the output is `Output::Made`, as a crop's.
+- The first conversion of a source keeps its stem whatever its size (#1157 (7)); another size takes a generated `xN`,
+  as Perl names every complex transform (`Post/Graphics.pm` L318-319). Converting in place (the destination the
+  source's own directory), a sized render takes `xN` too: the stem beside the source is listed by graphicx on the next
+  run, and a run without the cache (`--nocache`, a deleted cache) reads it as the figure, so there it is only ever the
+  natural render (`Graphics::beside`). With the cache, our own `.svg` is never read as the source (#1157 (7)).
+- A non-positive factor keeps the natural render (`scale=-1` turns the figure at full size; `width=-100pt` gives a box
+  `wd=-100pt`, the figure reflected at 100pt); its object stays 1x1 (pre-existing).
+- Unchanged: a natural-size render (no scaling op; sized in `em`, #107) and a raster's bytes; a sized small PDF that
+  falls back to PNG (a raster drawn enlarged) takes the sized request's name, so each size is a PNG of its own with the
+  same bytes.
+- Known residual: an author's `.svg` beside the PDF, copied, and a raster render keep their own size (`graphics-post/`
+  REDs `copied_svg_source_keeps_its_own_size_red.tex`, `raster_render_keeps_its_density_size_red.tex`).
+**Guard**: `graphics::tests::{a_sized_vector_render_carries_its_display_size,
+a_figure_converted_in_place_again_reads_the_authors_source}` (repros `graphics-post/`).
+
 ### 1036. `AddToMacro!` on an undefined cs is an Error and defines it with the addition (MACSYNC)
 
 **Perl.** `AddToMacro` (Package.pm:2534-2549) Warns ("not an expandable control sequence") and drops the addition when
@@ -24972,8 +25001,9 @@ destination directory, and for a zip or an EPUB (made in a directory removed onc
 the run's `DocCache` (`PostDocumentOptions::cache`, carried by `PostDocument::new_document` to each split page); the run
 closes its file before the render workers start, and each opens its own on it. `resource_cache.rs` names images over it: every name goes through it (a copy's
 kept path, a converted image's stem, a generated `xN` from Perl's counter key). A name's owner is its source (its path
-relative to the destination directory, its page, crop and turn, and the target type; never a size, which sizes the
-`<img>` only, so two widths of one figure share one file and a width edited keeps it), as Perl's key names it: entries of ours,
+relative to the destination directory, its page, crop and turn, and the target type; a size only where a vector
+render's root carries it (#1034), else it sizes the `<img>` only, so two widths of one figure share one file and a width
+edited keeps it), as Perl's key names it: entries of ours,
 `_owner_<name>`, `_name_<owner>`, `_source_<name>` and `_holds_<name>` (the bytes it was last written with), make a
 name another source owns fall back to the next free `xN` (the claim covers the `.svg` a vector render may take beside a
 raster), and `_content_<bytes>` lets a source with the same bytes share that file while its owner is named in the
@@ -25009,7 +25039,9 @@ height let it skip the conversion, which the content-addressed graphics cache (`
 (6) an image first met in another page's navigation is numbered at its own page, where Perl's serial
 CrossRef-then-Graphics numbered it at the first page whose navigation showed it; (7) a converted image keeps its stem
 when free (`plot.png`, witness 2606.30620), where Perl generates `xN` for every conversion (`Post/Graphics.pm`
-L318-319); (8) a stored name this run's site directory does not allow (a kept `../children/…` path, rerun without
+L318-319); so that a run in place again reads the author's file, not that stem, a graphic candidate the cache names an
+owner for (`_owner_<name>`) whose `_source_` is not the file itself ranks below every other in `findGraphicFile`
+(`Graphics::our_output`; guard `graphics::tests::a_figure_converted_in_place_again_reads_the_authors_source`); (8) a stored name this run's site directory does not allow (a kept `../children/…` path, rerun without
 `--sitedirectory`) is not reused, where Perl reuses it; (9) a stored name is written only when the image could have
 been given it: its kept path, its stem or a generated `<prefix>N`, or another source's kept path or stem when that
 source, named in this run, holds the same bytes; a name of another type or on a hidden path (a corrupt or planted cache, which a source
@@ -25037,8 +25069,7 @@ with no next count (`u64::MAX`, which wrapped to `x0`, or no number) is reported
 from `x1`, past those files. So the first conversion into a folder written without a cache (0.7.x, rc1/rc2, `--nocache`)
 names its images afresh and leaves the earlier files; converting in place, a figure whose stem the author's folder already
 holds (`fig.pdf` beside the author's `fig.png`) is named `x<N>.svg`, not `fig.svg`; and a rerun in place of an extensionless
-include (`\includegraphics{fig}`) that now finds the earlier run's `fig.svg` copies it once more under a new name (stable from
-the third run). `--nocache` (Perl's
+include (`\includegraphics{fig}`) reads `fig.pdf` again, not the earlier run's `fig.svg` (7), unless the cache is gone. `--nocache` (Perl's
 option, in memory from the start) skips nothing: its names restart at `x1` each run and overwrite, as Perl's do; (11) Perl's `--whatsout=math` unlinks
 `LaTeXML.cache` relative to the working directory after packing (`Util/Pack.pm` L343), which misses a cache in another
 destination directory; not ported: a math-only run keeps its cache, as every run does. The run closes the cache when post ends (checkpointed, no

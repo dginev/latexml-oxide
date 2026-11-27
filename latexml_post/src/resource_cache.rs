@@ -5,9 +5,10 @@
 //! [`crate::document::CACHE_FILE`] in the destination directory): `generateResourcePathname`'s counter under
 //! `_max_<subdir>_<prefix>_counter_` (`Post.pm` L192-200) and Graphics' `key → "dest|w|h"` entries
 //! (`Post/Graphics.pm` L245-262, L331). A name's owner is its source (path relative to the destination directory,
-//! page, crop and turn, type; never a size), as a Perl key is: our entries `_owner_<name>`, `_name_<owner>` and
-//! `_source_<name>` keep it, and `_holds_<name>` the bytes the name was last written with, so an edited image is a new
-//! key (the content digest replaces Perl's timestamp check) written again into the name its source owns.
+//! page, crop and turn, type; a size only where a vector render's root carries it, OD #1034), as a Perl key is: our
+//! entries `_owner_<name>`, `_name_<owner>` and `_source_<name>` keep it, and `_holds_<name>` the bytes the name was
+//! last written with, so an edited image is a new key (the content digest replaces Perl's timestamp check) written
+//! again into the name its source owns.
 //! `_content_<bytes>` lets a source with the same bytes share that file while its owner is named in the same run with
 //! them (the pages of one document); another document's file is never shared, as that document may write other bytes
 //! into it later, under a page this run does not rewrite. A copy keeping its path shares none (Perl L289-300).
@@ -48,8 +49,8 @@ pub enum Proposal {
 pub struct Request {
   /// Perl's cache key (`ref($self):reldir/name.srctype.type|transform`) with the source's content digest.
   pub key:      String,
-  /// What the destination file's bytes are made of (the source's bytes, page, type, crop and turn, never a size):
-  /// requests with the same bytes share one file.
+  /// What the destination file's bytes are made of (the source's bytes, page, type, crop and turn; a size only where
+  /// a vector render's root carries it): requests with the same bytes share one file.
   pub bytes:    String,
   /// Who owns the names the request is given: its source, transform and type, so an edited source keeps them.
   pub owner:    String,

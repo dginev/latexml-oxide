@@ -5694,15 +5694,17 @@ mod shared_figure_parallel_render {
       ));
     }
     tex.push_str("\\end{document}\n");
+    // Converted in place, a sized render takes a generated name: a stem beside its source is read back by a run without
+    // the cache (OXIDIZED_DESIGN_DIVERGENCES #1034). Its root is rewritten by each worker.
     let (serial, serial_images, ..) = run(&tex, "1", None, "fig");
-    assert_eq!(serial_images, ["fig.svg"], "the serial run's images");
+    assert_eq!(serial_images, ["x1.svg"], "the serial run's images");
     let s72 = &serial
       .iter()
       .find(|(name, _)| name == "S72.html")
       .expect("S72.html")
       .1;
     assert!(
-      s72.contains("data=\"fig.svg\""),
+      s72.contains("data=\"x1.svg\""),
       "S72 shows the vector render:\n{s72}"
     );
     // The race is a matter of timing: three parallel runs make a miss unlikely. A fourth uses the
@@ -5735,7 +5737,8 @@ mod shared_figure_parallel_render {
   /// A figure name of 220 characters or more converts as a short one: the same converter, the
   /// same bytes. Its staged file and mutool's directory, named after it with a counter added,
   /// passed NAME_MAX (255 bytes): mutool failed and pdftocairo drew the figure without a word, or
-  /// every converter failed and the figure was lost (`writer::bounded_name`).
+  /// every converter failed and the figure was lost (`writer::bounded_name`). At its natural size, as a
+  /// sized render converted in place takes a generated name (OXIDIZED_DESIGN_DIVERGENCES #1034).
   #[test]
   fn a_long_figure_name_converts_as_a_short_one() {
     if !svg_converter_or_skip("a_long_figure_name_converts_as_a_short_one") {
@@ -5743,7 +5746,7 @@ mod shared_figure_parallel_render {
     }
     let tex = |fig: &str| {
       format!(
-        "\\documentclass{{article}}\n\\usepackage{{graphicx}}\n\\begin{{document}}\n\\section{{S}}\nA \\includegraphics[width=3cm]{{{fig}}}\n\\end{{document}}\n"
+        "\\documentclass{{article}}\n\\usepackage{{graphicx}}\n\\begin{{document}}\n\\section{{S}}\nA \\includegraphics{{{fig}}}\n\\end{{document}}\n"
       )
     };
     let (_, images, stderr, short) = run(&tex("fig"), "1", None, "fig");

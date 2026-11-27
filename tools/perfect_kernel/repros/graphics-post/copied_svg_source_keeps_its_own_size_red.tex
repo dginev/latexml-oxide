@@ -1,0 +1,14 @@
+% witness: synthetic (a paper shipping both `fig.pdf` and `fig.svg`; the in-place re-run, where graphicx lists our own
+%          `<stem>.svg` beside the PDF, is GREEN: guard `graphics::tests::a_figure_converted_in_place_again_reads_the_authors_source`)
+% oracle:  pdflatex 0 errors (pdfTeX takes svgsrc.pdf: `.svg` is not among its extensions); the figure 200pt wide
+% engines: rust SVGSCALE = LaTeXML prefers svgsrc.svg and copies it: the object 276x138, the root 216x108, so
+%          ar5iv.css's `width:auto` shows 216 px
+% expect:  0 errors, 0 warnings; HTML (EXT=html): the copied SVG's root width="276" height="138", or the PDF rendered
+% status:  RED
+% moves:   post-merge (size a copied SVG's root as a render's)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{graphicx}
+\begin{document}
+\includegraphics[width=200pt]{svgsrc}
+\end{document}

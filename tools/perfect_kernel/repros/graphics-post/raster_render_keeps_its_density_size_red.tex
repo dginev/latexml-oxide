@@ -1,0 +1,13 @@
+% witness: synthetic (every EPS/PS figure, and a PDF over 500 KiB, takes the PNG path)
+% oracle:  pdflatex 0 errors (epstopdf-base takes quadrants-eps-converted-to.pdf); the figure 345pt wide
+% engines: rust SVGSCALE = quadrants.png is 360x180 (the 120-dpi render) while the img is 476x238: ar5iv.css's
+%          `width:auto` shows 360 px; Perl scales the raster to the size (Util/Image.pm L382-389)
+% expect:  0 errors, 0 warnings; HTML (EXT=html): quadrants.png 476x238 pixels, or a stylesheet that keeps the img size
+% status:  RED
+% moves:   post-merge (a raster sibling of SVGSCALE: resample to the size, as Perl, or keep the render's density)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{graphicx}
+\begin{document}
+\includegraphics[width=345pt]{quadrants.eps}
+\end{document}

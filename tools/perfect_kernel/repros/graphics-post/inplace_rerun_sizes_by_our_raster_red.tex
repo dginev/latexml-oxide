@@ -1,0 +1,16 @@
+% witness: synthetic (an EPS-only figure converted in place twice: run 1 writes epsonly.png beside the EPS;
+%          epsonly-eps-converted-to.pdf stands in for epstopdf under -no-shell-escape)
+% oracle:  pdflatex 0 errors; the natural box 216.80946pt/108.40472pt (epstopdf), on every run
+% engines: rust SVGSCALE = run 1 216.81pt/108.405pt; run 2 260.172pt/130.086pt (the sizer reads our epsonly.png,
+%          listed first as a declared extension); base INT081TR the same
+% expect:  0 errors, 0 warnings; every run prints 216.81pt/108.405pt
+% status:  RED
+% moves:   post-merge (latexml_core's candidates skip a file the destination's cache records as our output)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{graphicx}
+\begin{document}
+\setbox0\hbox{\includegraphics{epsonly}}\the\wd0/\the\ht0
+
+\includegraphics{epsonly}
+\end{document}
