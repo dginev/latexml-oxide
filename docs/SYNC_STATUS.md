@@ -96,15 +96,16 @@ Rules that keep this file honest and mergeable:
   - ODR7 — OD ruling 6: each "Bindings beyond Perl's tree" body (end of OD) into its binding module's `//!` doc comment, then trim the catalog to its table — the 19 CLSFM bodies ODDOC-E moved there from #460 (#412 … #912) included; 3
   - ODR8 — OD docs: #8 (the OML slot-127 claim unconfirmed in code), #26 (mdframed now inserts through `insert_block`, `mdframed_sty.rs`); 1
   - ODR9 — wire `tools/perfect_kernel/od_anchors.sh` into `tools/lint.sh`; 1
-  - DIGFATAL-CLOSE — (DIGFATAL residual; post-merge) a digestion Fatal now keeps every pending level (OD #251;
-    68 of the 159 CorTeX Fatal papers keep their text), but the salvage splices an unfinished construct's boxes into the
-    running paragraph: a footnote's words fuse with the sentence (`BeforeNote`), an unfinished `\author{…}` becomes a
-    body paragraph, unfinished math becomes italic text, an unfinished list leaves rootless items (4 of the 68
-    schema-invalid: 1402.0613, cond-mat9706088, 2512.12535, 2302.01695). Cause: `stomach.rs:2351`
-    `salvage_pending_box_lists` flattens the levels without their owners. Plan: tag each level with its kind; keep
-    body and group levels; close an argument level as its owner's container (a note, the frontmatter store), else a
-    separate paragraph, never fused; math as an unparsed math list; a word still unplaced is counted by a Warning. REDs
-    `rhai-bindings/digest_fatal_in_{an_unfinished_list,a_footnote,an_author,inline_math,display_math}_red.tex`; 2
+  - DIGFATAL-CLOSE — (DIGFATAL residual) a digestion Fatal now closes each pending level as its construct would (OD #251;
+    DIGFATALCLOSE on int): footnotes (with a `\par`, display or list inside), authors, lists, item and description labels,
+    math, abstracts, tabular cells — 13 guard rows in `fatal_salvages_partial_document`. Left: a Fatal in a caption keeps its
+    words in the hidden `ltx:toccaption`, counted by a Warning (REDs `rhai-bindings/digest_fatal_in_a_caption{,_outside_a_float}_red`;
+    cheap fix: open `ltx:caption` in the salvaged case, `sect09.rs:420-430`), and that Warning counts the tag number fused with
+    the first word (`1Cap`; a `\caption{\lxmbf\ tail}` warns "1 word(s): 1" — count the body without its `ltx:tag`); a formula
+    or a footnote inside an item label is flattened to text (`x+`, `Lafn`; base the same; REDs
+    `digest_fatal_in_a_{formula,footnote}_in_an_item_label_red`); a closed `{array}`'s `tex=` loses its body; one paper gains an
+    empty 73pt picture (dg-ga9409002); a Fatal in a section title or a `\thanks` (REDs
+    `digest_fatal_in_a_{section_title,thanks}_red`); 2
   - DIGFATAL-EOF — (root-caused 2026-11-26) 84 of the 159 CorTeX Fatal papers end in `Fatal:Mouth:EoF`: 81 the Until
     reader (`base_parameter_types.rs:370`), 3 a `\read` from the terminal. EOFBIND landed the four Rust-only binding
     clusters (26 papers, F 26→0, words 89,667→443,511): algpseudocodex defines its own language and blocks, amsppt

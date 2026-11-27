@@ -1,0 +1,18 @@
+% mechanism: the digestion salvage closes each pending box list as the construct that opened it would (OD #251); a construct
+%   that closes nothing of its own clears the closers set inside it (`stomach::clear_pending_list_closers`), so a Fatal inside a
+%   formula inside an `\item` label also undoes the formula's closer: the math is flattened to text in the label's paragraph
+%   (the base does the same — no regression; the fusion the batch fixes elsewhere)
+% witness: synthetic (DIGFATALCLOSE re-review 1, S3; 0 corpus witnesses; the binding lxmbf.sty.rhai, lxmbf.sty.ltxml, lxmbf.sty)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "First paragraph. • One. x + y Two. Second paragraph."
+% engines: DIGFATALCLOSE fix 1 (284e724739c) and INT081AU: 1 fatal error, E=0 W=0, the item "One." then <p><text font="italic">x</text>+</p>
+% expect:  1 fatal error, E=0; the label's formula kept as math (an unparsed math list, as `digest_fatal_in_inline_math`):
+%   <p><Math …>x+</Math></p> after the item "One."
+% status:  RED
+% moves:   post-merge (row R DIGFATAL-CLOSE)
+\documentclass{article}
+\usepackage{lxmbf}
+\begin{document}
+First paragraph.
+\begin{itemize}\item One. \item[$x+ \lxmbf y$] Two.\end{itemize}
+Second paragraph.
+\end{document}

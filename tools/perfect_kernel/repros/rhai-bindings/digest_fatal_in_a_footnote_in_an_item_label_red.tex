@@ -1,0 +1,17 @@
+% mechanism: the digestion salvage closes each pending box list as the construct that opened it would (OD #251); a construct
+%   that closes nothing of its own clears the closers set inside it (`stomach::clear_pending_list_closers`), so a Fatal inside a
+%   footnote inside an `\item` label also undoes the note's closer: the note's words fuse with the label's ("Lafn")
+%   (the base does the same — no regression)
+% witness: synthetic (DIGFATALCLOSE re-review 1, S3; 0 corpus witnesses; the binding lxmbf.sty.rhai, lxmbf.sty.ltxml, lxmbf.sty)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "First paragraph. • One. La1 Two. Second paragraph." + footnote "1 fn"
+% engines: DIGFATALCLOSE fix 1 (284e724739c) and INT081AU: 1 fatal error, E=0 W=0, the item "One." then <p>Lafn</p>
+% expect:  1 fatal error, E=0; <p>La<note role="footnote">fn</note></p> after the item "One."
+% status:  RED
+% moves:   post-merge (row R DIGFATAL-CLOSE)
+\documentclass{article}
+\usepackage{lxmbf}
+\begin{document}
+First paragraph.
+\begin{itemize}\item One. \item[La\footnote{fn \lxmbf}] Two.\end{itemize}
+Second paragraph.
+\end{document}
