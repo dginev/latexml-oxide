@@ -11,7 +11,8 @@ top of its group.
 
   - **AAAI's `\affiliations` lines are the authors' affiliations.** aaai21-aaai2027's `\affiliations` redefines itself
     as its store, `\affiliations_`, which the raw class's title page prints; its lines stayed a block under the names.
-    Each line now goes to the names whose marks request its label, an unlabelled institution to every author; under
+    Each line now goes to the names whose marks request its label, an unlabelled institution to every author, as do
+    the lines of a raw file's plain `\affiliations` store its title page prints (rlj.sty: 2605.26012); under
     `[submission]`, whose title page prints no affiliation, nothing moves. For every raw class whose title page prints
     such a store (aaai, rstransa, iau, alta, eph; caosp's numbered `\institute` entries stay as they were): a closing
     line of e-mails after the last label is the whole block's, not that label's — each address to the name it spells,

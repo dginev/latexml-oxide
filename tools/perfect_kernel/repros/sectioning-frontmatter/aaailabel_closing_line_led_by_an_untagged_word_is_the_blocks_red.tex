@@ -1,0 +1,38 @@
+% AAAI's closing `\affiliations` line (aaai25.sty:72) led by a word that is neither a local part nor a role tag the
+%   address reader knows (`Internet: xyz@b.edu`) reads as an address in a line of other words (insert.rs
+%   `address_line_reading`, `OtherWords`), so it stays with the last labelled entry: "Internet" joins label 2's
+%   affiliation and the unspelled `xyz@b.edu` goes to label 2's only author by bare position (DG ruling 2 of
+%   2026-11-26: such an address is the block's). A class's `\and`-numbered entries keep such lines owned, as before
+%   AAAILABEL (astro-ph9805232; displaced_numbered_institute_role_word_address_lines_stay_owned).
+% witness: synthetic (the reviewer's q/o1.tex, re-review 3 of AAAILABEL)
+% oracle:  pdflatex 0 errors: "Ann Able1, Bob Baker1, Cy Cole2", "1Univ A", "2Univ B", "Internet: xyz@b.edu"
+% engines: rust INT081RC6 = 0 errors, no affiliation (the lines the class's); AAAILABEL fix 3 (88ae94d60c5) and
+%          fix 4 = 0 errors, Ann and Bob "1 Univ A", Cy "2 Univ B Internet" and e-mail xyz@b.edu
+% expect:  0 errors, 0 warnings; Ann and Bob "1 Univ A", Cy "2 Univ B", the line "Internet: xyz@b.edu" the block's
+% status:  RED (AAAILABEL fix 3, 88ae94d60c5; AAAILABEL fix 4)
+% moves:   post-merge (a closing line of other words led by an unknown tag: a role-tag entry, or the block's line)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{aaai25.sty}
+\ProvidesPackage{aaai25}[2025/05/08 AAAI 2025 Submission format]
+\def\showauthors@on{T}
+\DeclareOption{submission}{\gdef\showauthors@on{}}
+\ProcessOptions\relax
+\def\maketitle{\par\begingroup\def\thefootnote{\fnsymbol{footnote}}\twocolumn[\@maketitle]\@thanks\endgroup
+  \setcounter{footnote}{0}\let\maketitle\relax\let\@maketitle\relax
+  \gdef\@thanks{}\gdef\@author{}\gdef\@title{}\let\thanks\relax}
+\long\gdef\affiliations #1{ \def \affiliations_{\if T\showauthors@on#1\fi}}%
+\def\@maketitle{\def\theauthors{\if T\showauthors@on\@author\else Anonymous submission\fi}%
+  \vbox{\hsize\textwidth\linewidth\hsize\centering
+    {\LARGE\bf \@title \par}\vskip 0.1in
+    {\Large{\textbf{\theauthors\ifhmode\\\fi}}}\vskip .2em
+    {\normalsize \affiliations_\ifhmode\\\fi}\vskip .5em}}
+\end{filecontents*}
+\documentclass[letterpaper]{article}
+\usepackage{aaai25}
+\title{A Title}
+\author{Ann Able\textsuperscript{\rm 1}, Bob Baker\textsuperscript{\rm 1}, Cy Cole\textsuperscript{\rm 2}}
+\affiliations{\textsuperscript{\rm 1}Univ A\\ \textsuperscript{\rm 2}Univ B\\ Internet: xyz@b.edu}
+\begin{document}
+\maketitle
+Body.
+\end{document}

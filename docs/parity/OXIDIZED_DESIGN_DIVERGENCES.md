@@ -14312,8 +14312,10 @@ bypassed under raw loading; the class's `\@maketitle` never runs under the locke
   - A piece printing an `@` after local parts alone that the frontmatter reads as no line of addresses (a mark in it,
     or neither `email_addresses` nor the Kind step's `address_line_cut` reading it: `{a, b} @x`, a nested brace list) is
     an entry of its own, a contact of the author block's creator (`label={addresses:block}`) that the flush's Kind
-    step does not read (`_unread`: its mark places no address, 2212.12190); the frontmatter observer's text reading
-    still gives an address the name it spells (2211.16869, 2412.03107, 2408.10349, 2212.12190; DG ruling of 2026-11-26). A line printing no `@`
+    step does not read (`_unread`; 2211.16869, 2412.03107, 2408.10349, 2212.12190; DG ruling of 2026-11-26). Only in
+    a line without a mark does the frontmatter observer's text reading still give an address the name it spells
+    (2408.10349); a line holding a mark keeps every address on the block's creator, the mark placing none
+    (2212.12190). A line printing no `@`
     is no address to any reader: `\{a,b\}\@x` prints none (latex.ltx:9422), so it goes on with its entry as a city line
     does (RED `aaailabel_no_at_brace_address_line_reads_as_a_city_line_red`).
   - The pieces of the last labelled entry past its lead that are lines of addresses (`[a, b]@x`, `a, b, c@x`,
@@ -14325,6 +14327,11 @@ bypassed under raw loading; the class's `\@maketitle` never runs under the locke
     (a line of several requested marked entries is several), or a line of addresses under an earlier labelled entry —
     then each label's line is its own. A city line there stays with its entry; an address inside a labelled line
     stays that label's (2303.13269).
+  - The table's `affiliations` row is the displaced route's only (`store_setters.rs DISPLACED_ONLY_SETTERS`): K11's
+    in-place reroute skips it and its off-table survey reads it as off the table. A pure `\affiliations` store is the
+    creators' contacts where the title page prints it (rlj.sty:72, 2605.26012), the class's where only its page foot
+    does (lpor2014.cls:1229-1230, numbered by `\and`: 1601.06956, 1912.03045; K11's table had given every author
+    every entry there).
   Guard `perfect_kernel_batchaaailabel::aaai_affiliations_rows`. Cost: the
   route's two speculative title-page runs, +1.88 % `instructions:u` on 2508.01473 (best of 3, one core: 4,997,745,205
   → 5,091,730,716), and the pieces' typeset run +0.06 % more (5,091,434,100 → 5,094,581,229); a plain article and an

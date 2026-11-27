@@ -1,0 +1,41 @@
+% A raw class's own pure `\affiliations` store (lpor2014.cls:1229-1230 `\long\def\affiliations#1{\gdef
+%   \@affiliations{#1}}`, `\let\institute\affiliations`), numbered by `\and` with `\refstepcounter{inst}` (:1235-1278)
+%   and printed in a box in the page foot, stays the class's: the table's `affiliations` row is the displaced route's
+%   only (store_setters.rs `DISPLACED_ONLY_SETTERS`), so K11's in-place reroute, whose numbering run cannot see the
+%   page foot's numbers, no longer hands each entry to every author. Its words stay counted lost, as before AAAILABEL.
+% witness: 1601.06956 (5 authors, each with all four institutes on 88ae94d60c5; none at INT081RC6), 1912.03045 (the
+%          same); synthetic stand-in
+% oracle:  pdflatex 0 errors: "Ann Able1,2, Bob Baker2 and Cy Cole3", in the foot "1Univ A, Town", "2Univ B, City",
+%          "3Univ C, Village"
+% engines: rust INT081RC6 = 0 errors, 1 warning (unclaimed_store, 4 words), each creator its marks only;
+%          AAAILABEL fix 3 (88ae94d60c5) = 0 errors, 0 warnings, every author all three institutes
+% expect:  0 errors, 1 warning (unclaimed_store: univ town city village); Ann "1,2", Bob "2", Cy "3" marks, no
+%          affiliation (INT081RC6's output, byte-identical)
+% status:  RED (88ae94d60c5) -> GREEN (AAAILABEL fix 4: perfect_kernel_batchaaailabel::aaai_affiliations_rows)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{lpand3.cls}
+\ProvidesClass{lpand3}\LoadClass{article}
+\newcounter{inst}
+\long\def\affiliations#1{\gdef\@affiliations{#1}}
+\let\institute\affiliations
+\let\@affiliations\relax
+\def\inst#1{\unskip\textsuperscript{#1}}
+\def\set@affiliations{\par\parindent=0pt\setcounter{inst}{0}\refstepcounter{inst}%
+  \def\and{\par\refstepcounter{inst}\textsuperscript{\theinst}\ignorespaces}%
+  \textsuperscript{\theinst}\ignorespaces\@affiliations}
+\def\ps@firstpage{\def\@oddhead{}\def\@oddfoot{\vbox to 0pt{\affiliationsbox\vss}}\let\@evenfoot\@oddfoot}
+\def\@maketitle{\begin{center}{\LARGE\@title\par}\vskip1em{\large\@author\par}\end{center}\vskip1em}
+\renewcommand\maketitle{\par\begingroup\@maketitle\endgroup
+  \def\affiliationsbox{\parbox[b]{\textwidth}{\small\set@affiliations}}%
+  \thispagestyle{firstpage}}
+\end{filecontents*}
+\documentclass{lpand3}
+\begin{document}
+\title{A Title}
+\author{Ann Able\inst{1,2}, Bob Baker\inst{2} and Cy Cole\inst{3}}
+\institute{Univ A, Town
+\and Univ B, City
+\and Univ C, Village}
+\maketitle
+Text.
+\end{document}

@@ -129,6 +129,12 @@ pub const STORE_SETTERS: &[(&str, &str)] = &[
   ),
 ];
 
+/// Table setters only the displaced-setter route takes (`reroute_displaced_setters`): K11's in-place reroute skips
+/// them and its off-table survey reads them as off the table. A pure `\affiliations` store is the creators' where the
+/// title page prints it (rlj.sty:72, 2605.26012), the class's where only its page foot does (lpor2014.cls:1229-1230,
+/// numbered by `\and`: 1601.06956, 1912.03045).
+pub const DISPLACED_ONLY_SETTERS: &[&str] = &["affiliations"];
+
 /// The setter `\name`'s current definition, as stored; none when it is undefined, `\let` to an
 /// undefined control sequence, or `\let` to a character (for which `lookup_definition_stored`
 /// makes a new definition on each call).

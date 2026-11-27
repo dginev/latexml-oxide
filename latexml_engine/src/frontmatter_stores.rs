@@ -67,7 +67,8 @@ use std::collections::VecDeque;
 
 use latexml_core::{
   binding::store_setters::{
-    STORE_SETTERS, defined_by_a_binding, defined_by_a_raw_file, in_a_raw_class_read,
+    DISPLACED_ONLY_SETTERS, STORE_SETTERS, defined_by_a_binding, defined_by_a_raw_file,
+    in_a_raw_class_read,
   },
   definition::origin::{DefinitionOrigin, with_origin},
   document::tag::TagContent,
@@ -3824,7 +3825,10 @@ fn reroute_raw_file_stores(cls: &str, package: bool) -> Result<()> {
   let mut setters = Vec::new();
   let mut toks: Vec<(&str, Vec<Token>)> = Vec::new();
   for (name, api) in STORE_SETTERS {
-    if defined_by_a_binding(name)? || (package && !defined_by_a_raw_file(name)?) {
+    if DISPLACED_ONLY_SETTERS.contains(name)
+      || defined_by_a_binding(name)?
+      || (package && !defined_by_a_raw_file(name)?)
+    {
       continue;
     }
     if let Some(label) = toks_store(name, &mut readers)? {
@@ -4391,7 +4395,9 @@ fn survey_off_table_stores(cls: &str, readers: &mut Option<ClassReaders>) -> Res
   let known = lookup_string("lx_offtable_stores");
   for cs_name in names {
     let name = &cs_name[1..];
-    if STORE_SETTERS.iter().any(|(n, _)| *n == name)
+    if STORE_SETTERS
+      .iter()
+      .any(|(n, _)| *n == name && !DISPLACED_ONLY_SETTERS.contains(n))
       || ["title", "author", "date", "thanks", "maketitle", "and"].contains(&name)
       || known.split(',').any(|n| n == name)
     {

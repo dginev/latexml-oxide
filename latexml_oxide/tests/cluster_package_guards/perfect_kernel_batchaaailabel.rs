@@ -12,7 +12,8 @@
 //! 2408.10349); one the Kind step reads stays routed (2211.08824), an address in a labelled line too (2303.13269); a
 //! line of addresses after the last labelled line is the whole block's, never that label's (2404.14949, 2511.11817),
 //! also as a macro's text, one address without its list's comma (2511.02997), while a city line stays with its entry,
-//! and per-label lines stay their labels'; a class's `\and`-numbered entries are read as before (astro-ph9805232); an
+//! and per-label lines stay their labels'; a class's `\and`-numbered entries are read as before (astro-ph9805232), a
+//! class's own pure `\affiliations` store that only its page foot prints stays the class's (1601.06956, 1912.03045); an
 //! address in a line of other words stays with its entry (astro-ph9805051, an rstransa-shaped `Internet:` line); the
 //! store's take-out when empty, never set or set after `\maketitle`.
 use latexml::util::test::convert_with;
@@ -309,6 +310,16 @@ const ROWS: &[Row] = &[
         "email=cy@b.edu",
       ],
     ],
+    block:    &[],
+  },
+  // (red on 88ae94d60c5: every author all three institutes, K11's table route; INT081RC6's output, its loss counted)
+  Row {
+    repro:    "aaailabel_class_pure_affiliations_store_stays_the_classs",
+    tex:      repro!("aaailabel_class_pure_affiliations_store_stays_the_classs"),
+    warnings: 1,
+    creators: &[&["Ann Able", "mark=1,2"], &["Bob Baker", "mark=2"], &[
+      "Cy Cole", "mark=3",
+    ]],
     block:    &[],
   },
   // (red on 9e7098cc4be: 12345@b.edu the block's; no closing move for a class's numbered entries)
