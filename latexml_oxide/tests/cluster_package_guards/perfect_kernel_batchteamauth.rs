@@ -1755,29 +1755,133 @@ fn a_listed_group_owns_no_address_of_the_person() {
   check(&rows);
 }
 
-/// Hand-picked lines of the generated harness (kit `teamauth_fuzz`), one behaviour each, every one red on round 3
-/// (3689214c83b) or round 4 (52eeaf68a5e) and green here: the reading with the enumeration is rc6's plus its teams, else rc6's whole
-/// (`resolver::enumeration`, OXIDIZED_DESIGN_DIVERGENCES #459). Each pdflatex-clean.
+/// rc6's reading whole where the enumeration's is worse in any check (`emit::Checks::worse`, OXIDIZED_DESIGN_DIVERGENCES
+/// #459) — a team's mark whose labelled line under is an e-mail or shares a person's line, answered by no contact the team
+/// holds (round 4b compared the word check alone: Gemini TEAMAUTH.17 B2a, C2h, B2c); names written from their text —, or
+/// promotes only part of a run, or reads a revtex `\collaboration` (advisor TEAMAUTH6 A-C). Each pdflatex-clean.
 #[test]
-fn harness_picks_keep_rc6_or_add_only_the_team() {
+fn a_promotion_no_check_finds_worse_than_rc6() {
+  let ann = |label: &str| {
+    doc(
+      ARTICLE,
+      &format!(
+        r#"\author{{Ann Able$^{{1}}$ and the GAPS Team$^{{{label}}}$ \\ $^{{1}}$Univ A \\ $^{{{label}}}$ann@x.org}}"#
+      ),
+    )
+  };
+  let rc6_ann: &[&[&str]] = &[&[
+    "role=author",
+    "Ann Able",
+    "collaboration=the GAPS Team",
+    "affiliation=Univ A",
+    "email=ann@x.org",
+  ]];
   check(&[
-    // (a framed remark ends a run of groups after one name's commas: rc6's affiliations, no invented co-authors —
-    // round 3's blocker B1 r02)
     row(
-      "a team run before a framed remark",
+      "a team's e-mail line keeps rc6's reading",
+      ann("2"),
+      (0, 0),
+      rc6_ann,
+    ),
+    row(
+      "a team's symbol-labelled e-mail line keeps rc6's reading",
+      ann(r"\dagger"),
+      (0, 0),
+      rc6_ann,
+    ),
+    row(
+      "a team's label sharing a person's line keeps rc6's reading",
       doc(
         ARTICLE,
-        r#"\author{Bob Baker, Google Brain Team, DeepMind Team, on behalf of the CMS Collaboration}"#,
+        r#"\author{Ann Able$^{1}$, Bob Baker$^{1}$ and the GAPS Team$^{2}$ \\ $^{1}$ $^{2}$Univ A}"#,
+      ),
+      (0, 0),
+      &[
+        &[
+          "role=author",
+          "Ann Able",
+          "collaboration=the GAPS Team",
+          "affiliation=Univ A",
+        ],
+        &[
+          "role=author",
+          SEP,
+          "Bob Baker",
+          "collaboration=the GAPS Team",
+          "affiliation=Univ A",
+        ],
+      ],
+    ),
+    // (a name its events spell only through a macro's run: W 0 -> 2 promoted, advisor TEAMAUTH6 C)
+    row(
+      "names written from their text keep rc6's reading",
+      doc(
+        ARTICLE,
+        r#"\author{\def\G{GAPS}Ann Able and the \G{} Team \\ CERN}"#,
       ),
       (0, 0),
       &[&[
         "role=author",
-        "Bob Baker",
-        "affiliation=Google Brain Team",
-        "affiliation=DeepMind Team",
-        "collaboration=on behalf of the CMS Collaboration",
+        "Ann Able",
+        "collaboration=and the GAPS Team",
+        "affiliation=CERN",
       ]],
     ),
+    // (one run promotes all its teams or none: a dash frames a remark, a `;` lists none — advisor TEAMAUTH6 B)
+    row(
+      "a framed run keeps rc6's reading",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able -- the XYZ Collaboration and the ABC Collaboration}"#,
+      ),
+      (0, 0),
+      &[&[
+        "role=author",
+        "Ann Able",
+        "collaboration=the XYZ Collaboration",
+        "collaboration=the ABC Collaboration",
+      ]],
+    ),
+    row(
+      "a semicolon's run keeps rc6's reading",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able; the XYZ Collaboration and the ABC Collaboration}"#,
+      ),
+      (0, 0),
+      &[&[
+        "role=author",
+        "Ann Able",
+        "collaboration=the XYZ Collaboration",
+        "collaboration=the ABC Collaboration",
+      ]],
+    ),
+    // (revtex's `\collaboration` is one group's name, no list: rc6's reading, 0705.3322, 2010.14527; the one-note
+    // reading DG ruled is `revtex_collaboration_list_is_one_contact_red`'s — advisor TEAMAUTH6 A)
+    row(
+      "a revtex collaboration enumerates nothing",
+      doc(
+        r"\documentclass{revtex4-2}",
+        r#"\author{Ann Able}\affiliation{CERN}\collaboration{XYZ Collaboration and ABC Collaboration}"#,
+      ),
+      (0, 0),
+      &[&["role=author", "Ann Able", "affiliation=CERN"], &[
+        "role=author",
+        SEP,
+        "XYZ Collaboration",
+        "collaboration=ABC Collaboration",
+      ]],
+    ),
+  ]);
+}
+
+/// Hand-picked lines of the generated harness (kit `teamauth_fuzz`), at most ten (DG), one behaviour each, every one red on
+/// round 3 (3689214c83b) or round 4 (52eeaf68a5e) and green here (a team run before a framed remark and a bare comma: the
+/// rows "a team, a for remark (Gemini F1)" and "a company group after a comma (advisor 3)"): the reading with the enumeration is rc6's plus its teams, else rc6's whole
+/// (`resolver::enumeration`, OXIDIZED_DESIGN_DIVERGENCES #459). Each pdflatex-clean.
+#[test]
+fn harness_picks_keep_rc6_or_add_only_the_team() {
+  check(&[
     // (the team an author, the place after it the last person's, as rc6's: a names line's institution never lands on a
     // listed group — ADV5 section 5)
     row(
@@ -1792,21 +1896,6 @@ fn harness_picks_keep_rc6_or_add_only_the_team() {
         &["role=author", SEP, "Bob Baker", "affiliation=Theory Group"],
         &["role=author", SEP, "the XYZ Collaboration"],
       ],
-    ),
-    // (an unframed team after a bare comma keeps rc6's reading, DG 2026-11-27; `author_team_comma_only_list_of_three_red`)
-    row(
-      "a bare comma keeps rc6's reading",
-      doc(
-        ARTICLE,
-        r#"\author{Ann Able, Bob Baker, Google Brain Team}"#,
-      ),
-      (0, 0),
-      &[&["role=author", "Ann Able"], &[
-        "role=author",
-        SEP,
-        "Bob Baker",
-        "affiliation=Google Brain Team",
-      ]],
     ),
     // (a team's name holding a label before a colon is no author: rc6's reading, no safety-net Warning — harness-found)
     row(
@@ -1856,10 +1945,10 @@ fn harness_picks_keep_rc6_or_add_only_the_team() {
       ]],
     ),
     row(
-      "a later piece's note stays the person's",
+      "a later piece's or line's note stays the person's",
       doc(
         ARTICLE,
-        r#"\author{Cat Cole and the CMS Collaboration\thanks{Note 1.}, Alibaba Group\thanks{Note 2.}}"#,
+        r#"\author{Cat Cole and the CMS Collaboration\thanks{Note 1.}, Alibaba Group\thanks{Note 2.} \\ CERN\thanks{Note 3.}}"#,
       ),
       (0, 0),
       &[&[
@@ -1869,21 +1958,8 @@ fn harness_picks_keep_rc6_or_add_only_the_team() {
         "note:thanks[*]=Note 1.",
         "affiliation=Alibaba Group",
         "note:thanks[\u{2020}]=Note 2.",
-      ]],
-    ),
-    row(
-      "a line-under's note stays the person's",
-      doc(
-        ARTICLE,
-        r#"\author{Bob Baker and the GAPS Team \\ CERN\thanks{Note 2.}}"#,
-      ),
-      (0, 0),
-      &[&[
-        "role=author",
-        "Bob Baker",
-        "collaboration=the GAPS Team",
         "affiliation=CERN",
-        "note:thanks[*]=Note 2.",
+        "note:thanks[\u{2021}]=Note 3.",
       ]],
     ),
     // (a later collaboration contact never moves from the persons to the team — harness F3)

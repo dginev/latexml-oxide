@@ -218,31 +218,33 @@ struct DocumentEmail {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Input {
   Block {
-    index:   usize,
-    binding: String,
-    hook:    String,
+    index:         usize,
+    binding:       String,
+    hook:          String,
     /// the keyvals the call hands each author (`annotations={a,b}`: requests)
-    keyvals: Option<String>,
+    keyvals:       Option<String>,
     /// the policy's state counter at the call (`ledger::AuthorBlock::counter`)
-    counter: Option<i64>,
+    counter:       Option<i64>,
     /// whether the call replaces the authors queued before it (`\lx@clear@frontmatter{ltx:creator}`: the kernel
     /// `\author` given twice), and the flushes before it (the queue it is in)
-    replace: bool,
+    replace:       bool,
     /// whether a later creator clear in its queue removed its authors (`ledger::AuthorBlock::cleared`: llncs's
     /// `\author` given twice)
-    cleared: bool,
-    epoch:   usize,
-    events:  Vec<Event>,
+    cleared:       bool,
+    epoch:         usize,
+    events:        Vec<Event>,
     /// per creator call of its own expansion (`Event::creator_call`), the labels its `annotations=` give the creator its
     /// Name makes, as Perl's `\lx@add@creator[annotations={ed}]` gives them (`field_notes::FieldCreator`). Not in a dump
-    calls:   Vec<Vec<String>>,
+    calls:         Vec<Vec<String>>,
     /// where an IJCAI sectioned block's rehearsal held its Errors (`ledger::AuthorBlock::sectioned`, `events::HeldError`):
     /// a section marker a class defines only inside its `\author` (ijcai19.sty:127, a raw `\@maketitle`), the one before
     /// the addresses its `\emails` (`Resolver::block`, where the reading ends); none for any other block. Not in a dump
-    markers: Vec<u16>,
+    markers:       Vec<u16>,
     /// the `author:N` positions its queued entry holds, one a name the queue's reading parts it into
     /// (`ledger::AuthorBlock::names`; 0 unread, one)
-    names:   usize,
+    names:         usize,
+    /// a class's collaboration command's block (`ledger::AuthorBlock::collaboration`): its names line enumerates no team
+    collaboration: bool,
   },
   Api {
     index:  usize,
@@ -1342,8 +1344,10 @@ fn read(
         calls,
         markers,
         names,
+        collaboration,
       } => {
         policy = conventions(binding, hook);
+        resolver.enumerating = enumerating && !collaboration;
         resolver.read_note_legends(events, None);
         resolver.call_labels.clone_from(calls);
         resolver.line_column = None;
@@ -1563,20 +1567,20 @@ pub(in crate::base_utilities) fn ledger_inputs(ledger: &ledger::Ledger) -> Vec<I
       ledger::Entry::Author(block) => {
         if let ledger::Outcome::Events { events, creators, held, .. } = &block.outcome {
           inputs.push(Input::Block {
-            index:   block.index,
-            binding: block.binding.clone(),
-            hook:    block.hook.to_string(),
-            keyvals: block.keyvals.clone(),
-            counter: block.counter,
-            replace: block.replace,
-            cleared: block.cleared,
-            epoch:   block.epoch,
-            events:  events.clone(),
-            calls:   creators
+            index:         block.index,
+            binding:       block.binding.clone(),
+            hook:          block.hook.to_string(),
+            keyvals:       block.keyvals.clone(),
+            counter:       block.counter,
+            replace:       block.replace,
+            cleared:       block.cleared,
+            epoch:         block.epoch,
+            events:        events.clone(),
+            calls:         creators
               .iter()
               .map(field_notes::FieldCreator::labels)
               .collect(),
-            markers: if block.sectioned {
+            markers:       if block.sectioned {
               held
                 .iter()
                 .filter_map(|error| error.span.map(|(from, _)| from))
@@ -1584,7 +1588,8 @@ pub(in crate::base_utilities) fn ledger_inputs(ledger: &ledger::Ledger) -> Vec<I
             } else {
               Vec::new()
             },
-            names:   block.names,
+            names:         block.names,
+            collaboration: block.collaboration,
           });
         }
       },

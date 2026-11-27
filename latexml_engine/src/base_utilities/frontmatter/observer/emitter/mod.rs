@@ -30,6 +30,8 @@ mod repart;
 
 // (the writer's cut of a block's entry, which the reading checks an in-block contact's entries by: `events::labelled_entries`)
 pub(super) use content::{Field, aligned};
+// (the reading the emitter wrote, which the ledger's JSON shows: `reading::fm_reading_json`)
+pub(super) use emit::emitted_reading;
 // (a binding that rebuilds a printed text as tokens, `ieeetran_cls.rs`'s routed addresses)
 pub use emit::printed_text_tokens;
 pub(in crate::base_utilities) use emit::{

@@ -11,6 +11,10 @@
 % expect:  0 errors, 0 warnings; two creators, Ann Able (Univ A) and Bob Baker (Univ B), each with one
 %   `<contact role="collaboration">A, B, and C Collaborations</contact>`
 % status:  RED
+% sibling: `\author{Ann Able}\affiliation{CERN}\collaboration{XYZ Collaboration and ABC Collaboration}` (0705.3322,
+%   2010.14527; advisor TEAMAUTH6 A): rc6 and TEAMAUTH (no enumeration in a `\collaboration` block, `AuthorBlock::
+%   collaboration`) give a creator "XYZ Collaboration" with contact "ABC Collaboration"; expect Ann Able with one
+%   `<contact role="collaboration">XYZ Collaboration and ABC Collaboration</contact>` (pdflatex 0 `!`)
 % moves:   post-merge (a binding change of `\collaboration`, beyond the enumeration fix)
 % preload: ar5iv.sty
 \documentclass{revtex4-2}

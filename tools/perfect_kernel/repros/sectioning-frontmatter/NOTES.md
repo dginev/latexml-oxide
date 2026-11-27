@@ -260,5 +260,7 @@ FIDELITY_CHARTER §4, OXIDIZED_DESIGN_DIVERGENCES #459). RED, no guard (`moves: 
 - `author_shared_head_shared_mark_red` — a shared head's mark reaches only its last group.
 - `author_singular_team_with_inner_and_red` — `The Alpha and Omega Team` split in two.
 - `author_marked_team_piece_is_a_name_red` — a mark-led piece (`and $^2$Robotics Group`) made an author, not an address.
+- `author_team_own_column_line_under_red` — a team in its own `\and` column with a line under it stays rc6's affiliation
+  (`Ann Able \\ CERN \and the GAPS Team \\ Fermilab`; `\and R Core Team \\ CERN` after two persons), rule 7 keeping CERN.
 - `author_paired_name_team_lists_red` — `Bob Baker, Google Brain Team and Carl Clark, DeepMind Team`: four authors.
 - `author_team_thanks_email_is_the_persons_red` (1611.07751) — an e-mail `\thanks` on the team's name goes to the team.

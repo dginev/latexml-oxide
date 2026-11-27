@@ -9599,8 +9599,16 @@ author's contact, never part of the name and never a creator.
   piece's contact; no new nameless creator, one rc6 had healed onto a team; each new creator a collaboration-arm contact
   or a lone column's affiliation in rc6's reading, holding a copy of a person's line only where no other name or item
   prints its words); the two readings run only where a decision of the first departs from rc6's, and the emitter keeps
-  the first only where its word check loses no ink, or less than rc6's (`emit::analysis`, `Readings::keep`); only the
-  kept reading's log calls are emitted (`reading_log`). A `;` is no enumeration's comma (the lexer's `Sep(Comma)` keeps
+  the first only where none of its checks is worse than rc6's, each check by its own counts, never a sum
+  (`emit::Checks::worse`, `Readings::keep`): per block, names failing that did not, more ink lost, more words in
+  excess or more pictures unwritten, or any one of the three at all where the block's creators differ (lost ink is
+  kept by its block's creators); per call, more words lost or in excess; per block, more marks no contact answers,
+  more names a separator parts or more names written from their text (Gemini TEAMAUTH.17, advisor TEAMAUTH6 C); the
+  chosen reading's checks are the ones the emitter uses. A run promotes all its teams or none: a names line's
+  collaboration a person keeps in a block where a team was promoted keeps rc6's reading (`-- the X Collaboration and
+  the Y Collaboration`, its `;` form); revtex's `\collaboration` block (`\author{#1}` as Perl's, marked
+  `AuthorBlock::collaboration`) enumerates nothing (0705.3322, 2010.14527). Only the kept reading's log calls are
+  emitted (`reading_log`). A `;` is no enumeration's comma (the lexer's `Sep(Comma)` keeps
   it as its text);
   an `\IEEEmembership` grade is the name's it follows (formerly #1016, #950);
   IEEEtran's blocks under authblk's `\author` are read as the class reads them (formerly #987).
@@ -9612,7 +9620,8 @@ author's contact, never part of the name and never a creator.
 `perfect_kernel_batchfms2a2::a_corresponding_author_list_names_each_author`,
 `perfect_kernel_batchteamauth::{an_enumerated_team_is_an_author, a_group_is_an_author_after_and_or_its_mark,
 each_group_a_shared_head_lists_is_an_author, a_framed_collaboration_and_an_institution_keep_their_reading,
-a_group_run_before_a_place_or_a_remark_keeps_rc6, a_listed_group_owns_no_address_of_the_person}`. RED:
+a_group_run_before_a_place_or_a_remark_keeps_rc6, a_listed_group_owns_no_address_of_the_person,
+a_promotion_no_check_finds_worse_than_rc6}`. RED:
 `article_mark_led_second_row_of_one_name_read_as_affiliation_red`, `aa_institute_and_inside_a_macro_group_red`,
 `revtex_collaboration_list_is_one_contact_red`, `author_group_only_list_keeps_one_creator_red`,
 `author_team_witness_*_red` (1311.7305, hep-ex0611001, 2009.04166, 1205.6912), `author_team_comma_only_list_of_three_red`,

@@ -267,6 +267,20 @@ pub(super) fn promotion_only(inputs: &[Input], rc6: &Resolved, enumerated: &Reso
     }
     pieces.extend(of_it);
   }
+  // (a run promotes all its teams or none: a names line's collaboration a person keeps in a block where a team was promoted
+  // is a half-flip — `Ann Able -- the XYZ Collaboration and the ABC Collaboration`, its `;` form, advisor TEAMAUTH6 B)
+  let half = pairs.iter().any(|&(_, c)| {
+    items(&enumerated.creators[c]).any(|item| {
+      item.role == "collaboration"
+        && item.rule.starts_with("line:names collaboration")
+        && teams
+          .iter()
+          .any(|t| item.source.is_some_and(|(at, _)| at == t.source))
+    })
+  });
+  if half {
+    return false;
+  }
   let on_a_team = |item: &Assoc| teams.iter().any(|t| items(t).any(|i| same(i, item)));
   let mut moved: Vec<&Assoc> = Vec::new();
   let mut moved_marks: Vec<&NameMark> = Vec::new();

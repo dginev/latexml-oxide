@@ -181,6 +181,9 @@ pub(in crate::base_utilities) struct AuthorBlock {
   pub late:           bool,
   /// a per-author binding's cautious name split
   pub cautious:       bool,
+  /// made by a class's collaboration command (revtex's `\collaboration{…}`, `\author{#1}` as Perl's): one group's
+  /// name, no list of authors (`lx_author_collaboration`; 0705.3322, 2010.14527)
+  pub collaboration:  bool,
   /// the keyvals the call hands each author (revtex `annotations=`)
   pub keyvals:        Option<String>,
   /// those keyvals as the call's tokens: what a writer hands on is these, never [`keyvals`](Self::keyvals) retokenized, where
@@ -861,6 +864,7 @@ pub(in crate::base_utilities) fn record_author_call(
     sectioned,
     late,
     cautious,
+    collaboration: lookup_bool("lx_author_collaboration"),
     keyvals: keyvals.map(|kv| kv.to_string()),
     keyval_tokens: keyvals.cloned(),
     epoch: 0,
