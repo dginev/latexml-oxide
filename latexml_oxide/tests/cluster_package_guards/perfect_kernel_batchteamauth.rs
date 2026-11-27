@@ -1948,6 +1948,127 @@ fn a_promotion_no_check_finds_worse_than_rc6() {
         ],
       ],
     ),
+    row(
+      "a run's conjunction before the break keeps rc6's reading",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able, Bob Baker and the XYZ Team and \\ the ABC Team}"#,
+      ),
+      (0, 0),
+      &[
+        &[
+          "role=author",
+          "Ann Able",
+          "collaboration=the XYZ Team",
+          "affiliation=the ABC Team",
+        ],
+        &[
+          "role=author",
+          SEP,
+          "Bob Baker",
+          "collaboration=the XYZ Team",
+          "affiliation=the ABC Team",
+        ],
+      ],
+    ),
+    row(
+      "a run's comma and before the break keeps rc6's reading",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able, Bob Baker and the XYZ Team, and \\ the ABC Team}"#,
+      ),
+      (0, 0),
+      &[
+        &[
+          "role=author",
+          "Ann Able",
+          "collaboration=the XYZ Team",
+          "affiliation=the ABC Team",
+        ],
+        &[
+          "role=author",
+          SEP,
+          "Bob Baker",
+          "collaboration=the XYZ Team",
+          "affiliation=the ABC Team",
+        ],
+      ],
+    ),
+    row(
+      "a run's ampersand before the break keeps rc6's reading",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able, Bob Baker and the XYZ Team \& \\ the ABC Team}"#,
+      ),
+      (0, 0),
+      &[
+        &[
+          "role=author",
+          "Ann Able",
+          "collaboration=the XYZ Team",
+          "affiliation=the ABC Team",
+        ],
+        &[
+          "role=author",
+          SEP,
+          "Bob Baker",
+          "collaboration=the XYZ Team",
+          "affiliation=the ABC Team",
+        ],
+      ],
+    ),
+    // (what goes on past a break is no run of teams: a wrapped department, a wrapped list of persons, a person after
+    // "and" — the team stays promoted, Gemini TEAMAUTH.24 FP1, FP5, advisor TEAMAUTH7)
+    row(
+      "a wrapped department keeps the promotion",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able and the GAPS Team \\ Department of Physics \\ and Astronomy, University of X}"#,
+      ),
+      (0, 1),
+      &[
+        &[
+          "role=author",
+          "Ann Able",
+          "affiliation=Department of Physics",
+          "affiliation=and Astronomy, University of X",
+        ],
+        &[
+          "role=author",
+          SEP,
+          "the GAPS Team",
+          "affiliation=Department of Physics",
+          "affiliation=and Astronomy, University of X",
+        ],
+      ],
+    ),
+    row(
+      "a wrapped list of persons keeps the promotion",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able, \\ and Bob Baker \and Cat Cole and the GAPS Team}"#,
+      ),
+      (0, 0),
+      &[
+        &["role=author", "Ann Able"],
+        &["role=author", SEP, "Bob Baker"],
+        &["role=author", SEP, "Cat Cole"],
+        &["role=author", SEP, "the GAPS Team"],
+      ],
+    ),
+    row(
+      "a person after and under the names keeps the promotion",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able and the GAPS Team \\ and Bob Baker}"#,
+      ),
+      (0, 0),
+      &[
+        &["role=author", "Ann Able"],
+        &["role=author", SEP, "the GAPS Team"],
+        &["role=author", SEP, "Bob Baker"],
+      ],
+    ),
     // (a name its events spell only through a macro's run: W 0 -> 2 promoted, advisor TEAMAUTH6 C)
     row(
       "names written from their text keep rc6's reading",
@@ -2002,6 +2123,22 @@ fn a_promotion_no_check_finds_worse_than_rc6() {
       ),
       (0, 0),
       &[&["role=author", "Ann Able", "affiliation=CERN"], &[
+        "role=author",
+        SEP,
+        "XYZ Collaboration",
+        "collaboration=ABC Collaboration",
+      ]],
+    ),
+    // (elsart's `\collab`, `\author{#2}` as Perl's, marked as revtex's: rc6's reading — advisor TEAMAUTH7; the command is
+    // elsart.cls's, absent from TL 2025, so pdflatex under elsarticle stops at it)
+    row(
+      "an elsart collaboration enumerates nothing",
+      doc(
+        r"\documentclass{elsarticle}",
+        r#"\begin{frontmatter}\author{Ann Able}\collab{XYZ Collaboration and ABC Collaboration}\end{frontmatter}"#,
+      ),
+      (0, 0),
+      &[&["role=author", "Ann Able"], &[
         "role=author",
         SEP,
         "XYZ Collaboration",

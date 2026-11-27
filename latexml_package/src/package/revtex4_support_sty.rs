@@ -211,11 +211,11 @@ LoadDefinitions!({
 
   // (Perl's `\author{#1}`, its block marked a collaboration's when digested: one group's name, which the reading enumerates
   // no team in — `\collaboration{XYZ Collaboration and ABC Collaboration}`, 0705.3322, 2010.14527)
-  DefMacro!("\\collaboration{}", "\\lx@revtex@collaboration@on\\author{#1}\\lx@revtex@collaboration@off");
-  DefPrimitive!("\\lx@revtex@collaboration@on", sub[_args] {
+  DefMacro!("\\collaboration{}", "\\lx@collaboration@on\\author{#1}\\lx@collaboration@off");
+  DefPrimitive!("\\lx@collaboration@on", sub[_args] {
     assign_value("lx_author_collaboration", true, Some(Scope::Global));
   });
-  DefPrimitive!("\\lx@revtex@collaboration@off", sub[_args] {
+  DefPrimitive!("\\lx@collaboration@off", sub[_args] {
     assign_value("lx_author_collaboration", false, Some(Scope::Global));
   });
   // revtex4-2.cls:2420 `\newcommand*\altaffiliation[2][]{\@AF@join{#1#2}}` (revtex4-1.cls, revtex4.cls alike): the

@@ -263,5 +263,7 @@ FIDELITY_CHARTER §4, OXIDIZED_DESIGN_DIVERGENCES #459). RED, no guard (`moves: 
 - `author_team_own_column_line_under_red` — a team in its own `\and` column with a line under it stays rc6's affiliation
   (`Ann Able \\ CERN \and the GAPS Team \\ Fermilab`; `\and R Core Team \\ CERN` after two persons), rule 7 keeping CERN.
 - `author_team_slash_pair_is_one_author_red` — `… and the XYZ Team / the ABC Team` one author named by both teams.
+- `author_team_beside_framed_remark_keeps_rc6_red` — `Ann Able (for the X Collaboration), Bob Baker and R Core Team`
+  keeps rc6's reading whole (over-conservative).
 - `author_paired_name_team_lists_red` — `Bob Baker, Google Brain Team and Carl Clark, DeepMind Team`: four authors.
 - `author_team_thanks_email_is_the_persons_red` (1611.07751) — an e-mail `\thanks` on the team's name goes to the team.

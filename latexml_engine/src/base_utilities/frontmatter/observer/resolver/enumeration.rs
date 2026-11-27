@@ -200,28 +200,52 @@ fn on_a_piece(
   })
 }
 
-/// Whether a line under the names opens with a list's conjunction (`\\ and the ABC Team`, `\\[2pt] \& …`, `, \\ and
-/// …`): the run goes on past the break, so a team before it is promoted only with the rest (pre-review of round 4c).
-fn line_opens_a_list(events: &[Event]) -> bool {
-  let mut after_break = false;
-  for e in events {
-    match &e.kind {
-      EventKind::Break => after_break = true,
-      EventKind::Layout
-      | EventKind::Mark
-      | EventKind::Sep(SepKind::Gap { .. } | SepKind::Comma) => {},
-      EventKind::Sep(SepKind::Word(_)) if after_break => return true,
-      EventKind::Name if after_break => {
-        let first = e.text.split_whitespace().next().unwrap_or_default();
-        if first.eq_ignore_ascii_case("and") || first == "&" {
-          return true;
-        }
-        after_break = false;
-      },
-      _ => after_break = false,
-    }
-  }
-  false
+/// Whether a creator of `enumerated` (a nameless one too) holds an affiliation of a promoted team's block that is the run
+/// going on past a break: a listed collaboration, or a collaboration after "and" or `&` — in its text or the separator
+/// before it (`… the XYZ Team and \\ the ABC Team`, `\\ and the ABC Team`; never a wrapped department, `\\ and
+/// Astronomy, …`, a person, nor a team alone on its line: Gemini TEAMAUTH.24).
+fn listed_on(inputs: &[Input], enumerated: &Resolved, teams: &[&RCreator]) -> bool {
+  let conjunction = |w: &str| w.eq_ignore_ascii_case("and") || w == "&";
+  enumerated
+    .creators
+    .iter()
+    .flat_map(|c| &c.affiliations)
+    .any(|item| {
+      let Some((at, span)) = item.source else {
+        return false;
+      };
+      if !teams.iter().any(|t| t.source == at) {
+        return false;
+      }
+      let text = item.text.trim();
+      let first = text.split_whitespace().next().unwrap_or_default();
+      let opens = conjunction(first);
+      let rest = if opens {
+        text[first.len()..].trim_start()
+      } else {
+        text
+      };
+      let after_word = || {
+        let Some((start, _)) = span else {
+          return false;
+        };
+        let before = events_of(inputs, at).iter().rev().find(|e| {
+          e.span.is_some_and(|(_, end)| end <= start)
+            && !matches!(
+              e.kind,
+              EventKind::Break
+                | EventKind::Layout
+                | EventKind::Declaration
+                | EventKind::Mark
+                | EventKind::Sep(SepKind::Gap { .. } | SepKind::Comma)
+            )
+        });
+        before
+          .is_some_and(|e| matches!(&e.kind, EventKind::Sep(SepKind::Word(w)) if conjunction(w)))
+      };
+      reads_as_listed_collaboration(rest, false, false)
+        || (reads_as_collaboration(rest, true) && (opens || after_word()))
+    })
 }
 
 /// A text's words, lowercased.
@@ -302,11 +326,7 @@ pub(super) fn promotion_only(inputs: &[Input], rc6: &Resolved, enumerated: &Reso
           .any(|t| item.source.is_some_and(|(at, _)| at == t.source))
     })
   });
-  if half
-    || teams
-      .iter()
-      .any(|t| line_opens_a_list(events_of(inputs, t.source)))
-  {
+  if half || listed_on(inputs, enumerated, &teams) {
     return false;
   }
   let on_a_team = |item: &Assoc| teams.iter().any(|t| items(t).any(|i| same(i, item)));
