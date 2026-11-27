@@ -140,6 +140,13 @@ Rules that keep this file honest and mergeable:
     TeX's "matching" scanner state): 0 Errors where pdflatex and Perl give 1 each, the text right; put constructor
     argument reads in that state, or report a `None` read at any file level; RED
     `required_reader_input_file_end_silent_red`; 1
+  - INPUTCATCODE-BINDEXT — (PARITY with Perl, a TeX-fidelity gap; issue-1024 reply review 2026-11-27) inside a raw package that
+    changed `@`'s catcode (`\catcode`\@=12`), `\input{p.sty}` / `\input{q.tex}` still read with `@` forced to letter: the
+    binding-extension branch (`latexml_core/src/binding/content.rs` ~:2335-2349, `input_definitions(stem, …default())`) keeps
+    `at_letter: true`. Only a non-binding extension (`.clo`), no extension or a directory reads `at_letter: false` (~:2361-2367).
+    pdflatex prints 12/12; rc6 and Perl 11/11 (Perl `Package.pm:2286-2288`, `:2346`). Fix: an `\input` (not
+    `\RequirePackage`/`\usepackage`) of a binding-extension file inside a package reads under the current catcodes and keeps the
+    binding dispatch; take a reach census first. RED beside `perfect_kernel_batch61::input_from_a_package_keeps_the_catcodes`; 2
   - RHAISTRBODY — a Rhai `DefMacro` whose string body is unbalanced (`"{"`) is a Fatal here; Perl checks the balance
     only for a Tokens body (Expandable.pm:30-35); 1
   - OD83 — OD #83 (DG 2026-11-15): keep digesting acmart's `\Description`, but report an error inside it as a Warning (acmart.cls:895 discards the argument, so pdflatex never meets it; 2607.21760's `\D1 … \D5`; KNOWN_PERL_ERRORS #66 point 2) — post-cutoff; 1
@@ -286,6 +293,12 @@ Rules that keep this file honest and mergeable:
   - HOLD4 — the fresh holdout v4 read once, 98/98 per creator and per paper — DG 2026-11-12: after the merge, after TRUTH; the holdout stays sealed until then; 3
   - PERF — the perf + RAM pass, remaining levers (#346) — DG 2026-11-12: after the merge (each bundle's cost bar ≤ +0.5 % blocks slowdowns); RAM witness 2605.17422 (4.04 GB peak RSS; Fatal:oom at the fleet worker's address-space limit in runs 368 and 375); 5
   - FMPL — the frontmatter perf levers (FMPERF 2026-11-13; after AAS1 the >1,000-author AASTeX papers stay +7.3 / +8.3 % vs the 2026-10-31 audit: the author blocks' rehearsals ≈0.33 G, `emit_commands` ≈0.53 G diffuse, entry digestion +0.3 G — DG: after the merge; P23's ~25M gap); 3
+  - CWDSCAN — (TEAMFUZZ2 helper 2026-11-27) a conversion reads its working directory about 400 times, and each scan is O(files in
+    the cwd): in a ~78k-file folder that costs ~6 s of system time per conversion (7.2 s vs 0.35 s in a small folder). A user
+    converting inside a large folder pays the same. Next: `strace -c -e trace=getdents64,openat` in a 50k-file dir vs an empty dir
+    to find the caller(s) (kpathsea cwd lookups, PR #926's nocase dir cache, or FindFile's local-dir probe), then list the cwd once
+    per conversion and invalidate it on our own writes. Bar: byte-identical output, and the large-dir conversion within 5 % of the
+    small-dir time; 2
   - T1 — the repro suite move (`tools/perfect_kernel/repros`, 1,469 files → `latexml_oxide/tests/repros` header-contract trials; drain `tools/`; memory `project_repro_suite_move`) — DG 2026-11-12: after the merge; 3
   - P6R — P6's rest: the declared cut `cut_list` and P4b2's cost gate `may_open_with_mark` out of the moved directories (e0's MOVED_CUT_KIND_CODE_LINES, OLD_READER_EXPORTS, TOKEN_READS fall), further compaction (P6S) — DG 2026-11-12: P6 closes at P6f; + LST0's plan (`2026-11-13_LST0_report.md`; its 18 kind-deciding F/D lists are the special-casing debt): P6R1 name annotations by the binding's declaration (lists NAME_ANNOTATIONS, PRINTED_IN_PLACE, FRONTMATTER_SETTERS, MARK_NOTE/NOTE/NOTE_TEXT_COMMANDS), P6R2 font commands by `declared_font` (with P6S D3/P6c), P6R3 breaks/spacing by meaning, P6R4 symbols/accents by glyph; 3
   - QA80 — the upstream LaTeXML patches (8 prepared: QA08, QA30, QA35, QA36, QA39, QA50, QA56, QA62; `/home/deyan/data/pk_wt/latexml_upstream`, `~/data/pk_agents/main/upstream_patches/`; summary e-mailed to BM 2026-11-12) — HELD: BM asked us to wait; none submitted; each goes upstream at BM's go and DG's OK; no merge gate (DG 2026-11-12); 3
@@ -358,6 +371,14 @@ Rules that keep this file honest and mergeable:
     accept only `<name>.sty.rhai`/`.cls.rhai`, or log an Info naming the file (RHAIBARE, unverified); two bindings with
     byte-identical source share one AST (`SCRIPT_CACHE` keyed by source), so one deprecation Warning for both
     (RHAIHOOKSRC); 3
+  - RHAIDEPREM — (issue 716, kept open with this list 2026-11-27; DG 2026-11-18: the shims stay through 0.8.0 and go in the release
+    after) remove the Rhai deprecated aliases:
+    - the 25 `**Deprecated**` rows of `latexml_contrib/src/script_bindings/API.md`, `mod.rs` `DEPRECATED_ALIASES`;
+    - engine.rs `whatsit()`, argString/propertyString, document.getProperty(ies), assign_value/assign_global/lookup_value;
+    - the old closure arities (`afterDigest: |whatsit|`, `properties: |x|`), the string comparisons, the Number-to-int bridge.
+    The guards flip from "warns" to "unknown function"; regenerate API.md and CHEATSHEET.md, mark RHAI_BINDINGS_GUIDE.md's migration
+    table "removed in 0.8.1", and add a CHANGELOG BREAKING line. RED `gullet_only_on_one_arg_macro_red` turns green. On demand: the 15
+    calls CHEATSHEET.md lists as missing. Close 716 when the removal lands; 2
   - REGW — the core register lookup could Warn on an undefined CS once the kernel's optional-register probes use the quiet lookup (a Warning there added geometry `\Gm@tw` Warnings to 27 of 200 papers; #843, OD #1036); 1
   - VERBR — verbatim CSS residuals (#844): a `numbers=left` line number overlaps the code (`listings-algorithms/fancyvrb_numbers_left_overlap_the_code_red`); a breaklines first line indented twice (fvextra's negative `\hspace` missing from the HTML); a breaklines Verbatim in a minipage in a `tabular` widens the page (pre-existing); `display: contents` on the id-bearing wrapper may remove an `#id` link's scroll target (suspected, unprobed); 2605.00468 widens a phone page through a fixed-width tcolorbox SVG; an xleftmargin Verbatim in a minipage or p-cell loses the margin from its second line on (#855, issue 853; I853); lstlisting's xleftmargin not rendered (Perl parity); 3
   - NICEO — nicematrix: 2206.12224's second trailing key list (`package-bindings/nicematrix_second_trailing_options_red`); NiceArray's `tex=` reverts to `\left.\begin{array}…\right.` and drops `\Block` (pre-existing) (#839, issue 736); 1
@@ -963,6 +984,13 @@ Rules that keep this file honest and mergeable:
   - FMTCACHE-PRUNE (post-0.8.0) — the per-user format cache (`~/.cache/latexml-oxide/formats/<version>-<executable>-
     <tree>/`, ~4 MB an entry, OXIDIZED_DESIGN_DIVERGENCES #449) is never pruned: a developer host holds 1,843 entries
     (7 GB; earlier 6.6 GB in 1,734; `latexml_oxide/src/format_dumps.rs` ~:281-315; the fleet's dumps match its tree, so it does not use them). Drop entries whose executable hash no longer exists, or keep the newest few per tree, or document a cleanup (FMTCACHE folded in 2026-11-23); 1
+  - FMTCACHEKEY — (issue 1023, replied 2026-11-27; 0.8.1) the format cache key (`latexml_oxide/src/format_dumps.rs` `cache_dir`
+    ~:423-454) is `VERSION-<exe size>-<exe mtime>-<tree checksums>`: a copied binary with a fresh mtime rebuilds its formats, and an
+    mtime-normalising packager (Nix's 1970 mtimes, `SOURCE_DATE_EPOCH` pipelines) can make two different equal-size builds share
+    a key — one engine loading another's dump, silently. Key on a fast content hash of the executable (xxh3/blake3), memoised per
+    (dev, inode, size, mtime) in the cache base; and prune build directories unused for 30 days (keep the newest few) — this host
+    held 2,147 dirs / 7.8 GB back to 0.7.6. Guards: a copy reuses the cache; two builds with forced equal mtime+size do not share;
+    stale dirs are pruned; 2
   - DUMPTRIM (post-0.8.0, DG 2026-11-23) — embed one TeX Live year's formats instead of the 5-year window (2022–2026,
     `parity/DUMP_DESIGN.md` "Distribution"). An embedded format is used only with no TeX tree, or on a tree whose
     `latex.ltx` + `expl3-code.tex` (or `plain.tex`) match its `# source` stamps (DUMP_DESIGN "Tree match",
@@ -1527,6 +1555,50 @@ Rules that keep this file honest and mergeable:
     `class="ltx_group"` on the creator (schema-valid: `LaTeXML-common.rnc:79`; no visual change) and emit JATS
     `<contrib contrib-type="author"><collab>`, TEI `<orgName>`; consider `typeof="schema:Organization"` via the rdfa-subject mode
     (suppressed in EPUB3, `LaTeXML-epub3.xsl:56-60`) — Gemini TEAMAUTH.2, XSLT/schema citations verified; A/B the JATS/TEI outputs; 2
+  - TEAMLISTEDBLOCK — (TEAMAUTH final gate, Gemini TEAMAUTH.29, verified) `\author{Ann Able, Bob Baker and the XYZ Team \\
+    $^{1}$and the ABC Team}` promotes the XYZ Team, while `and the ABC Team` stays the nameless affiliation creator the 0.8.0-rc6
+    reading already makes. That is half of a run, against "a run promotes all or none". Nothing is lost and W is 0/0. Cause:
+    `resolver/enumeration.rs` `listed_on` (~:425-428) scans the enumerated creators' affiliations, not `enumerated.block`'s.
+    Fix: follow the block affiliations, so the run is kept whole or promoted whole. RED row in `perfect_kernel_batchteamauth`.
+    Synthetic only; 1
+  - TEAMD1WRITER — (TEAMAUTH round 4c, open question 2) a promoted team that shares a call holding another item (revtex4-2
+    `\author{Bob Baker and the CMS Collaboration}\affiliation{CERN\thanks{E-mail: p2@x.org}}`) has the call written once per
+    holder by the XML writer, and the inner item lands outside both, so it is lost.
+    - 0.8.0 keeps the unpromoted reading through a reading-level rule (`enumeration.rs` `call_items`/`alone`: no team copies a call
+      that holds another item). It is not caught by construction.
+    - The rule holds back 2 real promotions (1012.1660, astro-ph0403682).
+    - The same mechanism writes a shared `\affiliation{CERN\footnotemark}`'s mark into both creators: the same ink twice, no loss
+      (reviewer TEAMSHAREDMARK).
+    - Fix: the writer places a shared call's inner items once (with the first holder, or as the call's own note); then drop
+      `alone` and recover the 2 papers.
+    - Gemini ran 60 D1-class probes: no bypass, and a non-e-mail `\thanks` stays one `<pubnote>`; 2
+  - TEAMGUARDOUTPUT — `emit::Checks::worse` compares counts, not identities, so a promotion that heals one nameless creator while
+    losing a different word could pass (advisor, final gate; none built). Add an output-level creator comparison (the written
+    creators' names and contacts against the unpromoted reading's). Pairs with TEAMD1WRITER; 2
+  - TEAMCONTACTORDER — 2608.21611: under the promotion one person's affiliation and ORCID contacts swap order (nothing lost;
+    advisor, final gate). Keep the person's contact order from the unpromoted reading; 1
+  - TEAMPERF — 2507.12374 (revtex4-2, 1,771 authors, output identical) costs +0.52 % (advisor) / +0.58 % (main session)
+    instructions:u with TEAMAUTH, over the +0.5 % bar. DG 2026-11-27 accepted it for 0.8.0 with this row. Seven other papers measured
+    +0.08 % to +0.38 %. Lever: skip the second (unpromoted) resolve when no line holds a team word, or reuse more of the first
+    resolve's work; 1
+  - TEAMAUTH-RESIDUALS — the final gate's small items:
+    - add the e-mail case (`… \\ $^{2}$CERN, gaps@cern.ch` gives gaps@ to the person) to RED `author_team_own_column_line_under_red`;
+    - one charter sentence on "after two names": `A, B, Team1 and Team2` gives 4 authors but `A, Team1 and Team2` keeps the
+      unpromoted reading;
+    - the picks' doc wording (`perfect_kernel_batchteamauth.rs` ~:2242: one pick is red only against rc6);
+    - rename `Readings::rc6` / `keep(rc6)` and charter rule 7's "rc6" to a lasting name (`baseline`);
+    - define `\lx@collaboration@on/off` once (now in `revtex4_support_sty.rs`, `elsart_support_core_sty.rs`, `quantumarticle_cls.rs`).
+    Reports: `agent_reports/2026-11-27_TEAMAUTH_finalship_review.md`, `ADV_TEAMAUTH_FINAL_2026-11-27.md`; 1
+  - FMWITNESS-REDS — (FMWITNESS bank 2026-11-27: 51 green author-segmentation witness rows in
+    `perfect_kernel_batchfmwitness::author_segmentation_witnesses`, 12 `sectioning-frontmatter/fmw_*_red.tex`) DG 2026-11-27 for
+    0.8.1: a comma-joined department group after several names (`Ann Able, Bob Baker, Theory Group \\ CERN, Geneva`) is the shared
+    affiliation of EVERY name on the line (rc6 gives it to the last name; the bank pins rc6 until then — flip
+    `art_comma_company_group` / `art_group_then_address_next_line` with the fix); a parenthesised institution after a name
+    (`Ann Able (Univ A)`) is that name's affiliation (`fmw_*paren*_red`). The other REDs: one-line marked list (Bob's mark `2,1`),
+    1407.0386 group name split, 1311.7305 family 2 Warnings on clean input, 2308.10076 amsart shared address on the last name,
+    2211.09822 AASTeX `\email` before every `\author` → nameless creator, 2103.09929 elsarticle unlabelled `\address`, 1605.04039
+    compsoc note mark, llncs `\and Speech Group, CERN`, 2010.08109 svjour3 names before `\at`, 1105.1742/1205.6912 iopart shared
+    address, hep-th0406174 note marks + 2 Warnings; 3
   - ICONFONTS-RESIDUAL — (ICONFONTS landed 2026-11-27: ccicons + manfnt glyph maps, OD #645) a U-family character is measured
     from the glyph it maps to, not the font's TFM (`\textdbend` raised 10.3pt vs TeX 11pt; RED
     `fonts-nfss/u_family_char_metrics_are_not_its_tfm_red`); plain `\font` with `lcircle` may drop `\char` with no Warning
