@@ -774,6 +774,8 @@ impl Mouth {
   // fn open_binding(&mut self, _content: &str) {}
 
   fn initialize(&mut self) {
+    // `@`'s catcode as the read starts: the note's ` w/@ other`, and the at_letter save below.
+    let at_cc = lookup_catcode('@');
     self.note_message = if self.notes {
       let source = if !self.source.is_empty() {
         &self.source
@@ -787,14 +789,12 @@ impl Mouth {
       };
       // Perl Mouth.pm:94-96 says `w/@ other` for a reader that does not force `@`; a package's `\input` keeps the
       // catcodes (content.rs), so it also needs `@` not a letter as the read starts (other, or an escape; #1024).
-      let at_note = if self.fordefinitions
-        && !self.at_letter
-        && !matches!(lookup_catcode('@'), Some(Catcode::LETTER))
-      {
-        " w/@ other"
-      } else {
-        ""
-      };
+      let at_note =
+        if self.fordefinitions && !self.at_letter && !matches!(at_cc, Some(Catcode::LETTER)) {
+          " w/@ other"
+        } else {
+          ""
+        };
       Some(s!("Processing {}{} {}", kind, at_note, source))
     } else {
       None
@@ -815,7 +815,7 @@ impl Mouth {
     // SimpleSample, ~20 errors; RUST-ONLY, Perl 0).
     // Guard: `perfect_kernel_batch56::at_letter_mouth_keeps_group_catcode_undo`.
     if self.at_letter {
-      self.saved_at_cc = lookup_catcode('@');
+      self.saved_at_cc = at_cc;
       assign_catcode('@', Catcode::LETTER, None);
     }
     // Perl: fordefinitions saves/restores INCLUDE_COMMENTS
