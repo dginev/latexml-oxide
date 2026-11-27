@@ -1,0 +1,14 @@
+% shape:   a group name holding `and` on its own line, the institution under it
+% witness: 1407.0386 (`Databases and Information Systems Group`, here on its own line)
+% oracle:  pdflatex 0 errors; "Ann Able and Bob Baker / Databases and Information Systems Group / Univ X"
+% engines: rust rc6: both lines both names'
+% expect:  0 errors, 0 warnings; both lines both names'
+% status:  GREEN (rc6 fe76f5268af); guard perfect_kernel_batchfmwitness::author_segmentation_witnesses
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able and Bob Baker\\ Databases and Information Systems Group\\ Univ X}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,16 @@
+% shape:   neurips `\And` columns of name / affiliation / `\texttt` e-mail, a `\thanks`
+% witness: 2407.01392
+% oracle:  pdflatex (with 2407.01392's own neurips file; TL 2025 ships none) 0 errors; two columns
+% engines: rust rc6: each column its author; Bob the note
+% expect:  0 errors, 0 warnings; each column its author; Bob the note
+% status:  GREEN (rc6 fe76f5268af); guard perfect_kernel_batchfmwitness::author_segmentation_witnesses
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[final]{neurips_2024}
+\begin{document}
+\title{T}
+\author{Ann Able \\ Lab A\\ \texttt{ann@a.edu} \\ \And
+Bob Baker\thanks{Work done as a visiting student at Lab A.} \\ Univ B\\ \texttt{bob@b.edu} \\}
+\maketitle
+Text.
+\end{document}

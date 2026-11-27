@@ -1,0 +1,14 @@
+% shape:   marked names, then ALL marked affiliations on one line under them
+% witness: ADV_TEAMAUTH2 probe (the one-line list's sibling)
+% oracle:  pdflatex 0 errors; "Ann Able1, Bob Baker2 / 1Univ A, 2Robotics Group"
+% engines: rust rc6: Ann Univ A, Bob Robotics Group
+% expect:  0 errors, 0 warnings; Ann Univ A, Bob Robotics Group
+% status:  GREEN (rc6 fe76f5268af); guard perfect_kernel_batchfmwitness::author_segmentation_witnesses
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$, Bob Baker$^2$\\ $^1$Univ A, $^2$Robotics Group}
+\maketitle
+Text.
+\end{document}

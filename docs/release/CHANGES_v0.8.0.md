@@ -52,6 +52,17 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
   - **The bundled ar5iv.css is ar5iv-css 0.9.6** (`tools/ar5iv-css.pin`): the same no-scrollbar display in a box, an
     aligned display's rows lined up in a box as outside, the title page's margin notes beside the text on very wide
     screens, and a zero-width text-mode `\vphantom`.
+  - **A team the author list names is an author.** `\author{A, B and R Core Team}`, its `\and` form and `A, B and the
+    GAPS Team` give three authors, as the PDF prints them, and two teams or collaborations listed after the names are
+    two authors; the team was a hover-only collaboration note on each name (the `\and` form an affiliation). A "group"
+    is an author only after "and" or with its own mark (`A, B, Quantum Optics Group` stays an affiliation). A shared head
+    lists each group: `The ATLAS and CMS Collaborations` gives the authors "The ATLAS" and "CMS Collaborations", as
+    printed. A team after a comma alone keeps its reading (`A, B, Google Brain Team`), as do groups listed before a
+    place or a `for the … Collaboration` remark; the person a team is listed beside keeps everything printed for them —
+    a reading that would take anything from a person keeps the earlier one. A team a name
+    speaks for (`for the ATLAS Collaboration`), a bracketed line under the names, AASTeX's `\collaboration` and
+    institutions keep their reading; REVTeX's `\collaboration` list is still read as before (a known residual).
+    FIDELITY_CHARTER (amended 2026-11-27), OXIDIZED_DESIGN_DIVERGENCES #459; guards `perfect_kernel_batchteamauth`.
   - **The log no longer says `w/@ other` for a file a package `\input`s while `@` is a letter** (issue 1024):
     `Processing definitions <path>` again, as Perl and 0.7.6; the suffix stays where `@` is not a letter (`xy.tex`).
     OXIDIZED_DESIGN_DIVERGENCES #1172; guard `cluster_cli::log_note_nesting::definitions_note_says_at_other_only_where_it_is`.

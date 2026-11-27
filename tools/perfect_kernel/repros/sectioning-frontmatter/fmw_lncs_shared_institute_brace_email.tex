@@ -1,0 +1,15 @@
+% shape:   llncs one institute, `\email{\{a, b, c\}@host}`
+% witness: 1903.01538
+% oracle:  pdflatex 0 errors; "{ann_able, bbaker, ccole}@su.edu"
+% engines: rust rc6: every name the institute; each its expanded address
+% expect:  0 errors, 0 warnings; every name the institute; addresses by spelling
+% status:  GREEN (rc6 fe76f5268af); guard perfect_kernel_batchfmwitness::author_segmentation_witnesses
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able \and Bob Baker \and Cat Cole}
+\institute{State University, City, Country\\ \email{\{ann\_able, bbaker, ccole\}@su.edu}}
+\maketitle
+Text.
+\end{document}

@@ -878,8 +878,9 @@ fn prefix_marks_on_a_sole_line_and_a_sole_authors_orphans() {
 
 /// Item 3 (the largest buckets' resolver defects): a list with one address per author that every spelled address
 /// agrees with is in author order (FIDELITY_CHARTER §4, 2026-10-21; `{qkv, riven, …}@zju.edu.cn`, 2603.19610,
-/// 2512.22629); "the MAST Team" among the names is the names' collaboration since batch 97d (1609.09534,
-/// astro-ph0509500; OXIDIZED_DESIGN_DIVERGENCES #946; an author before).
+/// 2512.22629); "the MAST Team" the names enumerate is an author (1609.09534, astro-ph0509500; DG 2026-11-27,
+/// OXIDIZED_DESIGN_DIVERGENCES #459: their collaboration from batch 97d, pdflatex prints it as the list's last name), no
+/// mark, so no address.
 #[test]
 fn address_lists_in_author_order_and_collaborations() {
   assert_eq!(
@@ -910,10 +911,10 @@ fn address_lists_in_author_order_and_collaborations() {
     [
       "C Ann Able [1] | line:names",
       "  a Univ A | ruling1:request",
-      "  c collaboration the MAST Team | line:names collaboration",
       "C Bob Baker [1] | line:names sep:comma",
       "  a Univ A | ruling1:request",
-      "  c collaboration the MAST Team | line:names collaboration",
+      // (the tag of a creator only the list's enumeration makes, `resolver::LISTED_GROUP`: TEAMAUTH fix round 2)
+      "C the MAST Team [] | line:names sep:word line:listed-group",
     ]
   );
 }

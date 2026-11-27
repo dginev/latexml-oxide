@@ -145,10 +145,9 @@ pub(super) fn assert_rows(rows: &[Row]) {
 ///   separator residual, RED in `author_marked_list_keeps_its_printed_separators_red`;
 /// - amsart marked names (97a's amsart case): the list, each name its mark and address; C. Cole's before=" and " where
 ///   the line prints ", and" is pinned, RED in `author_marked_list_amsart_comma_and_keeps_its_comma_red`;
-/// - amsart marked names beside "the XYZ Team": a list and its collaboration (97a
-///   `marked_names_beside_a_team_are_a_list_and_its_collaboration`). B. in der Baker's before=" and " — the "and"
-///   printed before the team moved between the names — is pinned, RED in
-///   `author_marked_names_beside_a_team_move_their_and_red`;
+/// - amsart marked names beside "the XYZ Team": a list, the team its last author (DG 2026-11-27; 97a's collaboration),
+///   each separator where the line prints it (TEAMAUTH: B. in der Baker's before=", ", the team's " and ";
+///   `author_marked_names_beside_a_team_move_their_and_red` GREEN);
 /// - kernel `\and` names with symbol marks (`$^{*}$`, `$^{\dagger}$`, `\textsuperscript{*}`; html_feedback#6637
 ///   construct 2, OD #52; was `06_cluster_frontmatter::frontmatter_symbol_superscript_mark`): four creators, each mark
 ///   visible, a mark-only note after the name since PURE, none an affiliation. Fiona Foxtrot's text asterisk written as the math `∗` (pdflatex: CMR8
@@ -289,8 +288,9 @@ fn hollow_guards_restored_read_as_printed() {
       counts:   (0, 0),
       lines:    &[],
       creators: Creators::Whole(&[
-        r#"<creator role="author"><personname>A. Able</personname><contact role="collaboration">the XYZ Team</contact><contact name="Address: " role="address"><sup><text font="italic">1</text></sup> Institute of One</contact></creator>"#,
-        r#"<creator before=" and " role="author"><personname>B. in der Baker</personname><contact role="collaboration">the XYZ Team</contact><contact name="Address: " role="address"><sup><text font="italic">2</text></sup> University of Two</contact></creator>"#,
+        r#"<creator role="author"><personname>A. Able</personname><contact name="Address: " role="address"><sup><text font="italic">1</text></sup> Institute of One</contact></creator>"#,
+        r#"<creator before=", " role="author"><personname>B. in der Baker</personname><contact name="Address: " role="address"><sup><text font="italic">2</text></sup> University of Two</contact></creator>"#,
+        r#"<creator before=" and " role="author"><personname>the XYZ Team</personname></creator>"#,
       ]),
     },
     Row {
@@ -795,14 +795,27 @@ fn marked_blocks_restored_read_as_printed() {
         r#"<creator before="  " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">b</text></sup>Univ B, City</contact></creator>"#,
       ]),
     },
+    // (the team the names line enumerates an author, DG 2026-11-27 ruling 1: rc6's `collaboration` contact on each name)
     Row {
       repro:    repro!("sectioning-frontmatter/author_names_line_team_piece_is_a_collaboration"),
       files:    &[],
       counts:   (0, 0),
       lines:    &[],
       creators: Creators::Whole(&[
-        r#"<creator role="author"><personname>Ann Able</personname><contact role="collaboration">the GAPS Team</contact><contact name="Affiliation: " role="affiliation"><sup>1</sup>Univ A</contact></creator>"#,
-        r#"<creator before="  " role="author"><personname>Bob Baker</personname><contact role="collaboration">the GAPS Team</contact><contact name="Affiliation: " role="affiliation"><sup>2</sup>Univ B</contact></creator>"#,
+        r#"<creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation"><sup>1</sup>Univ A</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation"><sup>2</sup>Univ B</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>the GAPS Team</personname></creator>"#,
+      ]),
+    },
+    Row {
+      repro:    repro!("sectioning-frontmatter/author_names_line_marked_group_is_an_author"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Whole(&[
+        r#"<creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation"><sup>1</sup>Univ A</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation"><sup>2</sup>Univ B</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>LHD experimental group</personname><contact name="Affiliation: " role="affiliation"><sup>1</sup>Univ A</contact></creator>"#,
       ]),
     },
     // The names whole, no "[ETHZ]" text; the addresses on a nameless creator and the printed "and" lost are pinned,

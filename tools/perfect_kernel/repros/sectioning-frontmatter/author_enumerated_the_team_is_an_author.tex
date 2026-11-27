@@ -1,0 +1,16 @@
+% mechanism: a team the author line enumerates after "and the" is an author, as pdflatex prints it — the article does
+%            not frame it; a name's "for/on behalf of/representing" remark, brackets or a line of its own do (DG
+%            2026-11-27; `reads_as_listed_collaboration`, OXIDIZED_DESIGN_DIVERGENCES #459)
+% witness: 1708.04166 (`… and the GAPS Team`), 1609.09534 (`and the MAST Team`)
+% oracle:  pdflatex: 0 errors; one line "A. Author, B. Author and the GAPS Team" (article.cls:246-247); Perl: three
+%          creators (Base_Utility `@authorsplits`)
+% engines: rust 0.8.0-rc6: two creators, "the GAPS Team" a `contact role="collaboration"` on each
+% expect:  0 errors, 0 warnings; three creators role="author", personnames A. Author, B. Author, the GAPS Team, no contact
+% status:  RED (rc6) -> GREEN (TEAMAUTH); guard `perfect_kernel_batchteamauth::an_enumerated_team_is_an_author`
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{A. Author, B. Author and the GAPS Team}
+\begin{document}
+\maketitle
+\end{document}

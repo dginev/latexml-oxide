@@ -1,0 +1,16 @@
+% mechanism: a listed team is an author (FIDELITY_CHARTER §4 rule 1) beside a person's framed remark on the names line;
+%            the all-or-none guard keeps rc6's reading whole (OXIDIZED_DESIGN_DIVERGENCES #459, `promotion_only`)
+% witness: synthetic (advisor TEAMAUTH7 N1; over-conservative, 0 of its 143 real promotions)
+% oracle:  pdflatex 0 `!`: "Ann Able (for the X Collaboration), Bob Baker and R Core Team" on one line
+% engines: rust 0.8.0-rc6 and TEAMAUTH: rc6's reading, 0 errors, 2 warnings
+% expect:  three creators "Ann Able" (its remark kept), "Bob Baker", "R Core Team"
+% status:  RED
+% moves:   post-merge
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able (for the X Collaboration), Bob Baker and R Core Team}
+\maketitle
+Text.
+\end{document}

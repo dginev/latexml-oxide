@@ -218,31 +218,33 @@ struct DocumentEmail {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Input {
   Block {
-    index:   usize,
-    binding: String,
-    hook:    String,
+    index:         usize,
+    binding:       String,
+    hook:          String,
     /// the keyvals the call hands each author (`annotations={a,b}`: requests)
-    keyvals: Option<String>,
+    keyvals:       Option<String>,
     /// the policy's state counter at the call (`ledger::AuthorBlock::counter`)
-    counter: Option<i64>,
+    counter:       Option<i64>,
     /// whether the call replaces the authors queued before it (`\lx@clear@frontmatter{ltx:creator}`: the kernel
     /// `\author` given twice), and the flushes before it (the queue it is in)
-    replace: bool,
+    replace:       bool,
     /// whether a later creator clear in its queue removed its authors (`ledger::AuthorBlock::cleared`: llncs's
     /// `\author` given twice)
-    cleared: bool,
-    epoch:   usize,
-    events:  Vec<Event>,
+    cleared:       bool,
+    epoch:         usize,
+    events:        Vec<Event>,
     /// per creator call of its own expansion (`Event::creator_call`), the labels its `annotations=` give the creator its
     /// Name makes, as Perl's `\lx@add@creator[annotations={ed}]` gives them (`field_notes::FieldCreator`). Not in a dump
-    calls:   Vec<Vec<String>>,
+    calls:         Vec<Vec<String>>,
     /// where an IJCAI sectioned block's rehearsal held its Errors (`ledger::AuthorBlock::sectioned`, `events::HeldError`):
     /// a section marker a class defines only inside its `\author` (ijcai19.sty:127, a raw `\@maketitle`), the one before
     /// the addresses its `\emails` (`Resolver::block`, where the reading ends); none for any other block. Not in a dump
-    markers: Vec<u16>,
+    markers:       Vec<u16>,
     /// the `author:N` positions its queued entry holds, one a name the queue's reading parts it into
     /// (`ledger::AuthorBlock::names`; 0 unread, one)
-    names:   usize,
+    names:         usize,
+    /// a class's collaboration command's block (`ledger::AuthorBlock::collaboration`): its names line enumerates no team
+    collaboration: bool,
   },
   Api {
     index:  usize,
@@ -265,6 +267,9 @@ pub enum Input {
 mod api;
 pub(in crate::base_utilities::frontmatter::observer) use api::is_creator_call;
 mod blocks;
+mod enumeration;
+pub(in crate::base_utilities::frontmatter::observer) use enumeration::Readings;
+pub(super) use enumeration::reading_log;
 mod labels;
 mod lines;
 mod mark_ledger;
@@ -632,6 +637,14 @@ struct Resolver {
   outside_labels:     Vec<String>,
   /// while a names line its marks lead is read (`names_led_by_marks`): each mark after a separator the next name's
   marks_lead:         bool,
+  /// the names line being read has a line under it in its column that reads as no names (a place, `Theory Group \\
+  /// CERN`): `names_line`'s enumeration of a group
+  place_under:        bool,
+  /// whether the names lines enumerate their teams as authors (OXIDIZED_DESIGN_DIVERGENCES #459): off, the reading is
+  /// rc6's, which [`resolve_readings`] checks the reading with it on against
+  enumerating:        bool,
+  /// whether a decision of the reading departed from rc6's by the enumeration
+  enumeration_fired:  bool,
   /// the block being read's marks and notes beside spacing, each with the name it goes to ([`mark_ledger`])
   mark_ledger:        MarkLedger,
   /// the pending entries (their place in `pending`) a `_share=authors` call made (llncs's one `\institute`, no `\and`
@@ -754,6 +767,9 @@ impl Resolver {
       block_thanks:       Vec::new(),
       outside_labels:     Vec::new(),
       marks_lead:         false,
+      place_under:        false,
+      enumerating:        true,
+      enumeration_fired:  false,
       mark_ledger:        MarkLedger::default(),
       shared:             Vec::new(),
       row_units:          Vec::new(),
@@ -908,6 +924,22 @@ impl Resolver {
       .cloned()
       .unwrap_or_default()
   }
+
+  /// The one live creator no list enumerated as a group, and the groups its line listed beside it: a sole author's
+  /// reading of `Ann Able and the GAPS Team` (OXIDIZED_DESIGN_DIVERGENCES #459, [`LISTED_GROUP`]).
+  fn sole_named(&self) -> Option<(usize, Vec<usize>)> {
+    let (named, groups): (Vec<usize>, Vec<usize>) = self
+      .live()
+      .into_iter()
+      .partition(|&c| !self.listed_group(c));
+    match named[..] {
+      [sole] => Some((sole, groups)),
+      _ => None,
+    }
+  }
+
+  /// Whether creator `c` is a group a names line's enumeration made an author ([`LISTED_GROUP`]).
+  fn listed_group(&self, c: usize) -> bool { self.out.creators[c].rule.contains(LISTED_GROUP) }
 
   fn live(&self) -> Vec<usize> {
     (0..self.out.creators.len())
@@ -1165,6 +1197,11 @@ const ENTRY_MAILBOX: &str = " api:entry-mailbox";
 /// which the emitter writes as `frontmatter_api::STOPGAP_ENTRY` for the flush's Link step of an address its Kind step
 /// takes out (`\affil{Univ C; zz@x.org}`, `insert::link_entry_addresses`).
 pub(in crate::base_utilities) const RUN_LEFTOVER: &str = " api:run-leftover";
+/// The rule tag of a creator a names line's enumeration made of a group (`… and R Core Team`, OXIDIZED_DESIGN_DIVERGENCES
+/// #459): what a class gives its sole or last author stays that author's, as before (`sole_named`).
+pub(super) const LISTED_GROUP: &str = " line:listed-group";
+/// The rule tag beside [`LISTED_GROUP`] of a team a column of its own holds (`\and R Core Team`): the column rule's.
+pub(super) const COLUMN_GROUP: &str = " line:column-group";
 
 /// The one of `names` an address spells (`spelled_owners`), if one — none for a list of local parts the address reader
 /// could not part (`lists_local_parts`); each name read as an address spells it, by its base letters ([`base_letters`])
@@ -1256,13 +1293,30 @@ pub(in crate::base_utilities) fn transliterated(text: &str) -> String {
 /// (`policy::policy_for`).
 pub fn resolve(inputs: &[Input]) -> Resolved { resolve_with(inputs, &policy_for) }
 
+/// [`resolve`]'s readings: the enumeration's, and rc6's where the emitter's word check may choose it ([`Readings`]).
+pub(in crate::base_utilities::frontmatter::observer) fn resolve_readings(
+  inputs: &[Input],
+) -> Readings {
+  enumeration::checked(inputs, |enumerating| read(inputs, &policy_for, enumerating))
+}
+
 /// Resolve inputs, each block under the conventions `conventions` gives for its binding and hook (the deleted `ab_audit fmshadow
 /// --re-resolve`, offline: the declarations it holds, as `policy::conventions_among` reads them).
 pub fn resolve_with(
   inputs: &[Input],
   conventions: &dyn Fn(&str, &str) -> &'static Policy,
 ) -> Resolved {
+  enumeration::checked(inputs, |enumerating| read(inputs, conventions, enumerating)).keep(false)
+}
+
+/// [`resolve_readings`]' reading, its names lines `enumerating` their teams or not, and whether that departed from rc6's.
+fn read(
+  inputs: &[Input],
+  conventions: &dyn Fn(&str, &str) -> &'static Policy,
+  enumerating: bool,
+) -> (Resolved, bool) {
   let mut resolver = Resolver::new();
+  resolver.enumerating = enumerating;
   resolver.outside_labels = affiliation_set_labels(inputs, conventions);
   let mut policy: &'static Policy = &policy::KERNEL;
   // (the blocks a later clear removed, a nameless one too: none of their items is kept)
@@ -1290,8 +1344,10 @@ pub fn resolve_with(
         calls,
         markers,
         names,
+        collaboration,
       } => {
         policy = conventions(binding, hook);
+        resolver.enumerating = enumerating && !collaboration;
         resolver.read_note_legends(events, None);
         resolver.call_labels.clone_from(calls);
         resolver.line_column = None;
@@ -1469,7 +1525,7 @@ pub fn resolve_with(
     in_source_order(&mut creator.contacts);
   }
   in_source_order(&mut out.block);
-  out
+  (out, resolver.enumeration_fired)
 }
 
 /// Whether a contact call is every author's share unless marks pick it (`_share=authors`: llncs's sole `\institute`, aa's,
@@ -1511,20 +1567,20 @@ pub(in crate::base_utilities) fn ledger_inputs(ledger: &ledger::Ledger) -> Vec<I
       ledger::Entry::Author(block) => {
         if let ledger::Outcome::Events { events, creators, held, .. } = &block.outcome {
           inputs.push(Input::Block {
-            index:   block.index,
-            binding: block.binding.clone(),
-            hook:    block.hook.to_string(),
-            keyvals: block.keyvals.clone(),
-            counter: block.counter,
-            replace: block.replace,
-            cleared: block.cleared,
-            epoch:   block.epoch,
-            events:  events.clone(),
-            calls:   creators
+            index:         block.index,
+            binding:       block.binding.clone(),
+            hook:          block.hook.to_string(),
+            keyvals:       block.keyvals.clone(),
+            counter:       block.counter,
+            replace:       block.replace,
+            cleared:       block.cleared,
+            epoch:         block.epoch,
+            events:        events.clone(),
+            calls:         creators
               .iter()
               .map(field_notes::FieldCreator::labels)
               .collect(),
-            markers: if block.sectioned {
+            markers:       if block.sectioned {
               held
                 .iter()
                 .filter_map(|error| error.span.map(|(from, _)| from))
@@ -1532,7 +1588,8 @@ pub(in crate::base_utilities) fn ledger_inputs(ledger: &ledger::Ledger) -> Vec<I
             } else {
               Vec::new()
             },
-            names:   block.names,
+            names:         block.names,
+            collaboration: block.collaboration,
           });
         }
       },

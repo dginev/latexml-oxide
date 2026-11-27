@@ -1,0 +1,16 @@
+% mechanism: a "group" joined to an institution by "and" is an affiliation (DG 2026-11-27 ruling 2, FIDELITY_CHARTER)
+% witness: Gemini TEAMAUTH.7 a4a (synthetic); TEAMAUTH re-review S3
+% oracle:  pdflatex 0 `!`: "Ann Able, Bob Baker, Department of Physics and Quantum Optics Group"
+% engines: rust 0.8.0-rc6 and TEAMAUTH: `collaboration` "Quantum Optics Group" on both names, `affiliation` "Department of
+%          Physics" on Bob Baker; 0 errors, 0 warnings
+% expect:  "Bob Baker" with the affiliation "Department of Physics and Quantum Optics Group", no collaboration contact
+% status:  RED
+% moves:   post-merge (rc6's reading kept, guard row "joined to an institution (Gemini a4a)")
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able, Bob Baker, Department of Physics and Quantum Optics Group}
+\maketitle
+Text.
+\end{document}

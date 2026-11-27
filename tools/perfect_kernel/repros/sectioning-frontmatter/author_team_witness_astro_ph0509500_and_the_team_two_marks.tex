@@ -1,0 +1,14 @@
+% mechanism: a team, group or collaboration an author list enumerates is an author; one a remark frames is a contact (DG 2026-11-27, OXIDIZED_DESIGN_DIVERGENCES #459)
+% witness: astro-ph0509500 (article with mrs2005.sty's `\affil`, written as lines: `…, Olivier Le Fèvre$^1$, and the VVDS team$^{1, 2}$}`)
+% oracle:  pdflatex 0 `!`
+% engines: rust 0.8.0-rc6: three creators, the team a `collaboration` contact on each
+% expect:  0 errors, 0 warnings; four creators, "the VVDS team" with Univ A and Univ B (marks 1, 2)
+% status:  RED (rc6) -> GREEN — TEAMAUTH fix round 1 (`perfect_kernel_batchteamauth`)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^2$, Cy Cole$^1$, and the VVDS team$^{1, 2}$ \\ $^1$ Univ A \\ $^2$ Univ B}
+\maketitle
+Text.
+\end{document}

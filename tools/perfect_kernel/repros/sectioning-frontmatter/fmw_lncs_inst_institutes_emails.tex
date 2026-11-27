@@ -1,0 +1,16 @@
+% shape:   llncs `\inst` names, `\and`-separated institutes each with an `\email`
+% witness: 1506.03562, 1704.07669
+% oracle:  pdflatex 0 errors; numbered institutes
+% engines: rust rc6: by `\inst`
+% expect:  0 errors, 0 warnings; by `\inst`
+% status:  GREEN (rc6 fe76f5268af); guard perfect_kernel_batchfmwitness::author_segmentation_witnesses
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker\inst{2}}
+\institute{Department of Mathematics, Univ A, City A\\ \email{ann@a.edu}
+\and Department of Engineering, Univ B, City B\\ \email{bob@b.edu}}
+\maketitle
+Text.
+\end{document}

@@ -1132,6 +1132,7 @@ mod whole_tests {
       sectioned: false,
       late: false,
       cautious: false,
+      collaboration: false,
       keyvals: None,
       keyval_tokens: None,
       epoch: 0,

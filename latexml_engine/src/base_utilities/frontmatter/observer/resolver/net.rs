@@ -310,12 +310,7 @@ pub(in crate::base_utilities::frontmatter::observer) fn merged_names(
     // (a label printed before a colon inside a name: a role's heading read into it, `Editor: Andrei V. Gritsan`, 2205.07715;
     // `{\bf Authors:} F.~Arleo`, hep-ph0311131)
     for c in &creators {
-      // (a colon a space follows: not a link's, `http://www.ligo.org`, gr-qc0505029)
-      if let Some((head, tail)) = c.name.split_once(':')
-        && printed_words(head).next().is_some()
-        && tail.starts_with(char::is_whitespace)
-        && printed_words(tail).next().is_some()
-      {
+      if let Some((head, tail)) = label_before_colon(&c.name) {
         failed.push(s!("{head}: | {}", tail.trim()));
       }
     }
@@ -324,4 +319,14 @@ pub(in crate::base_utilities::frontmatter::observer) fn merged_names(
     }
   }
   out
+}
+
+/// A name's label printed before a colon and a space, and the rest ([`merged_names`]; a team the enumeration would make
+/// of one is no author, `enumeration::promotion_only`). Not a link's colon, `http://www.ligo.org`, gr-qc0505029.
+pub(super) fn label_before_colon(name: &str) -> Option<(&str, &str)> {
+  name.split_once(':').filter(|(head, tail)| {
+    printed_words(head).next().is_some()
+      && tail.starts_with(char::is_whitespace)
+      && printed_words(tail).next().is_some()
+  })
 }

@@ -196,6 +196,45 @@ missing image, a broken `\ref` or `\cite`, and the like — the fixes are usuall
   shell; a note whose remainder still informs stays with its printed label (`\offprints{O. Kochukhov, \email{…}}` reads
   "Send offprint requests to: O. Kochukhov," — the address is in the author list).
 - **A collaboration or team named in the author line is a contact on its authors** (2026-11-01): `\author{A$^1$, B$^2$ and the GAPS Team}`, a `(XYZ Collaboration)` line under the names, BESIII's `\author{\center BESIII Collaboration\\ … (BESIII Collaboration)}` — the names split into their creators and the collaboration is a `<contact role="collaboration">` on every name of the line it covers (Perl's aastex convention, aas_support.sty.ltxml:126 `\collaboration` → `\lx@add@contact[role=collaboration]`), not a creator of its own and not welded into the last name (dev census M4: 1708.04166, 1711.07097, 1311.7305, 1905.11825, hep-ph0502212; 2212.06489).
+  **Amended DG 2026-11-27 ("the bug is that 'R Core Team' is an author, and should be marked as an author"):** in an
+  `\author` enumeration (pieces parted by `,`, `and`, `and the`, `&`, an inline `\and`, or `\and` columns):
+  1. a team or collaboration (`… Team`, `… Collaboration(s)`, `… Consortium`) in any enumerated position is an author
+     (`role="author"`, its text the personname), each its own creator with its own mark and address:
+     `Friedrich Leisch, Vincent Goulet and R Core Team` and its `\and` form give three, `A, B, the TCV team$^3$ and the WPTE team$^4$` five (2502.17397); after a bare comma only as rc6's
+     collaboration after two names (`…, the TCV Team`) or marked — an unframed team after a comma keeps rc6's reading
+     (DG 2026-11-27, revisit in 0.8.1): `A, B, Google Brain Team` (1408.5896, astro-ph0608009; RED
+     `author_team_comma_only_list_of_three_red`), `A, B, R Core Team, and the GAPS Team`, `Chris Howard, SNO Collaboration, \texttt{…}` (0906.0040), `Bob Baker,
+     Google Brain Team, Palo Alto`, `Ann Able, R Core Team and Bob Baker`; what a class gives its
+     sole or last author, and a contact line under the names, stays its holder's before the split (`\author{J.T.
+     Mitchell and the PHENIX Collaboration}\address{BNL}`: Mitchell's; svjour3's `\institute` every listed group's too);
+     an unmarked address a class shares among its line's names (llncs's or aa's institute, an `\affil` or a line under
+     the names) is the listed team's too, where jpconf, iopart, amsart, ws-* and jheppub give it to the person alone;
+  2. a "group" is an author only after `and`, `and the` or `&` with no address under it, or with its own mark (`and LHD
+     experimental group$^2$`, 1711.07097, its marked address under the names its own); otherwise it keeps rc6's reading —
+     an affiliation after a list's comma, in an `\and` column, before a place; a `collaboration` contact joined to an
+     institution (`…, Department of Physics and Quantum Optics Group`) or over a place on the next line (`A and B and
+     Theory Group \\ CERN`), whose affiliation reading is RED (`author_group_joined_to_institution_is_an_affiliation_red`,
+     `author_group_and_place_under_is_an_affiliation_red`);
+  3. a shared head noun lists one author per group, each named by its own printed text (`The ATLAS`, `CMS
+     Collaborations`; 1503.07589, 2408.02330) — never invented text; a list of whole group names with no person in its
+     block keeps its reading (`R Core Team and the GAPS Team`, RED `author_group_only_list_keeps_one_creator_red`), as
+     REVTeX's `\collaboration{Fermilab Lattice, HPQCD, and MILC Collaborations}` does (2412.18491, RED
+     `revtex_collaboration_list_is_one_contact_red`);
+  4. institutions and places keep their reading, an affiliation: `\and The R Foundation`, `\and University of X`, a group
+     before a place (`and Theory Group, CERN`, rc6's reading: RED `author_group_before_place_every_name_red`), and nothing after an institution the line read is enumerated; a team or
+     collaboration before a place keeps rc6's contact (`A, B and XYZ Collaboration, CERN`), and a run of groups that ends
+     in a place is a chain of the name's affiliations, as rc6 reads it (`Ann Able, XYZ Team, ABC Collaboration, CERN`;
+     `A, B, the XYZ Collaboration and the ABC Collaboration, CERN`);
+  5. a collaboration the line frames stays a contact: a name's `for`/`on behalf of`/`representing` remark (1311.7305,
+     hep-ex0611001, 2009.04166), a bracketed line `(XYZ Collaboration)`, a dash (hep-ex0106079), a collaboration line of
+     its own (BESIII's), AASTeX's `\collaboration`; a bracket the piece closes is no remark (`Ann Able (MIT), Bob Baker
+     and R Core Team`: three authors);
+  6. a lone collaboration is the creator (`\author{The IceCube Collaboration}`);
+  7. the reading with these authors is kept only where it is rc6's plus them: every person keeps all rc6 gave it but
+     the team's piece (a team's own mark or note — printed on the piece — moves with it, never an e-mail or a later
+     piece's or line's note or contact), no nameless creator rc6 did not have (one rc6 had may heal onto the team),
+     each new author a piece rc6 read as the names' collaboration or a column's own affiliation, and no more ink lost
+     or placed twice than in rc6's reading; anything else is rc6's reading whole. A `;` parts no enumeration.
 - **An address no author's name spells, in a boxed author block, is a block-level contact** (2026-11-01): a shared `contact@lab.org` line in a `tabular`/`minipage` block goes to no person; it is kept once at the block level (dev census M1, 2605.09461).
   **Amended 2026-11-05 (user: "block addresses may live on the #159 block creator"):** the block level is the shared
   nameless creator below the authors (OD #159, `label=addresses:block`) — the one nameless creator allowed, holding

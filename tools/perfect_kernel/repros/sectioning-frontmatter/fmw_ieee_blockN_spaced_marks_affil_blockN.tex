@@ -1,0 +1,15 @@
+% shape:   a marked names blockN and a second blockN of marked affiliations, `\quad`-separated
+% witness: 2602.20323
+% oracle:  pdflatex 0 errors; "Ann Able♠ Bob Baker♣ / ♣Univ A ♠Univ B"
+% engines: rust rc6: by marks
+% expect:  0 errors, 0 warnings; by marks
+% status:  GREEN (rc6 fe76f5268af); guard perfect_kernel_batchfmwitness::author_segmentation_witnesses
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able\textsuperscript{$\spadesuit$} \quad Bob Baker\textsuperscript{$\clubsuit$}}
+\IEEEauthorblockN{\textsuperscript{$\clubsuit$}Univ A \quad \textsuperscript{$\spadesuit$}Univ B}}
+\maketitle
+Text.
+\end{document}

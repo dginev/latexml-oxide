@@ -352,6 +352,9 @@ impl Lexer {
         self.flush_run();
         self.clear_gap();
         let mut comma = Event::new(EventKind::Sep(SepKind::Comma));
+        if c == ';' {
+          comma.text = c.to_string();
+        }
         comma.span = span;
         comma.nest = nest;
         comma.braces = self.braces;

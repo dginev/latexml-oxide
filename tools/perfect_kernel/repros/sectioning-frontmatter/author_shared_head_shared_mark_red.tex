@@ -1,0 +1,16 @@
+% mechanism: a mark after a shared head's plural is every listed group's (OXIDIZED_DESIGN_DIVERGENCES #459, rule 3)
+% witness: TEAMAUTH re-review NIT m8 (synthetic)
+% oracle:  pdflatex 0 `!`: "Ann Able¹ and the ATLAS and CMS Collaborations²" over "¹Univ A" and "²CERN"
+% engines: rust 0.8.0-rc6: `collaboration` "CMS Collaborations" on Ann Able and "the ATLAS", a nameless creator holding
+%          CERN, 1 warning; TEAMAUTH: "the ATLAS" with nothing, "CMS Collaborations" with CERN; 0 errors, 0 warnings
+% expect:  "the ATLAS" and "CMS Collaborations" each with the affiliation CERN
+% status:  RED
+% moves:   post-merge
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$ and the ATLAS and CMS Collaborations$^2$ \\ $^1$Univ A \\ $^2$CERN}
+\maketitle
+Text.
+\end{document}

@@ -209,7 +209,15 @@ LoadDefinitions!({
   DefMacro!("\\@AF@join{}", sub[(text)] { revtex_footnote_call(s!("role=thanks"), text, false) });
   DefMacro!("\\orcid[]{}",               "\\lx@add@orcid[name={#1}]{#2}"); // ?
 
-  DefMacro!("\\collaboration{}",    "\\author{#1}");
+  // (Perl's `\author{#1}`, its block marked a collaboration's when digested: one group's name, which the reading enumerates
+  // no team in — `\collaboration{XYZ Collaboration and ABC Collaboration}`, 0705.3322, 2010.14527)
+  DefMacro!("\\collaboration{}", "\\lx@collaboration@on\\author{#1}\\lx@collaboration@off");
+  DefPrimitive!("\\lx@collaboration@on", sub[_args] {
+    assign_value("lx_author_collaboration", true, Some(Scope::Global));
+  });
+  DefPrimitive!("\\lx@collaboration@off", sub[_args] {
+    assign_value("lx_author_collaboration", false, Some(Scope::Global));
+  });
   // revtex4-2.cls:2420 `\newcommand*\altaffiliation[2][]{\@AF@join{#1#2}}` (revtex4-1.cls, revtex4.cls alike): the
   // author's own note, joined to the author last given as `\email` and `\thanks` are — not one of the group's
   // affiliations `\affiliation` files (`\move@AU\move@AF`), so it neither reaches the authors before it nor ends the

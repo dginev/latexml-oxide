@@ -1,0 +1,15 @@
+% shape:   each author a `tabular` block, joined by `\and`
+% witness: synthetic (block authors)
+% oracle:  pdflatex 0 errors; two blocks: name / Univ / address
+% engines: rust rc6: each block its author
+% expect:  0 errors, 0 warnings; each block its author, no tabular in a personname
+% status:  GREEN (rc6 fe76f5268af); guard perfect_kernel_batchfmwitness::author_segmentation_witnesses
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{\begin{tabular}{c}Ann Able\\ Univ A\\ \texttt{ann@a.edu}\end{tabular}
+\and \begin{tabular}{c}Bob Baker\\ Univ B\\ \texttt{bob@b.edu}\end{tabular}}
+\maketitle
+Text.
+\end{document}

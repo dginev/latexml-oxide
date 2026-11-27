@@ -134,7 +134,14 @@ LoadDefinitions!({
   DefMacro!("\\thanks[Default:\\lx@contact@thanks@name]{}",              "\\lx@add@contact[role=thanks,name={#1}]{#2}");
   DefMacro!("\\orcid[]{}",               "\\lx@add@orcid[name={#1}]{#2}");
 
-  DefMacro!("\\collaboration{}",    "\\author{#1}");
+  // (its block marked a collaboration's when digested, as revtex's `\collaboration`: one group's name, no list)
+  DefMacro!("\\collaboration{}", "\\lx@collaboration@on\\author{#1}\\lx@collaboration@off");
+  DefPrimitive!("\\lx@collaboration@on", sub[_args] {
+    assign_value("lx_author_collaboration", true, Some(Scope::Global));
+  });
+  DefPrimitive!("\\lx@collaboration@off", sub[_args] {
+    assign_value("lx_author_collaboration", false, Some(Scope::Global));
+  });
   DefMacro!("\\altaffiliation[Default:\\lx@contact@affiliation@name]{}", "\\lx@add@contact[annotate=new,role=affiliation,name={#1}]{#2}");
 
   RawTeX!("\\DeclareRobustCommand\\openone{\\mathbbm{1}}");

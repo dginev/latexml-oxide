@@ -1,0 +1,22 @@
+% shape:   REVTeX `\altaffiliation` and `\thanks` on one author
+% witness: synthetic (REVTeX)
+% oracle:  pdflatex 0 errors; "Ann Able* … * Also at Univ C, City C; Corresponding author"
+% engines: rust rc6: Ann altaffiliation, thanks, affiliation; Bob his
+% expect:  0 errors, 0 warnings; each on its author
+% status:  GREEN (rc6 fe76f5268af); guard perfect_kernel_batchfmwitness::author_segmentation_witnesses
+% preload: ar5iv.sty
+\documentclass{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\altaffiliation{Also at Univ C, City C}
+\thanks{Corresponding author}
+\affiliation{Univ A, City A}
+\author{Bob Baker}
+\affiliation{Univ B, City B}
+\begin{abstract}
+A.
+\end{abstract}
+\maketitle
+Text.
+\end{document}

@@ -178,7 +178,14 @@ LoadDefinitions!({
   // Perl bug in docs/parity/KNOWN_PERL_ERRORS.md #16 (same root cause as
   // aipproc.cls.ltxml's \tablenote). Rust deliberately uses `#2` so the
   // author content reaches \author correctly.
-  DefMacro!("\\collab OptionalMatch:* {}", "\\author{#2}");
+  // (its block marked a collaboration's when digested, as revtex's `\collaboration`: one group's name, no list)
+  DefMacro!("\\collab OptionalMatch:* {}", "\\lx@collaboration@on\\author{#2}\\lx@collaboration@off");
+  DefPrimitive!("\\lx@collaboration@on", sub[_args] {
+    assign_value("lx_author_collaboration", true, Some(Scope::Global));
+  });
+  DefPrimitive!("\\lx@collaboration@off", sub[_args] {
+    assign_value("lx_author_collaboration", false, Some(Scope::Global));
+  });
   Let!("\\collaboration", "\\collab");
 
   // These pairs add various contact information to authors.  (Perl PR #2767)

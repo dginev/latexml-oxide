@@ -1,0 +1,19 @@
+% mechanism: a team in its own `\and` column is an author (FIDELITY_CHARTER §4 rule 1), its line under its own; rule 7
+%            keeps the reading rc6's where the team would take a line the persons hold (OXIDIZED_DESIGN_DIVERGENCES #459)
+% witness: synthetic (TEAMAUTH round 4b ship review S2: b29, d04)
+% oracle:  pdflatex 0 `!`: "Ann Able" over "CERN", "the GAPS Team" over "Fermilab", side by side
+% engines: rust 0.8.0-rc6 and TEAMAUTH: one creator "Ann Able" with affiliations "CERN", "the GAPS Team", "Fermilab";
+%          0 errors, 0 warnings
+% expect:  two creators: "Ann Able" with affiliation "CERN", "the GAPS Team" with affiliation "Fermilab"
+% status:  RED
+% sibling: `\author{Ann Able \and Bob Baker \and R Core Team \\ CERN}` (d04): rc6 and TEAMAUTH give "R Core Team" and
+%          "CERN" to both persons; expect three creators, "R Core Team" holding "CERN" (pdflatex 0 `!`)
+% moves:   post-merge (0.8.1: a team's own column line, not the persons')
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able \\ CERN \and the GAPS Team \\ Fermilab}
+\maketitle
+Text.
+\end{document}

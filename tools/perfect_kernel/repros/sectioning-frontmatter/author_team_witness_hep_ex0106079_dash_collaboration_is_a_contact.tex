@@ -1,0 +1,23 @@
+% mechanism: a team, group or collaboration an author list enumerates is an author; one a remark frames is a contact (DG 2026-11-27, OXIDIZED_DESIGN_DIVERGENCES #459)
+% witness: hep-ex0106079 (moriond.sty over article: `R. ARNALDI - NA50 collaboration \\ \vspace{0.3cm} M.C.~Abreu$^{6,a}$, …`)
+% oracle:  pdflatex 0 `!`
+% engines: rust 0.8.0-rc6: the same
+% expect:  0 errors, 0 warnings; four creators, the first with `collaboration` "NA50 collaboration"
+% status:  GREEN (rc6 and after) — TEAMAUTH fix round 1 (`perfect_kernel_batchteamauth`)
+% preload: ar5iv.sty
+\documentstyle[11pt]{article}
+\begin{document}
+\title{T}
+\author{ A. ABLE - NA50 collaboration
+\\
+\vspace{0.3cm}
+B.~Baker$^{1}$,
+C.~Cole$^{2}$,
+D.~Dorn$^{1}$.
+\\
+$^{1}$ Univ A.\\
+$^{2}$ Univ B.
+}
+\maketitle
+Text.
+\end{document}

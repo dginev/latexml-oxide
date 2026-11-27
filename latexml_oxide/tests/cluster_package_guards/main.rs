@@ -495,6 +495,7 @@ mod perfect_kernel_batchfms2a2r6;
 mod perfect_kernel_batchfms2a2r7;
 mod perfect_kernel_batchfms2a2r8;
 mod perfect_kernel_batchfms2b;
+mod perfect_kernel_batchfmwitness;
 mod perfect_kernel_batchfn1;
 mod perfect_kernel_batchfs1;
 /// FUPB: #944's follow-ups — a declared math alphabet's name is a token; the TeX-level `\DeclareOption{}` keeps `\ds@`.
@@ -809,6 +810,8 @@ mod perfect_kernel_batchst3;
 /// STRMWARN: a streamed conversion warns once per failing formula, as the eager one does (OD #1132).
 mod perfect_kernel_batchstrmwarn;
 mod perfect_kernel_batchta1;
+/// TEAMAUTH: a team the author line enumerates is an author (DG 2026-11-27, OD #459).
+mod perfect_kernel_batchteamauth;
 /// TITLESEC: a titlesec format applies only while titlesec holds the command; a later `\@startsection` definition or
 /// sectsty's load gives it back to LaTeX (OD #1143, KPE #1317).
 mod perfect_kernel_batchtitlesec;

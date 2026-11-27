@@ -1,0 +1,14 @@
+% mechanism: a team, group or collaboration an author list enumerates is an author; one a remark frames is a contact (DG 2026-11-27, OXIDIZED_DESIGN_DIVERGENCES #459)
+% witness: 0712.1016, 1704.03168 (sig-alternate.cls, not in TeX Live: `\sharedaffiliation` closes the names' tabular and opens one column; written out)
+% oracle:  pdflatex 0 `!`
+% engines: rust 0.8.0-rc6: the same (the shared column every name's affiliation)
+% expect:  0 errors, 0 warnings; three creators, each with both lines of the shared column
+% status:  GREEN (rc6 and after; `resolver::blocks` `shared_column`, which TEAMAUTH touches) — TEAMAUTH fix round 1 (`perfect_kernel_batchteamauth`)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able \and Bob Baker \and Cy Cole \end{tabular}\begin{tabular}{c} School of Physics, Univ A \\ Main Road, City}
+\maketitle
+Text.
+\end{document}

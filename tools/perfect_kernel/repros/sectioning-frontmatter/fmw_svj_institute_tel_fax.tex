@@ -1,0 +1,16 @@
+% shape:   svjour3 `\institute` with Tel./Fax lines and an `\email`
+% witness: 1301.5787
+% oracle:  pdflatex (with 1301.5787's own svjour3 file; TL 2025 ships none) 0 errors; institutes at the foot
+% engines: rust rc6: Ann the affiliation (with its Tel./Fax lines) and e-mail; Bob his
+% expect:  0 errors, 0 warnings; each institute its named author, every printed line kept
+% status:  GREEN (rc6 fe76f5268af); guard perfect_kernel_batchfmwitness::author_segmentation_witnesses
+% preload: ar5iv.sty
+\documentclass{svjour3}
+\begin{document}
+\title{T}
+\author{Ann Able \and Bob Baker}
+\institute{A. Able \at Univ A and INFN, City A \\ Tel.: +39-06-1234567\\ Fax: +39-06-7654321\\ \email{ann@a.edu}
+\and B. Baker \at INFN Sezione B, City B}
+\maketitle
+Text.
+\end{document}

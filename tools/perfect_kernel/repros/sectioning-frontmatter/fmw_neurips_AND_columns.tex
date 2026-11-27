@@ -1,0 +1,15 @@
+% shape:   neurips `\AND` (new row) columns
+% witness: 2407.01392 (sibling separator `\AND`)
+% oracle:  pdflatex (with 2407.01392's own neurips file; TL 2025 ships none) 0 errors; two rows
+% engines: rust rc6: each its author
+% expect:  0 errors, 0 warnings; each its author
+% status:  GREEN (rc6 fe76f5268af); guard perfect_kernel_batchfmwitness::author_segmentation_witnesses
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[final]{neurips_2024}
+\begin{document}
+\title{T}
+\author{Ann Able \\ Lab A\\ \texttt{ann@a.edu} \AND Bob Baker \\ Univ B\\ \texttt{bob@b.edu}}
+\maketitle
+Text.
+\end{document}

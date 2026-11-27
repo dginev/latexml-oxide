@@ -9579,15 +9579,61 @@ author's contact, never part of the name and never a creator.
   declarations around an alignment environment go with it (formerly #947); a one-column tabular's rows, side-by-side
   commands and a control return are lines (formerly #964).
 - *Tails*: a grade or collaboration after a name is the author's contact (`lines.rs:1163 is_collaboration`, `:2053
-  collaboration`; formerly #946, #967); an `\IEEEmembership` grade is the name's it follows (formerly #1016, #950);
+  collaboration`; formerly #946, #967) where the line frames it — a name's `for`/`on behalf of`/`representing` remark,
+  brackets, dashes, a line of its own, a remark left open earlier on the line; in an author enumeration a team or
+  collaboration is an author wherever it stands (after `and`, `and the`, `&`, an inline `\and`, an `\and` column alone,
+  or a comma after two names where rc6 read the names' collaboration, `…, the TCV Team`), a "group"
+  only after `and`/`&` with no address under it or with its own mark, each group a shared head noun lists by its own text
+  (beside names the block printed), never after an institution the line read nor before a place, past a run of groups (a team there keeps its
+  contact; the run is a chain of affiliations, `Ann Able, XYZ Team, ABC Collaboration, CERN`), as article.cls:246-247 prints them and Perl's `@authorsplits` (Base_Utility.pool.ltxml:679) splits them
+  (`lines.rs` `enumerated`, `blocks.rs shared_column`; DG 2026-11-27, charter §4 rules 1-6); such a group is no second
+  author to the owner rules: a sole author's block institute is every listed group's too, and what a class gives the
+  last author, or a contact line under the names, goes to its owner before the split (`post.rs
+  sole_author_takes_the_block`, `api.rs` `annotate:last`, `blocks.rs place_line_contacts`, `resolver::LISTED_GROUP`;
+  svjour3's `\institute`, amsart's and jpconf's `\address` (nucl-ex0510076, astro-ph0311630), PoS's e-mail line
+  (1411.6086); a marked group the reading made a creator before stays the holder, 2404.07458); a names line's
+  institution is the last name's the line did not list as a group (`lines.rs`, as `api.rs` `annotate:last`). The reading
+  with the enumeration is kept only where it is rc6's reading (the enumeration off, `Resolver::enumerating`) plus the
+  teams, else rc6's whole (`resolver::enumeration::promotion_only`: persons keep all but the team's piece, a team's own
+  mark or note — printed on its piece, only marks and notes between — moving with it and never an e-mail, nor a later
+  piece's contact; no new nameless creator, one rc6 had healed onto a team; each new creator a collaboration-arm contact
+  or a lone column's affiliation in rc6's reading, holding a copy of a person's line only where no other name or item
+  prints its words, and never of a call that holds another item, whose copy the writer writes per holder with
+  its inner items apart: revtex's `\affiliation{CERN\thanks{E-mail: …}}`); the two readings run only where a decision of the first departs from rc6's, and the emitter keeps
+  the first only where none of its checks is worse than rc6's, each check by its own counts, never a sum
+  (`emit::Checks::worse`, `Readings::keep`): per block, names failing that did not, more ink lost, more words in
+  excess or more pictures unwritten, or any ink lost where the block's creators differ (lost ink is kept by its
+  block's creators); per call, more words lost or in excess; per block, more marks no contact answers,
+  more names a separator parts, or more names written from their text, unspelled or overlapping, each counted apart
+  (Gemini TEAMAUTH.17, advisor TEAMAUTH6 C); the
+  chosen reading's checks are the ones the emitter uses. A run promotes all its teams or none: a names line's
+  collaboration a person keeps in a block where a team was promoted keeps rc6's reading (`-- the X Collaboration and
+  the Y Collaboration`, its `;` form), as does an affiliation of the block that goes on the run past a break, a listed
+  collaboration or one after "and"/`&` in its text or its separator (`… the X Team and \\ the Y Team`, `\\ and the Y
+  Team`; not a wrapped department or person: `enumeration::listed_on`); revtex's `\collaboration` block (`\author{#1}` as Perl's, marked
+  `AuthorBlock::collaboration`, set and cleared by the stomach around its `\author`; elsart's `\collab` and
+  quantumarticle's `\collaboration` alike) enumerates nothing (0705.3322, 2010.14527). Only the kept reading's log calls are
+  emitted (`reading_log`). A `;` is no enumeration's comma (the lexer's `Sep(Comma)` keeps
+  it as its text);
+  an `\IEEEmembership` grade is the name's it follows (formerly #1016, #950);
   IEEEtran's blocks under authblk's `\author` are read as the class reads them (formerly #987).
 
 **Witnesses** 0910.4381, 1908.10448, 2410.11607, 2403.06760, 2212.06489, 2508.03934 (gretsi's `first \textsc{last}`),
 1201.5726, 1301.6619 (collaboration). **Guards**
 `perfect_kernel_batch106c::a_collaboration_line_in_a_raw_name_block_is_the_names_contact`,
 `perfect_kernel_batch104c::a_control_return_parts_marked_entries`,
-`perfect_kernel_batchfms2a2::a_corresponding_author_list_names_each_author`. RED:
-`article_mark_led_second_row_of_one_name_read_as_affiliation_red`, `aa_institute_and_inside_a_macro_group_red`.
+`perfect_kernel_batchfms2a2::a_corresponding_author_list_names_each_author`,
+`perfect_kernel_batchteamauth::{an_enumerated_team_is_an_author, a_group_is_an_author_after_and_or_its_mark,
+each_group_a_shared_head_lists_is_an_author, a_framed_collaboration_and_an_institution_keep_their_reading,
+a_group_run_before_a_place_or_a_remark_keeps_rc6, a_listed_group_owns_no_address_of_the_person,
+a_promotion_no_check_finds_worse_than_rc6}`. RED:
+`article_mark_led_second_row_of_one_name_read_as_affiliation_red`, `aa_institute_and_inside_a_macro_group_red`,
+`revtex_collaboration_list_is_one_contact_red`, `author_group_only_list_keeps_one_creator_red`,
+`author_team_witness_*_red` (1311.7305, hep-ex0611001, 2009.04166, 1205.6912), `author_team_comma_only_list_of_three_red`,
+`author_team_comma_place_is_a_creator_red`, `author_group_joined_to_institution_is_an_affiliation_red`,
+`author_group_and_place_under_is_an_affiliation_red`, `author_group_before_place_every_name_red`,
+`author_shared_head_shared_mark_red`, `author_singular_team_with_inner_and_red`, `author_marked_team_piece_is_a_name_red`,
+`author_paired_name_team_lists_red`, `author_team_thanks_email_is_the_persons_red`.
 **Upstream.** Not offered (reads digested events). Records: [the archive](../archive/OD_FRONTMATTER_RECORDS_2026-11-15.md), under each number.
 
 ### 460. Class bindings map their title-page commands onto the frontmatter API as the class prints them (the CLSFM table) — absorbs #472 #485 #496 #963
@@ -16907,7 +16953,7 @@ now no `name`).
 
 ### 945. → #954 (An affiliation the reading already has reaches its author: a block entry is cut by its whole span, llncs's one institute cut at its marks stays every author's, svproc's `\institute` is sv_support's (Perl: no observer, the names line split at its "and"; llncs's whole institute on the first author; svproc's per author through OmniBus's inst_support))
 
-### 946. → #459 (A collaboration or team named in the author line is a `contact role="collaboration"` on the names it covers, no creator and no part of a name (Perl: a piece of the names, welded into the last name, or a creator; aastex's `\collaboration` alone a contact))
+### 946. → #459 (A collaboration or team named in the author line is a `contact role="collaboration"` on the names it covers, no creator and no part of a name (Perl: a piece of the names, welded into the last name, or a creator; aastex's `\collaboration` alone a contact); amended DG 2026-11-27: one the line enumerates is an author)
 ### 947. → #459 (The declarations around an author block's alignment environment go with it, and spacing after its close is no part of the block; AASTeX's `\affiliation` is REVTeX's (Perl: one creator per `\author`, the block kept whole; aastex's affiliation the last author's))
 
 ### 948. → #980 (Every remaining observer-writer family is written in one batch (ijcai, inst_support, iopart, jheppub, jinstpub, jcappub, jpconf, sv_support and every binding owning `\author` with no declaration); a block line's letters are read as printed, a re-parted entry keeps today's role, a letter-spaced name's word space is no gap, an e-mail's corresponding owner is one of the authors it is printed for, a name read as an entry is never written onto an author; an elsarticle key is answered by its keys alone, and a name the re-part makes that names no person declines (Perl: the old reader's output, no observer))

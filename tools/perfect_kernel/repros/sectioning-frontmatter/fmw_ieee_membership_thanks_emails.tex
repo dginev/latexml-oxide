@@ -1,0 +1,16 @@
+% shape:   IEEEtran journal `\IEEEmembership`, a shared `\thanks` 'A and B are with … (e-mail: a; b)'
+% witness: 1311.0244, 1802.02312
+% oracle:  pdflatex 0 errors; "Ann Able, Member, IEEE, and Bob Baker, Fellow, IEEE"
+% engines: rust rc6: memberships; the note read into each one's affiliation and spelled e-mail
+% expect:  0 errors, 0 warnings; as rc6 (the class's 'is with' reading)
+% status:  GREEN (rc6 fe76f5268af); guard perfect_kernel_batchfmwitness::author_segmentation_witnesses
+% preload: ar5iv.sty
+\documentclass[journal]{IEEEtran}
+\begin{document}
+\title{T}
+\author{Ann~Able,~\IEEEmembership{Member,~IEEE,}
+and~Bob~Baker,~\IEEEmembership{Fellow,~IEEE}
+\thanks{A. Able and B. Baker are with the Department of Engineering, Univ A, City A (e-mail: ann@a.edu; bob@a.edu).}}
+\maketitle
+Text.
+\end{document}

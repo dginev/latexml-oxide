@@ -1,0 +1,17 @@
+% shape:   a shared group holding `and` in the last `\and` column, its institution under it
+% witness: 1407.0386 (sig-alternate `\sharedaffiliation` `Databases and Information Systems Group`; ADV_TEAMAUTH2: a
+%          creator "Databases")
+% oracle:  pdflatex 0 errors; "Ann Able  Bob Baker  Databases and Information Systems Group / Univ X, Country"
+% engines: rust rc6: a third creator 'Databases' with collaboration 'Information Systems Group' and Univ X
+% expect:  0 errors, 0 warnings; two authors, each its e-mail and both lines (the group and Univ X) as affiliations
+% status:  RED (rc6 fe76f5268af); ruling: TEAMAUTH fix1 rule 2 (a group joined to an institution is an affiliation);
+%          the `and` inside a group name is not a separator
+% moves:   post-merge
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able\\ \texttt{aable@cs.x.de} \and Bob Baker\\ \texttt{bbaker@cs.x.de} \and Databases and Information Systems Group\\ Univ X, Country}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,21 @@
+% shape:   elsarticle `\affiliation[l]{organization=…,city=…,country=…}`
+% witness: 2302.09161
+% oracle:  pdflatex 0 errors; "Ann Ablea,b,*, Bob Bakerb"
+% engines: rust rc6: by labels; Ann the correspondent
+% expect:  0 errors, 0 warnings; by labels
+% status:  GREEN (rc6 fe76f5268af); guard perfect_kernel_batchfmwitness::author_segmentation_witnesses
+% preload: ar5iv.sty
+\documentclass{elsarticle}
+\begin{document}
+\title{T}
+\author[i1,i2]{Ann Able\corref{cor1}}
+\affiliation[i1]{organization={Applied Science Group, Univ A},city={City A},country={Country A}}
+\affiliation[i2]{organization={Applied Numerical Algorithms Group, Lab B},city={City B},country={Country B}}
+\author[i2]{Bob Baker}
+\cortext[cor1]{Corresponding author}
+\begin{abstract}
+A.
+\end{abstract}
+\maketitle
+Text.
+\end{document}

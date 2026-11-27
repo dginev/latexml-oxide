@@ -1,0 +1,14 @@
+% shape:   `A and B \\ affiliation`: one line under two names
+% witness: synthetic (kernel)
+% oracle:  pdflatex 0 errors; "Ann Able and Bob Baker / Department of Mathematics, Univ X"
+% engines: rust rc6: the line both names'
+% expect:  0 errors, 0 warnings; the line both names'
+% status:  GREEN (rc6 fe76f5268af); guard perfect_kernel_batchfmwitness::author_segmentation_witnesses
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able and Bob Baker\\ Department of Mathematics, Univ X}
+\maketitle
+Text.
+\end{document}

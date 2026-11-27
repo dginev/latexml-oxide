@@ -340,24 +340,25 @@ fn mark(label: &str, line_first: bool) -> FmEvent {
 #[test]
 fn an_unlabelled_entry_is_no_legend() {
   let inputs = [FmInput::Block {
-    index:   1,
-    binding: String::new(),
-    hook:    "\\lx@add@authors@append".to_string(),
-    keyvals: None,
-    counter: None,
-    replace: false,
-    cleared: false,
-    epoch:   0,
-    events:  vec![
+    index:         1,
+    binding:       String::new(),
+    hook:          "\\lx@add@authors@append".to_string(),
+    keyvals:       None,
+    counter:       None,
+    replace:       false,
+    cleared:       false,
+    epoch:         0,
+    events:        vec![
       name("Ann Able"),
       mark("1", false),
       FmEvent::new(FmEventKind::Break),
       mark("", true),
       name("Corresponding author."),
     ],
-    calls:   Vec::new(),
-    markers: Vec::new(),
-    names:   1,
+    calls:         Vec::new(),
+    markers:       Vec::new(),
+    names:         1,
+    collaboration: false,
   }];
   let tuples = resolved_tuples(&fm_resolve(&inputs));
   assert_eq!(tuples, [

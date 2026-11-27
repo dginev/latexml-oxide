@@ -1,0 +1,20 @@
+% shape:   elsarticle `\author[a,b]` with labelled `\address[a]`
+% witness: 1403.7289
+% oracle:  pdflatex 0 errors; "Ann Ablea,b, Bob Bakera"
+% engines: rust rc6: by labels
+% expect:  0 errors, 0 warnings; by labels
+% status:  GREEN (rc6 fe76f5268af); guard perfect_kernel_batchfmwitness::author_segmentation_witnesses
+% preload: ar5iv.sty
+\documentclass{elsarticle}
+\begin{document}
+\title{T}
+\author[ja,hi]{Ann Able}
+\author[ja]{Bob Baker}
+\address[ja]{Department of Physics, Univ A, City A}
+\address[hi]{Institute of Physics, Univ B, City B}
+\begin{abstract}
+A.
+\end{abstract}
+\maketitle
+Text.
+\end{document}

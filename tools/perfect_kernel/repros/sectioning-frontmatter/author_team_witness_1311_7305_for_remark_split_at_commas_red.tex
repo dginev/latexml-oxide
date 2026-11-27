@@ -1,0 +1,18 @@
+% mechanism: a team, group or collaboration an author list enumerates is an author; one a remark frames is a contact (DG 2026-11-27, OXIDIZED_DESIGN_DIVERGENCES #459)
+% witness: 1311.7305 (desyproc.cls, not in TeX Live; written with article: `{\slshape Stefanie Adomeit$^1$, Reinhild Yvonne Peters$^{2,3}$ for the ATLAS, CDF, CMS and D0 Collaborations}`)
+% oracle:  pdflatex 0 `!`: one names line, the remark after the last name
+% engines: rust 0.8.0-rc6 and TEAMAUTH (byte-identical): four creators — Ann Able and Bob Baker each with `collaboration` "for the ATLAS", "CDF" and "CMS" creators with `collaboration` "D0 Collaborations"; 0 errors, 0 warnings
+% expect:  two creators, each with one `collaboration` contact "for the ATLAS, CDF, CMS and D0 Collaborations"
+% status:  RED
+% moves:   post-merge (the remark's split at its own commas, `remark_pieces_joined`; not the enumeration)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{{\slshape Ann Able$^1$, Bob Baker$^{2,3}$ for the ATLAS, CDF, CMS and D0 Collaborations}\\[1ex]
+$^1$ Univ A\\
+$^2$ Univ B \\
+$^3$ Univ C}
+\maketitle
+Text.
+\end{document}

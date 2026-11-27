@@ -1,0 +1,17 @@
+% shape:   iopart three unmarked names, one unmarked `\address`
+% witness: 1105.1742, 1205.6912
+% oracle:  pdflatex (with 1306.5608's own iopart file; TL 2025 ships none) 0 errors; "F Able, A Baker and V Cole /
+%          Departamento de Fisica, Univ X, City"
+% engines: rust rc6: the address V Cole's alone
+% expect:  0 errors, 0 warnings; the address every unmarked name's (one line under all)
+% status:  RED (rc6 fe76f5268af); ruling: TEAMAUTH review (1205.6912): an unmarked shared address is every unmarked
+%          name's, or the block's
+% moves:   post-merge
+% preload: ar5iv.sty
+\documentclass{iopart}
+\begin{document}
+\title{T}
+\author{F Able, A Baker and V Cole}
+\address{Departamento de Fisica, Univ X, City}
+Text.
+\end{document}

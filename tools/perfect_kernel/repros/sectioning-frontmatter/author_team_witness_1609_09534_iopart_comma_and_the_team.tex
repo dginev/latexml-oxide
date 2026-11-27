@@ -1,0 +1,16 @@
+% mechanism: a team, group or collaboration an author list enumerates is an author; one a remark frames is a contact (DG 2026-11-27, OXIDIZED_DESIGN_DIVERGENCES #459)
+% witness: 1609.09534 (iopart: `…, A A Schekochihin$^{1,2}$, and the MAST Team}\ead{…}`)
+% oracle:  pdflatex: iopart.cls ships without its .clo; with article and `\address`, `\ead` as paragraphs 0 `!`
+% engines: rust 0.8.0-rc6: three creators, the team a `collaboration` contact on each
+% expect:  0 errors, 0 warnings; four creators, "the MAST Team" the last, no contact
+% status:  RED (rc6) -> GREEN — TEAMAUTH fix round 1 (`perfect_kernel_batchteamauth`)
+% preload: ar5iv.sty
+\documentclass[12pt]{iopart}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1,2}$, Bob Baker$^{2}$, Cy Cole$^{1}$, and the MAST Team}\ead{ann@a.org}
+\address{$^{1}$Univ A}
+\address{$^{2}$Univ B}
+\maketitle
+Text.
+\end{document}

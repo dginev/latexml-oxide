@@ -1,0 +1,18 @@
+% shape:   authblk affiliations each ending in an `Email:` line
+% witness: 2005.13982 (`Email:` lines inside `\affil`)
+% oracle:  pdflatex 0 errors; "1Univ A, City A / Email: ann@a.edu"
+% engines: rust rc6: each name its affiliation and e-mail
+% expect:  0 errors, 0 warnings; each name its affiliation and e-mail
+% status:  GREEN (rc6 fe76f5268af); guard perfect_kernel_batchfmwitness::author_segmentation_witnesses
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author[1]{Ann Able}
+\author[2]{Bob Baker}
+\affil[1]{Univ A, City A\\ Email: ann@a.edu}
+\affil[2]{Univ B, City B\\ Email: bob@b.edu}
+\maketitle
+Text.
+\end{document}

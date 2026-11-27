@@ -1,0 +1,25 @@
+% shape:   elsarticle labelled addresses plus one unlabelled
+% witness: 2103.09929
+% oracle:  pdflatex 0 errors; "Ann Ablea,*, Bob Bakera,b / Univ X, City / a Dept of Statistics / b Dept of
+%          Biostatistics"
+% engines: rust rc6: Univ X Bob Baker's alone
+% expect:  0 errors, 0 warnings; Univ X not on Bob alone: every name requests labels, so the unlabelled address is the
+%          block's (charter 4 placement order, R1/R3)
+% status:  RED (rc6 fe76f5268af); ruling: charter 4: marks win; an unmarked item goes to the block
+% moves:   post-merge
+% preload: ar5iv.sty
+\documentclass{elsarticle}
+\begin{document}
+\title{T}
+\author[stat]{Ann Able\corref{cor}}
+\author[stat,bios]{Bob Baker}
+\address[stat]{Department of Statistics}
+\address[bios]{Department of Biostatistics}
+\address{Univ X, City}
+\cortext[cor]{Corresponding author}
+\begin{abstract}
+A.
+\end{abstract}
+\maketitle
+Text.
+\end{document}

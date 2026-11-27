@@ -1,0 +1,24 @@
+% shape:   elsarticle `\corref`, `\ead`, `\ead[url]`, unlabelled `\address` per author
+% witness: 1206.3043
+% oracle:  pdflatex 0 errors; names over addresses; e-mails in the footnote
+% engines: rust rc6: each author his calls; Ann the corresponding note
+% expect:  0 errors, 0 warnings; each author his calls
+% status:  GREEN (rc6 fe76f5268af); guard perfect_kernel_batchfmwitness::author_segmentation_witnesses
+% preload: ar5iv.sty
+\documentclass{elsarticle}
+\begin{document}
+\title{T}
+\author{Ann Able\corref{cor1}}
+\ead{ann@a.edu}
+\ead[url]{http://a.edu/ann}
+\address{LMAH, Univ A, City A}
+\author{Bob Baker}
+\ead{bob@a.edu}
+\address{LITIS, Univ A, City A}
+\cortext[cor1]{Corresponding author}
+\begin{abstract}
+A.
+\end{abstract}
+\maketitle
+Text.
+\end{document}
