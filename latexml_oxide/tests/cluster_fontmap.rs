@@ -664,7 +664,7 @@ mod dingbat_family_maps {
     );
   }
 
-  /// Both sides of the severity boundary: a declared U family with no map warns once (its glyphs are read as OT1);
+  /// Both sides of the severity boundary: a declared U family with no map warns once (any text in it is read as OT1);
   /// an undeclared one stays an Info, as TeX substitutes U/cmr there. pdflatex 0 `!`, Perl 0 warnings.
   #[test]
   fn u_family_without_a_map_is_a_warning() {
@@ -686,8 +686,8 @@ mod dingbat_family_maps {
     );
     assert!(
       log.contains(
-        "Warning:unexpected:nomap Font family \"nomap\" in encoding \"U\" has no glyph map; its characters are read \
-         as OT1."
+        "Warning:unexpected:nomap Font family \"nomap\" in encoding \"U\" has no glyph map; any text set in it is \
+         read as OT1 and may print the wrong glyphs."
       ),
       "{log}"
     );

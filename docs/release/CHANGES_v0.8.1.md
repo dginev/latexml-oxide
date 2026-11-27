@@ -12,7 +12,7 @@ top of its group.
   - **dingbat.sty's symbols are their glyphs.** Its `ark` and `dingbat` fonts have glyph maps, so `\checkmark` is ✓,
     `\anchor` ⚓, `\eye` 👁 and the hands, pencils and thumbs their Unicode characters, where each printed an OT1 letter
     (`\checkmark` as "D", 2303.10475, ar5iv #408). A font family that TeX has, in an encoding no glyph map reaches, is
-    now a Warning, as its characters are read as OT1 (OXIDIZED_DESIGN_DIVERGENCES #645). Guards
+    now a Warning, as any text set in it is read as OT1 (OXIDIZED_DESIGN_DIVERGENCES #645). Guards
     `cluster_fontmap::dingbat_family_maps`.
   - **After a digestion Fatal, an unfinished construct is closed as its own.** The salvage of the boxes digested
     before a Fatal spliced an unfinished construct's text into the running paragraph: a footnote's words fused with
