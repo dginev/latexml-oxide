@@ -89,7 +89,7 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (450 items on 2026-11-27 on `int/towards_v0_8_1`: 450 open, weight 983, 36 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (451 items on 2026-11-27 on `int/towards_v0_8_1`: 451 open, weight 986, 36 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
 
 
   - ODR6 — OD ruling 12 (recorded in OD #449): `dump_reader.rs`'s "add-only" docstrings (:365, :574) corrected, then a removal trial of the skip lists against CLAUDE.md rule 2; 1
@@ -1381,7 +1381,7 @@ Rules that keep this file honest and mergeable:
     Gemini `GN_AR5IVBUGS2_2026-11-26.md`, anchors checked): (g) #220 PDF/EPS `trim`+`clip` crop scale — FIXED by GFXTRIM;
     (h) #127 1607.06945: sigsam's `\renewcommand\abstractname{\large\bfseries Abstract\vspace*{6pt}}` prints
     `Abstract\vskip6.0pt` (SHARED with Perl; ~930 papers): `queue_digest.rs:976,986` digest the name to text, so the glue
-    reverts — skip glue/kern whatsits, keep `TBox` text and the no-break space (OD #121); (i) #408 2303.10475: dingbat.sty's
+    reverts — skip glue/kern whatsits, keep `TBox` text and the no-break space (OD #121); (i) DONE by DINGBAT on int (ark/dingbat maps; a family no map reaches is a Warning, OD #645) — was: #408 2303.10475: dingbat.sty's
     `\checkmark` = `\dingbat@sym{'104}` in a U-encoded font with no fontmap → a silent "D" (Rust-only silent wrong glyph,
     ~279 papers; Perl has no dingbat binding and errs): `ark`/`dingbat` fontmaps like `ding_fontmap.rs`, and an unmapped
     U-encoded family a Warning rather than `Info:unexpected` (`sect13.rs` ~:2616-2626; A/B the noise first); (j) #419
@@ -1474,6 +1474,15 @@ Rules that keep this file honest and mergeable:
     conclusion draws a fraction where mathpartir draws no rule (mathpartir.sty:296-301; suspected, 1909.03523); `\\\\` as two
     `\quad`s (mathpartir: a forced new line, :193-196); `\mpr@inferrule` undefined (2403.15122); the parser cannot read
     `X \quad \sim Y` (math parked); 2
+  - ICONFONTS — icon fonts read through OT1 print wrong glyphs (DINGBAT now warns; Perl the same with `--includestyles`, an
+    error without): ccicons `\ccby` → "Γ Δ" (2602.07369; map from `ccicons-u.enc` to the Unicode 13 CC symbols 🅭 🅯 🄎 ⊜ 🄏 🅮 🄍);
+    manfnt `\dbend` → "¨" on the NFSS path (`U/manual`) and dropped silently on the plain `\font\x=manfnt` path (encoding
+    `manfnt`, `font.rs:155`; 1012.0265, 2008.09297, 2410.22549, 2004.07097, 2105.09724) — one map from `manfnt.mf` under both
+    names (bends → ☡ U+2621). EASY/LOW, one batch (~100 + ~500 arXiv). Deferred: academicons (`\aiOrcid` → "˙"; 1/30k prints an
+    icon; a binding mapping orcid to `\lx@orcidlogo`), 2505.06393's shipped XeLaTeX academicons losing an `\href` iD in `\affil`;
+    eulerpx `\sum` → "X" (2501.18458, RED `fonts-nfss/eulerpx_sum_reads_as_its_slot_letter_red`, ~480); arabtex utf8 prints Arabic
+    reversed (2310.14819, RED `package-bindings/arabtex_utf8_keeps_logical_order_red`); the DINGBAT Warning does not check a
+    per-family `{enc}_{family}_fontmap` (sect13.rs ~:2624; no family hits it today); 3
   - AUTHGDEF — a class/style that fills `\@author` by `\gdef` and prints it from its own `\@maketitle`, with no `\author` call
     (ismir.sty `\oneauthor`; icmc2025, LaurentianThesis.cls): no `ltx:creator`, the words counted by `Warning:frontmatter:unclaimed`;
     Perl the same, silent (PERL-ORIGIN). Fix plan (EASY, MED risk): `hand_offtable_stores` hands a raw `\@author` on as
