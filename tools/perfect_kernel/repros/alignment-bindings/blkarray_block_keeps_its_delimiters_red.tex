@@ -1,0 +1,19 @@
+% mechanism: blkarray.sty's `(` `)` `[` `]` `\{` `\}` in a `block` preamble are `\Left{}{(}`/`\Right{)}{}` (blkarray.sty:1998-2003,
+%   :1726-1737): a `\left(`…`\right.` beside the block's columns over its rows only (`\BA@leftdel`/`\BA@rightdel`, :1556-1566). Ours
+%   (`blkarray_sty.rs` ~:134 `\lx@blkarray@delimiters`, OD #771) sets them to EMPTY column types — the fences dropped silently.
+%   RUST-ONLY binding gap (Perl has none: undefined, or the KPE #53 hang). Fix plan: the `\bordermatrix` pass
+%   (`plain_constructs.rs:483-600` `\lx@hack@bordermatrix`): fence `XMCell`s with a stretchy OPEN/CLOSE + strut, `rowspan` over the
+%   block's rows (row R BLKFENCE).
+% witness: 1811.10792 (`block{c (cccccc)}`), 2310.17416 (`block{[cccc]}`); 19/30k blkarray `block` users, every one with fences
+% oracle:  pdflatex (TL 2025, -no-shell-escape): rc=0, no `!`; `(…)` around rows x,y and `[5 6]` around row z
+% engines: rust INT081TR: E=0 W=0, a 4×3 XMArray with no OPEN/CLOSE
+% expect:  0 errors; row 2 an `XMCell rowspan="2"` holding a `role="OPEN"` `(` with its `)`; row 4 `[`/`]`
+% status:  RED
+% moves:   post-merge (row R BLKFENCE; math alignment — DG)
+\documentclass{article}\usepackage{blkarray}\begin{document}
+\[\begin{blockarray}{ccc}
+ & a & b \\
+\begin{block}{c(cc)} x & 1 & 2 \\ y & 3 & 4 \\ \end{block}
+\begin{block}{c[cc]} z & 5 & 6 \\ \end{block}
+\end{blockarray}\]
+\end{document}

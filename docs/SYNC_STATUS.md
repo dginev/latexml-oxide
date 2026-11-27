@@ -89,7 +89,7 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (451 items on 2026-11-27 on `int/towards_v0_8_1`: 451 open, weight 986, 36 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (454 items on 2026-11-27 on `int/towards_v0_8_1`: 454 open, weight 990, 36 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
 
 
   - ODR6 — OD ruling 12 (recorded in OD #449): `dump_reader.rs`'s "add-only" docstrings (:365, :574) corrected, then a removal trial of the skip lists against CLAUDE.md rule 2; 1
@@ -1483,6 +1483,30 @@ Rules that keep this file honest and mergeable:
     eulerpx `\sum` → "X" (2501.18458, RED `fonts-nfss/eulerpx_sum_reads_as_its_slot_letter_red`, ~480); arabtex utf8 prints Arabic
     reversed (2310.14819, RED `package-bindings/arabtex_utf8_keeps_logical_order_red`); the DINGBAT Warning does not check a
     per-family `{enc}_{family}_fontmap` (sect13.rs ~:2624; no family hits it today); 3
+  - BLKFENCE — blkarray `block` delimiters (`(` `)` `[` `]` `\{` `\}`, `\Left`/`\Right` labels) are dropped silently: the binding sets
+    them to empty column types (`blkarray_sty.rs` ~:134, OD #771's simplification); TeX draws a `\left(…\right.` beside the block's
+    columns over its rows (blkarray.sty:1556-1566, :1726-1737, :1998-2003). Every `block` user in the 30k sample loses its fences
+    (19/30k; 1811.10792, 2310.17416, 1405.7962 labels). RUST-ONLY gap (Perl: undefined or the KPE #53 hang). Fix plan (EASY-MED,
+    ~100 lines, MED risk — `\cline`/`|` must stay on the original cells; MathML Core needs the strut): record fences per block,
+    then the `\bordermatrix` pass (`plain_constructs.rs:483-600`) adds `ltx_nopad` fence cells with `rowspan`; also greens the
+    side-labels RED. Math alignment parked — DG; interim: a per-block Warning naming the dropped fences. RED
+    `alignment-bindings/blkarray_block_keeps_its_delimiters_red`; 2
+  - ENDXREDEF — a raw style's redefined `\endtable`/`\endfigure` never runs: the kernel's `{table}` is a DefEnvironment whose
+    built-in end runs directly (`latex_constructs/sect01.rs` `end_environment_tokens`; Perl the same, latex_constructs.pool.ltxml:216-231),
+    so newpasp/asp20xx's `\spewtablenotes\end@float` (newpasp.sty:102-103) never prints the `\tablenotetext` notes — lost with 0 Errors
+    (astro-ph0108146, astro-ph0009357). Census (Gemini `GN_ENDXREDEF_2026-11-27.md`, 15k zips; anchors re-read by Opus): 250/15k
+    redefine the end side only, in 7 families — SAFE (output flushed before `\end@float`): ASP/PASP, AAS v4/emulateapj.sty, svmult
+    `\resetsubfig`, 1992 subfig, trivial; RISKY: AASTeX's `\let\saveendtable\endtable \def\endtable{\vskip6pt\saveendtable}` +
+    `endtable*`=`\endtable` (aastex701.cls:12204-12206; n=171); BREAKS: fixes.sty (`\egroup`, no `\end@float`). Fix plan (beyond Perl,
+    OD like #232): run a raw `\endX` only when `\X` is still built in, `\endX` is a macro, AND its body contains `\end@float`
+    (unstarred) / `\end@dblfloat` (starred) — covers the SAFE families, excludes AASTeX's and fixes'; `\end@float` let to the built-in
+    end. RED `captions-floats/redefined_endtable_runs_at_end_of_table_red`; 1
+  - TABLECOM-RESIDUAL — (TABLECOM landed 2026-11-27, KPE #1345) the bare-command form `\table … \tablecomments{X} \endtable`
+    loses X (the end hook hangs on `\end{table}` only, Package.pm:1945; the real `.sty` adds the printing to `\endtable` itself,
+    deluxetable.sty:105-106) — base the same, no corpus witness; with float.sty's `[H]` pdflatex prints that table's note at the
+    next table's end, we print it in its own table (kept either way); REDs `emulateapj_deluxetable_notes_order_red` (emulateapj's
+    in-deluxetable `\gdef` keeps the last note, References first) and `aastex_float_footnote_is_a_minipage_footnote_red` (a
+    float's `\footnote` is a minipage footnote in AASTeX 6+, 2409.15669); 1
   - AUTHGDEF — a class/style that fills `\@author` by `\gdef` and prints it from its own `\@maketitle`, with no `\author` call
     (ismir.sty `\oneauthor`; icmc2025, LaurentianThesis.cls): no `ltx:creator`, the words counted by `Warning:frontmatter:unclaimed`;
     Perl the same, silent (PERL-ORIGIN). Fix plan (EASY, MED risk): `hand_offtable_stores` hands a raw `\@author` on as

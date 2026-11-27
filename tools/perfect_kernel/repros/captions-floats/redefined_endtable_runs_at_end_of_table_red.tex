@@ -1,0 +1,27 @@
+% mechanism: LaTeX's `\end{table}` = `\endtable\endgroup`, so a style that redefines `\endtable` (newpasp.sty:90-103
+%   `\def\endtable{\spewtablenotes\end@float}`, asp2004/2006/2010/2014.sty the same) prints its `\tablenotetext` list there. The
+%   kernel's `{table}` is a DefEnvironment whose built-in end runs directly — a raw `\endtable` is never run (Perl
+%   latex_constructs.pool.ltxml:216-231; ours `latex_constructs/sect01.rs` `end_environment_tokens` :182, built-in branch :253), so
+%   the notes are lost with no message. PERL-ORIGIN. Fix plan (beyond Perl, an OD entry like #232): when raw code replaced `\endX` with
+%   a macro and `\X` was not redefined, `\end{X}` runs `\endX` with `\end@float`/`\end@dblfloat` let to the built-in end (row R ENDXREDEF).
+% witness: astro-ph0108146 (newpasp.sty; three table notes lost, E=0), astro-ph0009357
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "a Based on infrared photometric data." under the table
+% engines: rust INT081TR and Perl: 0 errors, `<table>` holds only the tabular (no "infrared")
+% expect:  0 errors; `//ltx:table` contains "Based on infrared photometric data." exactly once
+% status:  RED
+% moves:   post-merge (row R ENDXREDEF)
+% astro-ph0108146 (newpasp.sty:86-102): a package's \endtable prints the table notes it collected
+\documentclass{article}
+\makeatletter
+\def\tblnote@list{}
+\def\tablenotetext#1#2{\g@addto@macro\tblnote@list{\par\noindent$^{#1}$#2}}
+\def\spewtablenotes{{\footnotesize\tblnote@list}\gdef\tblnote@list{}}
+\def\endtable{\spewtablenotes\end@float}
+\makeatother
+\begin{document}
+\begin{table}
+\begin{tabular}{cc}A$^a$ & B\\\end{tabular}
+\tablenotetext{a}{Based on infrared photometric data.}
+\end{table}
+After the table.
+\end{document}
