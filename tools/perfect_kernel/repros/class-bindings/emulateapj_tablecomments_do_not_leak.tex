@@ -1,0 +1,29 @@
+% witness: 1310.5776, 0704.2079, 0910.4381, 1109.0204: a `\tablecomments` in a plain `{table}` printed in the next
+%          deluxetable, before that table's own note (the list `\tblnote@list` is printed only at a deluxetable's end)
+% oracle:  pdflatex 0 errors; "TABLE 1 Models / A B / Note. — Parameters fixed are marked with an asterisk." then
+%          "TABLE 2 Second / X Y / 1 2 / References. — (1) Brown 2003. / Note. — Second note."
+% engines: rust INT081TR = 0 errors, 0 warnings, Table 2 holds "Note. — Parameters fixed…" too, Table 1 none; Perl the
+%          same (KNOWN_PERL_ERRORS #1345)
+% expect:  0 errors, 0 warnings; S0.T1 holds its note, S0.T2 only its own note and references (in source order:
+%          emulateapj's reference-first order is emulateapj_deluxetable_notes_order_red)
+% status:  RED (INT081TR) -> GREEN (TABLECOM)
+% preload: ar5iv.sty
+\documentclass{emulateapj}
+\begin{document}
+\begin{table}
+\caption{Models}
+\begin{tabular}{ll}
+A & B \\
+\end{tabular}
+\tablecomments{Parameters fixed are marked with an asterisk.}
+\end{table}
+\begin{deluxetable}{ll}
+\tablecaption{Second}
+\tablehead{\colhead{X} & \colhead{Y}}
+\startdata
+1 & 2 \\
+\enddata
+\tablecomments{Second note.}
+\tablerefs{(1) Brown 2003.}
+\end{deluxetable}
+\end{document}

@@ -184,6 +184,9 @@ LoadDefinitions!({
   // `perfect_kernel_batch73a::stored_tablecaption_scoped_to_its_group`.
   if aastex6_plus {
     RawTeX!(r"\lx@deluxe@persistentfalse");
+    // Outside a deluxetable `\tablecomments`/`\tablerefs` print where they stand (aastex62.cls:5094, aastex631.cls:5379,
+    // aastex701.cls:11964-11972); 5.x keeps them for the table's end (deluxetable_sty.rs; KNOWN_PERL_ERRORS #1345).
+    RawTeX!(r"\lx@deluxe@inplacetrue");
     // aastex701.cls:8608-8610, :8849 (and aastex6/61/62/63/631): `$` is active in every table (aas_support_sty.rs).
     RawTeX!(r"\def\aas@table@dollar{\catcode`\$=\active\relax}");
   }

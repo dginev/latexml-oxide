@@ -1,0 +1,24 @@
+% witness: synthetic (emulateapj.cls:1437-1438 inside a deluxetable: `\tablecomments`/`\tablerefs` `\gdef` their own
+%          lists, so a second `\tablecomments` replaces the first, and `\spew@tblnotes` :1581-1593 prints the references
+%          before the note)
+% oracle:  pdflatex 0 errors; "TABLE 1 One / X Y / 1 2 / References. — Refs. / Note. — Second note." ("First note."
+%          not printed)
+% engines: rust TABLECOM = 0 errors, 0 warnings; "Note. — First note. Note. — Second note. References. — Refs." (one
+%          appended list, Perl's AddToMacro, deluxetable.sty.ltxml:112-123); Perl the same
+% expect:  the PDF's order and the replaced note
+% status:  RED (TABLECOM)
+% moves:   post-merge
+% preload: ar5iv.sty
+\documentclass{emulateapj}
+\begin{document}
+\begin{deluxetable}{ll}
+\tablecaption{One}
+\tablehead{\colhead{X} & \colhead{Y}}
+\startdata
+1 & 2 \\
+\enddata
+\tablecomments{First note.}
+\tablecomments{Second note.}
+\tablerefs{Refs.}
+\end{deluxetable}
+\end{document}

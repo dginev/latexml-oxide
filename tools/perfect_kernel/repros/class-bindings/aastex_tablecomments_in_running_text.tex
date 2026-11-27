@@ -1,0 +1,17 @@
+% witness: synthetic (the review of TABLECOM r0): AASTeX 5's `\tablecomments` in running text is kept for the next
+%          `{table}`'s end (aastex.cls 5.x:1228-1229, :1665-1666); the paragraph stays whole
+% oracle:  pdflatex (0901.4360's shipped aastex.cls) 0 errors; "Some text more text." then "Table 1: Next / A B /
+%          Note. — Running note."
+% engines: rust TABLECOM r0 = 0 errors, 0 warnings, the paragraph split in three around the note; INT081TR the note
+%          lost; Perl the same (KNOWN_PERL_ERRORS #1345)
+% expect:  0 errors, 0 warnings; one paragraph "Some text more text."; the note a paragraph of the table S0.T1
+% status:  RED (TABLECOM r0) -> GREEN (TABLECOM r1)
+% preload: ar5iv.sty
+\documentclass[manuscript]{aastex}
+\begin{document}
+Some text \tablecomments{Running note.} more text.
+\begin{table}
+\caption{Next}
+\begin{tabular}{cc} A & B \\ \end{tabular}
+\end{table}
+\end{document}

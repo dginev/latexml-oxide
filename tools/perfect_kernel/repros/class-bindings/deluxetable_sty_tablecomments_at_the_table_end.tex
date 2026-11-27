@@ -1,0 +1,21 @@
+% witness: 2304.00099, 1501.03765 (the standalone deluxetable.sty they ship): `\tablecomments`/`\tablerefs` are kept
+%          for the end of every `{table}`/`{table*}` (deluxetable.sty:105-106 `\prepdef\endtable{\spew@tblnotes}`,
+%          :413, :419 `\appgdef`), in order, wherever in the table they stand
+% oracle:  pdflatex (2304.00099's shipped deluxetable.sty) 0 errors; "Table 1 Wide / A B / Note. — Before the tabular.
+%          / References. — (1) Smith 2001." then "Text after."
+% engines: rust TABLECOM r0 = 0 errors, 0 warnings, both printed where they stand (the note above the tabular);
+%          INT081TR both lost; Perl the same (KNOWN_PERL_ERRORS #1345)
+% expect:  0 errors, 0 warnings; both paragraphs of the table S0.T1, after its tabular, in source order
+% status:  RED (TABLECOM r0) -> GREEN (TABLECOM r1)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{deluxetable}
+\begin{document}
+\begin{table*}
+\caption{Wide}
+\tablecomments{Before the tabular.}
+\begin{tabular}{ll} A & B \\ \end{tabular}
+\tablerefs{(1) Smith 2001.}
+\end{table*}
+Text after.
+\end{document}

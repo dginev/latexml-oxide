@@ -23128,3 +23128,37 @@ their bodies, the third titled. Witnesses alg-geom9709005, 1412.5856, dg-ga97110
 math9201265, math9202206, math9204224, math9207209, math9808069. Fixed in Rust (`amsppt_sty.rs` `\subheading`,
 `\subheading@`); repro `tools/perfect_kernel/repros/amstex/amsppt_subheading_reads_one_argument.tex`; guard
 `perfect_kernel_batcheofbind::eofbind_rows`.
+
+## 1345. Perl's deluxetable keeps `\tablecomments`/`\tablerefs` outside a deluxetable for the next one
+
+deluxetable.sty.ltxml:112-123 always appends `\tablecomments` and `\tablerefs` to `\tblnote@list`, which only a
+deluxetable's end prints (`\spew@tblnotes`). Each class prints them elsewhere too: AASTeX 5 (aastex.cls 5.x:1228-1229)
+and the standalone deluxetable.sty (:105-106) at the end of every `{table}`/`{table*}` (`\prepdef\endtable
+{\spew@tblnotes}`), wherever in it or before it they stand; emulateapj (:1569-1570) and AASTeX 6+ (aastex62.cls:5094
+of 2002.07183, aastex631.cls:5379 of 2409.15669, aastex701.cls:11964-11972) where they stand, keeping them for the end
+only inside a deluxetable (emulateapj.cls:1437-1438, :1471-1472, :1501-1502). So a note in a plain `{table}` is lost
+with no message, or printed in the next deluxetable, before that table's own. Minimal trigger:
+
+```latex
+\documentclass{emulateapj}
+\begin{document}
+\begin{table}
+\caption{Models}
+\begin{tabular}{ll} A & B \\ \end{tabular}
+\tablecomments{Parameters fixed are marked with an asterisk.}
+\end{table}
+Text after.
+\end{document}
+```
+
+pdflatex (TL 2025): 0 errors, "TABLE 1 Models / A B / Note. — Parameters fixed are marked with an asterisk.". Perl
+(same host): 0 errors, 0 warnings, the note gone. Witnesses 1310.5776 (ar5iv #637), 0704.2079, 0910.4381, 1109.0204;
+AASTeX 5 1412.3469, 1505.03262, astro-ph0702360; deluxetable.sty 2304.00099, 1501.03765. Fixed in Rust
+(`deluxetable_sty.rs`: `\tablecomments`/`\tablerefs` append, and the `{table}`/`{table*}` end prints the list,
+`@environment@table@atend`; `\lx@deluxe@inplacetrue`, set by `emulateapj_cls.rs` and AASTeX 6+ in `aastex_cls.rs`,
+prints them in place outside a deluxetable); repros
+`tools/perfect_kernel/repros/class-bindings/emulateapj_tablecomments_{in_a_plain_table,do_not_leak}.tex`,
+`aastex_tablecomments_{at_the_table_end,in_running_text}.tex`, `deluxetable_sty_tablecomments_at_the_table_end.tex`;
+guard `perfect_kernel_batch68y::tablecomments_print_where_each_class_prints_them`. Inside a deluxetable emulateapj's
+`\gdef` replaces an earlier note and prints the references first; both Perl and Rust append in source order (RED
+`emulateapj_deluxetable_notes_order_red`).

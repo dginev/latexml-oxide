@@ -239,3 +239,107 @@ fn aastex_tablenote_marks_pair_by_what_they_show() {
     )],
   );
 }
+
+/// Each class's `\tablecomments`/`\tablerefs` (KNOWN_PERL_ERRORS #1345): emulateapj and AASTeX 6+ print them where they
+/// stand outside a deluxetable (emulateapj_tablecomments_{in_a_plain_table,do_not_leak}; 1310.5776, 0704.2079, 0910.4381,
+/// 1109.0204), AASTeX 5 and deluxetable.sty at the end of every `{table}`/`{table*}` (aastex_tablecomments_{at_the_table_
+/// end,in_running_text}, deluxetable_sty_tablecomments_at_the_table_end; 1412.3469, 1505.03262, astro-ph0702360,
+/// 2304.00099, 1501.03765). Batch TABLECOM.
+#[test]
+fn tablecomments_print_where_each_class_prints_them() {
+  assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/class-bindings/emulateapj_tablecomments_in_a_plain_table.tex"
+    ),
+    "ar5iv.sty",
+    (0, 0),
+    &[
+      (
+        "table",
+        "S0.T1",
+        r##"<table class="ltx_panels_gallery" inlist="lot" panelcols="1" panelrows="3" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="autoref">Table 1<text xml:id="S0.T1.1"/></tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><toccaption><tag close=" ">1</tag>Models</toccaption><caption><tag>Table 1</tag>Models</caption><tabular class="ltx_figure_panel" vattach="middle" xml:id="S0.T1.2"><tbody><tr xml:id="S0.T1.2.1"><td align="left" xml:id="S0.T1.2.1.1">A</td><td align="left" xml:id="S0.T1.2.1.2">B</td></tr></tbody></tabular><break class="ltx_break"/><p class="ltx_figure_panel ltx_parbox" panelwidth="1" vattach="middle" width="345.0pt" xml:id="S0.T1.3">Note. — Parameters fixed are marked with an asterisk.</p><break class="ltx_break"/><p class="ltx_figure_panel ltx_parbox" panelwidth="1" vattach="middle" width="345.0pt" xml:id="S0.T1.4">References. — (1) Smith 2001; (2) Jones 2002.</p></table>"##,
+      ),
+      (
+        "para",
+        "p1",
+        r##"<para xml:id="p1"><p xml:id="p1.1">Text after.</p></para>"##,
+      ),
+    ],
+  );
+  assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/class-bindings/emulateapj_tablecomments_do_not_leak.tex"
+    ),
+    "ar5iv.sty",
+    (0, 0),
+    &[
+      (
+        "table",
+        "S0.T1",
+        r##"<table class="ltx_panels_gallery" inlist="lot" panelcols="1" panelrows="2" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="autoref">Table 1<text xml:id="S0.T1.1"/></tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><toccaption><tag close=" ">1</tag>Models</toccaption><caption><tag>Table 1</tag>Models</caption><tabular class="ltx_figure_panel" vattach="middle" xml:id="S0.T1.2"><tbody><tr xml:id="S0.T1.2.1"><td align="left" xml:id="S0.T1.2.1.1">A</td><td align="left" xml:id="S0.T1.2.1.2">B</td></tr></tbody></tabular><break class="ltx_break"/><p class="ltx_figure_panel ltx_parbox" panelwidth="1" vattach="middle" width="345.0pt" xml:id="S0.T1.3">Note. — Parameters fixed are marked with an asterisk.</p></table>"##,
+      ),
+      (
+        "table",
+        "S0.T2",
+        r##"<table class="ltx_panels_gallery" inlist="lot" panelcols="1" panelrows="3" xml:id="S0.T2"><tags><tag>Table 2</tag><tag role="autoref">Table 2<text xml:id="S0.T2.1"/></tag><tag role="refnum">2</tag><tag role="typerefnum">Table 2</tag></tags><toccaption><tag close=" ">2</tag>Second</toccaption><caption><tag>Table 2</tag>Second</caption><tabular class="ltx_figure_panel" xml:id="S0.T2.2"><thead><tr xml:id="S0.T2.2.1"><td align="center" border="tt" thead="column" xml:id="S0.T2.2.1.1">X</td><td align="center" border="tt" thead="column" xml:id="S0.T2.2.1.2">Y</td></tr></thead><tbody><tr xml:id="S0.T2.2.2"><td align="left" border="b t" xml:id="S0.T2.2.2.1">1</td><td align="left" border="b t" xml:id="S0.T2.2.2.2">2</td></tr></tbody></tabular><break class="ltx_break"/><p class="ltx_figure_panel ltx_parbox" panelwidth="1" vattach="middle" width="345.0pt" xml:id="S0.T2.3"><text fontsize="80%" xml:id="S0.T2.3.1">Note. — Second note.</text></p><break class="ltx_break"/><p class="ltx_figure_panel ltx_parbox" panelwidth="1" vattach="middle" width="345.0pt" xml:id="S0.T2.4"><text fontsize="80%" xml:id="S0.T2.4.1">References. — (1) Brown 2003.</text></p></table>"##,
+      ),
+    ],
+  );
+  assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/class-bindings/aastex_tablecomments_at_the_table_end.tex"
+    ),
+    "ar5iv.sty",
+    (0, 0),
+    &[
+      (
+        "table",
+        "S0.T1",
+        r##"<table class="ltx_panels_gallery" inlist="lot" panelcols="1" panelrows="2" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="autoref">Table 1<text xml:id="S0.T1.1"/></tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><toccaption class="ltx_centering"><tag close=" ">1</tag>Ratios</toccaption><caption class="ltx_centering"><tag close=": ">Table 1</tag>Ratios</caption><tabular class="ltx_centering ltx_figure_panel ltx_guessed_headers" vattach="middle" xml:id="S0.T1.2"><tbody><tr xml:id="S0.T1.2.1"><td align="center" border="t" thead="row" xml:id="S0.T1.2.1.1">Ratio</td><td align="center" border="t" xml:id="S0.T1.2.1.2">Observed</td><td align="center" border="t" xml:id="S0.T1.2.1.3">Expected</td></tr><tr xml:id="S0.T1.2.2"><td align="center" border="b t" thead="row" xml:id="S0.T1.2.2.1">A</td><td align="center" border="b t" xml:id="S0.T1.2.2.2">1</td><td align="center" border="b t" xml:id="S0.T1.2.2.3">2</td></tr></tbody></tabular><break class="ltx_break"/><p class="ltx_figure_panel ltx_parbox" panelwidth="1" vattach="middle" width="345.0pt" xml:id="S0.T1.3"><text fontsize="80%" xml:id="S0.T1.3.1">Note. — The errors represent the standard deviation.</text></p></table>"##,
+      ),
+      (
+        "para",
+        "p1",
+        r##"<para xml:id="p1"><p xml:id="p1.1">Text after.</p></para>"##,
+      ),
+    ],
+  );
+  assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/class-bindings/aastex_tablecomments_in_running_text.tex"
+    ),
+    "ar5iv.sty",
+    (0, 0),
+    &[
+      (
+        "para",
+        "p1",
+        r##"<para xml:id="p1"><p xml:id="p1.1">Some text  more text.</p></para>"##,
+      ),
+      (
+        "table",
+        "S0.T1",
+        r##"<table class="ltx_panels_gallery" inlist="lot" panelcols="1" panelrows="2" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="autoref">Table 1<text xml:id="S0.T1.1"/></tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><toccaption><tag close=" ">1</tag>Next</toccaption><caption><tag close=": ">Table 1</tag>Next</caption><tabular class="ltx_figure_panel" vattach="middle" xml:id="S0.T1.2"><tbody><tr xml:id="S0.T1.2.1"><td align="center" xml:id="S0.T1.2.1.1">A</td><td align="center" xml:id="S0.T1.2.1.2">B</td></tr></tbody></tabular><break class="ltx_break"/><p class="ltx_figure_panel ltx_parbox" panelwidth="1" vattach="middle" width="345.0pt" xml:id="S0.T1.3"><text fontsize="80%" xml:id="S0.T1.3.1">Note. — Running note.</text></p></table>"##,
+      ),
+    ],
+  );
+  assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/class-bindings/deluxetable_sty_tablecomments_at_the_table_end.tex"
+    ),
+    "ar5iv.sty",
+    (0, 0),
+    &[
+      (
+        "table",
+        "S0.T1",
+        r##"<table class="ltx_panels_gallery" inlist="lot" panelcols="1" panelrows="3" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><toccaption><tag close=" ">1</tag>Wide</toccaption><caption><tag close=": ">Table 1</tag>Wide</caption><tabular class="ltx_figure_panel" vattach="middle" xml:id="S0.T1.1"><tbody><tr xml:id="S0.T1.1.1"><td align="left" xml:id="S0.T1.1.1.1">A</td><td align="left" xml:id="S0.T1.1.1.2">B</td></tr></tbody></tabular><break class="ltx_break"/><p class="ltx_figure_panel ltx_parbox" panelwidth="1" vattach="middle" width="345.0pt" xml:id="S0.T1.2"><text fontsize="80%" xml:id="S0.T1.2.1">Note. — Before the tabular.</text></p><break class="ltx_break"/><p class="ltx_figure_panel ltx_parbox" panelwidth="1" vattach="middle" width="345.0pt" xml:id="S0.T1.3"><text fontsize="80%" xml:id="S0.T1.3.1">References. — (1) Smith 2001.</text></p></table>"##,
+      ),
+      (
+        "para",
+        "p1",
+        r##"<para xml:id="p1"><p xml:id="p1.1">Text after.</p></para>"##,
+      ),
+    ],
+  );
+}

@@ -14,6 +14,12 @@ top of its group.
     (`\checkmark` as "D", 2303.10475, ar5iv #408). A font family that TeX has, in an encoding no glyph map reaches, is
     now a Warning, as any text set in it is read as OT1 (OXIDIZED_DESIGN_DIVERGENCES #645). Guards
     `cluster_fontmap::dingbat_family_maps`.
+  - **`\tablecomments` and `\tablerefs` outside a deluxetable print where their class prints them.** Their text was
+    kept for the next deluxetable, so in a plain `{table}` it was lost with no message, or printed in the next
+    deluxetable before that table's own note. Now emulateapj and AASTeX 6+ print it where it stands (emulateapj.cls,
+    aastex701.cls), and AASTeX 5 and the standalone deluxetable.sty at the end of its `{table}` or of the next one
+    (aastex.cls 5.x, deluxetable.sty) (1310.5776, ar5iv #637; KNOWN_PERL_ERRORS #1345). Guard
+    `perfect_kernel_batch68y::tablecomments_print_where_each_class_prints_them`.
   - **After a digestion Fatal, an unfinished construct is closed as its own.** The salvage of the boxes digested
     before a Fatal spliced an unfinished construct's text into the running paragraph: a footnote's words fused with
     the sentence, an `\author{…}` became a body paragraph, a formula became italic text, a list left rootless items

@@ -1,0 +1,21 @@
+% witness: 2409.15669 (aastex631; a `\footnote` in the table's `\tablecomments`, the later footnotes 2, 3 in the PDF):
+%          aastex701.cls:8066-8072 `\@xfloat@prep` sets a float's footnotes as minipage footnotes (`\@mpfn` =
+%          mpfootnote, `\thempfootnote` "a"), so the float's note takes no step of the footnote counter
+% oracle:  pdflatex 0 errors; "Text one1", in the table "Below the table a" with "a In the table body.", "Text two2"
+% engines: rust TABLECOM = 0 errors, 0 warnings; marks 1, 2, 3 (the table's note numbered as a page footnote, the
+%          later one 3)
+% expect:  marks 1, a, 2
+% status:  RED (TABLECOM)
+% moves:   post-merge
+% preload: ar5iv.sty
+\documentclass{aastex701}
+\begin{document}
+Text one\footnote{First.}.
+\begin{table}
+\begin{tabular}{ll}
+A & B \\
+\end{tabular}
+Below the table\footnote{In the table body.}.
+\end{table}
+Text two\footnote{Second.}.
+\end{document}

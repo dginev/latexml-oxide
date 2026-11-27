@@ -1,0 +1,27 @@
+% witness: 1412.3469, 1505.03262, astro-ph0702360 (AASTeX 5, a `\tablecomments` after `\tableline` inside the
+%          `{tabular}` of a plain `{table}`): AASTeX 5 keeps `\tablecomments`/`\tablerefs` for the end of every
+%          `{table}`/`{table*}` (aastex.cls 5.x:1228-1229 `\prepdef\endtable{\spew@tblnotes}`, :1656-1666 `\appgdef`)
+% oracle:  pdflatex (0901.4360's shipped aastex.cls) 0 errors; "Table 1: Ratios / Ratio Observed Expected / A 1 2 /
+%          Note. — The errors represent the standard deviation." full width below the tabular, then "Text after."
+% engines: rust TABLECOM r0 = 0 errors, 0 warnings, a new row whose first cell holds the note (a 345pt inline block);
+%          INT081TR the note lost; Perl the same (KNOWN_PERL_ERRORS #1345)
+% expect:  0 errors, 0 warnings; the note a paragraph of the table S0.T1, after its tabular
+% status:  RED (TABLECOM r0) -> GREEN (TABLECOM r1)
+% preload: ar5iv.sty
+\documentclass[manuscript]{aastex}
+\begin{document}
+\begin{table}
+\begin{center}
+\caption{Ratios}
+\begin{tabular}{ccc}
+\tableline
+Ratio & Observed & Expected \\
+\tableline
+A & 1 & 2 \\
+\tableline
+\tablecomments{The errors represent the standard deviation.}
+\end{tabular}
+\end{center}
+\end{table}
+Text after.
+\end{document}

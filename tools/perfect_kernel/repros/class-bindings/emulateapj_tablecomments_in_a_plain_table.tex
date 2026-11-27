@@ -1,0 +1,22 @@
+% witness: 1310.5776 (ms.tex:646 `\tablecomments` in a plain `{table}`; ar5iv #637), 0704.2079, 0910.4381, 1109.0204:
+%          outside a deluxetable emulateapj's `\tablecomments`/`\tablerefs` print where they stand
+%          (emulateapj.cls:1569-1570 `\@tablecom{#1}`/`\@tableref{#1}`; aastex701.cls:11964-11972 alike)
+% oracle:  pdflatex 0 errors; "TABLE 1 Models / A B / Note. — Parameters fixed are marked with an asterisk. /
+%          References. — (1) Smith 2001; (2) Jones 2002." then "Text after."
+% engines: rust INT081TR = 0 errors, 0 warnings, the note and the references lost (kept for a deluxetable that never
+%          comes); Perl the same (KNOWN_PERL_ERRORS #1345)
+% expect:  0 errors, 0 warnings; both paragraphs inside the table S0.T1, after its tabular
+% status:  RED (INT081TR) -> GREEN (TABLECOM)
+% preload: ar5iv.sty
+\documentclass{emulateapj}
+\begin{document}
+\begin{table}
+\caption{Models}
+\begin{tabular}{ll}
+A & B \\
+\end{tabular}
+\tablecomments{Parameters fixed are marked with an asterisk.}
+\tablerefs{(1) Smith 2001; (2) Jones 2002.}
+\end{table}
+Text after.
+\end{document}

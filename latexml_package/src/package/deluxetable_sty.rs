@@ -399,17 +399,32 @@ LoadDefinitions!({
   // 1580; Perl's deluxetable.sty.ltxml:117-127 `\textwidth`, the same width where the page is not declared): against a
   // two-column class's declared page (`declare_panel_page`) a one-column table's note is the column, not the page
   // (guard `perfect_kernel_batch68y::emulateapj_deluxetable_is_open_from_its_head`).
-  // Perl uses AddToMacro to accumulate into \tblnote@list
-  // We use \g@addto@macro which does the same at the TeX level
-  DefMacro!("\\tablerefs{}", "\\g@addto@macro\\tblnote@list{\\@tableref{#1}\\let\\email\\@@email}");
+  // The notes and references are kept for the end of the deluxetable, `{table}` or `{table*}` (deluxetable.sty:105-106,
+  // :413, :419; aastex.cls 5.x:1228-1229; Perl's AddToMacro, here `\g@addto@macro`). Classes that print them in place
+  // outside a deluxetable set `\lx@deluxe@inplacetrue` (emulateapj.cls:1569-1570, aastex701.cls:11964-11972), so neither
+  // is lost or moved to the next deluxetable as in Perl (KNOWN_PERL_ERRORS #1345; 1310.5776, 0704.2079, 0910.4381,
+  // 1109.0204; AASTeX 5: 1412.3469, 1505.03262, astro-ph0702360; deluxetable.sty: 2304.00099, 1501.03765).
+  RawTeX!(r"\newif\iflx@deluxe@inplace");
+  DefMacro!("\\lx@deluxe@note{}{}",
+    r"\iflx@deluxe@inplace\expandafter\lx@deluxe@note@inplace\else\expandafter\@firstoftwo\fi
+{\g@addto@macro\tblnote@list{#1}}{#2}");
+  DefMacro!("\\lx@deluxe@note@inplace",
+    r"\iflx@deluxe@intable\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi");
+  DefMacro!("\\tablerefs{}", r"\lx@deluxe@note{\@tableref{#1}\let\email\@@email}{\@tableref{#1}}");
   DefMacro!("\\@tableref{}", "\\par\n \\vspace*{3ex}%\n {\\parbox{\\linewidth}{\\hskip1em\\rmfamily References. --- #1}\\par}");
 
-  DefMacro!("\\tablecomments{}", "\\g@addto@macro\\tblnote@list{\\@tablecom{#1}}");
+  DefMacro!("\\tablecomments{}", r"\lx@deluxe@note{\@tablecom{#1}}{\@tablecom{#1}}");
   DefMacro!("\\@tablecom{}", "\\par \n \\vspace*{3ex}% \n {\\parbox{\\linewidth}{\\hskip1em\\rmfamily Note. --- #1}\\par}");
 
   DefMacro!("\\spew@tblnotes",
     "\\@tablenotes{\\tblnote@list}\\global\\let\\tblnote@list\\@empty");
   DefMacro!("\\@tablenotes{}", "\\par \n \\vspace{4.5ex}\\footnoterule\\vspace{.5ex}%\n {\\footnotesize #1}");
+  // Every `{table}`/`{table*}` prints what is kept (deluxetable.sty:105-106 `\prepdef\endtable{\spew@tblnotes}`, here
+  // Perl's environment end, Package.pm:1945); the in-place classes add no such end (a deluxetable prints its own first).
+  RawTeX!(r"\def\lx@deluxe@table@end{\iflx@deluxe@inplace\else\ifx\tblnote@list\@empty\else\spew@tblnotes\fi\fi}");
+  for env in ["table", "table*"] {
+    push_value(&s!("@environment@{env}@atend"), Tokens!(T_CS!("\\lx@deluxe@table@end")))?;
+  }
 
   //======================================================================
   // Other esoterica

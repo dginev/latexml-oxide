@@ -11,6 +11,9 @@ LoadDefinitions!({
   // `load_class("aastex", Vec::new(), ...)` silently dropped the user's
   // `\documentclass[...]{emulateapj}` options before they reached aastex.
   LoadClass!("aastex", withoptions => true);
+  // Outside a deluxetable `\tablecomments`/`\tablerefs` print where they stand (emulateapj.cls:1569-1570; 1310.5776,
+  // KNOWN_PERL_ERRORS #1345), where AASTeX 5 keeps them for the table's end (deluxetable_sty.rs).
+  RawTeX!(r"\lx@deluxe@inplacetrue");
   // The page a float's panels are set in rows against (the panel grid rule, `declare_panel_page`), over the AASTeX
   // binding's withdrawn one: emulateapj.cls:334-335 `\textwidth=7.1in`, `\columnsep=0.3125in`, as pdflatex gives it —
   // 513.117pt in two 245.267pt columns, one column under `onecolumn` (:81-82, the later declared of the two;
