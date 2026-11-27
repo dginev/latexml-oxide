@@ -364,7 +364,7 @@ Rules that keep this file honest and mergeable:
   - PRESC — prescripts (#837, issue 824): a trailing float script after a prescripted factor, a prescripted bare OPFUNCTION (`scripted_factor_l11`), `{}^*x` (`math-parse/{trailing_float_script_after_a_prescripted_factor,prescript_on_a_bare_opfunction,prescript_star_on_a_bare_identifier}_red`); 3
   - CAPJ — caption justification (#834, issue 787, OD #1024): sub-captions (`captions-floats/subcaption_justification_and_skip_red`); `centerlast`/`centerfirst`; a justification through a user macro or raw glue — read the digested body, not its spelling (`caption_justification_through_a_macro_red`, `caption_justification_by_glue_red`); a short multi-line caption under singlelinecheck (`caption_singlelinecheck_short_multiline_red`); 3
   - LWID — `\linewidth` residuals (#836, issue 778, OD #42): a tabularx `X` cell's width, which needs the X width computed (`kernel-alignment/tabularx_x_cell_linewidth_red`); `\linewidth` inside list items (`lists/list_item_linewidth_red`); 3
-  - TXWD — class text widths (#830): the standard classes' and elsarticle's `twocolumn`, REVTeX's size options (`class-bindings/{standard_class_twocolumn,elsarticle_twocolumn,revtex_size_option}_textwidth_red`); 3
+  - TXWD — class text widths (#830): the standard classes' and elsarticle's `twocolumn`, REVTeX's size options (`class-bindings/{standard_class_twocolumn,elsarticle_twocolumn,revtex_size_option}_textwidth_red`); 3 IEEEtran journal: 516pt / 252pt column vs our 345pt for every register (`class-bindings/ieeetran_textwidth_red`, 1905.06981; measured by class: revtex4-2 510, mnras 508, acmart sigconf 506.3, article twocolumn 469, amsart 360; elsarticle and llncs match).
   - ETOCR — etoc (#830, issue 760): relative depth (`package-bindings/etoc_relative_depth_red`), `\etocsettocstyle` headings (`etoc_settocstyle_heading_red`); 1
   - IMPFC — import: a filecontents file under an import directory (`package-bindings/import_filecontents_file_under_an_import_dir_red`; #830, issue 772); 1
   - EPUBR — EPUB residuals (#840, issue 807; Perl the same): a document without sections has no navigation document, which epubcheck rejects (`epub/no_sections_no_nav_red`); CI does not run epubcheck yet; 1
@@ -618,7 +618,8 @@ Rules that keep this file honest and mergeable:
     task #360); (3) test against all of arXiv: count the images whose rendering changes (stated width > box; alone on
     its row vs side by side; narrow screen), then a visual A/B over a sample stratified by class, column layout,
     subfigure grids, tables and natural-size rasters; acceptance bar: no new overlap or overflow. Risks: misread
-    registers, panel overlap, phone overflow, two-stylesheet specificity. Witness: #721's MWE; 5
+    registers, panel overlap, phone overflow, two-stylesheet specificity. Witness: #721's MWE. Also: a relative width paired with an absolute height (no keepaspectratio) must
+    keep TeX's aspect — today only the width rescales (1905.06981: HTML 1.21, PDF 1.81, the image 1.82); 5
   - IEEEROUTE-ABBREV — an IEEE affiliation note with "St."/"Univ." + capital, or a "D.S. Name" sentence start, keeps the whole note unrouted; 2011.08553 (probe p2).
   - IEEEROUTE-CUTLIST — the content check does not read a note's routed contacts as one printed text (B3 cleared via B2c only).
   - IEEEROUTE-PARTIAL — (REVIEEEB S2) 2204.03507: Torrisi's "also with INSTM" is routed while his main note "A and B, are with …" stays whole; fix: leave an author's "also with" note whole when an earlier note of his stayed whole, or accept the comma.
@@ -1418,8 +1419,10 @@ Rules that keep this file honest and mergeable:
     43 %: the words detectors (math glued to text in the PDF's words), figure content on shots under ~160 px and PDF
     version skew, flattened-EPS pairing; those first, then five whitelist candidates for DG; 3
   - RENDERFOUND — converter defects the RENDERCMP calibration surfaced (an agent's eye check, each to triage before a fix):
-    figures numbered one too high from Figure 3 (2502.06601); `\scalebox{0.22}` ignored (1307.3809); `width=0.5\textwidth,
-    height=5cm` sized by LaTeXML's own `\textwidth`, not the class's (1905.06981); converted SVGs lose their text labels and
+    figures numbered one too high from Figure 3 (2502.06601; root-caused: a nested first sub-float steps the counter twice,
+    PERL-ORIGIN, caption.sty steps once — FIGNUM); `\scalebox{0.22}` ignored (1307.3809); `width=0.5\textwidth,
+    height=5cm` sized by LaTeXML's own `\textwidth`, not the class's (1905.06981; Perl's one-page model, tracked in QA14K3/TXWD,
+    RED `ieeetran_textwidth_red`; the aspect distortion → IMGINTENT); converted SVGs lose their text labels and
     are mis-scaled (1605.07806); an image overflows its 243-px figure onto a neighbour (hep-ex0703011); Latin-1 bytes in the
     bibliography become U+FFFD (1107.2598); plain-TeX math without alttext (1803.09981); 3
   - IMGCAP320 — ar5iv.css `width:auto` on `.ltx_img_*` overrides an image's width attribute, and `.ltx_img_portrait`'s caps do

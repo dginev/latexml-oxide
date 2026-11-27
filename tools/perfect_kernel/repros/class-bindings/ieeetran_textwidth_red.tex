@@ -1,0 +1,24 @@
+% mechanism: LaTeXML sets one 345pt `\textwidth` for every class (Perl latex_constructs.pool.ltxml:1045, copied to
+%   `\columnwidth`/`\hsize`/`\linewidth` at `\begin{document}`, :320-323; ours `latex_constructs/sect02.rs:144-147`); IEEEtran's
+%   journal page is 516pt (column 252pt). `ieeetran_cls.rs:199-238` declares the real page for panel rows only (OD #885), the
+%   registers keep Perl's values (OD #99). A relative width paired with an absolute height (no keepaspectratio) is then
+%   distorted: the width scales 0.67x, the height does not. PERL-ORIGIN / SHARED; DG 2026-11-15 "follow TeX's geometry"
+%   (row R QA14K3, design study first; IMGINTENT for the aspect)
+% witness: 1905.06981 (IEEEtran journal; `height=5cm,width=0.5\textwidth`: HTML aspect 1.21, PDF 1.81, image 1.82)
+% oracle:  pdflatex (TL 2025, -no-shell-escape): TW=516.0pt CW=252.0pt (inside the figure too); the graphic 258pt wide
+% engines: rust INT081AU and Perl: every register 345.0pt, `options="height=142.26378pt,width=172.5pt"`; 0 errors
+% expect:  `\textwidth` 516pt, `\columnwidth` 252pt; the graphic `width=258.0pt`
+% status:  RED
+% moves:   post-merge (row R QA14K3 / TXWD)
+\documentclass[journal]{IEEEtran}
+\usepackage{graphicx}
+\begin{document}
+\typeout{TW=\the\textwidth\space CW=\the\columnwidth\space LW=\the\linewidth\space HS=\the\hsize}
+Text: \the\textwidth/\the\columnwidth/\the\linewidth.
+\begin{figure}[!h]
+\centering
+\typeout{FIG TW=\the\textwidth\space LW=\the\linewidth}
+\includegraphics[height=5cm,width=0.5\textwidth]{example-image}
+\caption{C}
+\end{figure}
+\end{document}
