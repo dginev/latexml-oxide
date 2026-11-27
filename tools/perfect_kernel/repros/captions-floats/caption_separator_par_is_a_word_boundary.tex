@@ -1,0 +1,16 @@
+% A caption label separator that ends a paragraph (`\DeclareCaptionLabelSeparator{parsep}{.\par}`): pdflatex sets
+% "Figure 1." and "First caption" on two lines. The separator reaches the tag's `close` attribute through its attribute
+% form, and a `\par` there is a word boundary, a space (OXIDIZED_DESIGN_DIVERGENCES #1170, #766's line break in inline
+% frontmatter; sibling of sectioning-frontmatter/abstract_name_spacing_is_not_its_tex_spelling.tex).
+% witness: synthetic (ABSNAME review, finding 1).
+% status:  GREEN (ABSNAME fix 1): `\par`'s attribute form is a space.
+% oracle:  pdflatex 0 errors: "Figure 1." then "First caption" on the next line (pdftotext).
+% Perl:    close=".\par" (toAttribute falls back to the reversion, Whatsit.pm:217-223).
+% ours (before): close="." (ABSNAME round 0, `\par` nothing): renders "Figure 1.First caption".
+% expect:  0 errors, 0 warnings; <caption><tag close=". ">Figure 1</tag>First caption</caption>.
+\documentclass{article}
+\usepackage{caption}
+\DeclareCaptionLabelSeparator{parsep}{.\par}
+\begin{document}
+\begin{figure}\captionsetup{labelsep=parsep}\caption{First caption}\end{figure}
+\end{document}

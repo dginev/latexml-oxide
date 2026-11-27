@@ -230,7 +230,12 @@ LoadDefinitions!({
         assign_value("lx@vspace@mark", false, None);
       }
       let row_break = !vspace && lookup_bool("lx@in@float");
-      Ok(stored_map!("isSpace" => true, "isSkip" => true,
+      // In an attribute vertical glue is nothing, not its `\vskip` reversion as Perl's: it adds no width to a line
+      // (`\vspace*` in a renewed `\abstractname`, sigsam.sty:99, 1607.06945, 1502.02294). A raw `\vskip` after a word in
+      // a horizontal list (a name digested as text, where no `\par` went in) ends the line, a space (tex.web §1094;
+      // #1170); before any, TeX is still in vertical mode (`\vskip-3mm Abstract`, 2603.28538).
+      let form = if vspace || mode_ends_with("vertical") || !list_has_text() { "" } else { " " };
+      Ok(stored_map!("isSpace" => true, "isSkip" => true, "attributeForm" => Stored::String(pin(form)),
         "isVerticalSpace" => true, "isBreak" => true,
         "height" => height, "panel_row_break" => row_break,
         "vspace" => vspace, "in_paragraph" => lookup_bool("lx@vskip@in@paragraph")))
@@ -336,6 +341,15 @@ LoadDefinitions!({
     })
   });
 });
+
+/// Whether the current list holds a word an attribute would print, after which a line end is a word boundary.
+fn list_has_text() -> bool {
+  with_own_box_list(|list| {
+    list
+      .iter()
+      .any(|item| !item.to_attribute().trim_ascii().is_empty())
+  })
+}
 
 /// Sum a `\vskip` that follows an `ltx:para` on that paragraph's parent, for the next paragraph to take if the net is
 /// positive, as on TeX's vertical list (needspace's `\vskip\dimen@ … \vskip -\dimen@` nets 0; tex_paragraph.rs

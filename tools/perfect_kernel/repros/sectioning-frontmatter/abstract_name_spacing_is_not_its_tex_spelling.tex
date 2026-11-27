@@ -1,0 +1,22 @@
+% A renewed `\abstractname` with spacing in it (sigsam.sty:99 `{\large\bfseries Abstract\vspace*{6pt}}`, 1607.06945,
+% ar5iv #127): the abstract's `name` attribute is the text pdflatex prints, its spacing as spaces or nothing. A `\vspace`
+% in horizontal mode is `\vadjust`ed vertical glue (latex.ltx:9374-9385) and adds nothing to the line; `\hskip`/`\kern`
+% are their width in spaces; a `\par` is a word boundary, a space. The guard varies the body: `\textit{Abstract.}\hskip1em`
+% (arxstspdf.cls, 1312.7183, math0609457), `{}\vspace{-14mm}` (jkas.cls, 1502.02294: no heading, so no `name`),
+% `Abstract\kern3pt`, `Abstract\par\smallskip` ("Abstract "), `Sum\par mary` (pdflatex: "Sum" and "mary" on two lines;
+% "Sum mary"), `Sum\vskip2pt mary` (the same: tex.web §1094 ends the paragraph before a raw `\vskip`), `\vskip-3mm Abstract`
+% (2603.28538: "Abstract", no paragraph begun before it), `\par` (only a space: no `name`). The renewed `\refname` is an element's text and stays "References".
+% witness: 1607.06945, 1502.02294, 1312.7183, math0609457.
+% status:  GREEN (ABSNAME): attribute values take each digested item's attribute form (Perl `toAttribute`,
+%          Document.pm:1373-1380), and `\vskip`/`\kern`/`\par` have one (OXIDIZED_DESIGN_DIVERGENCES #1170).
+% oracle:  pdflatex 0 errors: the heading "Abstract", then "Text."; the bibliography heading "References".
+% Perl:    name="Abstract\vskip6.0pt" (toAttribute falls back to the reversion, Whatsit.pm:217-223).
+% ours (before): name="Abstract\vskip6.0pt"; `\hskip1em` gave "Abstract.\quad" (Display, not the attribute form).
+% expect:  0 errors, 0 warnings; <abstract name="Abstract">; <title>References</title>.
+\documentclass{article}
+\renewcommand\abstractname{\large\bfseries Abstract\vspace*{6pt}}
+\renewcommand\refname{References\vspace*{6pt}}
+\begin{document}
+\begin{abstract}Text.\end{abstract}
+\nocite{x}\begin{thebibliography}{1}\bibitem{x} X.\end{thebibliography}
+\end{document}

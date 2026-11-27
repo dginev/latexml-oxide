@@ -25409,6 +25409,42 @@ class's 2020 fits; the era default of the paper's own amsart, 1991, waits for le
 amstex/amsppt_msc_edition_*), `latexml_core` `util::msc::tests`.
 **Upstream**: Rust-only (DG 2026-11-25: no Perl patches for now).
 
+### 1170. In an attribute value spacing is its width or nothing, a paragraph end a space: `\vskip`, `\kern` and `\par` have an attribute form (ABSNAME)
+
+Related: #96 (the em a faked space is sized by), #121 (alignment declarations in `\abstractname`), #921 (an empty name
+is no label); searched: attributeForm, toAttribute, DimensionToSpaces, abstractname.
+Principle: real TeX — an attribute value is the text the item prints, and spacing prints as its width on the line.
+**Rule**: a digested value becomes an attribute through `Digested::to_attribute` (Perl `toAttribute`), never its
+reversion; there a `\vspace` (`\smallskip`) and a vertical `\kern` are nothing, a source `\par`, or the paragraph end
+before a raw `\vskip`, is a word boundary, a space, and a horizontal `\kern` is its spaces as `\hskip` is.
+**Perl behavior**: Whatsit.pm:217-223 falls back to the reversion for a definition without `attributeForm`; only `\hskip`
+has one (TeX_Glue.pool.ltxml:85), so `\vskip` (:91), `\kern` (TeX_Kern.pool.ltxml:31) and `\par` print their spelling
+(KNOWN_PERL_ERRORS #1346).
+**TeX source**: latex.ltx:9374-9385 — `\vspace` in horizontal mode is `\vadjust{\vskip…}`, below the line and not in it;
+tex.web §1057 `append_kern` adds a kern of its width to the list in horizontal mode.
+- The properties carry the form: `\vskip`'s Glue constructor an empty `attributeForm` (in vertical mode or for a
+  `\vspace`), `\par`'s whatsit a space (pdflatex
+  sets `Sum\par mary` on two lines; a caption separator `.\par` gives `close=". "`; #766 makes it a line break in
+  inline frontmatter), `\kern` its `dimension_to_spaces` (tex_glue.rs, tex_paragraph.rs, tex_kern.rs). A raw
+  `\vskip` in a paragraph ends it (tex.web §1094; `Sum\vskip2pt mary` prints two lines), so it is a space: the `\par`
+  `leave_horizontal` inserts (`internal_par`), or in a name digested as text, where none goes in, the `\vskip` itself after a word (before any, TeX is still in
+  vertical mode: `\vskip-3mm Abstract` is "Abstract", 2603.28538).
+  A `\vspace` (`\lx@vspace@mark`) is a `\vadjust` that ends no line, empty both ways (`Key words\vspace*{2pt}` prints on
+  one line), as is the `\par` kept inside a paragraph before a display. An empty form wins in
+  `to_attribute`; a name that is empty or only ASCII spaces is no name (#921, Document.pm:1381's empty-value drop).
+- The frontmatter calls' digested keyvals and the default names (`\lx@<tag>@<role>@name`, `\lx@<tag>@name`) were their
+  `Display`, which reverts even `\hskip1em` to `\quad`: they now take `to_attribute`, as Perl (Base_Utility.pool.ltxml:
+  386-388, :395, :428, :482; frontmatter_api.rs, queue_digest.rs `get_frontmatter_name`).
+- A constructor's attribute built from an argument (`attr='#1'`, `replacement.rs value_to_attribute`) already took
+  `to_attribute`, and takes the new forms too; `tex=`, `alttext` and every text node revert or construct, untouched.
+**Witnesses**: 1607.06945 (sigsam.sty:99 `\vspace*{6pt}`: "Abstract"), 1502.02294 (jkas.cls `{}\vspace{-14mm}`: no
+name, no heading in the PDF), 1312.7183 and math0609457 (arxstspdf.cls `\textit{Abstract.}\hskip1em`: "Abstract." and an
+em space, not `\quad`).
+**Guards** `perfect_kernel_batchabsname::frontmatter_name_spacing_is_its_attribute_form` (repros
+sectioning-frontmatter/abstract_name_spacing_is_not_its_tex_spelling, frontmatter_names_spacing_through_keyvals,
+captions-floats/caption_separator_par_is_a_word_boundary).
+**Upstream**: Rust-only (DG 2026-11-25: no Perl patches for now).
+
 ### 1171. A math array cell covered by a `rowspan` is omitted from the XML, `\bordermatrix`'s fence cells too (SPANNED)
 
 Related: none (searched: rowspan, @spanned, skipped, bordermatrix, plain_constructs, Alignment).

@@ -74,12 +74,16 @@ LoadDefinitions!({
   // `perfect_kernel_batch58::horizontal_kern_has_its_width`.
   properties => sub[args] {
     let size = args[0].as_ref().and_then(|d| d.get_dimension()).unwrap_or_default();
+    // In an attribute a kern is its spaces as `\hskip`'s, a vertical one nothing, not its `\kern` reversion as Perl's
+    // (OXIDIZED_DESIGN_DIVERGENCES #1170).
     if mode_ends_with("vertical") {
       Ok(stored_map!("height" => size, "width" => Dimension::default(),
         "depth" => Dimension::default(), "isSpace" => true, "isKern" => true,
-        "isVerticalSpace" => true, "isBreak" => true))
+        "isVerticalSpace" => true, "isBreak" => true, "attributeForm" => Stored::String(pin(""))))
     } else {
-      Ok(stored_map!("width" => size, "isSpace" => true, "isKern" => true))
+      let spaces = super::tex_glue::dimension_to_spaces(size, None);
+      Ok(stored_map!("width" => size, "isSpace" => true, "isKern" => true,
+        "attributeForm" => Stored::String(pin(&spaces))))
     }
   });
 

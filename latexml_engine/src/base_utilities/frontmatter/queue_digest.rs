@@ -961,6 +961,9 @@ pub(in crate::base_utilities) fn clean_frontmatter_labels(
 /// its class prints none (the kernel's title `\thanks`, a dedication, a report number set top right), and the role's
 /// default does not stand in. Perl's `$name && scalar($name->unlist)` falls back to the default there. A call that
 /// forwards an optional label (`\email[]{…}`, `name={#1}`) passes the role's default itself when none was given.
+/// A default is its attribute form, as Perl's `setAttribute` makes it (Document.pm:1373-1380): a `\vspace` in it is
+/// nothing, an `\hskip` its spaces, a `\par` a space; a name of only ASCII spaces prints no word and is no name
+/// (OXIDIZED_DESIGN_DIVERGENCES #1170; 1607.06945, 1312.7183).
 pub(in crate::base_utilities) fn get_frontmatter_name(
   name: Option<&String>,
   tag: &str,
@@ -968,23 +971,23 @@ pub(in crate::base_utilities) fn get_frontmatter_name(
 ) -> Result<Option<String>> {
   let stag = tag.strip_prefix("ltx:").unwrap_or(tag);
   if let Some(name) = name {
-    return Ok((!name.is_empty()).then(|| name.clone()));
+    return Ok((!name.trim_ascii().is_empty()).then(|| name.clone()));
   }
   if !role.is_empty() {
     let cs = T_CS!(s!("\\lx@{stag}@{role}@name"));
     if lookup_definition(&cs)?.is_some() {
-      let n = digest_text(Tokens!(cs))?.to_string();
+      let n = digest_text(Tokens!(cs))?.to_attribute();
       // A defined-but-empty per-role default (e.g. `\lx@contact@orcid@name`,
       // emptied because the iD glyph self-identifies) means NO label — return
       // None rather than an empty `ltx:contact_name`, and do not fall back to
       // the generic default. General, not role-special.
-      return Ok(if n.is_empty() { None } else { Some(n) });
+      return Ok((!n.trim_ascii().is_empty()).then_some(n));
     }
   }
   let cs = T_CS!(s!("\\lx@{stag}@name"));
   if lookup_definition(&cs)?.is_some() {
-    let n = digest_text(Tokens!(cs))?.to_string();
-    if !n.is_empty() {
+    let n = digest_text(Tokens!(cs))?.to_attribute();
+    if !n.trim_ascii().is_empty() {
       return Ok(Some(n));
     }
   }

@@ -160,6 +160,9 @@ LoadDefinitions!({
   // the hooks again, keeping a deferred `\RequirePackage`/`\usepackage` legal.
   let mut skippable_props: SymHashMap<Stored> = SymHashMap::default();
   skippable_props.insert("alignmentSkippable", Stored::Bool(true));
+  // In an attribute a paragraph end is a word boundary, a space, not its `\par` reversion (OXIDIZED_DESIGN_DIVERGENCES
+  // #1170; 1607.06945).
+  skippable_props.insert("attributeForm", Stored::String(pin(" ")));
 
   DefConstructor!("\\lx@normal@par",
     sub[document, _args, props] {
@@ -260,10 +263,12 @@ LoadDefinitions!({
         return Ok(Vec::new());
       }
       whatsit.set_property("mode", lookup_mode());
-      // When invoked by leave_horizontal: no reversion, don't close ltx:para
+      // When invoked by leave_horizontal: no reversion (TeX_Paragraph.pool.ltxml:131), and don't close ltx:para. In an
+      // attribute a word boundary (tex.web §1094's `\par`), but nothing before a `\vspace`, a `\vadjust` in TeX.
       if LookupBool!("INTERNAL_PAR") {
         whatsit.set_property("internal_par", true);
         whatsit.set_property("reversion", Tokens!());
+        whatsit.set_property("attributeForm", pin(if lookup_bool("lx@vspace@mark") { "" } else { " " }));
       } else {
         // the frontmatter field whose own paragraph break this is (`frontmatter_paragraph_field`), whose element decides
         // at construction what it makes (`frontmatter_paragraph_break`)
@@ -545,6 +550,7 @@ fn keep_inside_paragraph(material: &Digested) {
       {
         whatsit.set_property("internal_par", true);
         whatsit.set_property("reversion", Tokens!());
+        whatsit.set_property("attributeForm", pin(""));
       }
     },
     _ => {},

@@ -422,6 +422,7 @@ mod perfect_kernel_batch99b;
 /// #955).
 mod perfect_kernel_batchaaailabel;
 mod perfect_kernel_batchabsfix;
+mod perfect_kernel_batchabsname;
 mod perfect_kernel_batchacmteaser;
 mod perfect_kernel_batchalgo397;
 mod perfect_kernel_batchamsppt;

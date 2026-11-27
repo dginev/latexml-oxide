@@ -1,0 +1,23 @@
+% amsart's names with spacing in them: the e-mail label and the keywords name reach their `name` through the call's
+% keyvals (`\lx@annotate@frontmatter`, `\lx@add@frontmatter` `name=`), the abstract's through its default name. Each is
+% the text pdflatex prints, its spacing as spaces or nothing, never its TeX spelling (sibling of
+% abstract_name_spacing_is_not_its_tex_spelling.tex; witness shape 1607.06945).
+% witness: synthetic (ABSNAME sibling sweep).
+% status:  GREEN (ABSNAME): every digested keyval takes its attribute form (Perl `toAttribute`, Document.pm:1373-1380;
+%          OXIDIZED_DESIGN_DIVERGENCES #1170).
+% oracle:  pdflatex 0 errors: "Abstract. Text.", "E-mail : a@b.c", "Key words. alpha, beta."
+% ours (before): name="E-mail\kern2.0pt: ", "Abstract\vskip3.0pt.", "Key words\vskip2.0pt: ".
+% expect:  0 errors, 0 warnings; name="E-mail&#x2009;: ", "Abstract.", "Key words: " (no-break space).
+\documentclass{amsart}
+\renewcommand\keywordsname{Key words\vspace*{2pt}}
+\renewcommand\emailaddrname{E-mail\kern2pt}
+\renewcommand\abstractname{Abstract\vspace*{3pt}}
+\begin{document}
+\title{T}
+\author{A. Author}
+\email{a@b.c}
+\keywords{alpha, beta}
+\begin{abstract}Text.\end{abstract}
+\maketitle
+Body.
+\end{document}

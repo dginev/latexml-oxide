@@ -31,6 +31,13 @@ top of its group.
     printed "¨") and through plain's `\font\manual=manfnt` (`\char127` printed nothing, 1012.0265); the cubes stand in
     as ⧉ and the METAFONT logo's slots are its letters. Neither family warns any longer (OXIDIZED_DESIGN_DIVERGENCES
     #645). Guards `cluster_fontmap::dingbat_family_maps`.
+  - **A frontmatter name with spacing in it is the text pdflatex prints, not its TeX spelling.** A renewed
+    `\abstractname{\large\bfseries Abstract\vspace*{6pt}}` (sigsam.sty) gave `name="Abstract\vskip6.0pt"`, and
+    `\textit{Abstract.}\hskip1em` (arxstspdf.cls) `Abstract.\quad`. Every value a frontmatter call or a default name
+    digests now takes its attribute form, as Perl's `toAttribute` (an `\hskip` its spaces), and in an attribute
+    `\vspace` is nothing, `\par` (also the paragraph end a raw `\vskip` makes) a space and `\kern` its spaces (1607.06945, 1502.02294, 1312.7183;
+    OXIDIZED_DESIGN_DIVERGENCES #1170, KNOWN_PERL_ERRORS #1346). Guard
+    `perfect_kernel_batchabsname::frontmatter_name_spacing_is_its_attribute_form`.
   - **After a digestion Fatal, an unfinished construct is closed as its own.** The salvage of the boxes digested
     before a Fatal spliced an unfinished construct's text into the running paragraph: a footnote's words fused with
     the sentence, an `\author{…}` became a body paragraph, a formula became italic text, a list left rootless items

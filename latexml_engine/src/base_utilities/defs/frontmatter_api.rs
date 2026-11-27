@@ -545,8 +545,8 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
       DebugFeature!("frontmatter", "FRONT drop {tag}: its block's setters' entries are written as queued");
       return Ok(Vec::new());
     }
-    // %options = digested keyvals hash; role read from the UNdigested keyvals
-    // (Careful! Multiple values — Perl getValue returns the last one.)
+    // %options = digested keyvals hash, each value its attribute form as Perl's `setAttribute` writes it (OD #1170);
+    // role read from the UNdigested keyvals (Careful! Multiple values — Perl getValue returns the last one.)
     let mut options = TagAttrs::default();
     let mut role = String::new();
     if let Some(kv) = kv {
@@ -554,7 +554,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
       if let DigestedData::KeyVals(dkv) = kv.be_digested()?.data() {
         for key in dkv.get_keyvals().keys() {
           if let Some(v) = dkv.get_value_digested(key) {
-            options.insert(key.clone(), v.to_string());
+            options.insert(key.clone(), v.to_attribute());
           }
         }
       }
@@ -685,7 +685,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
       if let DigestedData::KeyVals(dkv) = kv.be_digested()?.data() {
         for key in dkv.get_keyvals().keys() {
           if let Some(v) = dkv.get_value_digested(key) {
-            options.insert(key.clone(), v.to_string());
+            options.insert(key.clone(), v.to_attribute());
           }
         }
       }
@@ -1012,7 +1012,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
       && let DigestedData::KeyVals(dkv) = kv.be_digested()?.data() {
         for key in dkv.get_keyvals().keys() {
           if let Some(v) = dkv.get_value_digested(key) {
-            options.insert(key.clone(), v.to_string());
+            options.insert(key.clone(), v.to_attribute());
           }
         }
       }

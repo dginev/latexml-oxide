@@ -89,7 +89,7 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (459 items on 2026-11-27 on `int/towards_v0_8_1`: 459 open, weight 996, 36 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (462 items on 2026-11-27 on `int/towards_v0_8_1`: 462 open, weight 999, 36 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
 
 
   - ODR6 — OD ruling 12 (recorded in OD #449): `dump_reader.rs`'s "add-only" docstrings (:365, :574) corrected, then a removal trial of the skip lists against CLAUDE.md rule 2; 1
@@ -1535,6 +1535,24 @@ Rules that keep this file honest and mergeable:
   - MPRCONCL-QUAD — (from the ICONFONTS review) MPRCONCL's `\\` → `\quad` in an `\inferrule` conclusion leaves
     `X \longmapsto \quad Y` unparsed by the math parser (1712.01800: +1 unparsed formula per such conclusion, content kept);
     math is parked — the parser should treat `\quad` after a relation as space; 1
+  - ABSNAME-RESIDUAL — (ABSNAME landed 2026-11-27: a renewed name's glue never prints its TeX spelling; `\par`/raw `\vskip` after a
+    word is a space, OD #1170, KPE #1346) a second vertical item adds a second space (`Sum\vskip2pt\vskip3pt mary` → `"Sum  mary"`,
+    caption `:\par\vskip3pt` → `close=":  "`; invisible in HTML); `\par Summary` → `" Summary"`; `\noindent\vskip2pt Abstract` →
+    `"\noindent Abstract"` — scan the list from its end and add `" "` only when the last printing item is not blank
+    (`tex_glue.rs` `list_has_text`). Same helper: it calls `to_attribute()` on list items at every `\vskip` outside vertical mode,
+    and a whatsit without an `attributeForm` goes through `Display` → `revert().unwrap()` (whatsit.rs:319), so a reversion error
+    there panics (suspected, no witness; the unwrap itself is pre-existing for every attribute); +5.4 % instructions on 900
+    `\vskip`s in `\mbox`es (TeX-invalid input); review `agent_reports/2026-11-27_ABSNAME_rereview2.md`; 1
+  - BORDERFENCE — (Gemini SPANNED.2, verified 2026-11-27) a `\bordermatrix`'s parentheses are a static `<mpadded>` strut
+    (~12.2pt a row: 97.6pt for `rowspan="8"` in 1909.09038), not a stretch, so a tall matrix outgrows them: rows below the
+    strut hang outside (Chrome 38/82 fences >10px short, Firefox 58/82 — Firefox rows ~12 % taller; 1308.0068's row `C` in
+    Firefox); MathML Core stretches an `<mo>` only within its `mrow`, not across a `rowspan`, so size the strut from the
+    rows' measured heights or draw the fences as a stretched column; pre-existing; 1
+  - CCGLYPH — (Gemini ICONGLYPH.2, verified: `fc-list ':charset=1f16d'` = 0 here) ccicons' Unicode 13 CC icons (U+1F10D-1F10F,
+    U+1F16D-1F16F) render as tofu on a stock Ubuntu in Chrome and Firefox under LaTeXML.css and ar5iv.css (fonts-noto-core's
+    old Noto Sans Symbols 2 lacks them); ⊜ ☡ ⧉ ◜◝◞◟ ◡ render. Options for DG: ar5iv-fonts imports Noto Sans Symbols 2 (online
+    ar5iv only) or an embedded OFL 6-glyph subset with `unicode-range` (both stacks, offline) — embedded per the
+    self-contained-binary rule; 1
   - AUTHGDEF — a class/style that fills `\@author` by `\gdef` and prints it from its own `\@maketitle`, with no `\author` call
     (ismir.sty `\oneauthor`; icmc2025, LaurentianThesis.cls): no `ltx:creator`, the words counted by `Warning:frontmatter:unclaimed`;
     Perl the same, silent (PERL-ORIGIN). Fix plan (EASY, MED risk): `hand_offtable_stores` hands a raw `\@author` on as

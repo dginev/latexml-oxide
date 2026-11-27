@@ -23163,6 +23163,30 @@ guard `perfect_kernel_batch68y::tablecomments_print_where_each_class_prints_them
 `\gdef` replaces an earlier note and prints the references first; both Perl and Rust append in source order (RED
 `emulateapj_deluxetable_notes_order_red`).
 
+## 1346. Perl writes `\vskip`, `\kern` and `\par` in an attribute value as their TeX spelling
+
+`Document::setAttribute` (Document.pm:1373-1380) turns a digested value into its `toAttribute`, and a whatsit whose
+definition gives no `attributeForm` falls back to its `toString`, the reversion (Whatsit.pm:217-223). `\hskip` gives one,
+its spaces (TeX_Glue.pool.ltxml:85); `\vskip` (:91), `\kern` (TeX_Kern.pool.ltxml:31) and `\par` do not, so a renewed
+name with spacing in it prints its spelling. pdflatex prints "Abstract": a `\vspace` in horizontal mode is `\vadjust`ed
+vertical glue (latex.ltx:9374-9385) and adds nothing to the line. Minimal trigger:
+
+```latex
+\documentclass{article}
+\renewcommand\abstractname{\large\bfseries Abstract\vspace*{6pt}}
+\begin{document}\begin{abstract}Text.\end{abstract}\end{document}
+```
+
+Perl (same host): `<abstract name="Abstract\vskip6.0pt">`; `Abstract\kern3pt` gives `Abstract\kern3.0pt`,
+`Abstract\par\smallskip` `Abstract\par\vskip3.0pt plus 1.0pt minus 1.0pt`. Witnesses 1607.06945 (sigsam.sty:99, ar5iv
+#127), 1502.02294 (jkas.cls). Rust surpasses (OXIDIZED_DESIGN_DIVERGENCES #1170): in an attribute a `\vspace` and a
+vertical `\kern` are nothing, a source `\par` or the paragraph end before a raw `\vskip` a space (a word boundary:
+`Sum\par mary` and `Sum\vskip2pt mary` print two lines, tex.web §1094), a horizontal `\kern` its spaces. A patch for
+Perl would give `\vskip` `attributeForm => ''` (`' '` for a raw one after a word in a horizontal list), `\par` a CODE form, `''`
+for an `internal_par` before a `\vspace` (a `\vadjust` in TeX; TeX_Paragraph.pool.ltxml:131) else `' '`, and `\kern`
+`\hskip`'s (an empty definition form wins: Whatsit.pm:221 reads the property `||` the definition's). Guard
+`perfect_kernel_batchabsname::frontmatter_name_spacing_is_its_attribute_form`.
+
 ## 1347. Perl's MathML drops the real cells after a `\multirow` in a math array
 
 `@spanned` (Post/MathML.pm:448-470) skips, in the rows a `rowspan` (or `colspan`) covers, the cell at each covered
