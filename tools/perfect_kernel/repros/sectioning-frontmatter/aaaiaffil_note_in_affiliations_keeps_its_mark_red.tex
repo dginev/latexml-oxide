@@ -1,0 +1,32 @@
+% mechanism: a `\thanks` inside aaai's `\affiliations` prints its mark at the call in TeX (`\thanks` under `\maketitle`
+%   = `\footnotemark` + a deferred `\footnotetext`, latex.ltx:17213-17216); the frontmatter deposit (`sect05.rs`
+%   `deposit_tokens_of`) leaves the kernel `\thanks` (Perl latex_constructs.pool.ltxml:1128, a mark-less pubnote), so the
+%   note loses its mark and its place, silently; PERL-ORIGIN inside the OD #265 surpass (LONG_TAIL AAAIAFFIL)
+% witness:  2110.07444, 2312.01324, 2502.18479, 2410.04191 (aaai21+; the style a minimal stand-in)
+% oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Able1∗, Bob Baker2∗", "1 Univ A†", "2 Univ B∗"; foot
+%   "∗ These authors contributed equally." once, "† Work done at Univ A."
+% engines:  rust INT081AL (86e435643c6) = 0 errors, 1 Warning (Univ B's `\equalcontrib` note written as plain text, counted);
+%   "Work done at Univ A." a mark-less `pubnote`, its † and its place on Univ A lost, uncounted
+% expect:   0 errors; "Work done at Univ A." a note marked † on the Univ A affiliation (P1: a note in place at the call,
+%   with an Info; P2: the glyph from the counter state), Univ B's ∗ a copy of the shared note
+% status:   RED
+% moves:    post-merge (LONG_TAIL AAAIAFFIL)
+% preload:  ar5iv.sty
+\begin{filecontents*}[overwrite]{aaai25.sty}
+\def\maketitle{\par\begingroup\def\thefootnote{\fnsymbol{footnote}}\twocolumn[\@maketitle]\@thanks\endgroup
+  \setcounter{footnote}{0}\let\maketitle\relax\let\@maketitle\relax\gdef\@thanks{}\let\thanks\relax}
+\long\gdef\affiliations#1{\def\affiliations_{#1}}
+\def\@maketitle{\newcounter{eqfn}\setcounter{eqfn}{0}\vbox{\let\footnote\thanks\relax\setcounter{footnote}{0}%
+    \def\equalcontrib{\ifnum\value{eqfn}=0 \footnote{These authors contributed equally.}%
+      \setcounter{eqfn}{\value{footnote}}\else\footnotemark[\value{eqfn}]\fi}%
+    \hsize\textwidth\centering{\LARGE\bf\@title\par}{\Large\bf\@author\par}{\normalsize\affiliations_\par}}}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{aaai25}
+\title{A Title}
+\author{Ann Able\textsuperscript{\rm 1}\equalcontrib, Bob Baker\textsuperscript{\rm 2}\equalcontrib}
+\affiliations{\textsuperscript{\rm 1}Univ A\thanks{Work done at Univ A.}\\ \textsuperscript{\rm 2}Univ B\equalcontrib}
+\begin{document}
+\maketitle
+Body.
+\end{document}

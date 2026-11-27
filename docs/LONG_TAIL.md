@@ -571,8 +571,9 @@ bullets below; moved from row R by DG's ruling of 2026-11-23, in row R's order):
     the kernel `\thanks` (= Perl `latex_constructs.pool.ltxml:1128`, a mark-less pubnote) where TeX prints
     `\footnotemark` at the call (latex.ltx:17213-17216); 0 Warnings (2110.07444, 2312.01324, 2502.18479, 2410.04191).
     PERL-ORIGIN inside the OD #265 surpass. P1 (a note made in place at the call, mark-less, plus an Info) is easy;
-    P2 (the glyph from the counter state) is hard. Also: sect05.rs ~:4058-4061 says the deposits `\let\thanks\@gobble`;
-    only the replay does; 3
+    P2 (the glyph from the counter state) is hard. RED
+    `sectioning-frontmatter/aaaiaffil_note_in_affiliations_keeps_its_mark_red.tex`. Also: sect05.rs ~:4058-4061 says the
+    deposits `\let\thanks\@gobble`; only the replay does; 3
   - DATEICML-TYPED — (moved from DATEICML 2026-11-26: one witness) a notice legend whose mark the name types
     itself (`\icmlauthor{Kai Wang$^\dag$}{a}`, no `\icmlsetsymbol` label) answers no recorded mark: the notice
     stays whole (RED `package-bindings/icml_notice_legend_of_a_mark_typed_in_the_name_red`; 2402.05011); 1
