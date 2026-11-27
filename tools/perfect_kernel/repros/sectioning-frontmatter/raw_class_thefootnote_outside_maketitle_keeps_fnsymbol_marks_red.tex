@@ -1,0 +1,26 @@
+% mechanism: a raw class over `\LoadClass{article}` that changes `\thefootnote` at class level still prints fnsymbol title
+%   marks in pdflatex, because article's `\maketitle` sets `\thefootnote` only inside its own group (article.cls:205); OMNT's
+%   `settle_title_block_after_class_load` (`latex_constructs/mod.rs`, `TITLE_BLOCK_COMMANDS`) counts any change to
+%   `\thefootnote` as the class taking the title block over and declines the block, so the marks stay unknown (no glyph —
+%   the safe side, DG 2026-11-16). Same over-decline: a class-level `\let\thanks\footnote` (pdflatex ∗ †, the note texts lost)
+%   and `\thanks` redefined to latex.ltx's own body (pdflatex prints its own fnsymbol marks). Pre-existing (base = head)
+% witness: synthetic (the OMNT review's probes `scratch_revOMNT/p/t_rthe.tex`, `t_rlet.tex`, `t_rabd.tex`)
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann One∗ Bob Two†", body note "a"
+% engines: rust after OMNT (8332d42e9dd) and INT081EP: the two creators unmarked, body note "a"
+% expect:  Ann One ∗ (Univ A.), Bob Two † (Univ B.); body note a. Fix: drop `\thefootnote` from the compared set, or compare
+%   what the title would actually print (row R OMNTSETTLE)
+% status:  RED
+% moves:   post-merge (row R OMNTSETTLE)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{rthe.cls}
+\NeedsTeXFormat{LaTeX2e}\ProvidesClass{rthe}
+\LoadClass{article}
+\renewcommand\thefootnote{\alph{footnote}}
+\end{filecontents*}
+\documentclass{rthe}
+\title{The Title}
+\author{Ann One\thanks{Univ A.} \and Bob Two\thanks{Univ B.}}
+\begin{document}
+\maketitle
+Body\footnote{Body note.} text.
+\end{document}

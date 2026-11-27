@@ -1,0 +1,19 @@
+% mechanism: a creator's notes print in source order (`\thanks{…}` then `\protect\footnotemark[n]`: latex.ltx `\thanks`
+%   puts its mark at the call, `\footnotemark` its own after it), but the frontmatter places a creator's mark-only note
+%   before its thanks note (`observer`/insert), so the marks come out reversed; pre-existing (base = head), now also
+%   reached under scrartcl since OMNT declares KOMA's fnsymbol marks (2609.04243: Wu "†¶", Zhang "†‖" where the PDF prints
+%   "¶†" and "‖†")
+% witness: 2609.04243 (scrartcl); synthetic below (article)
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "The Title∗", "Ann One† Bob Two∗ Cy Three‡∗"
+% engines: rust INT081 after OMNT (8332d42e9dd) and base INT081EP: Cy Three's notes ∗ before ‡
+% expect:  Cy Three's two notes in source order: ‡ (Univ C.) then ∗ (the title's note, mark only)
+% status:  RED
+% moves:   post-merge (row R CREATORNOTEORDER)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{The Title\thanks{Grant G.}}
+\author{Ann One\thanks{Univ A.} \and Bob Two\protect\footnotemark[1] \and Cy Three\thanks{Univ C.} \protect\footnotemark[1]}
+\begin{document}
+\maketitle
+Body\footnote{Body note.} text.
+\end{document}

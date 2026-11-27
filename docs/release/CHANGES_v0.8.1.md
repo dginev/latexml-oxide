@@ -9,6 +9,12 @@ top of its group.
 
 ### Unreleased
 
+  - **KOMA-Script, versioned SIAM and dmtcs title notes print their fnsymbol marks and step the footnote counter, as the
+    classes do.** A binding now answers for the class it actually serves — its own name, the request a versioned or prefix
+    fallback answered with it (`siamltex1213`, `siamonline220329`), or the base a raw class file `\LoadClass`es while leaving
+    the title block alone — so `scrartcl`/`scrarticle`, `scrreprt`, `scrbook`, `siamart`/`siamonline` and `dmtcs-episciences`
+    title notes are marked ∗, †, ‡ … where they were unmarked or arabic, and `\footremember`/`\footrecall` keep their notes
+    (OXIDIZED_DESIGN_DIVERGENCES #851). Guard `perfect_kernel_batchomnt`.
   - **A `trim`/`viewport` crop of a rasterized PDF, EPS or PS keeps the region the PDF shows.** The crop was cut at
     72 pixels per inch whatever density the figure was rendered at, so at the default 120 dpi a `trim` removed 60 %
     of what it asked for, and a large figure rendered at the 2048-pixel cap (26 dpi for a 5669 bp page) lost 2.8 times
