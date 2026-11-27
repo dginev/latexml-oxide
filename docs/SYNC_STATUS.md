@@ -992,8 +992,19 @@ Rules that keep this file honest and mergeable:
     `scratch_BLOCKDECL/fix1/gates_nextest_run1.log`), and SIGABRT "free(): chunks in smallbin corrupted" in
     `perfect_kernel_batch56::byte_mouth_declare_unicode_character_defines_u8_names` (gates INT081EB on `1f8370df6d4`,
     after `t1.fontmap` loaded). The rate: 4 crash-signal gate runs of the ~121 since 2026-11-23, 0 of the 484 before
-    (counted over `gates_nextest_*.log`, ANSI-stripped `SIGABRT|SIGSEGV|SIGBUS` lines). Next: a bisect by stress — the
-    full suite looped on a tree with rust-libxml 0.3.24's lock and without #1000 against today's, same host and load; 5
+    (counted over `gates_nextest_*.log`, ANSI-stripped `SIGABRT|SIGSEGV|SIGBUS` lines; p ≈ 0.002 that the rate did not
+    change). HEAPABORT (2026-11-27): AddressSanitizer silent (the four witnesses ×50 and `cluster_package_guards` twice,
+    ~16k instrumented processes); a stress comparison of today's tree against #1000's runtime changes reverted came out
+    0 of 109,548 processes against 0 of 109,548 — too few at ~3.7e-6 per process to tell them apart (~1e6 per arm
+    would). A 0.3.24 arm does not build (36 calls need 0.3.26's `Node::with_name`). Ruled out: DRAM (EDAC 0 corrected,
+    0 uncorrected in 45 days, no MCE) and the allocator (mimalloc release binaries die the same way, in its free-list
+    pop on a corrupt next pointer: 2026-11-23 10:49 and 2026-11-26 16:59), so something writes where it should not on
+    either allocator; libxml 0.3.25 is not proven the start (the 11-23 crash came ~7 h before it reached the host).
+    The tools' silence fits a write they treat as valid (a stale pointer into re-mapped memory such as a dead thread's
+    stack or a stacker segment, uninstrumented C — libxml2, kpathsea, libmarpa — or a race; inferred). Since 2026-11-27
+    the gates keep cores (`ulimit -c unlimited` around nextest; apport keeps unpackaged binaries' cores in `/var/crash`;
+    D-18's ruling, never wired before). Next: read the next crash's core; then a ThreadSanitizer build on the witnesses
+    and the streaming test; a bisect only after (two nights at the gate's shape); 5
   - PATHAPI — (DG 2026-11-25, v0.8.1 only; main/v0.8.0 takes no refactor) one pathname API used everywhere, so a path
     bug is fixed in one file: helpers sized to the business needs and to Perl `Util/Pathname.pm`'s 25 operations (ours
     has 47 public functions, while ~24 `canonicalize(`, 3 `std::path::absolute`, 3 `current_dir()`, ~90 `.parent()`
