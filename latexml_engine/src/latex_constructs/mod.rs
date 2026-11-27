@@ -538,7 +538,7 @@ pub const DOCUMENT_CLASS_BINDING_REQUEST: &str = "lx@document@class@binding@requ
 const DOCUMENT_CLASS_BINDING_BASE: &str = "lx@document@class@binding@base";
 
 /// Does the binding `class` serve the document's class — its own name, the request a fallback answered with it, or the
-/// base of the document's raw class file that leaves its title block alone ([`DOCUMENT_CLASS_BINDING_BASE`])?
+/// base of the document's raw class file that leaves its title block alone (`DOCUMENT_CLASS_BINDING_BASE`)?
 pub fn serves_document_class(class: &str) -> bool {
   is_document_class(class)
     || (lookup_string(DOCUMENT_CLASS_BINDING) == class

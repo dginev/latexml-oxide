@@ -61,13 +61,21 @@ fn body_footnote_marks(xml: &str) -> Vec<String> {
     .collect()
 }
 
+/// A row: the repro, its Warnings, its creators ([`creator_lines`]), the body's footnote marks.
+type Row = (
+  &'static str,
+  &'static str,
+  usize,
+  &'static [&'static str],
+  &'static [&'static str],
+);
+
 /// latex.ltx:17215 `\thanks`; scrartcl.cls:2859-2862, scrreprt.cls:3080-3083, siamltex1213.cls:151-169,
 /// siamonline220329.cls:508-528, dmtcs-episciences.cls:304-316 mark the title's notes `\@fnsymbol` and reset the counter
 /// after `\maketitle`; pdflatex for each row in its repro header.
 #[test]
 fn a_binding_serving_the_document_class_marks_its_title_in_fnsymbol() {
-  // (the repro, its Warnings, its creators, the body's footnote marks)
-  let rows: [(&str, &'static str, usize, &[&str], &[&str]); 7] = [
+  let rows: [Row; 7] = [
     (
       "koma_title_footnotemark_prints_fnsymbol",
       repro!("koma_title_footnotemark_prints_fnsymbol"),
