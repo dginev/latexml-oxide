@@ -2,7 +2,8 @@
 %          `p/s` s1, k1: capa.cls, capc.cls)
 % oracle:  pdflatex 0 errors: "(1 ) Univ A, Town", "(9 ) Univ Z, Zed", "Pre text.", "(c, d) Lab C, Place", "We thank
 %          X.", "(8 ) Univ Y1" with its footnote 1 "Y note.", then "A Title", "Ann Able1", "Body." with footnote 1 "Body
-%          note." (`\maketitle` resets the counter; LaTeXML numbers it 2, as 94b r4 and 94a r8 do)
+%          note." (`\maketitle` resets the counter; 94b r4 and 94a r8 numbered it 2, OMNT 1: article's title block
+%          is the raw class's, which leaves it alone)
 % engines: rust 94b r5 = 0 errors, 0 warnings: every line in doubt set after the title, after the text printed between
 %          them ("Pre text. We thank X. (9) Univ Z, Zed (c, d) Lab C, Place (8) Univ Y"), the body's footnote 1 and
 %          the line's 2; 94b r4 and 94a r8 = the lines where the class printed them

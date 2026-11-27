@@ -384,7 +384,7 @@ fn a_definition_its_call_prints_takes_effect_in_order() {
                          block prints; the block is written as Perl's \\lx@add@authors splits it at its separators, \
                          its pieces digested in order";
   // (the repro, its Warnings, whether it declines, its creators)
-  let rows: [(&str, usize, bool, &[String]); 12] = [
+  let rows: [(&str, usize, bool, &[String]); 13] = [
     (repro!("footnoterecall_three_authors_spaced_remember"), 1, true, &[
       "<creator role=\"author\"><personname>Ann One</personname><note class=\"ltx_note_frontmatter ltx_thanks_note\" \
        mark=\"*\" role=\"thanks\" xml:id=\"id1\">The University</note></creator>"
@@ -509,6 +509,18 @@ fn a_definition_its_call_prints_takes_effect_in_order() {
        role=\"affiliation\"> <sup xml:id=\"id9\"><text font=\"italic\" xml:id=\"id9.1\">1</text></sup> Univ \
        X</contact><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup \
        xml:id=\"id10\"><text font=\"italic\" xml:id=\"id10.1\">2</text></sup> Univ Y</contact></creator>",
+    ])),
+    // (OMNT: under scrarticle, a raw class file loading scrartcl, the title block is scrartcl's, so the remembered
+    // counter is 1 and each recall "∗"; 2407.13730, 2606.19583)
+    (repro!("footnoterecall_counter_defined_by_an_earlier_creator"), 1, true, &row(&[
+      "<creator role=\"author\"><personname>Ann One</personname><note class=\"ltx_note_frontmatter ltx_thanks_note\" \
+       mark=\"*\" role=\"thanks\" xml:id=\"id1\">The University</note></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Two</personname><note \
+       class=\"ltx_note_frontmatter ltx_thanks_note\" idref=\"id1\" mark=\"*\" role=\"thanks\" \
+       xml:id=\"footnotex1\">The University</note></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cy Three</personname><note \
+       class=\"ltx_note_frontmatter ltx_thanks_note\" idref=\"id1\" mark=\"*\" role=\"thanks\" \
+       xml:id=\"footnotex2\">The University</note></creator>",
     ])),
   ];
   for (tex, warnings, declines, creators) in rows {

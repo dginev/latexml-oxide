@@ -1,4 +1,4 @@
-% mechanism: a name's `\footnotemark[1]` under an unbound class (scrartcl) is no number glyph: Perl's number key "1"
+% mechanism: a name's `\footnotemark[1]` under an unbound class (proc) is no number glyph: Perl's number key "1"
 %   shown as the mark, where pdflatex prints ∗ (the advisor's I-3); its note no number key names yet, so it is counted
 % witness:  review revMARKSAFE / ADVGEN I-3
 % oracle:   pdflatex 0 errors; "Ann Able∗ Bob Baker∗", one footnote "∗ Equal contribution."
@@ -9,7 +9,9 @@
 % status:   RED -> GREEN no glyph (MARKSAFEb: perfect_kernel_batchshmark::a_mark_whose_glyph_is_unknown_prints_none);
 %   the shared ∗ RED (row R MARKKEY: a mark paired by its number; row R SHAUTO)
 % preload:  ar5iv.sty
-\documentclass{scrartcl}
+% class:   proc (proc.cls:97-110 `\maketitle` sets `\fnsymbol`, no binding declares it) since OMNT, whose scrartcl
+%          binding declares its marks (koma_title_footnotemark_prints_fnsymbol); pdflatex the same under proc
+\documentclass{proc}
 \title{T}
 \author{Ann Able\thanks{Equal contribution.} \and Bob Baker\footnotemark[1]}
 \date{}

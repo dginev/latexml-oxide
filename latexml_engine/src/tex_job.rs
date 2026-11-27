@@ -376,6 +376,7 @@ LoadDefinitions!({
       // Branch 2 — `<class>.cls` exists: load it as the document class.
       crate::latex_constructs::note_document_class(&class);
       load_class(&class, opts_vec, after)?;
+      crate::latex_constructs::settle_title_block_after_class_load()?;
       crate::latex_constructs::make_missing_float_counters()?;
     } else {
       // Branch 3 — neither sty nor cls found. Load OmniBus to provide the

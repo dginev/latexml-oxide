@@ -15656,9 +15656,20 @@ yet, review rev78u); `given_footnote_number` reads
 `_fnvalue` reuse it, so a `[<n>]` whose expansion errs (`\footnotemark[\the\relax]`) is no number and the mark's
 digestion reports the error once, as pdflatex (review probes rev78o2 valerr, val: 78o r2 2 and 3 errors) (read so, a `\footnotetext[<mark>]{…}` no longer drops the space after it, which the digested argument
 lost: `perfect_kernel_batch68y::aa_tablefootmark_sets_the_mark_in_text`). `declare_fnsymbol_title_block` (called by the article, report, book, extarticle, extreport, extbook
-and siamltex bindings — siamltex.cls:156-175 marks its title block in `\fnsymbol` too — when that class is the
-document's — `is_document_class`, recorded by `\documentclass`/`\documentstyle` before the class loads, so revtex4,
-IEEEtran, elsarticle, llncs and the other bindings that load the article binding as their base keep their marks)
+and siamltex bindings — siamltex.cls:156-175 marks its title block in `\fnsymbol` too — and by siamart/siamonline
+(siamonline220329.cls:508-528), dmtcs-episciences (dmtcs-episciences.cls:304-316) and KOMA's scrartcl, scrreprt and
+scrbook, which mark it so with and without a title page (scrartcl.cls:2860, :2985; `None`), when that binding serves
+the document's class — `serves_document_class`: the class `\documentclass`/`\documentstyle` named
+(`is_document_class`, recorded before the class loads, so revtex4, IEEEtran, elsarticle, llncs and the other bindings
+that load the article binding as their base keep their marks), the request a versioned or prefix fallback answered
+with it (`fallback_request` as the document class's first binding loads, `ledger::note_document_class_binding`;
+Perl Package.pm:2194-2228, :2717-2725: `siamltex1213` → siamltex, 1503.07490; `siamonline220329` → siamonline,
+2408.02805), or the base a raw class file `\LoadClass`es where the rest of that file leaves the title block as the
+binding made it (`settle_title_block_after_class_load` after the class load: no refused `\maketitle`, and
+`\@maketitle`, `\thefootnote`, `\@makefnmark`, `\thanks`, `\footnotemark` the meanings they had; scrarticle.cls's
+`\LoadClassWithOptions{scrartcl}`, 2407.13730, 2606.19583; a raw class whose own `\maketitle` the lock refused keeps
+no glyph, the safe side — proc.cls, RED `raw_class_own_maketitle_fnsymbol_marks_red`; OmniBus declares none, as it
+fronts AMS and IEEE-clone classes that print no such marks)
 defines the title's `\thefootnote` hook `\lx@title@thefootnote` (`TITLE_THEFOOTNOTE`, `\@fnsymbol\c@footnote`, unless
 the class options set a title page), sets `lx_title_counts_footnotes` and appends `\setcounter{footnote}{0}` to
 `\lx@maketitle@body`; `enter_title_footnotes` makes the hook `\thefootnote` for the rest of a title, creator or date
@@ -15695,8 +15706,8 @@ under `\fnsymbol` ("∗ Equal contribution") is no answer to a table's `\footnot
 r1, int52a and Perl moved the text into the table's mark). This keeps the common title-block idiom paired —
 `\author{A\footnotemark[1]}` `\maketitle` `\renewcommand{\thefootnote}{\fnsymbol{footnote}}` `\footnotetext[1]{…}`
 prints "∗" for both (2412.20504, 2006.14582; siamltex 0903.0014); `\footnotetext[2]` after `\maketitle` without the
-renewal prints "2" where the title shows "†", which pdflatex leaves apart and we pair (2505.14146); a class whose title
-marks we do not model pairs too (siamltex1213, 1406.0089, 1503.07490); and `\fnsymbol`'s "∥" against `\@fnsymbol`'s "‖"
+renewal prints "2" where the title shows "†", which pdflatex leaves apart and we pair (2505.14146); a versioned
+class's title marks are its binding's (siamltex1213, 1406.0089, 1503.07490); and `\fnsymbol`'s "∥" against `\@fnsymbol`'s "‖"
 for 6 (2002.11721; Perl's `\fnsymbol` table, latex_constructs.pool.ltxml:3070, against latex.ltx's `\@fnsymbol` the
 kernel runs). Witness 2507.05750 (footmisc `symbol`). 0707.3986 (RR.sty:141 `\RRnote` = `\footnotetext[0]`, under
 RR.sty:445 `\def\thefootnote{\fnsymbol{footnote}}`) prints its note unmarked, as the class asks; its TL 2025 PDF's "0"
@@ -15724,7 +15735,12 @@ article_title_thanks_in_every_field_step_in_turn, footnotetext_by_number_pairs_o
 unmarked_footnotemark_pairs_with_its_unmarked_text, declared_title_thefootnote_prints_the_marks_the_observer_labels, title_counter_mark_keeps_to_the_title_block,
 report_title_bare_footnotemark_keeps_to_the_title_block, footnotemark_number_error_reported_once,
 footnotetext_number_error_reported_once, title_bare_footnotemark_pairs_with_a_numbered_body_text,
-title_mark_of_another_counter_pairs_with_its_body_text, section_title_footnotemark_pairs_with_its_text}`, `perfect_kernel_batchfms2a1::title_footnote_hook_overrides_fnsymbol`.
+title_mark_of_another_counter_pairs_with_its_body_text, section_title_footnotemark_pairs_with_its_text}`, `perfect_kernel_batchfms2a1::title_footnote_hook_overrides_fnsymbol`, the served class (OMNT, repros sectioning-frontmatter/koma_title_footnotemark_prints_fnsymbol,
+koma_titlepage_marks_in_fnsymbol, siamltex_versioned_title_marks_in_fnsymbol, siamonline_versioned_title_marks_in_fnsymbol,
+dmtcs_title_marks_in_fnsymbol, omnibus_unknown_class_title_marks_unmarked, raw_class_title_block_redefined_keeps_its_marks,
+footnoterecall_counter_defined_by_an_earlier_creator)
+`perfect_kernel_batchomnt::a_binding_serving_the_document_class_marks_its_title_in_fnsymbol` and
+`perfect_kernel_batchcr7::a_definition_its_call_prints_takes_effect_in_order`'s scrarticle row.
 
 ### 852. → KNOWN_PERL_ERRORS #1062 (algorithm2e's `noline` block gives its indentation back)
 

@@ -3767,9 +3767,15 @@ const CLASS: &[Row] = &[
     repro:      "marksafe_unbound_class_name_footnote_unknown",
     tex:        repro!("marksafe_unbound_class_name_footnote_unknown"),
     warnings:   0,
-    creators:   &[r#"Ann Able | note=Note A."#, r#"Bob Baker"#],
+    // (OMNT: scrartcl's binding declares its title block, so the name's `\footnote`, `\thanks` there, is marked ∗, as
+    // pdflatex; the unbound path is the proc rows)
+    creators:   &[r#"Ann Able ; thanks[*]=Note A."#, r#"Bob Baker"#],
     moves:      r#""#,
-    page:       &[r#"Ann Able"#, r#"Bob Baker"#],
+    page:       &[
+      r#"Ann Able ; * plain"#,
+      r#"Bob Baker"#,
+      r#"margin: Note A."#,
+    ],
     page_moves: r#""#,
   },
   Row {

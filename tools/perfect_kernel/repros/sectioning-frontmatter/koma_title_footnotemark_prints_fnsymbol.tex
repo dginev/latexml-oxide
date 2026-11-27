@@ -1,0 +1,12 @@
+% mechanism: scrartcl's `\maketitle` marks its title block's notes `\@fnsymbol\c@footnote` and lets `\footnote` be
+%   `\thanks` (scrartcl.cls:2859-2862, the counter reset :3038, as article.cls:203-205): its binding declares the
+%   fnsymbol title block (`declare_fnsymbol_title_block("scrartcl", None)`, scrartcl_cls.rs), so the title's notes step
+%   the counter and print ∗, and the body's note counts from 1. Formerly omnibus_title_footnotemark_prints_fnsymbol_red
+% witness: 2407.13730, 2606.19583 (scrarticle; footnoterecall_counter_defined_by_an_earlier_creator)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: "Ann One∗", "Bob Two∗"; title note ∗ The University; body 1
+% engines: rust e6a6c93a18, FNR1, INT081EP 0 errors, 0 warnings, both notes unmarked; OMNT 0 errors, 0 warnings, ∗, ∗, 1
+% expect:  0 errors, 0 warnings; Ann One's and Bob Two's notes ∗, the body's note 1
+% status:  GREEN (OMNT)
+\documentclass{scrartcl}
+\title{T}\author{Ann One\thanks{The University} \and Bob Two\footnotemark[1]}
+\begin{document}\maketitle Body\footnote{Body note.}.\end{document}

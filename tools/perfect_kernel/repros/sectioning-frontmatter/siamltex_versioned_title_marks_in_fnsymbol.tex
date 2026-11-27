@@ -1,0 +1,20 @@
+% mechanism: a versioned SIAM class (`siamltex1213`, no binding of its name) is answered by the siamltex binding
+%   (the versioned fallback, Perl Package.pm:2194-2228; `fallback_request`), which serves the document's class
+%   (`serves_document_class`: the request it answers is `lx@document@class`), so its fnsymbol title block is in force:
+%   siamltex1213.cls:151-169 `\renewcommand{\thefootnote}{\fnsymbol{footnote}}` in `\maketitle`, the reset after it
+% witness: 1503.07490 (siamltex1213, `\footnotemark[3]` + `\footnotetext[3]` "‡"), 1410.1012 (siamltex704)
+% oracle:  pdflatex (TL 2025, -no-shell-escape, 1503.07490's siamltex1213.cls and siam10.clo beside it) 0 `!`:
+%   "ANN ONE‡ AND BOB TWO‡", "‡ Univ A.", "Body1", "1 Body note."
+% engines: rust INT081EP 0 errors, 0 warnings, both marks "3"; OMNT 0 errors, 0 warnings, both "‡", body 1
+% expect:  0 errors, 0 warnings; Ann One's and Bob Two's notes ‡, the body's note 1
+% status:  GREEN (OMNT)
+\documentclass{siamltex1213}
+\title{T}
+\author{Ann One\footnotemark[3] \and Bob Two\footnotemark[3]}
+\begin{document}
+\maketitle
+\renewcommand{\thefootnote}{\fnsymbol{footnote}}
+\footnotetext[3]{Univ A.}
+\renewcommand{\thefootnote}{\arabic{footnote}}
+Body\footnote{Body note.}.
+\end{document}

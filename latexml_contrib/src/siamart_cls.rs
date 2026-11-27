@@ -9,7 +9,12 @@ use latexml_package::prelude::*;
 use crate::shipped_class::class_option_given;
 
 LoadDefinitions!({
+  // (the binding's name, siamart or siamonline, for its title block below)
+  let class = Expand!(Tokens!(T_CS!("\\@currname"))).to_string();
   LoadClass!("OmniBus");
+  // siamonline220329.cls:508-528 (2408.02805): `\maketitle` marks the title block's notes in `\fnsymbol` and resets the
+  // counter after it.
+  latexml_package::engine::latex_constructs::declare_fnsymbol_title_block(&class, None)?;
   // siamart220329.cls L58 (siamart250211.cls:64): \RequirePackage[leqno]{amsmath}
   // — SIAM numbers equations on the left (DIVERGENCES #336; 2605.02838).
   RequirePackage!("amsmath", options => vec!["leqno".to_string()]);

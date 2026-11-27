@@ -1,6 +1,6 @@
-% mechanism: an author note whose mark is unknown here (an unbound class's `\maketitle`: scrartcl's prints `\fnsymbol`)
+% mechanism: an author note whose mark is unknown here (an unbound class's `\maketitle`: proc's prints `\fnsymbol`)
 %   shows no glyph on the page: no XSLT `†` (LaTeXML-meta-xhtml.xsl `note-mark`), its text under its name (OD #990)
-% witness:  review revMARKSAFE B1 (scrartcl `Ann\thanks{A} \and Bob\thanks{B}`); 1807.01940's name dagger
+% witness:  review revMARKSAFE B1 (proc `Ann\thanks{A} \and Bob\thanks{B}`); 1807.01940's name dagger
 % oracle:   pdflatex 0 errors; "Ann Able∗ Bob Baker†", footnotes "∗ Note A.", "† Note B."
 % engines:  rust MARKSAFEb merge 16e5e53b4a4 = 0 errors, 0 Warnings; notes unmarked; HTML "†" on both names
 %   (Perl's fallback glyph, another author's)
@@ -9,7 +9,9 @@
 % status:   RED -> GREEN HTML (MARKSAFEb: perfect_kernel_batchshmark::a_mark_whose_glyph_is_unknown_prints_none);
 %   the ∗ and † RED (row R SHAUTO: the unbound class's marks, from its own `\maketitle`)
 % preload:  ar5iv.sty
-\documentclass{scrartcl}
+% class:   proc (proc.cls:97-110 `\maketitle` sets `\fnsymbol`, no binding declares it) since OMNT, whose scrartcl
+%          binding declares its marks (koma_title_footnotemark_prints_fnsymbol); pdflatex the same under proc
+\documentclass{proc}
 \title{T}
 \author{Ann Able\thanks{Note A.} \and Bob Baker\thanks{Note B.}}
 \date{}

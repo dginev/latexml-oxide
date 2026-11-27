@@ -8,6 +8,8 @@
 %   CL9b to int167a the block whole, note and marks kept, Warning 1
 % expect:  0 errors, 0 warnings; creators Ann Able (footnote mark 1, note "Univ X.", Univ Z), Bob Baker (footnote mark
 %   2, Univ Z)
+% omnt:    OMNT: scrartcl's title block declared, Ann's marks † and the note ∗, Bob's ‡ (pdflatex's), 0 warnings;
+%          MARKSAFEb to OMNT the bare marks dropped and counted (2 Warnings)
 % status:  GREEN (AUT1; guard perfect_kernel_batchaut1)
 \documentclass{scrartcl}
 \newcommand{\myauthors}{Ann Able\thanks{Univ X.}\footnotemark, Bob Baker\footnotemark}

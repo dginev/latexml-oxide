@@ -1,0 +1,17 @@
+% mechanism: dmtcs-episciences' `\maketitle` sets the body's footnotes in roman after the title
+%   (dmtcs-episciences.cls:317 `\renewcommand\thefootnote{(\roman{footnote})}`, after the reset :316); its binding keeps
+%   the kernel's arabic `\thefootnote`
+% witness: synthetic (found writing dmtcs_title_marks_in_fnsymbol; 1601.03710's class, 1810.10099's the same)
+% oracle:  pdflatex (TL 2025, -no-shell-escape, 1601.03710's dmtcs-episciences.cls) 4 `!` (3 the class's hyperref
+%   against TL 2025's, harness limit; 1 `\@affil` undefined): "Body(i)", "(i) Body note."
+% engines: rust INT081EP, OMNT 0 errors, 0 warnings, the body's note marked "1"
+% expect:  0 errors; the body's note marked "(i)"
+% status:  RED (INT081EP, OMNT)
+% moves:   post-merge (a class's body `\thefootnote` after `\maketitle`; not OMNT's title-block mechanism)
+\documentclass[nohyperref]{dmtcs-episciences}
+\title{T}
+\author{Ann One\thanks{Univ A.}}
+\begin{document}
+\maketitle
+Body\footnote{Body note.}.
+\end{document}

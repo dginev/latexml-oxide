@@ -5,7 +5,7 @@
 %   that prints something (`$\dagger$`) or a blank one stays as given, with no diagnostic (OXIDIZED_DESIGN_DIVERGENCES
 %   #851; the blank: footnotemark_blank_is_tex_zero_red).
 % witness: 2407.13730, 2606.19583 (`\footnoterecall` = `\footnotemark[\value{uni}]` read before its `\newcounter`,
-%   footnoterecall_counter_defined_by_an_earlier_creator_red; int163a counted the empty mark by `\value`'s "assuming 0")
+%   footnoterecall_counter_defined_by_an_earlier_creator; int163a counted the empty mark by `\value`'s "assuming 0")
 % oracle:  pdflatex (TL 2025, -no-shell-escape) 7 `!` ("Missing number, treated as zero."): "A0 B0 D2 E†0 F0 G H.",
 %   "I J†", footnote "0 Body."
 % engines: rust int163a 0 errors, 2 warnings, GA1e 0 errors, 2 warnings (both: A, B, F and I marks empty, the three

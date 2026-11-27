@@ -5,6 +5,8 @@
 % oracle:  pdflatex 0 errors: "Ann Able,†∗ Bob Baker‡ / Univ Z"; footnote "∗ Univ X."
 % engines: CL9b to AUT1 the block whole, note and 2 marks kept, Warning 1
 % expect:  0 errors, 1 warning (the overlap); one creator holding "Univ X." and 2 marks
+% omnt:    OMNT: scrartcl's title block declared, the marks † ‡ and the note ∗ (pdflatex's), Warning 1 (the overlap);
+%          MTREDUCEd to OMNT the marks dropped and counted (3 Warnings)
 % status:  GREEN (CL9b; guard perfect_kernel_batchcl9)
 \documentclass{scrartcl}
 \newcommand{\myauthors}[1]{Ann Able\thanks{Univ X.}\footnotemark, Bob Baker\footnotemark#1}

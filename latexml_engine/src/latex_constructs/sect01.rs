@@ -387,6 +387,7 @@ pub(crate) fn load() -> Result<()> {
       load_class(&class_name,
                 class_opts,
                 Tokens!(T_CS!("\\AtBeginDocument"), T_CS!("\\warn@unusedclassoptions")))?;
+      settle_title_block_after_class_load()?;
       // A class no binding and no file answered (the OmniBus fallback) is no declaration a later `\documentstyle`
       // meets as the second (`tex_job.rs` `\lx@documentstyle@impl`; astro-ph9812142).
       let base = class_name.rsplit('/').next().unwrap_or(&class_name);
