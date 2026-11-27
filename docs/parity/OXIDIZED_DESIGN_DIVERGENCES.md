@@ -25408,3 +25408,22 @@ class's 2020 fits; the era default of the paper's own amsart, 1991, waits for le
 **Guards** `perfect_kernel_batchmscinfer::mscinfer_rows` (repros sectioning-frontmatter/msc_edition_*,
 amstex/amsppt_msc_edition_*), `latexml_core` `util::msc::tests`.
 **Upstream**: Rust-only (DG 2026-11-25: no Perl patches for now).
+
+### 1171. A math array cell covered by a `rowspan` is omitted from the XML, `\bordermatrix`'s fence cells too (SPANNED)
+
+Related: none (searched: rowspan, @spanned, skipped, bordermatrix, plain_constructs, Alignment).
+**Rule**: an `XMArray` has one layout for a covered cell, the table builder's: a cell a `rowspan` or `colspan` covers is
+not in the XML, so post's MathML emits every `XMCell` and skips none (MathML Core §3.5.3: `rowspan` on `<mtd>` is
+HTML's, whose row-processing algorithm gives a covered slot to no later cell).
+**Perl behavior**: Alignment omits covered cells (Alignment.pm:336 `next if $$cell{skipped}`), but
+`\lx@hack@bordermatrix` (plain_constructs.pool.ltxml:247-251) gives every row its two empty `ltx_nopad` fence cells,
+including the rows the `rowspan` fences of row 1 cover; post's `@spanned` (MathML.pm:448-470) then skips the cell at a
+covered index, which drops real cells after a `\multirow` (KNOWN_PERL_ERRORS #1347).
+**Rust behavior**: `plain_constructs.rs` `\lx@hack@bordermatrix` adds the fence cells to rows 0 and 1 only; rows 2..n
+carry their own cells. `presentation.rs` `pmml_array_inner` has no `@spanned`. The XML moves from Perl's: the rows below
+r_1 have two `XMCell` fewer, and the formula's `text=` reads `[D, 2, 3]` for `[D, , 2, 3, ]`
+(`latexml_oxide/tests/alignment/plainmath.xml`).
+**Why**: rc6's MathML kept the covered cells, so in a browser every later cell of a `\bordermatrix` row sat one column
+right; porting `@spanned` alone would lose `\multirow` content as Perl does.
+**Repros** `tools/perfect_kernel/repros/alignment/{bordermatrix_mathml_covered_cells,multirow_math_array_mathml_cells}.tex`.
+**Guards** `perfect_kernel_batchspanned::math_rowspan_covered_cells_are_omitted_once`, `alignment` fixture `plainmath`.

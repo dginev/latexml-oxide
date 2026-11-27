@@ -1,0 +1,16 @@
+% witness: synthetic; run with EXT=html. The counter-example to porting Perl's MathML.pm:448-470 @spanned alone
+% oracle:  pdflatex 0 `!`; every letter printed in its column
+% engines: rust rc6 fe76f5268af 0 E 0 W, every cell kept: A's 2nd row c,d; B's 2nd row c,d; C's 1st row x,b and 2nd row d.
+%   Perl 0 E but drops c (A), d (B), b and d (C): Alignment omits covered cells from the XML (Alignment.pm:336), so @spanned
+%   skips the real cell that now stands at the covered index
+% expect:  0 errors; MathML rows A: [x a b][c d][e f g]; B: [a x b][c d]; C: [x b][d][e f g] (colspan 2 + rowspan 2)
+% status:  GREEN
+% mechanism: presentation.rs pmml_array_inner emits every XMCell; must stay so for Alignment-built arrays (KNOWN_PERL_ERRORS #1347)
+% guard:   perfect_kernel_batchspanned::math_rowspan_covered_cells_are_omitted_once
+\documentclass{article}
+\usepackage{multirow}
+\begin{document}
+\[ A=\left(\begin{array}{ccc} \multirow{2}{*}{x} & a & b \\ & c & d \\ e & f & g \end{array}\right) \]
+\[ B=\left(\begin{array}{ccc} a & \multirow{2}{*}{x} & b \\ c & & d \end{array}\right) \]
+\[ C=\left(\begin{array}{ccc} \multicolumn{2}{c}{\multirow{2}{*}{x}} & b \\ & & d \\ e & f & g \end{array}\right) \]
+\end{document}

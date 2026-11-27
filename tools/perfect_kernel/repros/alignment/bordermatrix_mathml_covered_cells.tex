@@ -1,0 +1,16 @@
+% witness: synthetic (\bordermatrix: ~180 of a 30k sample); run with EXT=html, the defect showed in post's MathML
+% oracle:  pdflatex 0 `!`; the ( and ) span the data rows, every a_{ij} prints under its c_j
+% engines: rust rc6 fe76f5268af 0 E 0 W: rows below r_1 were 5 <mtd> (2 empty `ltx_nopad` cells the rowspan fences above
+%   cover), so browsers pushed a_{21} under c_2 and a_{22} past the `)`; Perl 3 <mtd> (MathML.pm:448-470 @spanned skips them)
+% expect:  0 errors; M: rows [ , ,c_1,c_2, ][r_1,(,a_11,a_12,)][r_2,a_21,a_22] (fences rowspan 2);
+%   N: rows r_2 and r_3 3 <mtd> each (fences rowspan 3); P: one data row, rowspan 1, no row covered
+% status:  GREEN (OD #1171: \lx@hack@bordermatrix omits the covered cells, as Alignment does, Alignment.pm:336)
+% mechanism: plain_constructs.rs \lx@hack@bordermatrix (Perl plain_constructs.pool.ltxml:230-275); post needs no @spanned,
+%   which would drop real cells after a \multirow (multirow_math_array_mathml_cells.tex, KNOWN_PERL_ERRORS #1347)
+% guard:   perfect_kernel_batchspanned::math_rowspan_covered_cells_are_omitted_once
+\documentclass{article}
+\begin{document}
+\[ M=\bordermatrix{ & c_1 & c_2 \cr r_1 & a_{11} & a_{12} \cr r_2 & a_{21} & a_{22} \cr} \]
+\[ N=\bordermatrix{ & c_1 & c_2 \cr r_1 & 1 & 2 \cr r_2 & 3 & 4 \cr r_3 & 5 & 6 \cr} \]
+\[ P=\bordermatrix{ & c_1 \cr r_1 & 7 \cr} \]
+\end{document}

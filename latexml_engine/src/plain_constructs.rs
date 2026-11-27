@@ -526,8 +526,9 @@ LoadDefinitions!({
         let rows = document.findnodes("ltx:XMRow", Some(&marray));
         let n = rows.len();
         if n >= 2 {
-          // Add 2 empty cells to each row; move one to 2nd position
-          for mut row in rows.iter().cloned() {
+          // Add 2 empty cells to rows 0 and 1; move one to 2nd position. Rows 2.. are covered by
+          // the rowspan fences of row 1 and get none, as Alignment omits covered cells (OD #1171).
+          for mut row in rows.iter().take(2).cloned() {
             let mut nopad_attrs = HashMap::default();
             nopad_attrs.insert("class".to_string(), "ltx_nopad".to_string());
             let mut cell1 = document.open_element_at(&mut row, "ltx:XMCell", Some(nopad_attrs.clone()), None)?;

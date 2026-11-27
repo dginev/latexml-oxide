@@ -177,3 +177,11 @@ any arg scan, is recognised so the after-`$` closes the math.
 - Hand-built expl3 idioms (exp_args:NNNV+group_end; exp_last_unbraced:NV+q_stop
   split; implicit `\c_group_begin_token` in a delimited arg; group dance): none
   reproduce the drift in isolation — it is the loop's cumulative residue.
+
+## Covered cells of a math rowspan: one XML model (`bordermatrix_mathml_covered_cells`, `multirow_math_array_mathml_cells`)
+- Alignment omits a cell a rowspan or colspan covers (Alignment.pm:336 `next if $$cell{skipped}`); proof.sty's rowspan XMArray
+  does too. Perl's `\lx@hack@bordermatrix` (plain_constructs.pool.ltxml:230-275) kept them: every row got its two empty
+  `ltx_nopad` XMCells, including rows the `(`/`)` cells of row 1 span.
+- Perl MathML.pm:448-470 (`@spanned`, older than the Alignment model) skips the cell at a covered index, which suits the hack
+  and drops real cells in `\multirow` math arrays (KNOWN_PERL_ERRORS #1347). Not ported.
+- Fixed at the hack (OD #1171): ours adds the fence cells to rows 0 and 1 only, so post skips nothing and both shapes line up.

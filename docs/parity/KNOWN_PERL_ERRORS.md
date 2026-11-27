@@ -23162,3 +23162,22 @@ prints them in place outside a deluxetable); repros
 guard `perfect_kernel_batch68y::tablecomments_print_where_each_class_prints_them`. Inside a deluxetable emulateapj's
 `\gdef` replaces an earlier note and prints the references first; both Perl and Rust append in source order (RED
 `emulateapj_deluxetable_notes_order_red`).
+
+## 1347. Perl's MathML drops the real cells after a `\multirow` in a math array
+
+`@spanned` (Post/MathML.pm:448-470) skips, in the rows a `rowspan` (or `colspan`) covers, the cell at each covered
+index. That suits `\lx@hack@bordermatrix` (plain_constructs.pool.ltxml:247-251), which keeps an empty cell there, but
+Alignment omits covered cells from the XML (Alignment.pm:336), so the cell `@spanned` skips is a real one. Minimal trigger:
+
+```latex
+\documentclass{article}
+\usepackage{multirow}
+\begin{document}
+\[\begin{array}{ccc}\multirow{2}{*}{x}&a&b\\&c&d\end{array}\]
+\end{document}
+```
+
+pdflatex: 0 `!`, both rows printed. Perl (same host, 0 errors, 0 warnings): the second `<mtr>` is `<mtd>d</mtd>`, `c` lost
+(and `d`, `b` in the colspan and middle-column shapes of `alignment/multirow_math_array_mathml_cells.tex`). Not
+ported: Rust's post skips no cell, and `\bordermatrix` omits its covered cells as Alignment does (OXIDIZED_DESIGN
+#1171). Guard `perfect_kernel_batchspanned::math_rowspan_covered_cells_are_omitted_once`.

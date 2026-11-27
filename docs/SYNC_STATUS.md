@@ -89,7 +89,7 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (454 items on 2026-11-27 on `int/towards_v0_8_1`: 454 open, weight 990, 36 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (459 items on 2026-11-27 on `int/towards_v0_8_1`: 459 open, weight 996, 36 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
 
 
   - ODR6 — OD ruling 12 (recorded in OD #449): `dump_reader.rs`'s "add-only" docstrings (:365, :574) corrected, then a removal trial of the skip lists against CLAUDE.md rule 2; 1
@@ -1474,7 +1474,7 @@ Rules that keep this file honest and mergeable:
     conclusion draws a fraction where mathpartir draws no rule (mathpartir.sty:296-301; suspected, 1909.03523); `\\\\` as two
     `\quad`s (mathpartir: a forced new line, :193-196); `\mpr@inferrule` undefined (2403.15122); the parser cannot read
     `X \quad \sim Y` (math parked); 2
-  - ICONFONTS — icon fonts read through OT1 print wrong glyphs (DINGBAT now warns; Perl the same with `--includestyles`, an
+  - ICONFONTS — (ccicons + manfnt DONE on int 2026-11-27, see ICONFONTS-RESIDUAL) icon fonts read through OT1 print wrong glyphs (DINGBAT now warns; Perl the same with `--includestyles`, an
     error without): ccicons `\ccby` → "Γ Δ" (2602.07369; map from `ccicons-u.enc` to the Unicode 13 CC symbols 🅭 🅯 🄎 ⊜ 🄏 🅮 🄍);
     manfnt `\dbend` → "¨" on the NFSS path (`U/manual`) and dropped silently on the plain `\font\x=manfnt` path (encoding
     `manfnt`, `font.rs:155`; 1012.0265, 2008.09297, 2410.22549, 2004.07097, 2105.09724) — one map from `manfnt.mf` under both
@@ -1507,6 +1507,34 @@ Rules that keep this file honest and mergeable:
     next table's end, we print it in its own table (kept either way); REDs `emulateapj_deluxetable_notes_order_red` (emulateapj's
     in-deluxetable `\gdef` keeps the last note, References first) and `aastex_float_footnote_is_a_minipage_footnote_red` (a
     float's `\footnote` is a minipage footnote in AASTeX 6+, 2409.15669); 1
+  - SVGSCALE-RESIDUAL — (SVGSCALE landed 2026-11-27: a sized vector render's SVG root carries its display size; OD #1034, #1157 (7)(10))
+    "in place" (`Graphics::beside`, `graphics.rs` ~:1347) means only the figure's own folder: with `\graphicspath{{figs/}}` and the
+    output in the document's folder, a rerun with `--nocache` or the cache deleted reads our sized `figs/<stem>.svg` back as every
+    figure's source (the natural-size figure 276x138 instead of 216x108; base wrong on other figures) — count any `dirs.search_paths`
+    folder as in place; `our_output` (~:1653) relativizes by text while `beside` resolves (`same_file`), so a symlinked dest/source
+    keeps base's behaviour (our own render copied, the trim dropped with a Warning) — canonicalize first (macOS `/tmp` →
+    `/private/tmp`); an EPS-only figure's `.png` sizes the TeX box on an in-place rerun (`latexml_core` does not read the dest cache;
+    RED `graphics-post/inplace_rerun_sizes_by_our_raster_red`); probes `/home/deyan/data/pk_wt/scratch_revSVGSCALE2/`; 1
+  - SPANNED-RESIDUAL — (SPANNED landed 2026-11-27: `\bordermatrix` omits the cells its bracket rowspan covers, OD #1171, KPE #1347)
+    pre-existing, base and Perl the same or worse: a `\noalign` straight after the label row (`\cr\noalign{\smallskip}`) becomes row 1,
+    so both fences land in it and every data cell shifts right (`plain_constructs.rs` ~:524-547; put the fences on the first real data
+    row); a data row longer than row 1 puts its extra cell after the `)` where TeX prints it inside (layout only; Perl drops it); KPE
+    #1347's colspan shape loses `b` and `d` in Perl, not only `b`; none in the 169 A/B `\bordermatrix` formulas; review
+    `agent_reports/2026-11-27_SPANNED_review.md`; 1
+  - TEAMGROUP — (DG 2026-11-27: plain in v0.8.0, marker in 0.8.1) a team author (`R Core Team`, `the GAPS Team`, an enumerated
+    collaboration; TEAMAUTH) is a plain `creator role="author"` whose personname is the team's name, so `LaTeXML-jats.xsl:214-231` and
+    `LaTeXML-tei.xsl:225-243` split it on spaces (`<surname>Team</surname><given-names>R Core</given-names>`). Mark it
+    `class="ltx_group"` on the creator (schema-valid: `LaTeXML-common.rnc:79`; no visual change) and emit JATS
+    `<contrib contrib-type="author"><collab>`, TEI `<orgName>`; consider `typeof="schema:Organization"` via the rdfa-subject mode
+    (suppressed in EPUB3, `LaTeXML-epub3.xsl:56-60`) — Gemini TEAMAUTH.2, XSLT/schema citations verified; A/B the JATS/TEI outputs; 2
+  - ICONFONTS-RESIDUAL — (ICONFONTS landed 2026-11-27: ccicons + manfnt glyph maps, OD #645) a U-family character is measured
+    from the glyph it maps to, not the font's TFM (`\textdbend` raised 10.3pt vs TeX 11pt; RED
+    `fonts-nfss/u_family_char_metrics_are_not_its_tfm_red`); plain `\font` with `lcircle` may drop `\char` with no Warning
+    (suspected, as manfnt did); ccicons' EU/JP non-commercial icons print the dollar form 🄏 (no Unicode €/¥ forms);
+    academicons, eulerpx, arabtex deferred; 1
+  - MPRCONCL-QUAD — (from the ICONFONTS review) MPRCONCL's `\\` → `\quad` in an `\inferrule` conclusion leaves
+    `X \longmapsto \quad Y` unparsed by the math parser (1712.01800: +1 unparsed formula per such conclusion, content kept);
+    math is parked — the parser should treat `\quad` after a relation as space; 1
   - AUTHGDEF — a class/style that fills `\@author` by `\gdef` and prints it from its own `\@maketitle`, with no `\author` call
     (ismir.sty `\oneauthor`; icmc2025, LaurentianThesis.cls): no `ltx:creator`, the words counted by `Warning:frontmatter:unclaimed`;
     Perl the same, silent (PERL-ORIGIN). Fix plan (EASY, MED risk): `hand_offtable_stores` hands a raw `\@author` on as

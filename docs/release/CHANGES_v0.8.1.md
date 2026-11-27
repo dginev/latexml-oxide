@@ -9,6 +9,12 @@ top of its group.
 
 ### Unreleased
 
+  - **A `\bordermatrix`'s MathML lines its cells up under their column labels**: the rows below the first no longer
+    carry the two empty cells its parentheses already span, which pushed every later cell one column right in a
+    browser. Perl's own post skips such cells, and so loses real cells after a `\multirow` in a math array; ours keeps
+    them. OXIDIZED_DESIGN_DIVERGENCES #1171, KNOWN_PERL_ERRORS #1347; guard
+    `perfect_kernel_batchspanned::math_rowspan_covered_cells_are_omitted_once`.
+
   - **dingbat.sty's symbols are their glyphs.** Its `ark` and `dingbat` fonts have glyph maps, so `\checkmark` is ✓,
     `\anchor` ⚓, `\eye` 👁 and the hands, pencils and thumbs their Unicode characters, where each printed an OT1 letter
     (`\checkmark` as "D", 2303.10475, ar5iv #408). A font family that TeX has, in an encoding no glyph map reaches, is
