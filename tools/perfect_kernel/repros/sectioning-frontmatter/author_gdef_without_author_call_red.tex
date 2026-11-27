@@ -1,0 +1,27 @@
+% mechanism: a class/style that fills `\@author` by `\gdef` (ismir.sty:265-271 `\oneauthor`) and prints it from its own
+%   `\@maketitle`, with no `\author` call. LaTeX's `\author{X}` is exactly `\gdef\@author{X}` (latex.ltx:17213), so pdflatex prints
+%   the block. Perl's locked `\author` (latex_constructs.pool.ltxml:1083-1086) is the only route into the authors and its
+%   `\maketitle` (:1106-1120) empties `\@author` unread; ours treats `\@author` as frontmatter-owned (`frontmatter_stores.rs`
+%   `KERNEL_FIELDS` :4063, `frontmatter_owned_stores` :5812), so the net skips it and `\lx@maketitle@body` empties it — counted
+%   by `Warning:frontmatter:unclaimed`. PERL-ORIGIN / SHARED (Perl silent). Fix plan: `hand_offtable_stores` hands a raw
+%   `\@author` on as `\lx@add@authors@adaptive` when no creator and no `\author` call, gated on the title page printing it.
+% witness: 2608.05442 (ismir.sty); also 1805.11526 (ismir.sty), 2503.11896 (icmc2025_paper_template.sty), 1204.4734
+%   (LaurentianThesis.cls), 2604.28011; ~12/30k
+% oracle:  pdflatex (TL 2025, -no-shell-escape): "Yisu Zong / Jinjie Shi / Centre for Digital Music, Queen Mary / y.zong@qmul.ac.uk"
+% engines: rust INT081TR: E=0, `Warning:frontmatter:unclaimed` 11 words, no ltx:creator; Perl 0.8.8: no author, no message
+% expect:  0 Errors, no frontmatter:unclaimed; `ltx:creator[@role='author']/ltx:personname` "Yisu Zong" (and "Jinjie Shi")
+% status:  RED
+% moves:   post-merge (row R AUTHGDEF; frontmatter reach 1.1k < the v0.8.1 reopening's 3k — DG)
+\documentclass{article}
+\makeatletter
+\def\oneauthor#1#2{\gdef\@author{\begin{tabular}{@{}c@{}}\textbf{#1}\\#2\end{tabular}}}
+\def\maketitle{\par\begingroup\twocolumn[\@maketitle]\endgroup\let\maketitle\relax}
+\def\@maketitle{\newpage\null\begin{center}{\Large\bf\@title\par}
+  \vskip 2em{\large\begin{tabular}[t]{c}\@author\\\end{tabular}\par}\end{center}\par\vskip 2em}
+\makeatother
+\title{Diff2Mix Title}
+\oneauthor{Yisu Zong \hspace{1cm} Jinjie Shi}{Centre for Digital Music, Queen Mary\\\texttt{y.zong@qmul.ac.uk}}
+\begin{document}
+\maketitle
+Body text.
+\end{document}

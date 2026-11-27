@@ -89,7 +89,7 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (443 items on 2026-11-27 on `int/towards_v0_8_1`: 443 open, weight 973, 35 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (444 items on 2026-11-27 on `int/towards_v0_8_1`: 444 open, weight 972, 36 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
 
 
   - ODR6 — OD ruling 12 (recorded in OD #449): `dump_reader.rs`'s "add-only" docstrings (:365, :574) corrected, then a removal trial of the skip lists against CLAUDE.md rule 2; 1
@@ -1420,11 +1420,31 @@ Rules that keep this file honest and mergeable:
     version skew, flattened-EPS pairing; those first, then five whitelist candidates for DG; 3
   - RENDERFOUND — converter defects the RENDERCMP calibration surfaced (an agent's eye check, each to triage before a fix):
     figures numbered one too high from Figure 3 (2502.06601; root-caused: a nested first sub-float steps the counter twice,
-    PERL-ORIGIN, caption.sty steps once — FIGNUM); `\scalebox{0.22}` ignored (1307.3809); `width=0.5\textwidth,
+    PERL-ORIGIN, caption.sty steps once — FIGNUM); `\scalebox{0.22}` ignored (1307.3809; root-caused: the converter keeps the scale in XML and HTML, more exactly than Perl's
+    0pt box; ar5iv.css turns every `.ltx_inline-block.ltx_transformed_outer` transform off on purpose, `transform:none!important`,
+    "until LaTeXML's transform handling matures"; proposed: exempt a transform box whose only content is one graphic, as
+    the picture-only box already is — ar5iv-css, DG reviews CSS; 182/30k papers scale a graphic. SCALEBOXEM: inside such a
+    box the graphic is sized in em (`graphicx_sty.rs` `w_pt / font_pt`, #562) but the translate in pt, so a 16px em
+    misplaces it — size a transformed graphic in pt or translate in em); `width=0.5\textwidth,
     height=5cm` sized by LaTeXML's own `\textwidth`, not the class's (1905.06981; Perl's one-page model, tracked in QA14K3/TXWD,
     RED `ieeetran_textwidth_red`; the aspect distortion → IMGINTENT); converted SVGs lose their text labels and
-    are mis-scaled (1605.07806); an image overflows its 243-px figure onto a neighbour (hep-ex0703011); Latin-1 bytes in the
-    bibliography become U+FFFD (1107.2598); plain-TeX math without alttext (1803.09981); 3
+    are mis-scaled (1605.07806; root-caused: labels kept, the SVG is drawn at its file size, not the target — RUST-ONLY, the PDF→SVG
+    path writes the target only on `<object width height>`, which ar5iv.css's `width:auto` overrides; 7 % of calibration papers —
+    SVGSCALE writer); an image overflows its 243-px figure onto a neighbour (hep-ex0703011); "Latin-1 bytes in the
+    bibliography become U+FFFD" REFUTED (1107.2598's own source carries UTF-8 U+FFFD, transcoded before submission; arXiv's
+    PDF drops the letters too; Latin-1/9/2, cp1252, ansinew and undeclared Latin-1 all decode right) — FFFDWARN: a Warning for a
+    U+FFFD the author typed (`mouth.rs` `decode_bytes`, valid-UTF-8 branch; ~1 % of sources) awaits a ruling, Perl turns it into a
+    space with a misleading "input isn't valid" Info (`Core/Mouth/file.pm:72-77`); plain-TeX math without alttext (1803.09981). RC6's word bags (13 real of 45 flags) add: a proof and the references lost after
+    10 Errors (1706.02701); the author block missing (2608.05442 → AUTHGDEF); revtex footnotes printed again as
+    bibliography notes (1512.02132); unused acronyms printed (2504.20545); a table row doubled (astro-ph0702279); table notes
+    (astro-ph0108146); an uncited entry printed (1803.09981); acmart's CCS block and `\Description` text (2009.11100); 3
+  - AUTHGDEF — a class/style that fills `\@author` by `\gdef` and prints it from its own `\@maketitle`, with no `\author` call
+    (ismir.sty `\oneauthor`; icmc2025, LaurentianThesis.cls): no `ltx:creator`, the words counted by `Warning:frontmatter:unclaimed`;
+    Perl the same, silent (PERL-ORIGIN). Fix plan (EASY, MED risk): `hand_offtable_stores` hands a raw `\@author` on as
+    `\lx@add@authors@adaptive` when there is no creator and no `\author` call, gated on the title page printing it. ~12/30k
+    (≈1.1k arXiv) — above the ~500 bar, below the v0.8.1 frontmatter reopening's 3k: DG. RED
+    `sectioning-frontmatter/author_gdef_without_author_call_red`; witnesses 2608.05442, 1805.11526, 2503.11896, 1204.4734,
+    2604.28011. FM-14 (DEFERRED_FAMILIES.md:112) looks stale: its jfpc case is handled by `hand_offtable_stores`; 2
   - IMGCAP320 — ar5iv.css `width:auto` on `.ltx_img_*` overrides an image's width attribute, and `.ltx_img_portrait`'s caps do
     not bind at 320 px, so a figure wider than the viewport escapes it (found by RENDERCMP RC4: 1104.1174 S3.F3.g1, 40 px;
     2506.20899 S4.F7.g1, BRK_DOC_OVERFLOW); an ar5iv-css change (mirror rule), DG reviews CSS; 1
