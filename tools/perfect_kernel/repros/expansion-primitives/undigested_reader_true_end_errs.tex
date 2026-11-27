@@ -1,0 +1,13 @@
+% mechanism: `\section` at the true end of all input: its title, an `Undigested` argument built on `read_arg`,
+%   errs as Perl's "Missing argument" (Parameter.pm:93-97; `gullet::read_required_arg`, OD #304); the heading is
+%   still made, with an empty title
+% witness: synthetic
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 2 `!` ("Emergency stop", no legal \end found: `\@ifstar` peeks at the
+%          end), no PDF; Perl 1 error "Missing argument Undigested for ...[\@@numbered@section {}Undigested ...]"
+% engines: INT081AU: 0 errors
+% expect:  "before text" kept and one "Missing argument Undigested at end of input" Error
+% status:  GREEN (TRUEENDREADERS; guard error_boundary::perfect_kernel_error_boundary)
+\documentclass{article}
+\begin{document}
+before text
+\section

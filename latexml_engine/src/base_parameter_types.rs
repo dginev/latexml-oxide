@@ -196,14 +196,7 @@ pub(crate) fn reread_sanitized_entry(arg: &Tokens) -> (Tokens, Vec<Token>) {
 
 LoadDefinitions!({
   DefParameterType!(Plain, sub[inner, _extra] {
-    let arg = match read_arg_or_none(ExpansionLevel::Off)? {
-      Some(arg) => arg,
-      None => {
-        note_missing_argument("{}", "{}")?;
-        Tokens::default()
-      },
-    };
-    let mut value = ArgWrap::Tokens(arg);
+    let mut value = ArgWrap::Tokens(read_required_arg(ExpansionLevel::Off, "{}")?);
     // An argument that ran off a file's end is dropped with its call: no re-parse.
     if let Some(inner_ps) = inner.filter(|_| !argument_runaway()) {
       // TODO: How many arguments can we expect back? One? Many?
@@ -278,7 +271,7 @@ LoadDefinitions!({
     optional_arg_reversion(arg, inner, T_OTHER!("["), T_OTHER!("]"))
   });
   DefParameterType!(Position, sub[_inner, _extra] {
-    ArgWrap::Tokens(read_arg(ExpansionLevel::Off)?)
+    ArgWrap::Tokens(read_required_arg(ExpansionLevel::Off, "Position")?)
   },
   reversion => sub[arg, _inner, _extra] {
     let mut read_tokens: Vec<Token> = vec![T_BEGIN!()];
@@ -333,10 +326,10 @@ LoadDefinitions!({
     //
     // EXCEPT at the TRUE end of all input (`gullet::at_end_of_all_input`), where Perl's put-back is the outcome (DG
     // 2026-11-26): the scanned tokens are back in the input (Gullet.pm:686-688), Perl's `Missing argument` Error is
-    // raised (Parameter.pm:93-97, `note_missing_argument`, as for every required reader that runs out: `{}`, the
-    // token readers) and the call runs on the empty argument. A self-recursive scanner re-misses to the
-    // error cap, as in Perl: fancyvrb `\FV@Scan` over an open `{VerbatimOut}` (fancyvrb/fancyvrb-doc), l3prg
-    // `\prg_map_break:Nn` via `\prop_map_inline:cn` on an undefined prop (stex/stex-doc). OD #304.
+    // raised (Parameter.pm:93-97, `note_missing_argument`, as for every required reader that runs out:
+    // `read_required_arg`, the token readers) and the call runs on the empty argument. A self-recursive scanner
+    // re-misses to the error cap, as in Perl: fancyvrb `\FV@Scan` over an open `{VerbatimOut}` (fancyvrb/fancyvrb-doc),
+    // l3prg `\prg_map_break:Nn` via `\prop_map_inline:cn` on an undefined prop (stex/stex-doc). OD #304.
     match read_until(&until_extra[0])? {
       Some(tokens) => {
         // A delimiter ending in `{` comes only from a parameter text's closing `#{`, whose brace TeX also appends to
@@ -474,7 +467,7 @@ LoadDefinitions!({
     let argument = if in_braced_read() {
       take_rest_of_mouth()
     } else {
-      read_arg(ExpansionLevel::Off)?.unlist()
+      read_required_arg(ExpansionLevel::Off, "DefaultUnits")?.unlist()
     };
     // A number as written: TeX's `<factor>` keeps 16 bits of it (0.15 → 0.14999),
     // a sub-`sp` difference that would only change the digits the picture
@@ -697,7 +690,9 @@ LoadDefinitions!({
   // `\protected@edef`'s braced form: `Expanded` with `\the` once and
   // e-TeX `\protected` deferred (as `\edef`), under the `\protect` regime.
   DefParameterType!(ProtectedExpanded, sub[_inner, _untils] {
-    Ok(ArgWrap::Tokens(with_unexpandable_protect(|| read_arg(ExpansionLevel::Partial))?))
+    Ok(ArgWrap::Tokens(with_unexpandable_protect(|| {
+      read_required_arg(ExpansionLevel::Partial, "ProtectedExpanded")
+    })?))
   },
   reversion => sub[arg, _inner, _extra] {
     let mut tks = vec![T_BEGIN!()];
@@ -802,7 +797,7 @@ LoadDefinitions!({
   //  This reads a braced tokens list, expanding as it goes,
   // but expanding \the-like commands only once.
   DefParameterType!(Expanded, sub[_inner, _untils] {
-    read_arg(ExpansionLevel::Full)
+    read_required_arg(ExpansionLevel::Full, "Expanded")
   },
   reversion => sub[arg, _inner, _extra] {
     // TODO: Consider a briefer syntax, maybe flat_vec ?
@@ -816,7 +811,7 @@ LoadDefinitions!({
   // Like Expanded, but defers \protected, and \the expanded only once.
   // Similar to when \edef is used.
   DefParameterType!(ExpandedPartially, sub[_inner, _untils] {
-    read_arg(ExpansionLevel::Partial)
+    read_required_arg(ExpansionLevel::Partial, "ExpandedPartially")
   },
   reversion => sub[arg, _inner, _extra] {
     // TODO: Consider a briefer syntax, maybe flat_vec ?
@@ -879,7 +874,7 @@ LoadDefinitions!({
 
   // Read a Semiverbatim argument; ie w/ most catcodes neutralized.
   DefParameterType!(Semiverbatim,
-    sub[_inner, _extra] { read_arg(ExpansionLevel::Off) },
+    sub[_inner, _extra] { read_required_arg(ExpansionLevel::Off, "Semiverbatim") },
     reversion => sub[arg, inner, _extra] {
       // let mut reverted_inner;
       let mut read_tokens: Vec<Token> = vec![T_BEGIN!()];
@@ -898,7 +893,7 @@ LoadDefinitions!({
   // `\homepage{http://x.org/%7Ea}` is that address, where Semiverbatim's SPECIALS (no `%`) made the `%` a comment
   // that took the line's `}` and the argument ran on through the document (KNOWN_PERL_ERRORS #1149; 0712.3811).
   DefParameterType!(UrlSemiverbatim,
-    sub[_inner, _extra] { read_arg(ExpansionLevel::Off) },
+    sub[_inner, _extra] { read_required_arg(ExpansionLevel::Off, "UrlSemiverbatim") },
     reversion => sub[arg, _inner, _extra] {
       let mut read_tokens: Vec<Token> = vec![T_BEGIN!()];
       read_tokens.extend(arg.iter().map(|t| t.revert()));
@@ -914,7 +909,7 @@ LoadDefinitions!({
   // `\@defaultunits` (`\afterassignment\remove@to@nnil`, latex.ltx:10537, :12678) expanded ahead of its assignment missed
   // its `\@nnil` delimiter and `\@nil` ran undefined, an Error pdflatex never raises (1802.01191).
   DefParameterType!(UnexpandedSemiverbatim,
-    sub[_inner, _extra] { read_arg(ExpansionLevel::Off) },
+    sub[_inner, _extra] { read_required_arg(ExpansionLevel::Off, "UnexpandedSemiverbatim") },
     reversion => sub[arg, _inner, _extra] {
       let mut read_tokens: Vec<Token> = vec![T_BEGIN!()];
       read_tokens.extend(arg.iter().map(|t| t.revert()));
@@ -934,7 +929,7 @@ LoadDefinitions!({
   // Semiverbatim's.
   DefParameterType!(ExpandedSemiverbatim,
   sub[_inner, _extra] {
-    let tks = read_arg(ExpansionLevel::Off)?;
+    let tks = read_required_arg(ExpansionLevel::Off, "ExpandedSemiverbatim")?;
     // Expand ONLY when the argument contains a control sequence (the expl3
     // `\l_..._tl` class-name case). A plain name like `neurips_2026` must
     // NOT pass through do_expand: at document catcodes its `_` is the
@@ -1088,7 +1083,7 @@ LoadDefinitions!({
       // end of the document (KNOWN_PERL_ERRORS #216). Batches 56ba/56bc.
       // Chars already in the state's SPECIALS are not repeated here:
       begin_semiverbatim(Some(&[' ', '\\', '%']));
-      let arg = read_arg(ExpansionLevel::Off)?;
+      let arg = read_required_arg(ExpansionLevel::Off, "SanitizedVerbatim")?;
       end_semiverbatim()?;
       // The `.idx` re-read is the consumer's: `reread_sanitized_entry`.
       Ok(arg)
@@ -1158,7 +1153,8 @@ LoadDefinitions!({
     }
   );
   // Read an argument that will not be digested.
-  DefParameterType!(Undigested, sub[_inner, _extra] { read_arg(ExpansionLevel::Off)},
+  DefParameterType!(Undigested, sub[_inner, _extra] {
+    read_required_arg(ExpansionLevel::Off, "Undigested") },
   predigest => sub[arg]{ Ok(arg.undigested()) }
   reversion => sub[arg, _inner, _extra] {
     if arg.is_empty() {
@@ -1189,10 +1185,10 @@ LoadDefinitions!({
 
   // Read a keyword value (KeyVals), that will not be digested.
   DefParameterType!(UndigestedKey, sub[_inner, _extra] {
-    read_arg(ExpansionLevel::Off) },
+    read_required_arg(ExpansionLevel::Off, "UndigestedKey") },
   predigest => sub[arg]{ Ok(arg.undigested()) });
   DefParameterType!(UndigestedDefKey, sub[_inner, _extra] {
-    read_arg(ExpansionLevel::Off)?.pack_parameters() },
+    read_required_arg(ExpansionLevel::Off, "UndigestedDefKey")?.pack_parameters() },
   predigest => sub[arg]{ Ok(arg.undigested()) });
 
   // The token `\newcommand` defines: DefToken, and when its
@@ -1458,7 +1454,7 @@ LoadDefinitions!({
     static STRIP_BRACE: LazyLock<Regex> =
       LazyLock::new(|| Regex::new(r"^\s*\{([^\}]*)\}").unwrap());
 
-    let arg = read_arg(ExpansionLevel::Off)?;
+    let arg = read_required_arg(ExpansionLevel::Off, "DirectoryList")?;
     let arg_string = arg.untex();
     let mut dirs: Vec<String> = Vec::new();
     for entry in SPLIT_RE.split(&arg_string) {
@@ -2045,7 +2041,8 @@ LoadDefinitions!({
 
   // Not sure that this is the most elegant solution, but...
   // What I'd really like are some sort of parameter modifiers, mathstyle, font... until...?
-  DefParameterType!(DisplayStyle, sub[_inner, _extra] { read_arg(ExpansionLevel::Off) },
+  DefParameterType!(DisplayStyle, sub[_inner, _extra] {
+    read_required_arg(ExpansionLevel::Off, "DisplayStyle") },
   before_digest => {
     bgroup();
     mark_argument_group();
@@ -2055,7 +2052,8 @@ LoadDefinitions!({
   reversion => sub[arg, _inner, _extra] {
     Ok(Tokens!(T_BEGIN!(), Tokens::new(arg).revert(), T_END!()))
   });
-  DefParameterType!(TextStyle, sub[_inner, _extra] { read_arg(ExpansionLevel::Off) },
+  DefParameterType!(TextStyle, sub[_inner, _extra] {
+    read_required_arg(ExpansionLevel::Off, "TextStyle") },
   before_digest => {
     bgroup();
     mark_argument_group();
@@ -2065,7 +2063,8 @@ LoadDefinitions!({
   reversion => sub[arg, _inner, _extra] {
     Ok(Tokens!(T_BEGIN!(), Tokens::new(arg).revert(), T_END!()))
   });
-  DefParameterType!(ScriptStyle, sub[_inner, _extra] { read_arg(ExpansionLevel::Off) },
+  DefParameterType!(ScriptStyle, sub[_inner, _extra] {
+    read_required_arg(ExpansionLevel::Off, "ScriptStyle") },
   before_digest => {
     bgroup();
     mark_argument_group();
@@ -2077,7 +2076,7 @@ LoadDefinitions!({
   });
   // Perl: Base_ParameterTypes.pool.ltxml L586-593
   DefParameterType!(ScriptscriptStyle,
-    sub[_inner, _extra] { read_arg(ExpansionLevel::Off) },
+    sub[_inner, _extra] { read_required_arg(ExpansionLevel::Off, "ScriptscriptStyle") },
   before_digest => {
     bgroup();
     mark_argument_group();
@@ -2090,7 +2089,7 @@ LoadDefinitions!({
   // # Perverse naming convention: not script style, but in the style of a script relative to
   // current.
   DefParameterType!(InScriptStyle, sub[_inner, _extra] {
-    read_arg(ExpansionLevel::Off) },
+    read_required_arg(ExpansionLevel::Off, "InScriptStyle") },
   before_digest => {
     bgroup();
     mark_argument_group();
@@ -2125,7 +2124,7 @@ LoadDefinitions!({
     }
   });
   DefParameterType!(InFractionStyle, sub[_inner, _extra] {
-    read_arg(ExpansionLevel::Off)
+    read_required_arg(ExpansionLevel::Off, "InFractionStyle")
   },
   before_digest => {
     bgroup();

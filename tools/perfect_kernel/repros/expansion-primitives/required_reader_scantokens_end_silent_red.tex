@@ -1,0 +1,15 @@
+% mechanism: a required reader at the end of a `\scantokens` pseudo-file stays quiet: `note_missing_argument`
+%   errs only at `gullet::at_end_of_all_input`, and the main file still lies beneath, so `\label` runs on an empty
+%   key with no report; TeX reports the pseudo-file's end (tex.web §362 calls §336 for name > 17) and drops the
+%   call, Perl reports "Missing argument" (row R TRUEENDREADERS-SCAN)
+% witness: synthetic (the TRUEENDREADERS sibling sweep)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 1 `!` ("File ended while scanning use of \label."), "before text
+%          after"; Perl 1 error "Missing argument Semiverbatim for ...[\lx@label Semiverbatim]"
+% engines: TRUEENDREADERS: 0 errors, "before text after", an empty label (`labels="LABEL:"`)
+% expect:  "before text after" and one Error for the `\label` miss
+% status:  RED
+% moves:   post-merge (TRUEENDREADERS-SCAN)
+\documentclass{article}
+\begin{document}
+before text \scantokens{\label}after
+\end{document}
