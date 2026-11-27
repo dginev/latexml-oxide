@@ -1,0 +1,16 @@
+% mechanism: a "group" with an address on the line under it is an affiliation (DG 2026-11-27 ruling 2, FIDELITY_CHARTER)
+% witness: synthetic; TEAMAUTH re-review S3
+% oracle:  pdflatex 0 `!`: "Ann Able and Bob Baker and Theory Group" over "CERN, Geneva"
+% engines: rust 0.8.0-rc6 and TEAMAUTH: `collaboration` "Theory Group" and `affiliation` "CERN, Geneva" on both names; 0
+%          errors, 0 warnings
+% expect:  both names with the affiliation "Theory Group" (and "CERN, Geneva"), no collaboration contact
+% status:  RED
+% moves:   post-merge (rc6's reading kept, guard row "and, the place on the next line")
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able and Bob Baker and Theory Group \\ CERN, Geneva}
+\maketitle
+Text.
+\end{document}

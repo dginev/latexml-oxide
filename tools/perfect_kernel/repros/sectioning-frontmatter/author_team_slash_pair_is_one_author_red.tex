@@ -1,0 +1,17 @@
+% mechanism: two teams a slash joins after "and" are two authors (FIDELITY_CHARTER §4 rule 1); the names line reads the
+%            pair as one piece (OXIDIZED_DESIGN_DIVERGENCES #459)
+% witness: synthetic (TEAMAUTH round 4c pre-review)
+% oracle:  pdflatex 0 `!`: "Ann Able, Bob Baker and the XYZ Team / the ABC Team" on one line
+% engines: rust 0.8.0-rc6: two creators, each with `collaboration` "the XYZ Team / the ABC Team"; TEAMAUTH: three
+%          creators, the third named "the XYZ Team / the ABC Team"; 0 errors, 0 warnings both
+% expect:  four creators "Ann Able", "Bob Baker", "the XYZ Team", "the ABC Team"
+% status:  RED
+% moves:   post-merge (a slash as a list separator inside a team piece)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able, Bob Baker and the XYZ Team / the ABC Team}
+\maketitle
+Text.
+\end{document}

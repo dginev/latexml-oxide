@@ -1,0 +1,25 @@
+% mechanism: a team, group or collaboration an author list enumerates is an author; one a remark frames is a contact (DG 2026-11-27, OXIDIZED_DESIGN_DIVERGENCES #459)
+% witness: 2009.04166 (webofc.cls, not in TeX Live; its `\inst`/`\and`/`\institute` written with llncs: `\ for the Belle II documentation and training group`)
+% oracle:  pdflatex 0 `!`
+% engines: rust 0.8.0-rc6 and TEAMAUTH (byte-identical): four creators — the fourth "for the Belle II documentation", Cy Cole and it with `collaboration` "training group"
+% expect:  three creators, each with `collaboration` "for the Belle II documentation and training group"
+% status:  RED
+% moves:   post-merge (a remark after `\inst` split at its "and")
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{
+        Ann Able\inst{1}
+        \and
+        Bob Baker\inst{1}\thanks{\email{bob@b.org}} \and
+        Cy Cole\inst{2}
+        \ for the Belle II documentation and training group
+}
+\institute{Univ A
+\and
+            Univ B
+          }
+\maketitle
+Text.
+\end{document}

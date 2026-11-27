@@ -2352,7 +2352,8 @@ pub fn input(request: &str, options: InputOptions) -> Result<()> {
     // `\BabelBeforeIni` descriptor never recorded, and french.ldf (→ `\og`,
     // `\ieme`) never loaded (paresse-fra; `\documentclass[french]{…}` +
     // `main=french`). Guard: `perfect_kernel_batch54::content_tex_reinput_during_definitions_rereads`.
-    // It is read under the current catcodes, as TeX's `\input` reads (the binding path below does the same): the
+    // It is read under the current catcodes, as TeX's `\input` reads. Only a request with a directory or with no binding
+    // extension (`.clo`, `.txt`, none) comes here: the `is_binding_extension` branch above still forces `@` to letter. The
     // definitions mouth's forced `@`-letter broke CoverPage.sty:58-70, which makes `@` the escape character and
     // inputs `\jobname.BibTeX.txt` so that `@article{…}` runs `\article` — the cover page printed "title
     // undefined" (coverpage SimpleSample; Perl Package.pm:2287-2288 + Mouth.pm:98-100 alike). Inside a package `@`

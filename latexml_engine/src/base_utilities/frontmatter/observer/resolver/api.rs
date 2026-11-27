@@ -1075,7 +1075,13 @@ impl Resolver {
       }
       return;
     } else {
-      (vec![n - 1], "api:annotate:last")
+      // (the last author's, past the groups its line listed after it: amsart's `\author{Ann Able and the GAPS
+      // Team}\email{…}`, Ann's as before, OXIDIZED_DESIGN_DIVERGENCES #459)
+      let last = (0..n)
+        .rev()
+        .find(|&c| !self.listed_group(c))
+        .unwrap_or(n - 1);
+      (vec![last], "api:annotate:last")
     };
     // (an e-mail call printing several addresses alone — a list, a group, a list sharing the domain: revtex's
     // `\email{seracre, hanaki, jimliu, pszepiet@umich.edu}` after the last `\author`, 0812.3572; `\email{tuhin@…;
@@ -1381,23 +1387,25 @@ fn warn_whole_entry_of_keyed_parts(index: usize, keys: &[String], creators: &[RC
   if distinct.len() < 2 || !creators.iter().any(partial) {
     return;
   }
-  let once = s!("{index}");
-  if lookup_mapping(COUNTED_ENTRIES, &once).is_some() {
-    return;
-  }
-  assign_mapping(COUNTED_ENTRIES, &once, Some(Stored::Bool(true)));
-  let labels: Vec<&str> = distinct
+  let labels: Vec<String> = distinct
     .iter()
-    .map(|k| k.trim_start_matches("ref:"))
+    .map(|k| k.trim_start_matches("ref:").to_string())
     .collect();
-  Warn!(
-    "unexpected",
-    "frontmatter",
-    s!(
-      "The frontmatter reading places an entry holding {} label targets ({}) whole: each name whose reference requests one \
-       of them holds them all",
-      labels.len(),
-      labels.join(", ")
-    )
-  );
+  reading_log(move || {
+    let once = s!("{index}");
+    if lookup_mapping(COUNTED_ENTRIES, &once).is_some() {
+      return;
+    }
+    assign_mapping(COUNTED_ENTRIES, &once, Some(Stored::Bool(true)));
+    Warn!(
+      "unexpected",
+      "frontmatter",
+      s!(
+        "The frontmatter reading places an entry holding {} label targets ({}) whole: each name whose reference requests \
+         one of them holds them all",
+        labels.len(),
+        labels.join(", ")
+      )
+    );
+  });
 }

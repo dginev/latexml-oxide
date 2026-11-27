@@ -4031,7 +4031,18 @@ pub(in crate::base_utilities) struct Analysis {
   merged:     BTreeMap<usize, Vec<String>>,
   /// the entries the reading took addresses out of that are written cut ([`entry_cuts`]); the others given back whole
   cuts:       Vec<EntryCut>,
+  /// per block, its names as the comparison of two readings took them ([`unspelled_names`]): the writer's own, once
+  taken:      BTreeMap<usize, NamesTaken>,
 }
+
+/// A block's names as [`block_names`] took them: the names asked, whether with their marks, the names taken and the
+/// spans it set on names.
+type NamesTaken = (
+  Vec<String>,
+  bool,
+  Vec<BlockName>,
+  BTreeSet<(usize, (u16, u16))>,
+);
 
 /// The ledger's [`Analysis`], made once while its entries read the same: a later flush with nothing new to read reads it as
 /// the last did (1901.01540's 1,202 authors, no `\maketitle`, flushed at each section: resolved at every flush, +33 % of the
@@ -4048,34 +4059,204 @@ fn analysis() -> Rc<Analysis> {
     return made;
   }
   let (generation, inputs) = with_ledger(|ledger| (ledger.generation(), ledger_inputs(ledger)));
-  let reading = resolve(&inputs);
+  // (a reading whose names lines enumerate their teams is kept only where none of its checks is worse than rc6's
+  // ([`Checks::worse`]): `Ann Able$^{1}$ and the GAPS Team$^{2}$ \\ $^{1}$Univ A \\ $^{2}$ann@x.org`'s mark, Gemini
+  // TEAMAUTH.17; a lost remark among names, the block written whole — harness)
+  let readings = resolve_readings(&inputs);
+  let on = Checks::of(readings.reading(), readings.rc6().is_some());
+  let (rc6, checks) = match readings.rc6() {
+    Some(rc6) => {
+      // (rc6's names are taken only where the enumeration's write some from their text: none is the common case)
+      let off = Checks::of(rc6, !on.unspelled.is_empty());
+      if on.worse(readings.reading(), &off, rc6) {
+        (true, off)
+      } else {
+        (false, on)
+      }
+    },
+    None => (false, on),
+  };
+  let reading = readings.keep(rc6);
   // (an entry's addresses, taken out, are written cut from its tokens, each address its owner's e-mail, as the old driver's writer
   // cuts today's entry (`address_cut`: 2011.02560, astro-ph0610446, 2406.02913); an entry its tokens can't be cut so is given
   // back whole, the Kind steps' to cut in place after the flush, as for a paper with no block, `insert_frontmatter` — entry by
   // entry, not the old driver's whole paper; the checks read the reading and its drops, `Resolved::drops`, 1610.05419)
   let mut resolved = reading.clone();
   let cuts = entry_cuts(&reading, &mut resolved);
-  with_ledger(|ledger| {
-    let keys = plan::written_keys(&reading);
-    let written = Written::new(ledger, &reading, |a| {
-      keys
-        .get(&std::ptr::from_ref(a))
-        .cloned()
-        .unwrap_or_default()
+  let Checks {
+    blocks,
+    calls,
+    marks,
+    merged,
+    taken,
+    ..
+  } = checks;
+  let made = Rc::new(Analysis {
+    generation,
+    checks: blocks,
+    calls,
+    marks,
+    merged,
+    cuts,
+    taken,
+    reading,
+    resolved,
+  });
+  with_ledger(|ledger| ledger.analysis = Some(Rc::clone(&made)));
+  made
+}
+
+/// The reading the emitter wrote at the ledger's last flush, while the ledger reads the same ([`Analysis`]): rc6's where
+/// [`Checks::worse`] chose it.
+pub(in crate::base_utilities::frontmatter::observer) fn emitted_reading(
+  ledger: &Ledger,
+) -> Option<&Resolved> {
+  let made = ledger.analysis.as_ref()?;
+  (made.generation == ledger.generation()).then_some(&made.reading)
+}
+
+/// One reading's checks, [`Analysis`]'s: the word check's block and call halves, from one [`Written`]; the marks and the
+/// separators (`resolver::net`); where two readings are compared, the names written from their text ([`unspelled_names`]).
+struct Checks {
+  blocks:    BTreeMap<usize, BlockCheck>,
+  calls:     BTreeMap<usize, CallCheck>,
+  marks:     BTreeMap<usize, Vec<String>>,
+  merged:    BTreeMap<usize, Vec<String>>,
+  unspelled: BTreeMap<usize, [usize; 2]>,
+  taken:     BTreeMap<usize, NamesTaken>,
+}
+
+impl Checks {
+  fn of(reading: &Resolved, compared: bool) -> Self {
+    let mut checks = with_ledger(|ledger| {
+      let keys = plan::written_keys(reading);
+      let written = Written::new(ledger, reading, |a| {
+        keys
+          .get(&std::ptr::from_ref(a))
+          .cloned()
+          .unwrap_or_default()
+      });
+      Self {
+        blocks:    check_blocks(ledger, &written),
+        calls:     call_checks(ledger, &written),
+        marks:     uncoordinated_marks(ledger, reading),
+        merged:    merged_names(ledger, reading),
+        unspelled: BTreeMap::new(),
+        taken:     BTreeMap::new(),
+      }
     });
-    let made = Rc::new(Analysis {
-      generation,
-      checks: check_blocks(ledger, &written),
-      calls: call_checks(ledger, &written),
-      marks: uncoordinated_marks(ledger, &reading),
-      merged: merged_names(ledger, &reading),
-      cuts,
-      reading,
-      resolved,
+    if compared {
+      (checks.unspelled, checks.taken) = unspelled_names(reading);
+    }
+    checks
+  }
+
+  /// Whether these, the checks of `reading`, are worse than `than`, rc6's, in any one check, each judged by its own
+  /// counts, never a sum: a block's names fail where they did not, or it loses more ink, writes more in excess or leaves
+  /// more pictures — or loses any where its creators differ: the emitter keeps lost ink by its block's creators, a sole
+  /// author's note, else a nameless creator (`Dan Dore$^{1}$; the Machine Learning Group$^{1}$ \\ … \\ Bob Baker`,
+  /// harness); a call loses more words or writes more in excess; a block fails more marks, parts more names, or writes
+  /// more names unspelled or overlapping from their text.
+  fn worse(&self, reading: &Resolved, than: &Self, rc6: &Resolved) -> bool {
+    let creators = |reading: &Resolved, block: usize| {
+      reading
+        .creators
+        .iter()
+        .filter(|c| c.source == block)
+        .count()
+    };
+    let tally = |check: Option<&BlockCheck>| {
+      check.map_or((false, [0; 3]), |check| {
+        let fails =
+          check.lost.iter().any(|ink| ink.names_fail) || check.excess.iter().any(|(_, name)| *name);
+        (fails, [
+          check.lost.len(),
+          check.excess.len(),
+          check.pictures,
+        ])
+      })
+    };
+    let blocks = self.blocks.keys().chain(than.blocks.keys()).any(|&block| {
+      let ((fails, inks), (failed, had)) = (
+        tally(self.blocks.get(&block)),
+        tally(than.blocks.get(&block)),
+      );
+      let moved = creators(reading, block) != creators(rc6, block);
+      (fails && !failed)
+        || inks
+          .iter()
+          .zip(had)
+          .enumerate()
+          .any(|(k, (&ink, had))| ink > had || (k == 0 && moved && ink > 0))
     });
-    ledger.analysis = Some(Rc::clone(&made));
-    made
-  })
+    let calls = self.calls.iter().any(|(index, (words, excess))| {
+      than.calls.get(index).is_none_or(|(had_words, had_excess)| {
+        words.len() > had_words.len() || excess.len() > had_excess.len()
+      })
+    });
+    let more = |on: &BTreeMap<usize, Vec<String>>, off: &BTreeMap<usize, Vec<String>>| {
+      on.iter()
+        .any(|(block, failed)| off.get(block).map_or(0, Vec::len) < failed.len())
+    };
+    let unspelled = self.unspelled.iter().any(|(block, n)| {
+      let had = than.unspelled.get(block).copied().unwrap_or_default();
+      n.iter().zip(had).any(|(&n, had)| n > had)
+    });
+    blocks
+      || calls
+      || unspelled
+      || more(&self.marks, &than.marks)
+      || more(&self.merged, &than.merged)
+  }
+}
+
+/// The names of a block's [`block_names`] whose runs overlap another's: each written from its text.
+fn overlapping_names(tokens: &[BlockName]) -> BTreeSet<usize> {
+  tokens
+    .iter()
+    .enumerate()
+    .filter(|(k, (name, _, run, ..))| {
+      name.is_some()
+        && run.is_some_and(|(s, t)| {
+          tokens.iter().enumerate().any(|(l, (other, _, run, ..))| {
+            l != *k && other.is_some() && run.is_some_and(|(s2, t2)| s < t2 && s2 < t)
+          })
+        })
+    })
+    .map(|(k, _)| k)
+    .collect()
+}
+
+/// Per author block with events, how many of `reading`'s names its events don't spell ([`block_names`]), and how many
+/// they spell from runs that overlap ([`overlapping_names`]): each written from its text, a Warning
+/// (`\author{\def\G{GAPS}Ann Able and the \G{} Team \\ CERN}`, advisor TEAMAUTH6 C).
+fn unspelled_names(
+  reading: &Resolved,
+) -> (BTreeMap<usize, [usize; 2]>, BTreeMap<usize, NamesTaken>) {
+  let mut by_block: BTreeMap<usize, Vec<String>> = BTreeMap::new();
+  for c in &reading.creators {
+    by_block.entry(c.source).or_default().push(c.name.clone());
+  }
+  let events = |source: usize| {
+    with_ledger(|ledger| {
+      matches!(ledger.entries().get(source), Some(Entry::Author(block))
+        if matches!(block.outcome, Outcome::Events { .. }))
+    })
+  };
+  let (mut counts, mut taken) = (BTreeMap::new(), BTreeMap::new());
+  for (source, names) in by_block.into_iter().filter(|(source, _)| events(*source)) {
+    let (marks, mut on_names) = (per_author_marks(source), BTreeSet::new());
+    let written = block_names(source, reading, &names, marks, &mut on_names);
+    let n = [
+      written.iter().filter(|(name, ..)| name.is_none()).count(),
+      overlapping_names(&written).len(),
+    ];
+    if n != [0, 0] {
+      counts.insert(source, n);
+    }
+    taken.insert(source, (names, marks, written, on_names));
+  }
+  (counts, taken)
 }
 
 /// The words the reading drops by its own rule ([`Resolved::drops`]), as the ledger's last [`Analysis`] read them:
@@ -6237,24 +6418,24 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
       .iter()
       .map(|&i| resolved.creators[i].name.clone())
       .collect();
-    let tokens = block_names(source, resolved, &spelled, keeps(source), &mut on_names);
+    // (as the comparison took them, where it asked the same: `Analysis::taken`)
+    let taken = analysis.taken.get(&source).filter(|(asked, marks, ..)| {
+      *asked == spelled
+        && *marks == keeps(source)
+        && analysis.reading.mark_ledgers.get(&source) == resolved.mark_ledgers.get(&source)
+    });
+    let tokens = match taken {
+      Some((_, _, written, on)) => {
+        on_names.extend(on.iter().copied());
+        written.clone()
+      },
+      None => block_names(source, resolved, &spelled, keeps(source), &mut on_names),
+    };
     // (two names written from runs that overlap each print the other's ink: a macro printing both, `\author{\small
     // \myauthors \\ …}` with `\newcommand{\myauthors}{Xing Shi Cai, Luc Devroye}` under scrartcl, each creator written as the
     // macro, a name of two people twice (2 × merged_creators, 1602.03850; cond-mat9310042). Each is its text, counted — where
     // the shared run prints a note or a footnote mark, the block is written whole instead, `names_overlap`)
-    let overlapping: BTreeSet<usize> = tokens
-      .iter()
-      .enumerate()
-      .filter(|(k, (name, _, run, ..))| {
-        name.is_some()
-          && run.is_some_and(|(s, t)| {
-            tokens.iter().enumerate().any(|(l, (other, _, run, ..))| {
-              l != *k && other.is_some() && run.is_some_and(|(s2, t2)| s < t2 && s2 < t)
-            })
-          })
-      })
-      .map(|(k, _)| k)
-      .collect();
+    let overlapping = overlapping_names(&tokens);
     let mut runs: Vec<(usize, (usize, usize))> = Vec::new();
     let mut stepped: BTreeSet<usize> = BTreeSet::new();
     for (k, (&i, (name, cites, run, apart, in_name))) in members.iter().zip(tokens).enumerate() {
@@ -7268,6 +7449,7 @@ mod tests {
         marks:      BTreeMap::new(),
         merged:     BTreeMap::new(),
         cuts:       Vec::new(),
+        taken:      BTreeMap::new(),
       }));
     });
     reset_fm_reading();

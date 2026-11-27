@@ -1,0 +1,15 @@
+% mechanism: a team, group or collaboration an author list enumerates is an author; one a remark frames is a contact (DG 2026-11-27, OXIDIZED_DESIGN_DIVERGENCES #459)
+% witness: hep-ex0611001 (ws-procs10x7.cls, not in TeX Live; written with article: `Benjamin Kilminster on behalf of the CDF and D\O \ collaborations`)
+% oracle:  pdflatex 0 `!`
+% engines: rust 0.8.0-rc6 and TEAMAUTH (byte-identical): one creator named "Ann Able on behalf of the CDF", `collaboration` "DØ collaborations", the affiliation Univ A
+% expect:  one creator "Ann Able" with `collaboration` "on behalf of the CDF and DØ collaborations" and the affiliation
+% status:  RED
+% moves:   post-merge (the remark's split at its "and")
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able on behalf of the CDF and D\O \ collaborations \\ Univ A}
+\maketitle
+Text.
+\end{document}

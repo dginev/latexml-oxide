@@ -2,6 +2,8 @@
 //! into lines and entries, the names line split at its separators with each mark on the name beside it, and the name
 //! helpers (gaps, initials, collaborations, placement letters).
 
+use std::cell::Cell;
+
 use super::*;
 
 /// A line of a block: its column, its events, and whether a blank line (a row of no ink) comes before it in its column.
@@ -1171,12 +1173,12 @@ pub(super) fn name_continues_at_gap(name: &str) -> bool {
   }
 }
 
-/// Whether a names line's piece is a collaboration listed among the authors (`and the MAST Team`, 1609.09534; `and the
-/// VVDS team`, astro-ph0509500): "the" before a team, collaboration, consortium or group's name — no institution of the
-/// name before it; the names line reads it as their collaboration (`reads_as_collaboration`, OXIDIZED_DESIGN_DIVERGENCES
-/// #946; an author before batch 97d).
-pub(super) fn is_collaboration(text: &str) -> bool {
+/// Whether a names line's piece names a team, collaboration, consortium or group listed among the authors — after "the"
+/// (`and the MAST Team`, 1609.09534; `and the VVDS team`, astro-ph0509500) or `enumerated` (`A, B and R Core Team`) — no
+/// institution of the name before it (OXIDIZED_DESIGN_DIVERGENCES #459).
+pub(super) fn is_collaboration(text: &str, enumerated: bool) -> bool {
   collaboration_remark(text) == Some(Framing::The)
+    || (enumerated && reads_as_collaboration(text, true))
 }
 
 /// Where a remark on a name opens in a piece's text: at a bracket (`(on behalf of the H1 and ZEUS collaborations)`,
@@ -1201,6 +1203,34 @@ pub(super) fn remark_start(text: &str) -> Option<usize> {
     .flatten()
     .min()
     .map(|at| at + skipped)
+}
+
+/// Whether a remark opens in a piece and goes on past it ([`remark_start`]): one naming whom the name speaks for, or a
+/// bracket left open (`Bob Baker (on behalf of the H1,`, 0811.3142) — not one it closes, `Ann Able (MIT),`.
+pub(super) fn remark_left_open(text: &str) -> bool {
+  let mut rest = text;
+  while let Some(at) = remark_start(rest) {
+    rest = &rest[at..];
+    let open = match rest.chars().next() {
+      Some('(') => ('(', ')'),
+      Some('[') => ('[', ']'),
+      _ => return true,
+    };
+    let mut depth = 0usize;
+    let close = rest.char_indices().find(|&(_, c)| {
+      if c == open.0 {
+        depth += 1;
+      } else if c == open.1 {
+        depth = depth.saturating_sub(1);
+      }
+      depth == 0
+    });
+    match close {
+      Some((at, c)) => rest = &rest[at + c.len_utf8()..],
+      None => return true,
+    }
+  }
+  false
 }
 
 /// Whether a names line's piece is a remark on the name before it, no name of its own: a bracket (`(on behalf of the H1
@@ -1543,8 +1573,13 @@ impl Resolver {
     // after it, with where they start)
     let mut last_covered: Vec<usize> = Vec::new();
     let mut heading: Option<(String, usize)> = None;
+    let mut read_institution = false;
     let listed = |sep: Option<&Event>| {
       sep.is_some_and(|s| matches!(&s.kind, EventKind::Sep(SepKind::Word(word)) if word.eq_ignore_ascii_case("and") || word == "&"))
+    };
+    // (an enumeration's: a list's "and", `&` or an inline `\and`, llncs's)
+    let enumerates = |sep: Option<&Event>| {
+      listed(sep) || sep.is_some_and(|s| matches!(s.kind, EventKind::Sep(SepKind::And(_))))
     };
     let split_rule = |sep: Option<&Event>| match sep.map(|e| &e.kind) {
       Some(EventKind::Sep(SepKind::Comma)) => "line:names sep:comma",
@@ -1554,6 +1589,126 @@ impl Resolver {
       _ => "line:names",
     };
     let events = &line.events;
+    // (a group a list of names enumerates is an author, OXIDIZED_DESIGN_DIVERGENCES #459: after "and", `&`, `\and`, or a
+    // comma of a list — a "group" only after "and" or `&` with no address on the line under it, or marked; never once the
+    // line read an institution, inside a remark left open (1311.7305, hep-ex0611001), nor before a place)
+    // (a piece of the line holding a letter or digit, no closing `.`: `…, and EAST Team$^{b}$.`, 2404.07458)
+    let piece = |e: &Event| e.kind == EventKind::Name && e.text.chars().any(char::is_alphanumeric);
+    // (a place after a piece on the line: its next name — `past_groups`, past a run of groups, a chain of affiliations,
+    // `Ann Able, XYZ Team, ABC Collaboration, CERN` — neither a person, a group, nor a name before its remark)
+    let place_after = |at: usize, past_groups: bool| {
+      events[at + 1..]
+        .iter()
+        .filter(|e| piece(e))
+        .find(|e| !(past_groups && reads_as_collaboration(&e.text, true)))
+        .is_some_and(|e| {
+          !reads_as_names(&e.text)
+            && !reads_as_collaboration(&e.text, true)
+            && name_before_remark(&e.text).is_none()
+        })
+    };
+    // (whether a person the block printed before this line is uncovered: asked only of a team after "and", once — a
+    // 1,000-call REVTeX list's every line would ask, 2103.04797)
+    let (before, replaced) = (
+      self.collaboration_from..self.out.creators.len(),
+      self.replaced.clone(),
+    );
+    let person_before_read: Cell<Option<bool>> = Cell::new(None);
+    let person_before = |creators: &[RCreator]| {
+      let read = person_before_read.get().unwrap_or_else(|| {
+        before
+          .clone()
+          .filter(|c| !replaced.contains(c))
+          .any(|c| reads_as_names(&creators[c].name))
+      });
+      person_before_read.set(Some(read));
+      read
+    };
+    let next_line_place = self.place_under;
+    let enumerating = self.enumerating;
+    let enumerated = |creators: &[RCreator],
+                      made: &[usize],
+                      sep: Option<&Event>,
+                      at: usize,
+                      after_institution: bool| {
+      // (the cheap tests first: every piece of a 1,000-name line asks)
+      if !enumerating
+        || made.is_empty()
+        || after_institution
+        || !reads_as_collaboration(&events[at].text, true)
+      {
+        return false;
+      }
+      let is_name = |e: &&&Event| e.kind == EventKind::Name;
+      let group = names_a_group(&events[at].text);
+      // (a printed comma, not a `;`: no enumeration's)
+      let comma = sep.is_some_and(|s| s.kind == EventKind::Sep(SepKind::Comma) && s.text != ";");
+      let by_sep = if group {
+        listed(sep) || marked_name(events, at, false, policy)
+      } else {
+        // (a comma lists only what rc6 read as the names' collaboration, after two names: `…, the TCV Team`; one name's
+        // keeps it, `Chris Howard, SNO Collaboration, \texttt{…}`, 0906.0040; an unframed team keeps rc6's reading,
+        // `A, B, Google Brain Team`, 1408.5896, astro-ph0608009)
+        enumerates(sep)
+          || (comma
+            && made.len() >= 2
+            && reads_as_listed_collaboration(&events[at].text, false, false))
+      };
+      // (a line of groups alone enumerates two "and" joins under names the block printed before, `\and the Solar
+      // Orbiter EPD and Parker Solar Probe ISIS teams` (2408.02330); with no person in the block it keeps today's
+      // reading, the iopart template's `Content \& Services Team`)
+      let people = made.iter().any(|&c| reads_as_names(&creators[c].name))
+        || (listed(sep)
+          && !events[..at]
+            .iter()
+            .any(|e| e.kind == EventKind::Sep(SepKind::Comma))
+          && person_before(creators));
+      // (a per-author class's `\author` listing groups under a plural is revtex's `\collaboration{Fermilab Lattice, HPQCD,
+      // and MILC Collaborations}` (2412.18491), read as today, `revtex_collaboration_list_is_one_contact_red`)
+      !(cautious && names_several_groups(&events[at].text))
+        && by_sep
+        && people
+        && !(group && next_line_place && !marked_name(events, at, false, policy))
+        && !events[..at]
+          .iter()
+          .filter(is_name)
+          .any(|e| remark_left_open(&e.text))
+        && !place_after(at, true)
+    };
+    // (a piece the line reads as the affiliation of the name before it, unless a list enumerates it)
+    let institution_piece = |at: usize, enumerated: bool| {
+      let text = &events[at].text;
+      is_institution(text)
+        && !is_collaboration(text, enumerated)
+        && name_before_remark(text).is_none()
+        && !marked_name(events, at, cautious, policy)
+    };
+    // (the collaboration arm's and the institution arm's readings of a piece, each noting where the enumeration departs
+    // from rc6's: the reading is then checked against rc6's, `Resolver::enumeration_fired`)
+    let fired = Cell::new(false);
+    let collaboration_arm =
+      |creators: &[RCreator], made: &[usize], sep: Option<&Event>, at: usize, after: bool| {
+        let text = &events[at].text;
+        let rc6 = reads_as_listed_collaboration(text, listed(sep), false);
+        // (read again only where the enumeration can change it: every name of a long line asks)
+        let narrowed = enumerating && listed(sep) && names_a_group(text) && place_after(at, false);
+        let enumerated = enumerated(creators, made, sep, at, after);
+        let read = if narrowed || enumerated {
+          reads_as_listed_collaboration(text, listed(sep) && !narrowed, enumerated)
+        } else {
+          rc6
+        };
+        fired.set(fired.get() || read != rc6);
+        read
+      };
+    // (the enumeration only takes a piece rc6 reads as an institution from it)
+    let institution_arm =
+      |creators: &[RCreator], made: &[usize], sep: Option<&Event>, at: usize, after: bool| {
+        let rc6 = institution_piece(at, false);
+        let read = rc6 && institution_piece(at, enumerated(creators, made, sep, at, after));
+        fired.set(fired.get() || read != rc6);
+        read
+      };
     // (a line printing only a collaboration framed for the names before it is theirs, its words as digested: a macro, a
     // `\let` copy, a font group or its own "and" — `\author{\obo{} the KM3NeT Consortium}`, 1201.5050, segaudit col1)
     if let Some(text) = framed_collaboration(events)
@@ -1682,9 +1837,10 @@ impl Resolver {
           creator.join(NameJoin::Reversed);
           last_sep = None;
         },
-        // (a collaboration among the names, or a remark on a name naming one, is a contact on the names of the line
-        // since its last collaboration, no name and no part of one — `… and the GAPS Team`, `J.~Zapatero$^{5}$ (The
-        // MAGIC Collaboration)`, as today's reader reads it: `collaboration_split`, OXIDIZED_DESIGN_DIVERGENCES #946)
+        // (a collaboration framed among the names, or a remark on a name naming one, is a contact on the names of the
+        // line since its last collaboration, no name and no part of one — `J.~Zapatero$^{5}$ (The MAGIC Collaboration)`:
+        // `collaboration_split`, OXIDIZED_DESIGN_DIVERGENCES #459; one the line enumerates is an author, `… and the GAPS
+        // Team`, 1708.04166)
         // (a call or a column of its own speaking for one, under the names before it, too: `\author{on behalf of the KM3NeT
         // consortium}`, 1201.5726; `\author{for the IceCube collaboration}`, 1301.6619 — elsarticle, printed under them; the
         // names since the last collaboration, no name. An unframed one stays a creator, revtex's `\collaboration{The HERMES
@@ -1693,7 +1849,7 @@ impl Resolver {
           if (!made.is_empty()
             || ((speaks_for(&event.text) || frames_the_names_alone(events, &event.text))
               && !self.uncovered_creators().is_empty()))
-            && reads_as_listed_collaboration(&event.text, listed(last_sep)) =>
+            && collaboration_arm(&self.out.creators, &made, last_sep, i, read_institution) =>
         {
           let text = event
             .text
@@ -1814,13 +1970,17 @@ impl Resolver {
         // (a marked name is a name whatever its words, rows N1-N3: [`marked_name`])
         EventKind::Name
           if !made.is_empty()
-            && is_institution(&event.text)
-            && !is_collaboration(&event.text)
-            && name_before_remark(&event.text).is_none()
-            && !marked_name(events, i, cautious, policy) =>
+            && institution_arm(&self.out.creators, &made, last_sep, i, read_institution) =>
         {
-          let c = *made.last().expect("a name");
+          // (the last name's that is no group the line listed: `Ann Able and the GAPS Team, CERN`, Ann's as rc6's)
+          let c = *made
+            .iter()
+            .rev()
+            .find(|&&c| !self.listed_group(c))
+            .or(made.last())
+            .expect("a name");
           institution = Some((c, self.out.creators[c].affiliations.len()));
+          read_institution = true;
           self.attach(
             Some(c),
             Assoc {
@@ -1902,7 +2062,18 @@ impl Resolver {
           let name = remark
             .as_ref()
             .map_or_else(|| event.text.clone(), |(name, _)| name.clone());
-          let c = self.new_creator(name, split_rule(last_sep), index, marks, group);
+          // (a creator only the enumeration makes, a contact or an affiliation before it — not a marked group, 2404.07458)
+          let listed_group = reads_as_collaboration(&event.text, true)
+            && enumerated(&self.out.creators, &made, last_sep, i, read_institution)
+            && (reads_as_listed_collaboration(&event.text, listed(last_sep), false)
+              || institution_piece(i, false));
+          fired.set(fired.get() || listed_group);
+          let rule = s!(
+            "{}{}",
+            split_rule(last_sep),
+            if listed_group { LISTED_GROUP } else { "" }
+          );
+          let c = self.new_creator(name, &rule, index, marks, group);
           self.out.creators[c].role.clone_from(&event.role);
           self.out.creators[c].call = event.creator_call;
           made.push(c);
@@ -2074,6 +2245,7 @@ impl Resolver {
     if let Some(&c) = made.last() {
       self.out.creators[c].marks.extend(waiting);
     }
+    self.enumeration_fired |= fired.get();
     NamesLine { creators: made }
   }
 

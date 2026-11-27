@@ -307,15 +307,17 @@ pub(in crate::base_utilities::frontmatter::observer) fn mark_ledger(
           ledger.records[at].side = Some(Side::After);
         }
       } else {
-        Info!(
-          "frontmatter",
-          "mark_convention",
-          s!(
-            "An author block sets notes both before its names and after them: {} between two names given the name \
-             before",
-            between.len()
-          )
-        );
+        let between = between.len();
+        reading_log(move || {
+          Info!(
+            "frontmatter",
+            "mark_convention",
+            s!(
+              "An author block sets notes both before its names and after them: {between} between two names given the \
+               name before"
+            )
+          );
+        });
       }
     }
   }

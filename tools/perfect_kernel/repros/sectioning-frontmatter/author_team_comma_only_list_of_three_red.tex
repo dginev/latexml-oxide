@@ -1,0 +1,20 @@
+% mechanism: an unframed team after a bare comma keeps rc6's reading (DG 2026-11-27, revisit in 0.8.1; 1408.5896,
+%            astro-ph0608009); a comma lists only rc6's `the` collaboration after two names (OXIDIZED_DESIGN_DIVERGENCES #459)
+% witness: synthetic (TEAMAUTH fix2: the reading cannot tell `Ann Able, R Core Team, Bob Baker` from `Bob Baker, Google
+%          Brain Team, Palo Alto`, Gemini TEAMAUTH.9 b1)
+% oracle:  pdflatex 0 `!`: "Ann Able, R Core Team, Bob Baker" on one line
+% engines: rust 0.8.0-rc6 and TEAMAUTH: "Ann Able" with `affiliation` "R Core Team", then "Bob Baker"; 0 errors, 0 warnings
+% expect:  three creators "Ann Able", "R Core Team", "Bob Baker"
+% status:  RED
+% sibling: `Ann Able, XYZ Collaboration, Bob Baker and Carl Cole` (review of f09ffb5d88e S2): the "and" after the
+%          collaboration shows a list, yet rc6 and TEAMAUTH keep it Ann's `collaboration` contact; expect four creators
+%          (pdflatex 0 `!`)
+% moves:   post-merge (a place word the reading can tell from a name)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able, R Core Team, Bob Baker}
+\maketitle
+Text.
+\end{document}

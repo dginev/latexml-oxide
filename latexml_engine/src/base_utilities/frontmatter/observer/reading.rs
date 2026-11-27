@@ -1,7 +1,7 @@
 //! The observer's flush and its dump (OXIDIZED_DESIGN_DIVERGENCES #837): at every real flush (`digest_front_matter`)
 //! the ledger's author blocks not rehearsed yet are rehearsed and lexed, and each API call's content
-//! ([`read_at_flush`]); [`fm_reading_json`] gives the ledger as JSON — its entries with their events and the resolver's
-//! tuples (`resolved`) — which the guards read the reading by, in process. The census that wrote it beside the output
+//! ([`read_at_flush`]); [`fm_reading_json`] gives the ledger as JSON — its entries with their events and the reading's
+//! tuples (`resolved`, the emitter's once it wrote them) — which the guards read the reading by, in process. The census that wrote it beside the output
 //! (`LATEXML_FM_SHADOW=1`, `<dest>.fmshadow.json`, `ab_audit fmshadow`) and its off state (`=0`) were deleted with the
 //! S2b writer (DEL4): the observer records and reads every paper.
 
@@ -895,8 +895,12 @@ pub fn fm_reading_json() -> String {
       }
       out.push(']');
     }
+    // (the reading the emitter wrote, rc6's where its checks chose it, `emit::Checks::worse`; else the resolver's)
     out.push_str(",\"resolved\":");
-    json_resolved(&mut out, &resolve(&ledger_inputs(ledger)));
+    match emitter::emitted_reading(ledger) {
+      Some(reading) => json_resolved(&mut out, reading),
+      None => json_resolved(&mut out, &resolve(&ledger_inputs(ledger))),
+    }
     let _ = write!(
       out,
       ",\"summary\":{{\"blocks\":{blocks},\"with_events\":{with_events},\"held\":{held},\"overflow\":{overflow},\"skipped\":{{"

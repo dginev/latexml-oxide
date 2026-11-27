@@ -213,6 +213,8 @@ In `latexml_core/src/util/pathname.rs`, `latexml_core/src/watchdog.rs` and `late
 
 `--init` writes no environment since 2026-11-25 (`dump_paths::set_ini_mode()`, an in-process flag).
 
+### E. Subprocess process groups, and the test environment (5 sites)
+
 Image converters (`gs`, `pdftocairo`, `mutool draw`, `ps2pdf`, `convert`) can spawn grandchildren, which a plain
 `Child::kill()` does not reach, so each runs as a process-group leader.
 
@@ -221,14 +223,17 @@ Image converters (`gs`, `pdftocairo`, `mutool draw`, `ps2pdf`, `convert`) can sp
 | `latexml_post/src/graphics.rs` (1) | `cmd.pre_exec(|| setsid(); setpgid(0,0); prctl(…))` | Runs between `fork()` and `exec()`, so it must be async-signal-safe. `setsid(2)` makes the child a group leader so the whole group can be killed; the signalling itself is safe `rustix::process` (`watchdog.rs`). `Command::process_group` gives no `setsid` + `killpg`. |
 | `latexml_post/src/test_env.rs` (3), `latexml_post/src/graphics_cache.rs` (1) | `set_var`/`remove_var` in `EnvGuard`; one `OnceLock`-initialised test `set_var` | **Test-only.** Both hold the binary-wide `env_lock` across set, use and restore. The residual, documented in `test_env.rs`: a linked C library can call `getenv` concurrently, which no Rust lock serialises, so no correctness rests on these variables (the graphics cache takes an explicit `CachePolicy`). |
 
-| Call | Why |
-|---|---|
-| `cmd.pre_exec(|| setsid(); setpgid(0,0); prctl(…))` | Runs post-`fork()`/pre-`exec()`; must be async-signal-safe. `setsid(2)` makes the child a process-group leader so the whole group is killable (signaling itself now uses safe `rustix::process` via `watchdog.rs`). |
-| `std::env::set_var`/`remove_var` in `EnvGuard` (test_env.rs) + a test `set_var` (graphics_cache.rs) | **Test-only.** `set_var`/`remove_var` are `unsafe` in Rust 2024 (concurrent env mutation races). `EnvGuard` is used only in test setup, but the default `cargo test` harness runs a binary's tests multi-threaded and other tests read the env — so the comment documents the invariant and keeps a `FIXME` proposing `serial_test` to make it airtight. The `graphics_cache.rs` test `set_var` is `OnceLock`-serialized. |
-
 `Command::process_group(0)` is `setpgid(0, 0)`, not `setsid()`: no new session, and the child keeps the controlling
 terminal; and `PR_SET_PDEATHSIG` can only be set between `fork` and `exec`. So the `pre_exec` stays. (The prune
 lock's `flock` is `File::try_lock` since 2026-11-24.)
+
+### F. libxslt global configuration (3 sites)
+
+`latexml_post/src/xslt.rs`: a `Once`-guarded write to libxslt's process-global `xsltMaxDepth` recursion cap (1000, as
+Perl's `XML::LibXSLT->max_depth(1000)`), through an `unsafe extern "C"` static declaration resolved at link time
+(WISDOM #56 says why not the crate's binding or `dlsym`), and a read-back in a parity test. The `libxslt` crate has no
+safe setter; libxslt only reads the value when it builds a transform context, so the single guarded write cannot race
+a transform. It stops pathologically deep stylesheet recursion gracefully, as Perl does.
 
 ### G. Editor server child processes (1 site)
 

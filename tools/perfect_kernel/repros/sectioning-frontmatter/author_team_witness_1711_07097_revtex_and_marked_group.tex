@@ -1,0 +1,17 @@
+% mechanism: a team, group or collaboration an author list enumerates is an author; one a remark frames is a contact (DG 2026-11-27, OXIDIZED_DESIGN_DIVERGENCES #459)
+% witness: 1711.07097 (revtex4-1 groupedaddress: `…, L.N. Vyacheslavov$^{6}$ and LHD experimental group$^{2}$ }`)
+% oracle:  pdflatex 0 `!`
+% engines: rust 0.8.0-rc6: three creators, the group a `collaboration` contact on each
+% expect:  0 errors, 0 warnings; four creators, "LHD experimental group" the fourth with address 2 (its own mark)
+% status:  RED (rc6) -> GREEN — TEAMAUTH fix round 1 (`perfect_kernel_batchteamauth`)
+% preload: ar5iv.sty
+\documentclass[groupedaddress]{revtex4-1}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1,2*}$, Bob Baker$^{2}$, Cy Cole$^{2}$
+and LHD experimental group$^{2}$ }
+\address{$^{1}$Univ A}
+\address{$^{2}$ National Institute for Fusion Science, Toki, Japan}
+\maketitle
+Text.
+\end{document}

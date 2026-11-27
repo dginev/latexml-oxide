@@ -1,0 +1,23 @@
+% mechanism: a team, group or collaboration an author list enumerates is an author; one a remark frames is a contact (DG 2026-11-27, OXIDIZED_DESIGN_DIVERGENCES #459)
+% witness: 2509.25166 (mnras: `C. Uhlemann$^{1,8}$\newauthor and the LSST Dark Energy Science Collaboration \\ $^{1}$…`)
+% oracle:  pdflatex 0 `!`
+% engines: rust 0.8.0-rc6: four creators, the collaboration a `collaboration` contact on each
+% expect:  0 errors, 0 warnings; five creators, the collaboration the fifth, no contact
+% status:  RED (rc6) -> GREEN — TEAMAUTH fix round 1 (`perfect_kernel_batchteamauth`)
+% preload: ar5iv.sty
+\documentclass{mnras}
+\title{T}
+\author[A. Able et al.]{Ann Able$^{1}$
+\thanks{E-mail: ann@a.org}
+Bob Baker,$^{1,2}$
+Cy Cole$^{2}$,
+\newauthor
+Dee Dorn$^{1}$\newauthor
+and the LSST Dark Energy Science Collaboration
+\\
+$^{1}$Univ A\\
+$^{2}$Univ B}
+\begin{document}
+\maketitle
+Text.
+\end{document}

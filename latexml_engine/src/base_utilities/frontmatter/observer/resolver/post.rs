@@ -10,14 +10,21 @@ impl Resolver {
   /// affiliations only when it holds none (an author whose marks request one is not given the one no one marks). A note
   /// of the title (`api:title-note`) stays the block's. The sole author is the sole live one: a replacing `\author`
   /// call's author takes the block (1611.08655).
+  /// A team the author's line lists beside it is no second author here: the institute is every one's, the rest the
+  /// author's (svjour3's `\author{Ann Able and the GAPS Team}\institute{CERN}`, OXIDIZED_DESIGN_DIVERGENCES #459).
   pub(super) fn sole_author_takes_the_block(&mut self) {
-    let [sole] = self.live()[..] else {
+    let Some((sole, groups)) = self.sole_named() else {
       return;
     };
     if self.out.block.is_empty() {
       return;
     }
     let affiliated = !self.out.creators[sole].affiliations.is_empty();
+    // (each group holding none before the block, so it takes every institute, `\institute{CERN \and Univ B}`)
+    let groups: Vec<usize> = groups
+      .into_iter()
+      .filter(|&g| self.out.creators[g].affiliations.is_empty())
+      .collect();
     let mut kept = Vec::new();
     for assoc in std::mem::take(&mut self.out.block) {
       let institute = matches!(assoc.role.as_str(), "affiliation" | "address");
@@ -30,6 +37,12 @@ impl Resolver {
         continue;
       }
       let rule = s!("{} owner:sole-author", assoc.rule);
+      if institute {
+        for &g in &groups {
+          let rule = rule.clone();
+          self.attach(Some(g), Assoc { rule, ..assoc.clone() }, note);
+        }
+      }
       self.attach(Some(sole), Assoc { rule, ..assoc }, note);
     }
     self.out.block = kept;
@@ -56,7 +69,7 @@ impl Resolver {
       .out
       .block
       .retain(|a| !(before(a) && held(a, &creators)));
-    if let [sole] = live[..] {
+    if let Some((sole, _)) = self.sole_named() {
       let mut kept = Vec::new();
       for assoc in std::mem::take(&mut self.out.block) {
         if before(&assoc) {
