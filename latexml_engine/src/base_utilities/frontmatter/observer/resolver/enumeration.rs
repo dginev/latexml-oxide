@@ -1,8 +1,9 @@
 //! A reading whose names lines enumerate their teams as authors, kept only where it is rc6's reading plus those authors
 //! (OXIDIZED_DESIGN_DIVERGENCES #459): the resolver reads with the enumeration on and, where a decision departed from
-//! rc6's, reads again with it off and returns rc6's reading whole unless [`promotion_only`] holds.
+//! rc6's, reads again with it off and returns rc6's reading whole unless [`promotion_only`] holds; the emitter's word
+//! check may still keep rc6's ([`Readings::keep`]).
 
-use std::cell::RefCell;
+use std::{cell::RefCell, collections::BTreeSet};
 
 use super::*;
 
@@ -43,24 +44,55 @@ fn held<T>(read: impl FnOnce() -> T) -> (T, Vec<Log>) {
   (value, logs)
 }
 
-/// The reading `read(true)` if no decision departed from rc6's or it holds [`promotion_only`] over `read(false)`, rc6's;
-/// else rc6's. Only the chosen reading's log calls are emitted.
-pub(super) fn checked(read: impl Fn(bool) -> (Resolved, bool)) -> Resolved {
+/// The two readings of a document whose names lines enumerated a team: the enumeration's, and rc6's where a decision
+/// departed from it and the enumeration's is not [`promotion_only`] over it. Each holds its log calls until [`Self::keep`].
+pub struct Readings {
+  enumerated: (Resolved, Vec<Log>),
+  rc6:        Option<(Resolved, Vec<Log>)>,
+}
+
+impl Readings {
+  /// The enumeration's reading, or rc6's whole where it is not [`promotion_only`] over rc6's.
+  pub fn reading(&self) -> &Resolved { &self.enumerated.0 }
+
+  /// rc6's reading, where the enumeration's is rc6's plus its teams.
+  pub fn rc6(&self) -> Option<&Resolved> { self.rc6.as_ref().map(|(rc6, _)| rc6) }
+
+  /// The reading kept, `rc6`'s if asked and there is one, its log calls emitted (none of the other's).
+  pub fn keep(self, rc6: bool) -> Resolved {
+    let (kept, logs) = match self.rc6 {
+      Some(rc6_reading) if rc6 => rc6_reading,
+      _ => self.enumerated,
+    };
+    for log in logs {
+      log();
+    }
+    kept
+  }
+}
+
+/// The reading `read(true)` if no decision departed from rc6's; else `read(false)`'s, rc6's, unless `read(true)`'s holds
+/// [`promotion_only`] over it, which the emitter's word check may still decline ([`Readings::keep`]).
+pub(super) fn checked(inputs: &[Input], read: impl Fn(bool) -> (Resolved, bool)) -> Readings {
   let ((enumerated, fired), logs) = held(|| read(true));
-  let (chosen, logs) = if fired {
-    let ((rc6, _), rc6_logs) = held(|| read(false));
-    if promotion_only(&rc6, &enumerated) {
-      (enumerated, logs)
-    } else {
-      (rc6, rc6_logs)
+  if !fired {
+    return Readings {
+      enumerated: (enumerated, logs),
+      rc6:        None,
+    };
+  }
+  let ((rc6, _), rc6_logs) = held(|| read(false));
+  if promotion_only(inputs, &rc6, &enumerated) {
+    Readings {
+      enumerated: (enumerated, logs),
+      rc6:        Some((rc6, rc6_logs)),
     }
   } else {
-    (enumerated, logs)
-  };
-  for log in logs {
-    log();
+    Readings {
+      enumerated: (rc6, rc6_logs),
+      rc6:        None,
+    }
   }
-  chosen
 }
 
 /// Two items alike but for the rule that placed them.
@@ -128,21 +160,60 @@ fn piece_of(item: &Assoc, team: &RCreator) -> bool {
     }
 }
 
-/// Whether `span` is printed after a promoted piece of its block: a team's own mark or note.
-fn after_a_piece(span: Option<(usize, Option<(u16, u16)>)>, pieces: &[&Assoc]) -> bool {
+/// The events of the block or call at ledger index `index`.
+fn events_of(inputs: &[Input], index: usize) -> &[Event] {
+  let events = inputs.iter().find_map(|input| match input {
+    Input::Block { index: i, events, .. } | Input::Api { index: i, events, .. } if *i == index => {
+      Some(events.as_slice())
+    },
+    _ => None,
+  });
+  events.unwrap_or_default()
+}
+
+/// Whether `span` is printed on a promoted piece of its block, only marks and notes between: a team's own mark or note
+/// (`the GAPS Team$^{2}$\thanks{…}`), never one a later piece or line prints (harness: `A \& the Speech Team \\ CERN,
+/// Cat Cole\thanks{…}`, Ann Able's as rc6's).
+fn on_a_piece(
+  inputs: &[Input],
+  span: Option<(usize, Option<(u16, u16)>)>,
+  pieces: &[&Assoc],
+) -> bool {
   let Some((index, Some((start, _)))) = span else {
     return false;
   };
-  pieces
-    .iter()
-    .any(|p| matches!(p.source, Some((i, Some((_, end)))) if i == index && end <= start))
+  let events = events_of(inputs, index);
+  let decoration = |e: &Event| match &e.kind {
+    EventKind::Mark
+    | EventKind::Note
+    | EventKind::Layout
+    | EventKind::Declaration
+    | EventKind::Sep(SepKind::Gap { .. }) => true,
+    EventKind::Name => !e.text.chars().any(char::is_alphanumeric),
+    _ => false,
+  };
+  pieces.iter().any(|p| match p.source {
+    Some((i, Some((_, end)))) if i == index && end <= start => events
+      .iter()
+      .all(|e| !e.span.is_some_and(|(s, _)| end <= s && s < start) || decoration(e)),
+    _ => false,
+  })
+}
+
+/// A text's words, lowercased.
+fn words(text: &str) -> impl Iterator<Item = String> + '_ {
+  text
+    .split(|c: char| !c.is_alphanumeric())
+    .filter(|w| !w.is_empty())
+    .map(str::to_lowercase)
 }
 
 /// Whether `enumerated` is `rc6`'s reading plus the teams its names lines enumerated: each of rc6's creators kept in
-/// order with its items but the team's piece and the team's own marks and notes (no e-mail); a nameless creator only
-/// where rc6 had it, or healed onto a team; each new creator a team whose piece rc6 read as the names' collaboration or a
-/// column's own affiliation, holding only what moved, what it healed, or a copy of what a person keeps.
-pub(super) fn promotion_only(rc6: &Resolved, enumerated: &Resolved) -> bool {
+/// order with its items but the team's piece and the team's own marks and notes, printed on it (no e-mail); a nameless
+/// creator only where rc6 had it, or healed onto a team; each new creator a team whose piece rc6 read as the names'
+/// collaboration or a column's own affiliation, holding only what moved, what it healed, or a copy of what a person
+/// keeps that no other name or item prints the words of.
+pub(super) fn promotion_only(inputs: &[Input], rc6: &Resolved, enumerated: &Resolved) -> bool {
   if (&rc6.policies, &rc6.continued, &rc6.drops, &rc6.mark_ledgers)
     != (
       &enumerated.policies,
@@ -224,7 +295,7 @@ pub(super) fn promotion_only(rc6: &Resolved, enumerated: &Resolved) -> bool {
         },
         None
           if teams.iter().any(|t| t.marks.contains(mark))
-            && after_a_piece(mark.span.map(|s| (now.source, Some(s))), &pieces) =>
+            && on_a_piece(inputs, mark.span.map(|s| (now.source, Some(s))), &pieces) =>
         {
           moved_marks.push(mark)
         },
@@ -234,19 +305,21 @@ pub(super) fn promotion_only(rc6: &Resolved, enumerated: &Resolved) -> bool {
     if !left.is_empty() {
       return false;
     }
-    for (from, kept) in [
-      (&was.affiliations, &now.affiliations),
-      (&was.contacts, &now.contacts),
-      (&was.notes, &now.notes),
+    for (from, kept, notes) in [
+      (&was.affiliations, &now.affiliations, false),
+      (&was.contacts, &now.contacts, false),
+      (&was.notes, &now.notes, true),
     ] {
       let Some(gone) = lost(from, kept) else {
         return false;
       };
       for item in gone {
         let piece = pieces.iter().any(|p| same(p, item));
+        // (a team's own: a note printed on its piece, or what its own mark requests — never a later remark's contact,
+        // `A \& KM3NeT Consortium \& representing the LIGO …`, harness)
         let own = !mail(item)
           && on_a_team(item)
-          && (after_a_piece(item.source, &pieces)
+          && ((notes && on_a_piece(inputs, item.source, &pieces))
             || item
               .label
               .as_ref()
@@ -272,11 +345,27 @@ pub(super) fn promotion_only(rc6: &Resolved, enumerated: &Resolved) -> bool {
   if !heals.iter().all(|item| on_a_team(item)) {
     return false;
   }
+  // (a copy only of a line no other name or item prints the words of, a separator's "and" aside: the placed check counts
+  // a name's print as the line's too, so `A \and B and the X teams \\ A` would place "A" more often than printed —
+  // harness L10212, and its `\\ B and the X teams`)
+  let printed_once = |item: &Assoc| {
+    let others: BTreeSet<String> = rc6
+      .creators
+      .iter()
+      .flat_map(|c| {
+        let texts = items(c).filter(|i| !same(i, item)).map(|i| i.text.as_str());
+        std::iter::once(c.name.as_str()).chain(texts)
+      })
+      .flat_map(words)
+      .collect();
+    !words(&item.text).all(|w| w == "and" || others.contains(&w))
+  };
   let kept = |item: &Assoc| {
     !mail(item)
       && pairs
         .iter()
         .any(|&(_, c)| items(&enumerated.creators[c]).any(|i| same(i, item)))
+      && printed_once(item)
   };
   let healed_marks: Vec<&NameMark> = healed
     .iter()
@@ -288,7 +377,7 @@ pub(super) fn promotion_only(rc6: &Resolved, enumerated: &Resolved) -> bool {
         moved_marks.contains(&m)
           || healed_marks.contains(&m)
           || (!rc6.creators.iter().any(|c| c.marks.contains(m))
-            && after_a_piece(m.span.map(|s| (t.source, Some(s))), &pieces))
+            && on_a_piece(inputs, m.span.map(|s| (t.source, Some(s))), &pieces))
       })
   });
   teams_hold && taken_alike(rc6, enumerated, &pairs)

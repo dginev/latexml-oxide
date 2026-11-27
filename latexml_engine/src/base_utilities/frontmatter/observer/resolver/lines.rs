@@ -1607,10 +1607,23 @@ impl Resolver {
             && name_before_remark(&e.text).is_none()
         })
     };
-    let person_before = self
-      .uncovered_creators()
-      .iter()
-      .any(|&c| reads_as_names(&self.out.creators[c].name));
+    // (whether a person the block printed before this line is uncovered: asked only of a team after "and", once — a
+    // 1,000-call REVTeX list's every line would ask, 2103.04797)
+    let (before, replaced) = (
+      self.collaboration_from..self.out.creators.len(),
+      self.replaced.clone(),
+    );
+    let person_before_read: Cell<Option<bool>> = Cell::new(None);
+    let person_before = |creators: &[RCreator]| {
+      let read = person_before_read.get().unwrap_or_else(|| {
+        before
+          .clone()
+          .filter(|c| !replaced.contains(c))
+          .any(|c| reads_as_names(&creators[c].name))
+      });
+      person_before_read.set(Some(read));
+      read
+    };
     let next_line_place = self.place_under;
     let enumerating = self.enumerating;
     let enumerated = |creators: &[RCreator],
@@ -1618,9 +1631,18 @@ impl Resolver {
                       sep: Option<&Event>,
                       at: usize,
                       after_institution: bool| {
+      // (the cheap tests first: every piece of a 1,000-name line asks)
+      if !enumerating
+        || made.is_empty()
+        || after_institution
+        || !reads_as_collaboration(&events[at].text, true)
+      {
+        return false;
+      }
       let is_name = |e: &&&Event| e.kind == EventKind::Name;
       let group = names_a_group(&events[at].text);
-      let comma = sep.is_some_and(|s| s.kind == EventKind::Sep(SepKind::Comma));
+      // (a printed comma, not a `;`: no enumeration's)
+      let comma = sep.is_some_and(|s| s.kind == EventKind::Sep(SepKind::Comma) && s.text != ";");
       let by_sep = if group {
         listed(sep) || marked_name(events, at, false, policy)
       } else {
@@ -1636,18 +1658,14 @@ impl Resolver {
       // Orbiter EPD and Parker Solar Probe ISIS teams` (2408.02330); with no person in the block it keeps today's
       // reading, the iopart template's `Content \& Services Team`)
       let people = made.iter().any(|&c| reads_as_names(&creators[c].name))
-        || (person_before
-          && listed(sep)
+        || (listed(sep)
           && !events[..at]
             .iter()
-            .any(|e| e.kind == EventKind::Sep(SepKind::Comma)));
+            .any(|e| e.kind == EventKind::Sep(SepKind::Comma))
+          && person_before(creators));
       // (a per-author class's `\author` listing groups under a plural is revtex's `\collaboration{Fermilab Lattice, HPQCD,
       // and MILC Collaborations}` (2412.18491), read as today, `revtex_collaboration_list_is_one_contact_red`)
-      enumerating
-        && reads_as_collaboration(&events[at].text, true)
-        && !made.is_empty()
-        && !(cautious && names_several_groups(&events[at].text))
-        && !after_institution
+      !(cautious && names_several_groups(&events[at].text))
         && by_sep
         && people
         && !(group && next_line_place && !marked_name(events, at, false, policy))
@@ -1672,18 +1690,23 @@ impl Resolver {
       |creators: &[RCreator], made: &[usize], sep: Option<&Event>, at: usize, after: bool| {
         let text = &events[at].text;
         let rc6 = reads_as_listed_collaboration(text, listed(sep), false);
-        let read = reads_as_listed_collaboration(
-          text,
-          listed(sep) && !(enumerating && names_a_group(text) && place_after(at, false)),
-          enumerated(creators, made, sep, at, after),
-        );
+        // (read again only where the enumeration can change it: every name of a long line asks)
+        let narrowed = enumerating && listed(sep) && names_a_group(text) && place_after(at, false);
+        let enumerated = enumerated(creators, made, sep, at, after);
+        let read = if narrowed || enumerated {
+          reads_as_listed_collaboration(text, listed(sep) && !narrowed, enumerated)
+        } else {
+          rc6
+        };
         fired.set(fired.get() || read != rc6);
         read
       };
+    // (the enumeration only takes a piece rc6 reads as an institution from it)
     let institution_arm =
       |creators: &[RCreator], made: &[usize], sep: Option<&Event>, at: usize, after: bool| {
-        let read = institution_piece(at, enumerated(creators, made, sep, at, after));
-        fired.set(fired.get() || read != institution_piece(at, false));
+        let rc6 = institution_piece(at, false);
+        let read = rc6 && institution_piece(at, enumerated(creators, made, sep, at, after));
+        fired.set(fired.get() || read != rc6);
         read
       };
     // (a line printing only a collaboration framed for the names before it is theirs, its words as digested: a macro, a

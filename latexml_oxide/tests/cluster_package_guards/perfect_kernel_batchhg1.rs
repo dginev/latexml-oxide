@@ -795,8 +795,20 @@ fn marked_blocks_restored_read_as_printed() {
         r#"<creator before="  " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">b</text></sup>Univ B, City</contact></creator>"#,
       ]),
     },
+    // (the team the names line enumerates an author, DG 2026-11-27 ruling 1: rc6's `collaboration` contact on each name)
     Row {
-      repro:    repro!("sectioning-frontmatter/author_names_line_team_piece_is_an_author"),
+      repro:    repro!("sectioning-frontmatter/author_names_line_team_piece_is_a_collaboration"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Whole(&[
+        r#"<creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation"><sup>1</sup>Univ A</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation"><sup>2</sup>Univ B</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>the GAPS Team</personname></creator>"#,
+      ]),
+    },
+    Row {
+      repro:    repro!("sectioning-frontmatter/author_names_line_marked_group_is_an_author"),
       files:    &[],
       counts:   (0, 0),
       lines:    &[],

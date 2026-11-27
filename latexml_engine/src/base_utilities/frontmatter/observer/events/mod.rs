@@ -248,7 +248,7 @@ pub struct Event {
   pub kind:           EventKind,
   /// the positions of the author field it covers, `start..end`
   pub span:           Option<(u16, u16)>,
-  /// its ink: a name's text, a mark's printed text, a contact's or a note's shown text
+  /// its ink: a name's text, a mark's printed text, a contact's or a note's shown text; a `;` read as a comma, its `;`
   pub text:           String,
   /// a mark's label, a note's `\label`, a contact's optional label; an enumerate item's (`ITEM_STEP`) counter value as digested
   pub label:          Option<String>,

@@ -266,6 +266,7 @@ mod api;
 pub(in crate::base_utilities::frontmatter::observer) use api::is_creator_call;
 mod blocks;
 mod enumeration;
+pub(in crate::base_utilities::frontmatter::observer) use enumeration::Readings;
 pub(super) use enumeration::reading_log;
 mod labels;
 mod lines;
@@ -638,7 +639,7 @@ struct Resolver {
   /// CERN`): `names_line`'s enumeration of a group
   place_under:        bool,
   /// whether the names lines enumerate their teams as authors (OXIDIZED_DESIGN_DIVERGENCES #459): off, the reading is
-  /// rc6's, which [`resolve_with`] checks the reading with it on against
+  /// rc6's, which [`resolve_readings`] checks the reading with it on against
   enumerating:        bool,
   /// whether a decision of the reading departed from rc6's by the enumeration
   enumeration_fired:  bool,
@@ -1290,16 +1291,23 @@ pub(in crate::base_utilities) fn transliterated(text: &str) -> String {
 /// (`policy::policy_for`).
 pub fn resolve(inputs: &[Input]) -> Resolved { resolve_with(inputs, &policy_for) }
 
+/// [`resolve`]'s readings: the enumeration's, and rc6's where the emitter's word check may choose it ([`Readings`]).
+pub(in crate::base_utilities::frontmatter::observer) fn resolve_readings(
+  inputs: &[Input],
+) -> Readings {
+  enumeration::checked(inputs, |enumerating| read(inputs, &policy_for, enumerating))
+}
+
 /// Resolve inputs, each block under the conventions `conventions` gives for its binding and hook (the deleted `ab_audit fmshadow
 /// --re-resolve`, offline: the declarations it holds, as `policy::conventions_among` reads them).
 pub fn resolve_with(
   inputs: &[Input],
   conventions: &dyn Fn(&str, &str) -> &'static Policy,
 ) -> Resolved {
-  enumeration::checked(|enumerating| read(inputs, conventions, enumerating))
+  enumeration::checked(inputs, |enumerating| read(inputs, conventions, enumerating)).keep(false)
 }
 
-/// [`resolve_with`]'s reading, its names lines `enumerating` their teams or not, and whether that departed from rc6's.
+/// [`resolve_readings`]' reading, its names lines `enumerating` their teams or not, and whether that departed from rc6's.
 fn read(
   inputs: &[Input],
   conventions: &dyn Fn(&str, &str) -> &'static Policy,

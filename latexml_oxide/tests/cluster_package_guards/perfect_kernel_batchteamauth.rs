@@ -952,14 +952,16 @@ fn each_group_a_shared_head_lists_is_an_author() {
         &["role=author", SEP, "Parker Solar Probe ISIS teams"],
       ],
     ),
+    // (svjour3's `\institute` every listed group's, rule 1; the witness repro's input as rc6's guard bank had it)
     row(
       "1503.07589",
       repro!("author_collaboration_name_with_and_stays_one").to_string(),
       (0, 0),
-      &[&["role=author", "The ATLAS"], &[
+      &[&["role=author", "The ATLAS", "affiliation=CERN"], &[
         "role=author",
         SEP,
         "CMS Collaborations",
+        "affiliation=CERN",
       ]],
     ),
   ]);
@@ -1748,26 +1750,13 @@ fn a_listed_group_owns_no_address_of_the_person() {
         "affiliation=CERN",
       ]],
     ),
-    row(
-      "svjour3, a shared head, plural (Gemini TEAMAUTH.9 a2)",
-      doc(
-        r"\documentclass{svjour3}",
-        r#"\author{The ATLAS and CMS Collaborations}\institute{CERN}"#,
-      ),
-      (0, 0),
-      &[&["role=author", "The ATLAS", "affiliation=CERN"], &[
-        "role=author",
-        SEP,
-        "CMS Collaborations",
-        "affiliation=CERN",
-      ]],
-    ),
+    // (the plural with svjour3's `\institute`: `each_group_a_shared_head_lists_is_an_author`'s 1503.07589 row)
   ]);
   check(&rows);
 }
 
 /// Hand-picked lines of the generated harness (kit `teamauth_fuzz`), one behaviour each, every one red on round 3
-/// (3689214c83b) and green here: the reading with the enumeration is rc6's plus its teams, else rc6's whole
+/// (3689214c83b) or round 4 (52eeaf68a5e) and green here: the reading with the enumeration is rc6's plus its teams, else rc6's whole
 /// (`resolver::enumeration`, OXIDIZED_DESIGN_DIVERGENCES #459). Each pdflatex-clean.
 #[test]
 fn harness_picks_keep_rc6_or_add_only_the_team() {
@@ -1847,6 +1836,142 @@ fn harness_picks_keep_rc6_or_add_only_the_team() {
         "J.-F. Donati",
         "collaboration=the BCool Collaboration",
         "note:thanks[*]=E-mail: jf@a.edu",
+      ]],
+    ),
+    // (a team's own note is the one printed on its piece, marks and notes between at most; a later piece's or line's
+    // stays the person's, so the reading is rc6's — harness F1, round 4's blocker class)
+    row(
+      "a team's own note moves with it",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able \& the Speech Team\thanks{Note 1.} \\ CERN}"#,
+      ),
+      (0, 0),
+      &[&["role=author", "Ann Able", "affiliation=CERN"], &[
+        "role=author",
+        SEP,
+        "the Speech Team",
+        "note:thanks[*]=Note 1.",
+        "affiliation=CERN",
+      ]],
+    ),
+    row(
+      "a later piece's note stays the person's",
+      doc(
+        ARTICLE,
+        r#"\author{Cat Cole and the CMS Collaboration\thanks{Note 1.}, Alibaba Group\thanks{Note 2.}}"#,
+      ),
+      (0, 0),
+      &[&[
+        "role=author",
+        "Cat Cole",
+        "collaboration=the CMS Collaboration",
+        "note:thanks[*]=Note 1.",
+        "affiliation=Alibaba Group",
+        "note:thanks[\u{2020}]=Note 2.",
+      ]],
+    ),
+    row(
+      "a line-under's note stays the person's",
+      doc(
+        ARTICLE,
+        r#"\author{Bob Baker and the GAPS Team \\ CERN\thanks{Note 2.}}"#,
+      ),
+      (0, 0),
+      &[&[
+        "role=author",
+        "Bob Baker",
+        "collaboration=the GAPS Team",
+        "affiliation=CERN",
+        "note:thanks[*]=Note 2.",
+      ]],
+    ),
+    // (a later collaboration contact never moves from the persons to the team — harness F3)
+    row(
+      "a later collaboration stays the person's",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able -- the Speech Team \& LHD experimental group; the Machine Learning Group}"#,
+      ),
+      (0, 0),
+      &[&[
+        "role=author",
+        "Ann Able",
+        "collaboration=the Speech Team",
+        "collaboration=LHD experimental group",
+        "collaboration=the Machine Learning Group",
+      ]],
+    ),
+    // (a `;` is no enumeration's comma: the charter's separators are `,`, "and", `&`, `\and` — harness F2)
+    row(
+      "a semicolon keeps rc6's reading",
+      doc(
+        ARTICLE,
+        r#"\author{Fay Fox \& Dan Dore; the CMS Collaboration}"#,
+      ),
+      (0, 0),
+      &[
+        &[
+          "role=author",
+          "Fay Fox",
+          "collaboration=the CMS Collaboration",
+        ],
+        &[
+          "role=author",
+          SEP,
+          "Dan Dore",
+          "collaboration=the CMS Collaboration",
+        ],
+      ],
+    ),
+    // (a team takes a copy of its column's line only where nothing else prints the line's words: the placed check would
+    // count them more often than printed, a Warning rc6 has not — harness F4, round 4's L10212)
+    row(
+      "a line under that repeats a name keeps rc6's reading",
+      doc(
+        ARTICLE,
+        r#"\author{Dan Dore \and the Solar Orbiter EPD and Parker Solar Probe ISIS teams \\ Dan Dore}"#,
+      ),
+      (0, 0),
+      &[&["role=author", "Dan Dore"], &[
+        "role=author",
+        SEP,
+        "the Solar Orbiter EPD",
+        "collaboration=Parker Solar Probe ISIS teams",
+        "affiliation=Dan Dore",
+      ]],
+    ),
+    // (where the emitter's word check finds ink lost and not less than in rc6's, rc6's reading: the lost remark among
+    // names (block written whole), the kept note on another creator — harness F5, F6)
+    row(
+      "a lost remark among the names keeps rc6's reading",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able$^{1}$ \\ the ATLAS and CMS Collaborations \\ -- the VERITAS Collaboration -- \and the Speech Team$^{1}$}"#,
+      ),
+      (0, 1),
+      &[&[
+        "role=author",
+        "Ann Able",
+        "collaboration=the ATLAS and CMS Collaborations",
+        "affiliation=the Speech Team",
+        "note:note=the VERITAS Collaboration",
+      ]],
+    ),
+    row(
+      "a lost line stays the sole person's note",
+      doc(
+        ARTICLE,
+        r#"\author{Dan Dore$^{1}$; the Machine Learning Group$^{1}$ \\ ATLAS Collaboration \\ Bob Baker}"#,
+      ),
+      (0, 1),
+      &[&[
+        "role=author",
+        "Dan Dore",
+        "note:footnotemark[1]=",
+        "collaboration=the Machine Learning Group",
+        "collaboration=ATLAS Collaboration",
+        "note:note=Bob Baker",
       ]],
     ),
   ]);

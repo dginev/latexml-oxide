@@ -231,9 +231,10 @@ missing image, a broken `\ref` or `\cite`, and the like — the fixes are usuall
      and R Core Team`: three authors);
   6. a lone collaboration is the creator (`\author{The IceCube Collaboration}`);
   7. the reading with these authors is kept only where it is rc6's plus them: every person keeps all rc6 gave it but
-     the team's piece (a team's own mark or note moves with it, never an e-mail), no nameless creator rc6 did not
-     have (one rc6 had may heal onto the team), each new author a piece rc6 read as the names' collaboration or a
-     column's own affiliation; anything else is rc6's reading whole.
+     the team's piece (a team's own mark or note — printed on the piece — moves with it, never an e-mail or a later
+     piece's or line's note or contact), no nameless creator rc6 did not have (one rc6 had may heal onto the team),
+     each new author a piece rc6 read as the names' collaboration or a column's own affiliation, and no more ink lost
+     or placed twice than in rc6's reading; anything else is rc6's reading whole. A `;` parts no enumeration.
 - **An address no author's name spells, in a boxed author block, is a block-level contact** (2026-11-01): a shared `contact@lab.org` line in a `tabular`/`minipage` block goes to no person; it is kept once at the block level (dev census M1, 2605.09461).
   **Amended 2026-11-05 (user: "block addresses may live on the #159 block creator"):** the block level is the shared
   nameless creator below the authors (OD #159, `label=addresses:block`) — the one nameless creator allowed, holding

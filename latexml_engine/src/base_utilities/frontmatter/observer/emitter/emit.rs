@@ -4047,7 +4047,24 @@ fn analysis() -> Rc<Analysis> {
     return made;
   }
   let (generation, inputs) = with_ledger(|ledger| (ledger.generation(), ledger_inputs(ledger)));
-  let reading = resolve(&inputs);
+  // (a reading whose names lines enumerate their teams is kept only where no block's word check is worse than in rc6's
+  // (`Readings`, `inks_off`): `Ann Able$^{1}$ \\ … \\ -- the VERITAS Collaboration -- \and the Speech Team$^{1}$`,
+  // whose lost remark would sit among names, the block written whole — harness)
+  let readings = resolve_readings(&inputs);
+  let decided = readings.rc6().map(|rc6| {
+    with_ledger(|ledger| {
+      let (on, off) = (
+        block_checks(ledger, readings.reading()),
+        block_checks(ledger, rc6),
+      );
+      if inks_off((&on, readings.reading()), (&off, rc6)) {
+        (true, off)
+      } else {
+        (false, on)
+      }
+    })
+  });
+  let reading = readings.keep(decided.as_ref().is_some_and(|(rc6, _)| *rc6));
   // (an entry's addresses, taken out, are written cut from its tokens, each address its owner's e-mail, as the old driver's writer
   // cuts today's entry (`address_cut`: 2011.02560, astro-ph0610446, 2406.02913); an entry its tokens can't be cut so is given
   // back whole, the Kind steps' to cut in place after the flush, as for a paper with no block, `insert_frontmatter` — entry by
@@ -4064,7 +4081,7 @@ fn analysis() -> Rc<Analysis> {
     });
     let made = Rc::new(Analysis {
       generation,
-      checks: check_blocks(ledger, &written),
+      checks: decided.map_or_else(|| check_blocks(ledger, &written), |(_, checks)| checks),
       calls: call_checks(ledger, &written),
       marks: uncoordinated_marks(ledger, &reading),
       merged: merged_names(ledger, &reading),
@@ -4074,6 +4091,51 @@ fn analysis() -> Rc<Analysis> {
     });
     ledger.analysis = Some(Rc::clone(&made));
     made
+  })
+}
+
+/// The word check's block half on `reading` ([`check_blocks`]).
+fn block_checks(ledger: &Ledger, reading: &Resolved) -> BTreeMap<usize, BlockCheck> {
+  let keys = plan::written_keys(reading);
+  let written = Written::new(ledger, reading, |a| {
+    keys
+      .get(&std::ptr::from_ref(a))
+      .cloned()
+      .unwrap_or_default()
+  });
+  check_blocks(ledger, &written)
+}
+
+/// Whether `checks`, the word check of `reading`, is worse in a block than `than`, of `rc6`'s: its names fail where they
+/// did not, more ink is lost or in excess, or as much and the block's creators differ — the emitter keeps lost ink by its
+/// block's creators (a sole author's note, else the block's nameless creator), so another creator would hold it elsewhere
+/// (`Dan Dore$^{1}$; the Machine Learning Group$^{1}$ \\ … \\ Bob Baker`, harness).
+fn inks_off(
+  (checks, reading): (&BTreeMap<usize, BlockCheck>, &Resolved),
+  (than, rc6): (&BTreeMap<usize, BlockCheck>, &Resolved),
+) -> bool {
+  let tally = |check: Option<&BlockCheck>| {
+    check.map_or((false, 0), |check| {
+      let fails =
+        check.lost.iter().any(|ink| ink.names_fail) || check.excess.iter().any(|(_, name)| *name);
+      (
+        fails,
+        check.lost.len() + check.excess.len() + check.pictures,
+      )
+    })
+  };
+  let creators = |reading: &Resolved, block: usize| {
+    reading
+      .creators
+      .iter()
+      .filter(|c| c.source == block)
+      .count()
+  };
+  checks.keys().chain(than.keys()).any(|&block| {
+    let ((fails, inks), (failed, had)) = (tally(checks.get(&block)), tally(than.get(&block)));
+    (fails && !failed)
+      || inks > had
+      || (inks > 0 && inks == had && creators(reading, block) != creators(rc6, block))
   })
 }
 

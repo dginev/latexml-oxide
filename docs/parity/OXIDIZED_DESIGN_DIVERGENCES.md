@@ -9595,9 +9595,13 @@ author's contact, never part of the name and never a creator.
   institution is the last name's the line did not list as a group (`lines.rs`, as `api.rs` `annotate:last`). The reading
   with the enumeration is kept only where it is rc6's reading (the enumeration off, `Resolver::enumerating`) plus the
   teams, else rc6's whole (`resolver::enumeration::promotion_only`: persons keep all but the team's piece, a team's own
-  mark or note moving with it and never an e-mail; no new nameless creator, one rc6 had healed onto a team; each new
-  creator a collaboration-arm contact or a lone column's affiliation in rc6's reading); the two readings run only
-  where a decision of the first departs from rc6's, and only the chosen reading's log calls are emitted (`reading_log`);
+  mark or note — printed on its piece, only marks and notes between — moving with it and never an e-mail, nor a later
+  piece's contact; no new nameless creator, one rc6 had healed onto a team; each new creator a collaboration-arm contact
+  or a lone column's affiliation in rc6's reading, holding a copy of a person's line only where no other name or item
+  prints its words); the two readings run only where a decision of the first departs from rc6's, and the emitter keeps
+  the first only where its word check loses no ink, or less than rc6's (`emit::analysis`, `Readings::keep`); only the
+  kept reading's log calls are emitted (`reading_log`). A `;` is no enumeration's comma (the lexer's `Sep(Comma)` keeps
+  it as its text);
   an `\IEEEmembership` grade is the name's it follows (formerly #1016, #950);
   IEEEtran's blocks under authblk's `\author` are read as the class reads them (formerly #987).
 

@@ -14,7 +14,7 @@ use super::{
   ledger::{Entry, Ledger, Outcome, SkipReason, with_ledger},
   resolver::{
     Assoc, Placed, PlacedItem, PlacedKind, RCreator, Resolved, content_check, ledger_inputs,
-    mark_labels, resolve, retold_words,
+    mark_labels, resolve_readings, retold_words,
   },
   *,
 };
