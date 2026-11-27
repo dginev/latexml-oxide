@@ -1,0 +1,29 @@
+% mechanism: autart.cls (elsart.cls's copy) prints its names line inside `{frontmatter}` (autart.cls:978-1001
+%   `\open@fm`, :1104-1145 each `\author` an `\hbox` of the line), so the template's ", ", "and" and `\and` typed
+%   between the `\author` and `\ead` calls print between the names; the creators carry the binding's separator, so a
+%   run the separator query reads as separators alone, before the list's next call or its end, is the list's
+%   (autart_cls.rs `\lx@autart@names@sep`). OmniBus's `{frontmatter}` is `\@empty` (Perl OmniBus.cls.ltxml:58 `#body`):
+%   the run was stray text after the creators
+% witness: 1610.05434, 1907.08912, 2310.07906, 2601.13958, 2602.06569 (`, and`), 1911.10606 (`\and`), 2205.10734
+% oracle:  pdflatex 0 errors (with 1610.05434's autart.cls): "A Title / Ann Able a, Bob Baker a, and Cy Cole b and
+%          Dee Dunn b, / a First University / b Second University / Abstract The abstract."
+% engines: rust INT081EP: 4 creators, then a para "," "," ", and" "and ," after the abstract
+% expect:  0 errors 0 Warnings; 4 creators, no text outside them before the section
+% status:  RED (INT081EP) -> GREEN (perfect_kernel_batchblockplace::autart_names_line_and_thanks_labels)
+% preload: ar5iv.sty
+\documentclass{autart}
+\begin{document}
+\begin{frontmatter}
+\title{A Title}
+\author[a]{Ann Able}\ead{ann@example.org},    % Add the
+\author[a]{Bob Baker}, and
+\author[b]{Cy Cole}\ead{cy@example.org} \and
+\author[b]{Dee Dunn},   % e-mail address
+
+\address[a]{First University}
+\address[b]{Second University}
+\begin{abstract}The abstract.\end{abstract}
+\end{frontmatter}
+\section{One}
+Text.
+\end{document}

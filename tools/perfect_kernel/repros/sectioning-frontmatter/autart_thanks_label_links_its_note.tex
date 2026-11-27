@@ -1,0 +1,29 @@
+% mechanism: autart.cls:923-929 `\thanks[label]{text}` steps the footnote counter, `\label`s it and queues the note
+%   for the page foot; a `\thanksref{label}` in the title or a name prints its mark (:909-922 `\add@thanksref`, the
+%   title's ⋆, a name's number). The binding read no `[…]` (`\thanks{}`), so `[` was the note and the label and text
+%   ran into the title page, and `\thanksref` printed the key; now elsart's pair (elsart_support_core_sty.rs, Perl
+%   elsart_support_core.sty.ltxml:77, :82): the note is the requester's; an unlabelled `\thanks` stays a document note
+% witness: 1307.6041, 1611.04531, 1807.10233, 2404.08842, 2505.13064 (the title's `footnoteinfo`); 1402.5644 (unlabelled)
+% oracle:  pdflatex 0 errors (with 1610.05434's autart.cls): "A Title⋆ / Ann Able a,1, Bob Baker a / … / ⋆ This paper
+%          was not presented at any IFAC meeting. / 1 Ann's note. / Funded by NSF."
+% engines: rust INT081EP: title "A Title<sup>footnoteinfo</sup>", Ann's `<note mark="fn2" role="footnotemark"/>`, two
+%          notes "[", the texts "footnoteinfo]This paper …", "fn2]Ann's note." in a para
+% expect:  0 errors 0 Warnings; the title holds its thanks note, Ann a thanks contact, the unlabelled note a document
+%          note; no "[", no key printed
+% status:  RED (INT081EP) -> GREEN (perfect_kernel_batchblockplace::autart_names_line_and_thanks_labels)
+% preload: ar5iv.sty
+\documentclass{autart}
+\begin{document}
+\begin{frontmatter}
+\title{A Title\thanksref{footnoteinfo}}
+\thanks[footnoteinfo]{This paper was not presented at any IFAC meeting.}
+\author[a]{Ann Able\thanksref{fn2}}\ead{ann@example.org},
+\author[a]{Bob Baker}
+\thanks[fn2]{Ann's note.}
+\address[a]{First University}
+\thanks{Funded by NSF.}
+\begin{abstract}The abstract.\end{abstract}
+\end{frontmatter}
+\section{One}
+Text.
+\end{document}

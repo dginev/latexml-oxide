@@ -1,0 +1,27 @@
+% mechanism: autart.cls:1104-1145 prints each `\author` as an `\hbox` of the names line, so a mark typed after the call
+%   (`\author{Shi Wang}$^{,*}$`, `\ead{…}$^1$`) prints beside that name; the binding reads only the call's argument, so
+%   the mark and the separator after it are text after the abstract (`\lx@autart@names@sep` reads a separator run only
+%   where nothing printed precedes it). A mark between two names is the name's before it (FIDELITY_CHARTER, ADVLAYER)
+% witness: 1307.6041 (`$^{,*}$,`), 2410.23435 (`$^1$\thanks[footnoteinfo]{Corresponding author.},`)
+% oracle:  pdflatex 0 errors (with 1610.05434's autart.cls): "A Title / Ann Able a ,∗, Bob Baker a 1, Cy Cole a / a
+%          First University / … / 1 Corresponding author."
+% engines: rust AUTART: the creators without the marks, a para ",∗, 1," after the abstract and a nameless creator
+%          holding the unrequested "Corresponding author." thanks contact (INT081EP: "[" a note, "footnoteinfo]…" text)
+% expect:  0 errors 0 Warnings; Ann's mark ∗ and Bob's 1 on their creators, the note Bob's, no text after the abstract
+% status:  RED (AUTART)
+% moves:   post-merge (a typed mark outside an author call; reach below ~500)
+% preload: ar5iv.sty
+\documentclass{autart}
+\begin{document}
+\begin{frontmatter}
+\title{A Title}
+\author[a]{Ann Able}$^{,*}$,
+\ead{ann@example.org}
+\author[a]{Bob Baker}\ead{bob@example.org}$^1$\thanks[footnoteinfo]{Corresponding author.},
+\author[a]{Cy Cole}
+\address[a]{First University}
+\begin{abstract}The abstract.\end{abstract}
+\end{frontmatter}
+\section{One}
+Text.
+\end{document}

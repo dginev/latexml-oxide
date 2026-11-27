@@ -204,3 +204,61 @@ fn an_undeclared_note_keeps_perls_place() {
     "{xml}"
   );
 }
+
+/// autart's title page (BLOCKPLACE-AUTART): the repro, and its frontmatter from the title to the first section, whitespace
+/// collapsed.
+const AUTART_ROWS: &[(&str, &str)] = &[
+  // the ", ", ", and", `\and` and trailing "," between the `\author`/`\ead` calls are the names line's, not text after
+  // the abstract (1610.05434, 1907.08912, 2310.07906, 2601.13958, 2602.06569, 1911.10606)
+  (
+    repro!("autart_names_line_separators"),
+    "<title>A Title</title> <creator role=\"author\"> <personname>Ann Able</personname> <contact name=\"Email: \" \
+     role=\"email\">ann@example.org</contact> </creator> <creator before=\" \" role=\"author\"> <personname>Bob \
+     Baker</personname> </creator> <creator before=\" \" role=\"author\"> <personname>Cy Cole</personname> <contact \
+     name=\"Email: \" role=\"email\">cy@example.org</contact> </creator> <creator before=\" \" role=\"author\"> \
+     <personname>Dee Dunn</personname> </creator> <note role=\"address\" xml:id=\"id1\">First University</note> <note \
+     role=\"address\" xml:id=\"id2\">Second University</note> <abstract inlist=\"toc\" name=\"Abstract\" \
+     xml:id=\"abstract1\"> <p xml:id=\"abstract1.1\">The abstract.</p> </abstract>",
+  ),
+  // `\thanks[label]` is the note its `\thanksref` requests, the title's and a name's; an unlabelled one a document note
+  // (1307.6041, 1611.04531, 1807.10233, 2404.08842, 2505.13064; 1402.5644)
+  (
+    repro!("autart_thanks_label_links_its_note"),
+    "<title>A Title<note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id1\">This paper was \
+     not presented at any IFAC meeting.</note></title> <creator role=\"author\"> <personname>Ann Able</personname> \
+     <contact name=\"Email: \" role=\"email\">ann@example.org</contact> <contact name=\"Thanks: \" \
+     role=\"thanks\">Ann\u{2019}s note.</contact> </creator> <creator before=\" \" role=\"author\"> <personname>Bob \
+     Baker</personname> </creator> <note role=\"address\" xml:id=\"id2\">First University</note> <abstract \
+     inlist=\"toc\" name=\"Abstract\" xml:id=\"abstract1\"> <p xml:id=\"abstract1.1\">The abstract.</p> </abstract> \
+     <note role=\"thanks\" xml:id=\"id3\">Funded by NSF.</note>",
+  ),
+  // the negative row: a word between two names and a period after the last stay where they print (1606.08323, 2008.08913)
+  (
+    repro!("autart_clean_names_line_unchanged"),
+    "<title>A Title</title> <creator role=\"author\"> <personname>Ann Able</personname> </creator> <creator before=\" \" \
+     role=\"author\"> <personname>Bob Baker</personname> </creator> <creator before=\" \" role=\"author\"> \
+     <personname>Cy Cole</personname> <contact name=\"Email: \" role=\"email\">cy@example.org</contact> </creator> \
+     <note role=\"address\" xml:id=\"id1\">First University</note> <abstract inlist=\"toc\" name=\"Abstract\" \
+     xml:id=\"abstract1\"> <p xml:id=\"abstract1.1\">The abstract.</p> </abstract> <para xml:id=\"p1\"> <p \
+     xml:id=\"p1.1\">with .</p> </para>",
+  ),
+];
+
+/// autart.cls sets its names line and `\thanks` notes inside `{frontmatter}` (autart.cls:909-929, :1104-1145), which
+/// OmniBus's `\@empty` left as stray text (autart_cls.rs `\lx@autart@names@sep`, `\thanks OptionalSemiverbatim`). Red
+/// (INT081EP): the separators and the split `[label]` notes in a para after the abstract, the key printed in the title.
+/// Distinct: the separator run's two exits (a separator consumed, text kept) and the labelled note's link.
+#[test]
+fn autart_names_line_and_thanks_labels() {
+  for &(tex, expected) in AUTART_ROWS {
+    let (log, xml) = run(tex);
+    assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+    let front =
+      &xml[xml.find("<title").expect("a title")..xml.find("<section").expect("a section")];
+    assert_eq!(
+      front.split_whitespace().collect::<Vec<_>>().join(" "),
+      expected,
+      "{xml}"
+    );
+  }
+}

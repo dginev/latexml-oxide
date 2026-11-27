@@ -30,6 +30,51 @@ const AUTART_THEOREMS: &[&str] = &[
   r"\newtheorem{case}{Case}",
 ];
 
+/// The calls of autart's names line, and where it ends: what follows a separator run there (`\lx@autart@names@sep`).
+const NAMES_LIST_ENDS: &[&str] = &[
+  "\\author",
+  "\\ead",
+  "\\thanks",
+  "\\address",
+  "\\par",
+  "\\begin",
+  "\\end",
+];
+
+/// The longest run read for a separator (", and~", spaced), past which it is text.
+const NAMES_SEP_MAX: usize = 16;
+
+/// Reads the run after a names-line call (`\lx@autart@names@sep`): dropped where the separator query reads it as
+/// separators alone and the list's next call or its end follows; else every token read is put back.
+fn take_names_separator() -> Result<()> {
+  let part = |t: &Token| {
+    matches!(
+      t.get_catcode(),
+      Catcode::SPACE | Catcode::LETTER | Catcode::OTHER | Catcode::ACTIVE
+    ) || x_equals(t, &T_CS!("\\and"))
+  };
+  let mut run: Vec<Token> = Vec::new();
+  let mut next = read_token()?;
+  while let Some(t) = next
+    && run.len() < NAMES_SEP_MAX
+    && part(&t)
+  {
+    run.push(t);
+    next = read_token()?;
+  }
+  let ends = next.is_none_or(|t| NAMES_LIST_ENDS.iter().any(|cs| x_equals(&t, &T_CS!(*cs))));
+  let separators = ends
+    && run.iter().any(|t| t.get_catcode() != Catcode::SPACE)
+    && separators_only(&Tokens::new(run.clone()))?;
+  if let Some(t) = next {
+    unread_one(t);
+  }
+  if !separators {
+    unread(Tokens::new(run));
+  }
+  Ok(())
+}
+
 /// The `\newtheorem{name}[counter]{Title}` / `\newtheorem{name}{Title}[within]` declarations of a copy of autart.cls,
 /// outside comments and other than `{thm}`'s (whose numbering the `secthm` option chooses), in the copy's order: each
 /// environment's name and its declaration.
@@ -162,15 +207,38 @@ LoadDefinitions!({
   // preserve author-supplied content as ltx:note frontmatter.
   // autart.cls:1199-1215 `\address` sets the entry in the title block, under the names (1402.5644's copy): OD #1074.
   DefMacro!("\\address[]{}", "\\lx@names@note{address}{#2}");
-  DefMacro!("\\thanksref{}", "\\textsuperscript{#1}");
+  // autart.cls:1104-1145 sets each `\author` as an `\hbox` of one names line, so what a template types between the
+  // `\author` and `\ead` calls (", ", "and", `\and`) prints between the names; the creators carry the binding's separator
+  // (1610.05434, 1907.08912, 2310.07906, 2601.13958, 2602.06569, 1911.10606, 2205.10734).
+  Let!("\\lx@autart@author", "\\author");
+  DefMacro!(
+    "\\author[]{}",
+    "\\lx@autart@author[#1]{#2}\\lx@autart@names@sep"
+  );
+  Let!("\\lx@autart@ead", "\\ead");
+  DefMacro!("\\ead{}[]", "\\lx@autart@ead{#1}[#2]\\lx@autart@names@sep");
+  // The run after a call that the separator query reads as separators alone, before the list's next call or its end,
+  // is the list's; any other run prints where it stands (`autart_clean_names_line_unchanged`).
+  DefMacro!("\\lx@autart@names@sep", sub[_args] {
+    take_names_separator()?;
+    Ok(Tokens!())
+  });
+  // autart.cls:909-929: `\thanks[label]{text}` `\label`s its note, which a `\thanksref{label}` in the title or a name
+  // marks; elsart's pair (elsart_support_core_sty.rs; 1307.6041, 1611.04531, 1807.10233, 2404.08842, 2505.13064). An
+  // unlabelled one marks nothing: a document note (1402.5644).
+  DefMacro!(
+    "\\thanksref{}",
+    "\\lx@request@frontmatter@annotation[thanks]{#1}"
+  );
+  DefMacro!(
+    "\\thanks OptionalSemiverbatim {}",
+    "\\if\\relax\\detokenize{#1}\\relax\\expandafter\\@firstoftwo\\else\\expandafter\\@secondoftwo\\fi\
+     {\\@add@frontmatter{ltx:note}[role=thanks]}{\\lx@add@contact[label={thanks:#1},role=thanks]}{#2}"
+  );
   DefMacro!("\\corauthref{}", "\\textsuperscript{*#1}");
   DefMacro!(
     "\\corauth{}",
     "\\@add@frontmatter{ltx:note}[role=corresponding]{#1}"
-  );
-  DefMacro!(
-    "\\thanks{}",
-    "\\@add@frontmatter{ltx:note}[role=thanks]{#1}"
   );
 
   // autart.cls L516 defines `\qed` directly at class level (a `\Box` at the

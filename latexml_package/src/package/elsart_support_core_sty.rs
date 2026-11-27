@@ -8,7 +8,7 @@ use crate::{engine::base_utilities::reading_author_fields, prelude::*};
 /// (`declare_frontmatter_conventions`, user ruling 2026-10-28: each binding declares its own): the kernel's reading,
 /// written (97e, OD #948), for the `\author[keys]{…}` of elsarticle, elsart and the classes keeping this binding's
 /// (entics, arxbj; not autart, which loads OmniBus and its own `\address`, autart_cls.rs, and only this binding's keyword
-/// markup): their title prints its notes in the body's arabic `\thefootnote` (elsarticle.cls:819, :836
+/// markup and `\thanks`/`\thanksref` pair): their title prints its notes in the body's arabic `\thefootnote` (elsarticle.cls:819, :836
 /// `\gdef\thefootnote{\arabic{footnote}}`, no `\@fnsymbol` in its `\maketitle`; elsart.cls v2.18 :1107-1108
 /// `\xarabic{footnote}` for the authors' notes), so `M.~Pesce-Rollins\footnotemark[1]` shows "1", not the kernel's "∗";
 /// and an `\address[key]`/`\affiliation[key]` key is never printed — the class prints the entry's place, `\theaffn`

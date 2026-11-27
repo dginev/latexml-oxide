@@ -1,0 +1,22 @@
+% mechanism: autart.cls:938-946 `\newcommand\ead[1][email]{…}` takes the contact's kind first, `[url]` a URL; the
+%   binding's `\ead` is OmniBus's `\ead{}[]` (Perl OmniBus.cls.ltxml:80), which reads the `[` as the address, so the
+%   creator gets the e-mail "[" and "url]http://example.org" is text after the abstract. elsart's binding reads it
+%   (elsart_support_core_sty.rs `\ead Optional:email Semiverbatim`)
+% witness: synthetic (autart.cls's own `\ead[url]`; none in the 23 census papers)
+% oracle:  pdflatex 0 errors (with 1610.05434's autart.cls): "A Title / Ann Able a / … / URL: http://example.org (Ann Able)."
+% engines: rust AUTART: `<contact role="email">[</contact>`, a para "url]http://example.org"
+% expect:  0 errors 0 Warnings; Ann's URL contact http://example.org, no text after the abstract
+% status:  RED (AUTART)
+% moves:   post-merge (no census paper uses it)
+% preload: ar5iv.sty
+\documentclass{autart}
+\begin{document}
+\begin{frontmatter}
+\title{A Title}
+\author[a]{Ann Able}\ead[url]{http://example.org}
+\address[a]{First University}
+\begin{abstract}The abstract.\end{abstract}
+\end{frontmatter}
+\section{One}
+Text.
+\end{document}
