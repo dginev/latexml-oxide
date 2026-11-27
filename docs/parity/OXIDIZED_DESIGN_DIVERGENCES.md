@@ -9598,7 +9598,8 @@ author's contact, never part of the name and never a creator.
   mark or note — printed on its piece, only marks and notes between — moving with it and never an e-mail, nor a later
   piece's contact; no new nameless creator, one rc6 had healed onto a team; each new creator a collaboration-arm contact
   or a lone column's affiliation in rc6's reading, holding a copy of a person's line only where no other name or item
-  prints its words); the two readings run only where a decision of the first departs from rc6's, and the emitter keeps
+  prints its words, and never of a call that holds another item, whose copy the writer writes per holder with
+  its inner items apart: revtex's `\affiliation{CERN\thanks{E-mail: …}}`); the two readings run only where a decision of the first departs from rc6's, and the emitter keeps
   the first only where none of its checks is worse than rc6's, each check by its own counts, never a sum
   (`emit::Checks::worse`, `Readings::keep`): per block, names failing that did not, more ink lost, more words in
   excess or more pictures unwritten, or any ink lost where the block's creators differ (lost ink is kept by its

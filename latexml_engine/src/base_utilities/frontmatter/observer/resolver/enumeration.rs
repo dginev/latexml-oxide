@@ -422,8 +422,25 @@ pub(super) fn promotion_only(inputs: &[Input], rc6: &Resolved, enumerated: &Reso
       .collect();
     !words(&item.text).all(|w| w == "and" || others.contains(&w))
   };
+  // (a call's item copied onto a team is written once per holder, the call's inner items apart from both: a call
+  // whole that holds another item — revtex's `\affiliation{CERN\thanks{E-mail: …}}`, its e-mail a nameless creator's,
+  // harness G2 D1)
+  let call_items = |at: usize| {
+    let all = enumerated
+      .creators
+      .iter()
+      .flat_map(items)
+      .chain(&enumerated.block);
+    let of_it = all.filter(|i| i.source == Some((at, None)));
+    of_it
+      .map(|i| (i.role.as_str(), i.text.as_str()))
+      .collect::<BTreeSet<_>>()
+      .len()
+  };
+  let alone = |item: &Assoc| !matches!(item.source, Some((at, None)) if call_items(at) > 1);
   let kept = |item: &Assoc| {
-    !mail(item)
+    alone(item)
+      && !mail(item)
       && pairs
         .iter()
         .any(|&(_, c)| items(&enumerated.creators[c]).any(|i| same(i, item)))

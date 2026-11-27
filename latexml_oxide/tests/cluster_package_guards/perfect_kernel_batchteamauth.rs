@@ -2069,6 +2069,56 @@ fn a_promotion_no_check_finds_worse_than_rc6() {
         &["role=author", SEP, "Bob Baker"],
       ],
     ),
+    // (a call's item copied onto a team whose call holds another item: the copy written per holder, the inner e-mail
+    // apart from both, a nameless creator's — rc6's reading, harness G2 D1, revtex and emulateapj alike)
+    row(
+      "a copied affiliation with an inner e-mail keeps rc6's reading",
+      doc(
+        r"\documentclass{revtex4-2}",
+        r#"\author{Bob Baker and the CMS Collaboration}\affiliation{CERN\thanks{E-mail: p2@x.org}}"#,
+      ),
+      (0, 0),
+      &[&[
+        "role=author",
+        "Bob Baker",
+        "collaboration=the CMS Collaboration",
+        "affiliation=CERN",
+        "email=p2@x.org",
+      ]],
+    ),
+    // (a framed run beside a revtex collaboration: rc6's reading, the TEAMFUZZ helper)
+    row(
+      "a framed run beside a revtex collaboration keeps rc6's reading",
+      doc(
+        r"\documentclass{revtex4-2}",
+        r#"\author{Ann Able -- the CMS Collaboration and ATLAS Collaboration --}\affiliation{CERN}\collaboration{KM3NeT Consortium}"#,
+      ),
+      (0, 0),
+      &[
+        &[
+          "role=author",
+          "Ann Able",
+          "collaboration=the CMS Collaboration",
+          "collaboration=ATLAS Collaboration",
+          "affiliation=CERN",
+        ],
+        &["role=author", SEP, "KM3NeT Consortium"],
+      ],
+    ),
+    // (a team's own mark labels the e-mail rc6 gave a nameless creator: the promotion heals it, W 1 -> 0, G2 D2)
+    row(
+      "a team's labelled e-mail keeps the promotion",
+      doc(
+        ARTICLE,
+        r#"\author{Eve Eden \& R Core Team$^{1}$ \& Bob Baker \\ $^{1}$p1@x.org}"#,
+      ),
+      (0, 0),
+      &[
+        &["role=author", "Eve Eden"],
+        &["role=author", SEP, "R Core Team", "email=p1@x.org"],
+        &["role=author", SEP, "Bob Baker"],
+      ],
+    ),
     // (a name its events spell only through a macro's run: W 0 -> 2 promoted, advisor TEAMAUTH6 C)
     row(
       "names written from their text keep rc6's reading",
