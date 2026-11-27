@@ -63,6 +63,9 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     speaks for (`for the ATLAS Collaboration`), a bracketed line under the names, AASTeX's `\collaboration` and
     institutions keep their reading; REVTeX's `\collaboration` list is still read as before (a known residual).
     FIDELITY_CHARTER (amended 2026-11-27), OXIDIZED_DESIGN_DIVERGENCES #459; guards `perfect_kernel_batchteamauth`.
+  - **The log no longer says `w/@ other` for a file a package `\input`s while `@` is a letter** (issue 1024):
+    `Processing definitions <path>` again, as Perl and 0.7.6; the suffix stays where `@` is not a letter (`xy.tex`).
+    OXIDIZED_DESIGN_DIVERGENCES #1172; guard `cluster_cli::log_note_nesting::definitions_note_says_at_other_only_where_it_is`.
 
 ### 0.8.0-rc5
 

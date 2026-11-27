@@ -3282,7 +3282,8 @@ const KERNEL_TOKEN_SPELLINGS: &[(&str, usize)] = &[
   ("latexml_core/src/keyvals.rs", 22),
   // (MEMA, 47 -> 46: `handle_escape` spells the name in a reused buffer instead of `s!("\\{}", ch)`, which counted)
   // (CRASH397B +1: `catcode_of` reads `BIB_DATA_LITERALS` by catcode, as the mouth's other catcode reads do)
-  ("latexml_core/src/mouth.rs", 47),
+  // (ATNOTE +1: `initialize`'s ` w/@ other` note reads `@`'s catcode, a catcode read and no spelling; issue #1024)
+  ("latexml_core/src/mouth.rs", 48),
   ("latexml_core/src/parameter.rs", 34),
   ("latexml_core/src/rewrite/declare.rs", 7),
   // (PRESBX +2: `note_redefined` records the file whose load made a refused definition, `\@currname.\@currext`, as
