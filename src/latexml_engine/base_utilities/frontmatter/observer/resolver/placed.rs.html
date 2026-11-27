@@ -1132,76 +1132,77 @@
 <a href=#1132 id=1132 data-nosnippet>1132</a>      sectioned: <span class="bool-val">false</span>,
 <a href=#1133 id=1133 data-nosnippet>1133</a>      late: <span class="bool-val">false</span>,
 <a href=#1134 id=1134 data-nosnippet>1134</a>      cautious: <span class="bool-val">false</span>,
-<a href=#1135 id=1135 data-nosnippet>1135</a>      keyvals: <span class="prelude-val">None</span>,
-<a href=#1136 id=1136 data-nosnippet>1136</a>      keyval_tokens: <span class="prelude-val">None</span>,
-<a href=#1137 id=1137 data-nosnippet>1137</a>      epoch: <span class="number">0</span>,
-<a href=#1138 id=1138 data-nosnippet>1138</a>      queue_position: <span class="number">0</span>,
-<a href=#1139 id=1139 data-nosnippet>1139</a>      stamp: Stamp::Projected,
-<a href=#1140 id=1140 data-nosnippet>1140</a>      range: (<span class="number">0</span>, <span class="number">0</span>),
-<a href=#1141 id=1141 data-nosnippet>1141</a>      tokens: Tokens::new(Vec::new()),
-<a href=#1142 id=1142 data-nosnippet>1142</a>      source: names.join(<span class="string">" \\\\ "</span>),
-<a href=#1143 id=1143 data-nosnippet>1143</a>      unfolded: <span class="prelude-val">None</span>,
-<a href=#1144 id=1144 data-nosnippet>1144</a>      mark: input_mark(),
-<a href=#1145 id=1145 data-nosnippet>1145</a>      window_open: <span class="bool-val">false</span>,
-<a href=#1146 id=1146 data-nosnippet>1146</a>      outcome: Outcome::Events {
-<a href=#1147 id=1147 data-nosnippet>1147</a>        events,
-<a href=#1148 id=1148 data-nosnippet>1148</a>        formulas: Vec::new(),
-<a href=#1149 id=1149 data-nosnippet>1149</a>        inks: Box::new(InkTable::default()),
-<a href=#1150 id=1150 data-nosnippet>1150</a>        errors: <span class="number">0</span>,
-<a href=#1151 id=1151 data-nosnippet>1151</a>        warnings: <span class="number">0</span>,
-<a href=#1152 id=1152 data-nosnippet>1152</a>        declarations: Vec::new(),
-<a href=#1153 id=1153 data-nosnippet>1153</a>        breaks: Vec::new(),
-<a href=#1154 id=1154 data-nosnippet>1154</a>        held: Vec::new(),
-<a href=#1155 id=1155 data-nosnippet>1155</a>        environments: Vec::new(),
-<a href=#1156 id=1156 data-nosnippet>1156</a>        creators: Box::new([]),
-<a href=#1157 id=1157 data-nosnippet>1157</a>        unread: <span class="prelude-val">None</span>,
-<a href=#1158 id=1158 data-nosnippet>1158</a>        unsaid: <span class="prelude-val">None</span>,
-<a href=#1159 id=1159 data-nosnippet>1159</a>      },
-<a href=#1160 id=1160 data-nosnippet>1160</a>      list_setter: <span class="prelude-val">None</span>,
-<a href=#1161 id=1161 data-nosnippet>1161</a>      queued: Vec::new(),
-<a href=#1162 id=1162 data-nosnippet>1162</a>      names: <span class="number">0</span>,
-<a href=#1163 id=1163 data-nosnippet>1163</a>    }))
-<a href=#1164 id=1164 data-nosnippet>1164</a>  }
-<a href=#1165 id=1165 data-nosnippet>1165</a>
-<a href=#1166 id=1166 data-nosnippet>1166</a>  <span class="kw">fn </span>name(holder: usize, text: <span class="kw-2">&amp;</span>str) -&gt; PlacedItem {
-<a href=#1167 id=1167 data-nosnippet>1167</a>    PlacedItem {
-<a href=#1168 id=1168 data-nosnippet>1168</a>      holder,
-<a href=#1169 id=1169 data-nosnippet>1169</a>      kind: PlacedKind::Name,
-<a href=#1170 id=1170 data-nosnippet>1170</a>      text: text.to_string(),
-<a href=#1171 id=1171 data-nosnippet>1171</a>      label: <span class="prelude-val">None</span>,
-<a href=#1172 id=1172 data-nosnippet>1172</a>    }
-<a href=#1173 id=1173 data-nosnippet>1173</a>  }
-<a href=#1174 id=1174 data-nosnippet>1174</a>
-<a href=#1175 id=1175 data-nosnippet>1175</a>  <span class="doccomment">/// A block written whole exempts the words of the creator it became, never another creator's (review revN2 finding 2,
-<a href=#1176 id=1176 data-nosnippet>1176</a>  /// revI8 finding 1): the whole block's creator holds an `and` its class's `\and` printed and no event holds (JAIR's,
-<a href=#1177 id=1177 data-nosnippet>1177</a>  /// 1908.02923), which is no excess; the second creator, from a block of its own, holds its name twice where its block
-<a href=#1178 id=1178 data-nosnippet>1178</a>  /// printed it once (until FX4, the ORCID link's text placed again as its contact: 2203.03523, 2306.13366), which is.
-<a href=#1179 id=1179 data-nosnippet>1179</a>  /// The repro `emit_content_a_whole_block_exempts_only_itself` has no excess on this path since FX4.
-<a href=#1180 id=1180 data-nosnippet>1180</a>  </span><span class="attr">#[test]
-<a href=#1181 id=1181 data-nosnippet>1181</a>  </span><span class="kw">fn </span>a_whole_block_exempts_only_its_own_creator() {
-<a href=#1182 id=1182 data-nosnippet>1182</a>    <span class="kw">let </span><span class="kw-2">mut </span>ledger = Ledger::default();
-<a href=#1183 id=1183 data-nosnippet>1183</a>    ledger.push(block(<span class="number">0</span>, <span class="kw-2">&amp;</span>[<span class="string">"Ann Able"</span>, <span class="string">"Bob Baker"</span>, <span class="string">"Univ A"</span>]));
-<a href=#1184 id=1184 data-nosnippet>1184</a>    ledger.push(block(<span class="number">1</span>, <span class="kw-2">&amp;</span>[<span class="string">"Cat Cole"</span>]));
-<a href=#1185 id=1185 data-nosnippet>1185</a>    <span class="kw">let </span>placed = Placed {
-<a href=#1186 id=1186 data-nosnippet>1186</a>      items: <span class="macro">vec!</span>[
-<a href=#1187 id=1187 data-nosnippet>1187</a>        name(<span class="number">0</span>, <span class="string">"Ann Able and Bob Baker Univ A"</span>),
-<a href=#1188 id=1188 data-nosnippet>1188</a>        name(<span class="number">1</span>, <span class="string">"Cat Cole"</span>),
+<a href=#1135 id=1135 data-nosnippet>1135</a>      collaboration: <span class="bool-val">false</span>,
+<a href=#1136 id=1136 data-nosnippet>1136</a>      keyvals: <span class="prelude-val">None</span>,
+<a href=#1137 id=1137 data-nosnippet>1137</a>      keyval_tokens: <span class="prelude-val">None</span>,
+<a href=#1138 id=1138 data-nosnippet>1138</a>      epoch: <span class="number">0</span>,
+<a href=#1139 id=1139 data-nosnippet>1139</a>      queue_position: <span class="number">0</span>,
+<a href=#1140 id=1140 data-nosnippet>1140</a>      stamp: Stamp::Projected,
+<a href=#1141 id=1141 data-nosnippet>1141</a>      range: (<span class="number">0</span>, <span class="number">0</span>),
+<a href=#1142 id=1142 data-nosnippet>1142</a>      tokens: Tokens::new(Vec::new()),
+<a href=#1143 id=1143 data-nosnippet>1143</a>      source: names.join(<span class="string">" \\\\ "</span>),
+<a href=#1144 id=1144 data-nosnippet>1144</a>      unfolded: <span class="prelude-val">None</span>,
+<a href=#1145 id=1145 data-nosnippet>1145</a>      mark: input_mark(),
+<a href=#1146 id=1146 data-nosnippet>1146</a>      window_open: <span class="bool-val">false</span>,
+<a href=#1147 id=1147 data-nosnippet>1147</a>      outcome: Outcome::Events {
+<a href=#1148 id=1148 data-nosnippet>1148</a>        events,
+<a href=#1149 id=1149 data-nosnippet>1149</a>        formulas: Vec::new(),
+<a href=#1150 id=1150 data-nosnippet>1150</a>        inks: Box::new(InkTable::default()),
+<a href=#1151 id=1151 data-nosnippet>1151</a>        errors: <span class="number">0</span>,
+<a href=#1152 id=1152 data-nosnippet>1152</a>        warnings: <span class="number">0</span>,
+<a href=#1153 id=1153 data-nosnippet>1153</a>        declarations: Vec::new(),
+<a href=#1154 id=1154 data-nosnippet>1154</a>        breaks: Vec::new(),
+<a href=#1155 id=1155 data-nosnippet>1155</a>        held: Vec::new(),
+<a href=#1156 id=1156 data-nosnippet>1156</a>        environments: Vec::new(),
+<a href=#1157 id=1157 data-nosnippet>1157</a>        creators: Box::new([]),
+<a href=#1158 id=1158 data-nosnippet>1158</a>        unread: <span class="prelude-val">None</span>,
+<a href=#1159 id=1159 data-nosnippet>1159</a>        unsaid: <span class="prelude-val">None</span>,
+<a href=#1160 id=1160 data-nosnippet>1160</a>      },
+<a href=#1161 id=1161 data-nosnippet>1161</a>      list_setter: <span class="prelude-val">None</span>,
+<a href=#1162 id=1162 data-nosnippet>1162</a>      queued: Vec::new(),
+<a href=#1163 id=1163 data-nosnippet>1163</a>      names: <span class="number">0</span>,
+<a href=#1164 id=1164 data-nosnippet>1164</a>    }))
+<a href=#1165 id=1165 data-nosnippet>1165</a>  }
+<a href=#1166 id=1166 data-nosnippet>1166</a>
+<a href=#1167 id=1167 data-nosnippet>1167</a>  <span class="kw">fn </span>name(holder: usize, text: <span class="kw-2">&amp;</span>str) -&gt; PlacedItem {
+<a href=#1168 id=1168 data-nosnippet>1168</a>    PlacedItem {
+<a href=#1169 id=1169 data-nosnippet>1169</a>      holder,
+<a href=#1170 id=1170 data-nosnippet>1170</a>      kind: PlacedKind::Name,
+<a href=#1171 id=1171 data-nosnippet>1171</a>      text: text.to_string(),
+<a href=#1172 id=1172 data-nosnippet>1172</a>      label: <span class="prelude-val">None</span>,
+<a href=#1173 id=1173 data-nosnippet>1173</a>    }
+<a href=#1174 id=1174 data-nosnippet>1174</a>  }
+<a href=#1175 id=1175 data-nosnippet>1175</a>
+<a href=#1176 id=1176 data-nosnippet>1176</a>  <span class="doccomment">/// A block written whole exempts the words of the creator it became, never another creator's (review revN2 finding 2,
+<a href=#1177 id=1177 data-nosnippet>1177</a>  /// revI8 finding 1): the whole block's creator holds an `and` its class's `\and` printed and no event holds (JAIR's,
+<a href=#1178 id=1178 data-nosnippet>1178</a>  /// 1908.02923), which is no excess; the second creator, from a block of its own, holds its name twice where its block
+<a href=#1179 id=1179 data-nosnippet>1179</a>  /// printed it once (until FX4, the ORCID link's text placed again as its contact: 2203.03523, 2306.13366), which is.
+<a href=#1180 id=1180 data-nosnippet>1180</a>  /// The repro `emit_content_a_whole_block_exempts_only_itself` has no excess on this path since FX4.
+<a href=#1181 id=1181 data-nosnippet>1181</a>  </span><span class="attr">#[test]
+<a href=#1182 id=1182 data-nosnippet>1182</a>  </span><span class="kw">fn </span>a_whole_block_exempts_only_its_own_creator() {
+<a href=#1183 id=1183 data-nosnippet>1183</a>    <span class="kw">let </span><span class="kw-2">mut </span>ledger = Ledger::default();
+<a href=#1184 id=1184 data-nosnippet>1184</a>    ledger.push(block(<span class="number">0</span>, <span class="kw-2">&amp;</span>[<span class="string">"Ann Able"</span>, <span class="string">"Bob Baker"</span>, <span class="string">"Univ A"</span>]));
+<a href=#1185 id=1185 data-nosnippet>1185</a>    ledger.push(block(<span class="number">1</span>, <span class="kw-2">&amp;</span>[<span class="string">"Cat Cole"</span>]));
+<a href=#1186 id=1186 data-nosnippet>1186</a>    <span class="kw">let </span>placed = Placed {
+<a href=#1187 id=1187 data-nosnippet>1187</a>      items: <span class="macro">vec!</span>[
+<a href=#1188 id=1188 data-nosnippet>1188</a>        name(<span class="number">0</span>, <span class="string">"Ann Able and Bob Baker Univ A"</span>),
 <a href=#1189 id=1189 data-nosnippet>1189</a>        name(<span class="number">1</span>, <span class="string">"Cat Cole"</span>),
-<a href=#1190 id=1190 data-nosnippet>1190</a>      ],
-<a href=#1191 id=1191 data-nosnippet>1191</a>      ..Placed::default()
-<a href=#1192 id=1192 data-nosnippet>1192</a>    };
-<a href=#1193 id=1193 data-nosnippet>1193</a>    <span class="macro">assert_eq!</span>(
-<a href=#1194 id=1194 data-nosnippet>1194</a>      content_check(<span class="kw-2">&amp;</span>ledger, <span class="kw-2">&amp;</span>placed, <span class="kw-2">&amp;</span>|index| index == <span class="number">0</span>),
-<a href=#1195 id=1195 data-nosnippet>1195</a>      ContentCheck {
-<a href=#1196 id=1196 data-nosnippet>1196</a>        lost:   <span class="macro">vec!</span>[],
-<a href=#1197 id=1197 data-nosnippet>1197</a>        excess: <span class="macro">vec!</span>[<span class="string">"Cat"</span>.to_string(), <span class="string">"Cole"</span>.to_string()],
-<a href=#1198 id=1198 data-nosnippet>1198</a>      }
-<a href=#1199 id=1199 data-nosnippet>1199</a>    );
-<a href=#1200 id=1200 data-nosnippet>1200</a>    <span class="comment">// (the same words with the whole block read like any other: its `and` in excess too)
-<a href=#1201 id=1201 data-nosnippet>1201</a>    </span><span class="macro">assert_eq!</span>(content_check(<span class="kw-2">&amp;</span>ledger, <span class="kw-2">&amp;</span>placed, <span class="kw-2">&amp;</span>|<span class="kw">_</span>| <span class="bool-val">false</span>), ContentCheck {
-<a href=#1202 id=1202 data-nosnippet>1202</a>      lost:   <span class="macro">vec!</span>[],
-<a href=#1203 id=1203 data-nosnippet>1203</a>      excess: <span class="macro">vec!</span>[<span class="string">"and"</span>.to_string(), <span class="string">"Cat"</span>.to_string(), <span class="string">"Cole"</span>.to_string()],
-<a href=#1204 id=1204 data-nosnippet>1204</a>    });
-<a href=#1205 id=1205 data-nosnippet>1205</a>  }
-<a href=#1206 id=1206 data-nosnippet>1206</a>}
+<a href=#1190 id=1190 data-nosnippet>1190</a>        name(<span class="number">1</span>, <span class="string">"Cat Cole"</span>),
+<a href=#1191 id=1191 data-nosnippet>1191</a>      ],
+<a href=#1192 id=1192 data-nosnippet>1192</a>      ..Placed::default()
+<a href=#1193 id=1193 data-nosnippet>1193</a>    };
+<a href=#1194 id=1194 data-nosnippet>1194</a>    <span class="macro">assert_eq!</span>(
+<a href=#1195 id=1195 data-nosnippet>1195</a>      content_check(<span class="kw-2">&amp;</span>ledger, <span class="kw-2">&amp;</span>placed, <span class="kw-2">&amp;</span>|index| index == <span class="number">0</span>),
+<a href=#1196 id=1196 data-nosnippet>1196</a>      ContentCheck {
+<a href=#1197 id=1197 data-nosnippet>1197</a>        lost:   <span class="macro">vec!</span>[],
+<a href=#1198 id=1198 data-nosnippet>1198</a>        excess: <span class="macro">vec!</span>[<span class="string">"Cat"</span>.to_string(), <span class="string">"Cole"</span>.to_string()],
+<a href=#1199 id=1199 data-nosnippet>1199</a>      }
+<a href=#1200 id=1200 data-nosnippet>1200</a>    );
+<a href=#1201 id=1201 data-nosnippet>1201</a>    <span class="comment">// (the same words with the whole block read like any other: its `and` in excess too)
+<a href=#1202 id=1202 data-nosnippet>1202</a>    </span><span class="macro">assert_eq!</span>(content_check(<span class="kw-2">&amp;</span>ledger, <span class="kw-2">&amp;</span>placed, <span class="kw-2">&amp;</span>|<span class="kw">_</span>| <span class="bool-val">false</span>), ContentCheck {
+<a href=#1203 id=1203 data-nosnippet>1203</a>      lost:   <span class="macro">vec!</span>[],
+<a href=#1204 id=1204 data-nosnippet>1204</a>      excess: <span class="macro">vec!</span>[<span class="string">"and"</span>.to_string(), <span class="string">"Cat"</span>.to_string(), <span class="string">"Cole"</span>.to_string()],
+<a href=#1205 id=1205 data-nosnippet>1205</a>    });
+<a href=#1206 id=1206 data-nosnippet>1206</a>  }
+<a href=#1207 id=1207 data-nosnippet>1207</a>}
 </code></pre></div></section></main></body></html>

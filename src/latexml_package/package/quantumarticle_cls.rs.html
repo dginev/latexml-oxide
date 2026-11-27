@@ -134,61 +134,68 @@
 <a href=#134 id=134 data-nosnippet>134</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\thanks[Default:\\lx@contact@thanks@name]{}"</span>,              <span class="string">"\\lx@add@contact[role=thanks,name={#1}]{#2}"</span>);
 <a href=#135 id=135 data-nosnippet>135</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\orcid[]{}"</span>,               <span class="string">"\\lx@add@orcid[name={#1}]{#2}"</span>);
 <a href=#136 id=136 data-nosnippet>136</a>
-<a href=#137 id=137 data-nosnippet>137</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\collaboration{}"</span>,    <span class="string">"\\author{#1}"</span>);
-<a href=#138 id=138 data-nosnippet>138</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\altaffiliation[Default:\\lx@contact@affiliation@name]{}"</span>, <span class="string">"\\lx@add@contact[annotate=new,role=affiliation,name={#1}]{#2}"</span>);
-<a href=#139 id=139 data-nosnippet>139</a>
-<a href=#140 id=140 data-nosnippet>140</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\DeclareRobustCommand\\openone{\\mathbbm{1}}"</span>);
-<a href=#141 id=141 data-nosnippet>141</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\definecolor{quantumviolet}{HTML}{53257F}"</span>);
-<a href=#142 id=142 data-nosnippet>142</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\definecolor{quantumgray}{HTML}{555555}"</span>);
-<a href=#143 id=143 data-nosnippet>143</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\DeclareRobustCommand{\\Quantum}{Quantum}"</span>);
-<a href=#144 id=144 data-nosnippet>144</a>
-<a href=#145 id=145 data-nosnippet>145</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\newenvironment{widetext}{}{}"</span>);
+<a href=#137 id=137 data-nosnippet>137</a>  <span class="comment">// (its block marked a collaboration's when digested, as revtex's `\collaboration`: one group's name, no list)
+<a href=#138 id=138 data-nosnippet>138</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\collaboration{}"</span>, <span class="string">"\\lx@collaboration@on\\author{#1}\\lx@collaboration@off"</span>);
+<a href=#139 id=139 data-nosnippet>139</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@collaboration@on"</span>, sub[_args] {
+<a href=#140 id=140 data-nosnippet>140</a>    assign_value(<span class="string">"lx_author_collaboration"</span>, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#141 id=141 data-nosnippet>141</a>  });
+<a href=#142 id=142 data-nosnippet>142</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@collaboration@off"</span>, sub[_args] {
+<a href=#143 id=143 data-nosnippet>143</a>    assign_value(<span class="string">"lx_author_collaboration"</span>, <span class="bool-val">false</span>, <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#144 id=144 data-nosnippet>144</a>  });
+<a href=#145 id=145 data-nosnippet>145</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\altaffiliation[Default:\\lx@contact@affiliation@name]{}"</span>, <span class="string">"\\lx@add@contact[annotate=new,role=affiliation,name={#1}]{#2}"</span>);
 <a href=#146 id=146 data-nosnippet>146</a>
-<a href=#147 id=147 data-nosnippet>147</a>  <span class="comment">// \onecolumngrid / \twocolumngrid — REVTeX column-switching primitives
-<a href=#148 id=148 data-nosnippet>148</a>  // that quantumarticle.cls L348-349 wraps. Defined via raw cls L4448 in
-<a href=#149 id=149 data-nosnippet>149</a>  // REVTeX but our quantumarticle binding skips that load. No visual
-<a href=#150 id=150 data-nosnippet>150</a>  // effect in HTML/XML; stub as no-op.
-<a href=#151 id=151 data-nosnippet>151</a>  // Witness 2406.00091: `\onecolumngrid \section*{APPENDIX}`.
-<a href=#152 id=152 data-nosnippet>152</a>  </span>def_macro_noop(<span class="string">"\\onecolumngrid"</span>)<span class="question-mark">?</span>;
-<a href=#153 id=153 data-nosnippet>153</a>  def_macro_noop(<span class="string">"\\twocolumngrid"</span>)<span class="question-mark">?</span>;
-<a href=#154 id=154 data-nosnippet>154</a>  <span class="comment">// quantumarticle.cls L1412-1414: \keywords{x} stores in \@keywords.
-<a href=#155 id=155 data-nosnippet>155</a>  // Render as classification block to preserve the metadata.
-<a href=#156 id=156 data-nosnippet>156</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\keywords{}"</span>,
-<a href=#157 id=157 data-nosnippet>157</a>    <span class="string">"\\lx@add@classification[scheme=keywords]{#1}"</span>);
-<a href=#158 id=158 data-nosnippet>158</a>  <span class="comment">// some elsearticle style commands?  (Perl PR #2767)
-<a href=#159 id=159 data-nosnippet>159</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\ead[]{}"</span>, <span class="string">"\\email{#1}"</span>); <span class="comment">// Strictly if #1=url, should be homepage.
-<a href=#160 id=160 data-nosnippet>160</a>
-<a href=#161 id=161 data-nosnippet>161</a>  // quantumarticle is REVTeX-based and inherits the REVTeX
-<a href=#162 id=162 data-nosnippet>162</a>  // \acknowledgments / \acknowledgements bare-command pattern
-<a href=#163 id=163 data-nosnippet>163</a>  // (NO \begin/\end). Driver: 2512.01858 (`\acknowledgments` on its
-<a href=#164 id=164 data-nosnippet>164</a>  // own line with no explicit close, body followed by
-<a href=#165 id=165 data-nosnippet>165</a>  // `\bibliography{...}`). Mirror revtex4_support_sty.rs:79-98 so
-<a href=#166 id=166 data-nosnippet>166</a>  // the bare form opens &lt;ltx:acknowledgements&gt; and the bibliography
-<a href=#167 id=167 data-nosnippet>167</a>  // / end of document auto-closes it. The tolerant \endacknowledgments
-<a href=#168 id=168 data-nosnippet>168</a>  // closes only if the element is still open (covers cases where
-<a href=#169 id=169 data-nosnippet>169</a>  // user did write \begin{acknowledgments}...\end{acknowledgments}
-<a href=#170 id=170 data-nosnippet>170</a>  // and our opener+auto-close already wrapped the body).
-<a href=#171 id=171 data-nosnippet>171</a>  // ltx:acknowledgements Tag (autoClose + inlist=toc) is global — set in
-<a href=#172 id=172 data-nosnippet>172</a>  // latex_constructs.rs (arXiv-fork 23771504 removed the binding-local copies).
-<a href=#173 id=173 data-nosnippet>173</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\acknowledgments"</span>, <span class="string">"&lt;ltx:acknowledgements name='#name'&gt;"</span>,
-<a href=#174 id=174 data-nosnippet>174</a>    properties =&gt; { <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"name" </span>=&gt; digest_in_group(<span class="macro">T_CS!</span>(<span class="string">"\\acknowledgmentsname"</span>))<span class="question-mark">?</span>)) });
-<a href=#175 id=175 data-nosnippet>175</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\endacknowledgments"</span>, sub[document, _whatsit, _props] {
-<a href=#176 id=176 data-nosnippet>176</a>    <span class="kw">let </span>cur = document.get_node().clone();
-<a href=#177 id=177 data-nosnippet>177</a>    <span class="kw">let </span>has_open = document.findnode(<span class="string">"ancestor-or-self::ltx:acknowledgements"</span>, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>cur)).is_some();
-<a href=#178 id=178 data-nosnippet>178</a>    <span class="kw">if </span>has_open {
-<a href=#179 id=179 data-nosnippet>179</a>      document.close_element(<span class="string">"ltx:acknowledgements"</span>)<span class="question-mark">?</span>;
-<a href=#180 id=180 data-nosnippet>180</a>    }
-<a href=#181 id=181 data-nosnippet>181</a>  });
-<a href=#182 id=182 data-nosnippet>182</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\acknowledgmentsname"</span>, <span class="string">"Acknowledgements"</span>);
-<a href=#183 id=183 data-nosnippet>183</a>  <span class="macro">Let!</span>(<span class="string">"\\acknowledgements"</span>, <span class="string">"\\acknowledgments"</span>);
-<a href=#184 id=184 data-nosnippet>184</a>  <span class="macro">Let!</span>(<span class="string">"\\endacknowledgements"</span>, <span class="string">"\\endacknowledgments"</span>);
-<a href=#185 id=185 data-nosnippet>185</a>  <span class="comment">// quantumarticle.cls:1266-1279: at `\begin{document}` the class loads tikz when installed (`\IfFileExists`, :1266),
-<a href=#186 id=186 data-nosnippet>186</a>  // for its title-page logo; tikz brings graphicx (pgfcore.sty:10), which papers then use without loading it
-<a href=#187 id=187 data-nosnippet>187</a>  // (`\includegraphics` undefined, 2110.03913). The xstring it loads there too (:1270, :933) serves only its own
-<a href=#188 id=188 data-nosnippet>188</a>  // date check and title URL code, which this binding does not run. Perl's binding (quantumarticle.cls.ltxml) loads
-<a href=#189 id=189 data-nosnippet>189</a>  // neither.
-<a href=#190 id=190 data-nosnippet>190</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\AtBeginDocument{\IfFileExists{tikz.sty}{\RequirePackage{tikz}\usetikzlibrary{calc}}{}}"</span>);
-<a href=#191 id=191 data-nosnippet>191</a>  <span class="comment">// quantumarticle.cls:22 `\def\quantumarticleversion{6.1}` (quantum-template).
-<a href=#192 id=192 data-nosnippet>192</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\quantumarticleversion"</span>, <span class="string">"6.1"</span>);
-<a href=#193 id=193 data-nosnippet>193</a>});
+<a href=#147 id=147 data-nosnippet>147</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\DeclareRobustCommand\\openone{\\mathbbm{1}}"</span>);
+<a href=#148 id=148 data-nosnippet>148</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\definecolor{quantumviolet}{HTML}{53257F}"</span>);
+<a href=#149 id=149 data-nosnippet>149</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\definecolor{quantumgray}{HTML}{555555}"</span>);
+<a href=#150 id=150 data-nosnippet>150</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\DeclareRobustCommand{\\Quantum}{Quantum}"</span>);
+<a href=#151 id=151 data-nosnippet>151</a>
+<a href=#152 id=152 data-nosnippet>152</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\newenvironment{widetext}{}{}"</span>);
+<a href=#153 id=153 data-nosnippet>153</a>
+<a href=#154 id=154 data-nosnippet>154</a>  <span class="comment">// \onecolumngrid / \twocolumngrid — REVTeX column-switching primitives
+<a href=#155 id=155 data-nosnippet>155</a>  // that quantumarticle.cls L348-349 wraps. Defined via raw cls L4448 in
+<a href=#156 id=156 data-nosnippet>156</a>  // REVTeX but our quantumarticle binding skips that load. No visual
+<a href=#157 id=157 data-nosnippet>157</a>  // effect in HTML/XML; stub as no-op.
+<a href=#158 id=158 data-nosnippet>158</a>  // Witness 2406.00091: `\onecolumngrid \section*{APPENDIX}`.
+<a href=#159 id=159 data-nosnippet>159</a>  </span>def_macro_noop(<span class="string">"\\onecolumngrid"</span>)<span class="question-mark">?</span>;
+<a href=#160 id=160 data-nosnippet>160</a>  def_macro_noop(<span class="string">"\\twocolumngrid"</span>)<span class="question-mark">?</span>;
+<a href=#161 id=161 data-nosnippet>161</a>  <span class="comment">// quantumarticle.cls L1412-1414: \keywords{x} stores in \@keywords.
+<a href=#162 id=162 data-nosnippet>162</a>  // Render as classification block to preserve the metadata.
+<a href=#163 id=163 data-nosnippet>163</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\keywords{}"</span>,
+<a href=#164 id=164 data-nosnippet>164</a>    <span class="string">"\\lx@add@classification[scheme=keywords]{#1}"</span>);
+<a href=#165 id=165 data-nosnippet>165</a>  <span class="comment">// some elsearticle style commands?  (Perl PR #2767)
+<a href=#166 id=166 data-nosnippet>166</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\ead[]{}"</span>, <span class="string">"\\email{#1}"</span>); <span class="comment">// Strictly if #1=url, should be homepage.
+<a href=#167 id=167 data-nosnippet>167</a>
+<a href=#168 id=168 data-nosnippet>168</a>  // quantumarticle is REVTeX-based and inherits the REVTeX
+<a href=#169 id=169 data-nosnippet>169</a>  // \acknowledgments / \acknowledgements bare-command pattern
+<a href=#170 id=170 data-nosnippet>170</a>  // (NO \begin/\end). Driver: 2512.01858 (`\acknowledgments` on its
+<a href=#171 id=171 data-nosnippet>171</a>  // own line with no explicit close, body followed by
+<a href=#172 id=172 data-nosnippet>172</a>  // `\bibliography{...}`). Mirror revtex4_support_sty.rs:79-98 so
+<a href=#173 id=173 data-nosnippet>173</a>  // the bare form opens &lt;ltx:acknowledgements&gt; and the bibliography
+<a href=#174 id=174 data-nosnippet>174</a>  // / end of document auto-closes it. The tolerant \endacknowledgments
+<a href=#175 id=175 data-nosnippet>175</a>  // closes only if the element is still open (covers cases where
+<a href=#176 id=176 data-nosnippet>176</a>  // user did write \begin{acknowledgments}...\end{acknowledgments}
+<a href=#177 id=177 data-nosnippet>177</a>  // and our opener+auto-close already wrapped the body).
+<a href=#178 id=178 data-nosnippet>178</a>  // ltx:acknowledgements Tag (autoClose + inlist=toc) is global — set in
+<a href=#179 id=179 data-nosnippet>179</a>  // latex_constructs.rs (arXiv-fork 23771504 removed the binding-local copies).
+<a href=#180 id=180 data-nosnippet>180</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\acknowledgments"</span>, <span class="string">"&lt;ltx:acknowledgements name='#name'&gt;"</span>,
+<a href=#181 id=181 data-nosnippet>181</a>    properties =&gt; { <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"name" </span>=&gt; digest_in_group(<span class="macro">T_CS!</span>(<span class="string">"\\acknowledgmentsname"</span>))<span class="question-mark">?</span>)) });
+<a href=#182 id=182 data-nosnippet>182</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\endacknowledgments"</span>, sub[document, _whatsit, _props] {
+<a href=#183 id=183 data-nosnippet>183</a>    <span class="kw">let </span>cur = document.get_node().clone();
+<a href=#184 id=184 data-nosnippet>184</a>    <span class="kw">let </span>has_open = document.findnode(<span class="string">"ancestor-or-self::ltx:acknowledgements"</span>, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>cur)).is_some();
+<a href=#185 id=185 data-nosnippet>185</a>    <span class="kw">if </span>has_open {
+<a href=#186 id=186 data-nosnippet>186</a>      document.close_element(<span class="string">"ltx:acknowledgements"</span>)<span class="question-mark">?</span>;
+<a href=#187 id=187 data-nosnippet>187</a>    }
+<a href=#188 id=188 data-nosnippet>188</a>  });
+<a href=#189 id=189 data-nosnippet>189</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\acknowledgmentsname"</span>, <span class="string">"Acknowledgements"</span>);
+<a href=#190 id=190 data-nosnippet>190</a>  <span class="macro">Let!</span>(<span class="string">"\\acknowledgements"</span>, <span class="string">"\\acknowledgments"</span>);
+<a href=#191 id=191 data-nosnippet>191</a>  <span class="macro">Let!</span>(<span class="string">"\\endacknowledgements"</span>, <span class="string">"\\endacknowledgments"</span>);
+<a href=#192 id=192 data-nosnippet>192</a>  <span class="comment">// quantumarticle.cls:1266-1279: at `\begin{document}` the class loads tikz when installed (`\IfFileExists`, :1266),
+<a href=#193 id=193 data-nosnippet>193</a>  // for its title-page logo; tikz brings graphicx (pgfcore.sty:10), which papers then use without loading it
+<a href=#194 id=194 data-nosnippet>194</a>  // (`\includegraphics` undefined, 2110.03913). The xstring it loads there too (:1270, :933) serves only its own
+<a href=#195 id=195 data-nosnippet>195</a>  // date check and title URL code, which this binding does not run. Perl's binding (quantumarticle.cls.ltxml) loads
+<a href=#196 id=196 data-nosnippet>196</a>  // neither.
+<a href=#197 id=197 data-nosnippet>197</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\AtBeginDocument{\IfFileExists{tikz.sty}{\RequirePackage{tikz}\usetikzlibrary{calc}}{}}"</span>);
+<a href=#198 id=198 data-nosnippet>198</a>  <span class="comment">// quantumarticle.cls:22 `\def\quantumarticleversion{6.1}` (quantum-template).
+<a href=#199 id=199 data-nosnippet>199</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\quantumarticleversion"</span>, <span class="string">"6.1"</span>);
+<a href=#200 id=200 data-nosnippet>200</a>});
 </code></pre></div></section></main></body></html>

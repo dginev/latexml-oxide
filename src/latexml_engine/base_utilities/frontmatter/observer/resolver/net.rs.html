@@ -310,19 +310,24 @@
 <a href=#310 id=310 data-nosnippet>310</a>    <span class="comment">// (a label printed before a colon inside a name: a role's heading read into it, `Editor: Andrei V. Gritsan`, 2205.07715;
 <a href=#311 id=311 data-nosnippet>311</a>    // `{\bf Authors:} F.~Arleo`, hep-ph0311131)
 <a href=#312 id=312 data-nosnippet>312</a>    </span><span class="kw">for </span>c <span class="kw">in </span><span class="kw-2">&amp;</span>creators {
-<a href=#313 id=313 data-nosnippet>313</a>      <span class="comment">// (a colon a space follows: not a link's, `http://www.ligo.org`, gr-qc0505029)
-<a href=#314 id=314 data-nosnippet>314</a>      </span><span class="kw">if let </span><span class="prelude-val">Some</span>((head, tail)) = c.name.split_once(<span class="string">':'</span>)
-<a href=#315 id=315 data-nosnippet>315</a>        &amp;&amp; printed_words(head).next().is_some()
-<a href=#316 id=316 data-nosnippet>316</a>        &amp;&amp; tail.starts_with(char::is_whitespace)
-<a href=#317 id=317 data-nosnippet>317</a>        &amp;&amp; printed_words(tail).next().is_some()
-<a href=#318 id=318 data-nosnippet>318</a>      {
-<a href=#319 id=319 data-nosnippet>319</a>        failed.push(<span class="macro">s!</span>(<span class="string">"{head}: | {}"</span>, tail.trim()));
-<a href=#320 id=320 data-nosnippet>320</a>      }
-<a href=#321 id=321 data-nosnippet>321</a>    }
-<a href=#322 id=322 data-nosnippet>322</a>    <span class="kw">if </span>!failed.is_empty() {
-<a href=#323 id=323 data-nosnippet>323</a>      out.insert(index, failed);
-<a href=#324 id=324 data-nosnippet>324</a>    }
-<a href=#325 id=325 data-nosnippet>325</a>  }
-<a href=#326 id=326 data-nosnippet>326</a>  out
-<a href=#327 id=327 data-nosnippet>327</a>}
+<a href=#313 id=313 data-nosnippet>313</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>((head, tail)) = label_before_colon(<span class="kw-2">&amp;</span>c.name) {
+<a href=#314 id=314 data-nosnippet>314</a>        failed.push(<span class="macro">s!</span>(<span class="string">"{head}: | {}"</span>, tail.trim()));
+<a href=#315 id=315 data-nosnippet>315</a>      }
+<a href=#316 id=316 data-nosnippet>316</a>    }
+<a href=#317 id=317 data-nosnippet>317</a>    <span class="kw">if </span>!failed.is_empty() {
+<a href=#318 id=318 data-nosnippet>318</a>      out.insert(index, failed);
+<a href=#319 id=319 data-nosnippet>319</a>    }
+<a href=#320 id=320 data-nosnippet>320</a>  }
+<a href=#321 id=321 data-nosnippet>321</a>  out
+<a href=#322 id=322 data-nosnippet>322</a>}
+<a href=#323 id=323 data-nosnippet>323</a>
+<a href=#324 id=324 data-nosnippet>324</a><span class="doccomment">/// A name's label printed before a colon and a space, and the rest ([`merged_names`]; a team the enumeration would make
+<a href=#325 id=325 data-nosnippet>325</a>/// of one is no author, `enumeration::promotion_only`). Not a link's colon, `http://www.ligo.org`, gr-qc0505029.
+<a href=#326 id=326 data-nosnippet>326</a></span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>label_before_colon(name: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;(<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str)&gt; {
+<a href=#327 id=327 data-nosnippet>327</a>  name.split_once(<span class="string">':'</span>).filter(|(head, tail)| {
+<a href=#328 id=328 data-nosnippet>328</a>    printed_words(head).next().is_some()
+<a href=#329 id=329 data-nosnippet>329</a>      &amp;&amp; tail.starts_with(char::is_whitespace)
+<a href=#330 id=330 data-nosnippet>330</a>      &amp;&amp; printed_words(tail).next().is_some()
+<a href=#331 id=331 data-nosnippet>331</a>  })
+<a href=#332 id=332 data-nosnippet>332</a>}
 </code></pre></div></section></main></body></html>

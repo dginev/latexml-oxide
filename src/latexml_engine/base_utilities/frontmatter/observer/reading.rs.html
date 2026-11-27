@@ -1,7 +1,7 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_engine/src/base_utilities/frontmatter/observer/reading.rs`."><title>reading.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-1e18a8e7.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="latexml_engine" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (6c709eb42 2026-11-25)" data-channel="nightly" data-search-js="search-085293d4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../../../static.files/src-script-813739b1.js"></script><script defer src="../../../../../src-files.js"></script><script defer src="../../../../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../../../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_engine/base_utilities/frontmatter/observer/</div>reading.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! The observer's flush and its dump (OXIDIZED_DESIGN_DIVERGENCES #837): at every real flush (`digest_front_matter`)
 <a href=#2 id=2 data-nosnippet>2</a>//! the ledger's author blocks not rehearsed yet are rehearsed and lexed, and each API call's content
-<a href=#3 id=3 data-nosnippet>3</a>//! ([`read_at_flush`]); [`fm_reading_json`] gives the ledger as JSON — its entries with their events and the resolver's
-<a href=#4 id=4 data-nosnippet>4</a>//! tuples (`resolved`) — which the guards read the reading by, in process. The census that wrote it beside the output
+<a href=#3 id=3 data-nosnippet>3</a>//! ([`read_at_flush`]); [`fm_reading_json`] gives the ledger as JSON — its entries with their events and the reading's
+<a href=#4 id=4 data-nosnippet>4</a>//! tuples (`resolved`, the emitter's once it wrote them) — which the guards read the reading by, in process. The census that wrote it beside the output
 <a href=#5 id=5 data-nosnippet>5</a>//! (`LATEXML_FM_SHADOW=1`, `&lt;dest&gt;.fmshadow.json`, `ab_audit fmshadow`) and its off state (`=0`) were deleted with the
 <a href=#6 id=6 data-nosnippet>6</a>//! S2b writer (DEL4): the observer records and reads every paper.
 <a href=#7 id=7 data-nosnippet>7</a>
@@ -895,195 +895,199 @@
 <a href=#895 id=895 data-nosnippet>895</a>      }
 <a href=#896 id=896 data-nosnippet>896</a>      out.push(<span class="string">']'</span>);
 <a href=#897 id=897 data-nosnippet>897</a>    }
-<a href=#898 id=898 data-nosnippet>898</a>    out.push_str(<span class="string">",\"resolved\":"</span>);
-<a href=#899 id=899 data-nosnippet>899</a>    json_resolved(<span class="kw-2">&amp;mut </span>out, <span class="kw-2">&amp;</span>resolve(<span class="kw-2">&amp;</span>ledger_inputs(ledger)));
-<a href=#900 id=900 data-nosnippet>900</a>    <span class="kw">let _ </span>= <span class="macro">write!</span>(
-<a href=#901 id=901 data-nosnippet>901</a>      out,
-<a href=#902 id=902 data-nosnippet>902</a>      <span class="string">",\"summary\":{{\"blocks\":{blocks},\"with_events\":{with_events},\"held\":{held},\"overflow\":{overflow},\"skipped\":{{"
-<a href=#903 id=903 data-nosnippet>903</a>    </span>);
-<a href=#904 id=904 data-nosnippet>904</a>    <span class="kw">for </span>(i, (reason, count)) <span class="kw">in </span>skipped.iter().enumerate() {
-<a href=#905 id=905 data-nosnippet>905</a>      <span class="kw">if </span>i &gt; <span class="number">0 </span>{
-<a href=#906 id=906 data-nosnippet>906</a>        out.push(<span class="string">','</span>);
-<a href=#907 id=907 data-nosnippet>907</a>      }
-<a href=#908 id=908 data-nosnippet>908</a>      json_str(<span class="kw-2">&amp;mut </span>out, reason);
-<a href=#909 id=909 data-nosnippet>909</a>      <span class="kw">let _ </span>= <span class="macro">write!</span>(out, <span class="string">":{count}"</span>);
-<a href=#910 id=910 data-nosnippet>910</a>    }
-<a href=#911 id=911 data-nosnippet>911</a>    <span class="comment">// (whether a flush's emitter wrote the paper's frontmatter, `Ledger::emitted`)
-<a href=#912 id=912 data-nosnippet>912</a>    </span><span class="kw">let _ </span>= <span class="macro">writeln!</span>(out, <span class="string">"}}}},\"emitted\":{}}}"</span>, ledger.emitted);
-<a href=#913 id=913 data-nosnippet>913</a>    out
-<a href=#914 id=914 data-nosnippet>914</a>  })
-<a href=#915 id=915 data-nosnippet>915</a>}
-<a href=#916 id=916 data-nosnippet>916</a>
-<a href=#917 id=917 data-nosnippet>917</a><span class="kw">fn </span>json_assoc(out: <span class="kw-2">&amp;mut </span>String, assoc: <span class="kw-2">&amp;</span>Assoc) {
-<a href=#918 id=918 data-nosnippet>918</a>  out.push_str(<span class="string">"{\"role\":"</span>);
-<a href=#919 id=919 data-nosnippet>919</a>  json_str(out, <span class="kw-2">&amp;</span>assoc.role);
-<a href=#920 id=920 data-nosnippet>920</a>  out.push_str(<span class="string">",\"text\":"</span>);
-<a href=#921 id=921 data-nosnippet>921</a>  json_str(out, <span class="kw-2">&amp;</span>assoc.text);
-<a href=#922 id=922 data-nosnippet>922</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(label) = <span class="kw-2">&amp;</span>assoc.label {
-<a href=#923 id=923 data-nosnippet>923</a>    out.push_str(<span class="string">",\"label\":"</span>);
-<a href=#924 id=924 data-nosnippet>924</a>    json_str(out, label);
-<a href=#925 id=925 data-nosnippet>925</a>  }
-<a href=#926 id=926 data-nosnippet>926</a>  out.push_str(<span class="string">",\"rule\":"</span>);
-<a href=#927 id=927 data-nosnippet>927</a>  json_str(out, <span class="kw-2">&amp;</span>assoc.rule);
-<a href=#928 id=928 data-nosnippet>928</a>  <span class="comment">// (a link's target, where it points: FM S2a.2 r9)
-<a href=#929 id=929 data-nosnippet>929</a>  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(target) = <span class="kw-2">&amp;</span>assoc.target {
-<a href=#930 id=930 data-nosnippet>930</a>    out.push_str(<span class="string">",\"target\":"</span>);
-<a href=#931 id=931 data-nosnippet>931</a>    json_str(out, target);
-<a href=#932 id=932 data-nosnippet>932</a>  }
-<a href=#933 id=933 data-nosnippet>933</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>((index, span)) = assoc.source {
-<a href=#934 id=934 data-nosnippet>934</a>    <span class="comment">// (keyed by the block and the span: spans are unique only within a block)
-<a href=#935 id=935 data-nosnippet>935</a>    </span><span class="kw">let _ </span>= <span class="macro">write!</span>(out, <span class="string">",\"source\":[{index},"</span>);
-<a href=#936 id=936 data-nosnippet>936</a>    json_span(out, span.map(|(s, e)| (usize::from(s), usize::from(e))));
-<a href=#937 id=937 data-nosnippet>937</a>    out.push(<span class="string">']'</span>);
-<a href=#938 id=938 data-nosnippet>938</a>  }
-<a href=#939 id=939 data-nosnippet>939</a>  out.push(<span class="string">'}'</span>);
-<a href=#940 id=940 data-nosnippet>940</a>}
-<a href=#941 id=941 data-nosnippet>941</a>
-<a href=#942 id=942 data-nosnippet>942</a><span class="kw">fn </span>json_assocs(out: <span class="kw-2">&amp;mut </span>String, key: <span class="kw-2">&amp;</span>str, assocs: <span class="kw-2">&amp;</span>[Assoc]) {
-<a href=#943 id=943 data-nosnippet>943</a>  <span class="kw">let _ </span>= <span class="macro">write!</span>(out, <span class="string">",\"{key}\":["</span>);
-<a href=#944 id=944 data-nosnippet>944</a>  <span class="kw">for </span>(i, assoc) <span class="kw">in </span>assocs.iter().enumerate() {
-<a href=#945 id=945 data-nosnippet>945</a>    <span class="kw">if </span>i &gt; <span class="number">0 </span>{
-<a href=#946 id=946 data-nosnippet>946</a>      out.push(<span class="string">','</span>);
-<a href=#947 id=947 data-nosnippet>947</a>    }
-<a href=#948 id=948 data-nosnippet>948</a>    json_assoc(out, assoc);
-<a href=#949 id=949 data-nosnippet>949</a>  }
-<a href=#950 id=950 data-nosnippet>950</a>  out.push(<span class="string">']'</span>);
-<a href=#951 id=951 data-nosnippet>951</a>}
-<a href=#952 id=952 data-nosnippet>952</a>
-<a href=#953 id=953 data-nosnippet>953</a><span class="doccomment">/// The resolver's tuples: the creators (name without marks, requests, the rule that split it out, its block) with
-<a href=#954 id=954 data-nosnippet>954</a>/// their affiliations, contacts and notes, and the block's own.
-<a href=#955 id=955 data-nosnippet>955</a></span><span class="kw">fn </span>json_resolved(out: <span class="kw-2">&amp;mut </span>String, resolved: <span class="kw-2">&amp;</span>Resolved) {
-<a href=#956 id=956 data-nosnippet>956</a>  out.push_str(<span class="string">"{\"creators\":["</span>);
-<a href=#957 id=957 data-nosnippet>957</a>  <span class="kw">for </span>(i, creator) <span class="kw">in </span>resolved.creators.iter().enumerate() {
-<a href=#958 id=958 data-nosnippet>958</a>    <span class="kw">if </span>i &gt; <span class="number">0 </span>{
-<a href=#959 id=959 data-nosnippet>959</a>      out.push(<span class="string">','</span>);
-<a href=#960 id=960 data-nosnippet>960</a>    }
-<a href=#961 id=961 data-nosnippet>961</a>    out.push_str(<span class="string">"{\"name\":"</span>);
-<a href=#962 id=962 data-nosnippet>962</a>    json_str(out, <span class="kw-2">&amp;</span>creator.name);
-<a href=#963 id=963 data-nosnippet>963</a>    out.push_str(<span class="string">",\"requests\":["</span>);
-<a href=#964 id=964 data-nosnippet>964</a>    <span class="kw">for </span>(j, request) <span class="kw">in </span>creator.requests().enumerate() {
-<a href=#965 id=965 data-nosnippet>965</a>      <span class="kw">if </span>j &gt; <span class="number">0 </span>{
-<a href=#966 id=966 data-nosnippet>966</a>        out.push(<span class="string">','</span>);
-<a href=#967 id=967 data-nosnippet>967</a>      }
-<a href=#968 id=968 data-nosnippet>968</a>      json_str(out, request);
-<a href=#969 id=969 data-nosnippet>969</a>    }
-<a href=#970 id=970 data-nosnippet>970</a>    out.push_str(<span class="string">"],\"rule\":"</span>);
-<a href=#971 id=971 data-nosnippet>971</a>    json_str(out, <span class="kw-2">&amp;</span>creator.rule);
-<a href=#972 id=972 data-nosnippet>972</a>    out.push_str(<span class="string">",\"joins\":["</span>);
-<a href=#973 id=973 data-nosnippet>973</a>    <span class="kw">for </span>(j, join) <span class="kw">in </span>creator.joins.iter().enumerate() {
-<a href=#974 id=974 data-nosnippet>974</a>      <span class="kw">if </span>j &gt; <span class="number">0 </span>{
-<a href=#975 id=975 data-nosnippet>975</a>        out.push(<span class="string">','</span>);
-<a href=#976 id=976 data-nosnippet>976</a>      }
-<a href=#977 id=977 data-nosnippet>977</a>      json_str(out, join.tag());
-<a href=#978 id=978 data-nosnippet>978</a>    }
-<a href=#979 id=979 data-nosnippet>979</a>    out.push(<span class="string">']'</span>);
-<a href=#980 id=980 data-nosnippet>980</a>    <span class="kw">let _ </span>= <span class="macro">write!</span>(out, <span class="string">",\"source\":{}"</span>, creator.source);
-<a href=#981 id=981 data-nosnippet>981</a>    <span class="comment">// (its creator call's role, where a call in its block printed it: `RCreator::role`)
-<a href=#982 id=982 data-nosnippet>982</a>    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(role) = <span class="kw-2">&amp;</span>creator.role {
-<a href=#983 id=983 data-nosnippet>983</a>      out.push_str(<span class="string">",\"role\":"</span>);
-<a href=#984 id=984 data-nosnippet>984</a>      json_str(out, role);
-<a href=#985 id=985 data-nosnippet>985</a>    }
-<a href=#986 id=986 data-nosnippet>986</a>    json_assocs(out, <span class="string">"affiliations"</span>, <span class="kw-2">&amp;</span>creator.affiliations);
-<a href=#987 id=987 data-nosnippet>987</a>    json_assocs(out, <span class="string">"contacts"</span>, <span class="kw-2">&amp;</span>creator.contacts);
-<a href=#988 id=988 data-nosnippet>988</a>    json_assocs(out, <span class="string">"notes"</span>, <span class="kw-2">&amp;</span>creator.notes);
-<a href=#989 id=989 data-nosnippet>989</a>    out.push(<span class="string">'}'</span>);
-<a href=#990 id=990 data-nosnippet>990</a>  }
-<a href=#991 id=991 data-nosnippet>991</a>  out.push(<span class="string">']'</span>);
-<a href=#992 id=992 data-nosnippet>992</a>  json_assocs(out, <span class="string">"block"</span>, <span class="kw-2">&amp;</span>resolved.block);
-<a href=#993 id=993 data-nosnippet>993</a>  json_assocs(out, <span class="string">"dropped"</span>, <span class="kw-2">&amp;</span>resolved.dropped);
-<a href=#994 id=994 data-nosnippet>994</a>  out.push_str(<span class="string">",\"continued\":["</span>);
-<a href=#995 id=995 data-nosnippet>995</a>  <span class="kw">for </span>(i, lines) <span class="kw">in </span>resolved.continued.iter().flatten().enumerate() {
-<a href=#996 id=996 data-nosnippet>996</a>    <span class="kw">if </span>i &gt; <span class="number">0 </span>{
-<a href=#997 id=997 data-nosnippet>997</a>      out.push(<span class="string">','</span>);
-<a href=#998 id=998 data-nosnippet>998</a>    }
-<a href=#999 id=999 data-nosnippet>999</a>    out.push(<span class="string">'['</span>);
-<a href=#1000 id=1000 data-nosnippet>1000</a>    <span class="kw">for </span>(j, line) <span class="kw">in </span>lines.iter().enumerate() {
-<a href=#1001 id=1001 data-nosnippet>1001</a>      <span class="kw">if </span>j &gt; <span class="number">0 </span>{
-<a href=#1002 id=1002 data-nosnippet>1002</a>        out.push(<span class="string">','</span>);
-<a href=#1003 id=1003 data-nosnippet>1003</a>      }
-<a href=#1004 id=1004 data-nosnippet>1004</a>      json_str(out, line);
-<a href=#1005 id=1005 data-nosnippet>1005</a>    }
-<a href=#1006 id=1006 data-nosnippet>1006</a>    out.push(<span class="string">']'</span>);
-<a href=#1007 id=1007 data-nosnippet>1007</a>  }
-<a href=#1008 id=1008 data-nosnippet>1008</a>  out.push(<span class="string">']'</span>);
-<a href=#1009 id=1009 data-nosnippet>1009</a>  out.push_str(<span class="string">",\"policies\":["</span>);
-<a href=#1010 id=1010 data-nosnippet>1010</a>  <span class="kw">for </span>(i, (index, name)) <span class="kw">in </span>resolved.policies.iter().enumerate() {
-<a href=#1011 id=1011 data-nosnippet>1011</a>    <span class="kw">if </span>i &gt; <span class="number">0 </span>{
-<a href=#1012 id=1012 data-nosnippet>1012</a>      out.push(<span class="string">','</span>);
-<a href=#1013 id=1013 data-nosnippet>1013</a>    }
-<a href=#1014 id=1014 data-nosnippet>1014</a>    <span class="kw">let _ </span>= <span class="macro">write!</span>(out, <span class="string">"[{index},"</span>);
-<a href=#1015 id=1015 data-nosnippet>1015</a>    json_str(out, name);
-<a href=#1016 id=1016 data-nosnippet>1016</a>    out.push(<span class="string">']'</span>);
-<a href=#1017 id=1017 data-nosnippet>1017</a>  }
-<a href=#1018 id=1018 data-nosnippet>1018</a>  out.push_str(<span class="string">"]}"</span>);
-<a href=#1019 id=1019 data-nosnippet>1019</a>}
-<a href=#1020 id=1020 data-nosnippet>1020</a>
-<a href=#1021 id=1021 data-nosnippet>1021</a><span class="doccomment">/// Why a block that has no events was not rehearsed: its skip's reason; one deferred by a flush no rehearsal could run
-<a href=#1022 id=1022 data-nosnippet>1022</a>/// at (`JournalUnavailable`) and never rehearsed later, that reason; one no flush came after, `NoFlush`.
-<a href=#1023 id=1023 data-nosnippet>1023</a></span><span class="kw">fn </span>skip_reason(outcome: <span class="kw-2">&amp;</span>Outcome) -&gt; <span class="prelude-ty">Option</span>&lt;SkipReason&gt; {
-<a href=#1024 id=1024 data-nosnippet>1024</a>  <span class="kw">match </span>outcome {
-<a href=#1025 id=1025 data-nosnippet>1025</a>    Outcome::Pending =&gt; <span class="prelude-val">Some</span>(SkipReason::NoFlush),
-<a href=#1026 id=1026 data-nosnippet>1026</a>    Outcome::Skipped(reason) | Outcome::Deferred(reason) =&gt; <span class="prelude-val">Some</span>(<span class="kw-2">*</span>reason),
-<a href=#1027 id=1027 data-nosnippet>1027</a>    Outcome::Events { .. } =&gt; <span class="prelude-val">None</span>,
-<a href=#1028 id=1028 data-nosnippet>1028</a>  }
-<a href=#1029 id=1029 data-nosnippet>1029</a>}
-<a href=#1030 id=1030 data-nosnippet>1030</a>
-<a href=#1031 id=1031 data-nosnippet>1031</a><span class="kw">fn </span>bump&lt;<span class="lifetime">'a</span>&gt;(counts: <span class="kw-2">&amp;mut </span>Vec&lt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>str, usize)&gt;, reason: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>str) {
-<a href=#1032 id=1032 data-nosnippet>1032</a>  <span class="kw">match </span>counts.iter_mut().find(|(r, <span class="kw">_</span>)| <span class="kw-2">*</span>r == reason) {
-<a href=#1033 id=1033 data-nosnippet>1033</a>    <span class="prelude-val">Some</span>((<span class="kw">_</span>, count)) =&gt; <span class="kw-2">*</span>count += <span class="number">1</span>,
-<a href=#1034 id=1034 data-nosnippet>1034</a>    <span class="prelude-val">None </span>=&gt; counts.push((reason, <span class="number">1</span>)),
-<a href=#1035 id=1035 data-nosnippet>1035</a>  }
-<a href=#1036 id=1036 data-nosnippet>1036</a>}
-<a href=#1037 id=1037 data-nosnippet>1037</a>
-<a href=#1038 id=1038 data-nosnippet>1038</a><span class="attr">#[cfg(test)]
-<a href=#1039 id=1039 data-nosnippet>1039</a></span><span class="kw">mod </span>tests {
-<a href=#1040 id=1040 data-nosnippet>1040</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
+<a href=#898 id=898 data-nosnippet>898</a>    <span class="comment">// (the reading the emitter wrote, rc6's where its checks chose it, `emit::Checks::worse`; else the resolver's)
+<a href=#899 id=899 data-nosnippet>899</a>    </span>out.push_str(<span class="string">",\"resolved\":"</span>);
+<a href=#900 id=900 data-nosnippet>900</a>    <span class="kw">match </span>emitter::emitted_reading(ledger) {
+<a href=#901 id=901 data-nosnippet>901</a>      <span class="prelude-val">Some</span>(reading) =&gt; json_resolved(<span class="kw-2">&amp;mut </span>out, reading),
+<a href=#902 id=902 data-nosnippet>902</a>      <span class="prelude-val">None </span>=&gt; json_resolved(<span class="kw-2">&amp;mut </span>out, <span class="kw-2">&amp;</span>resolve(<span class="kw-2">&amp;</span>ledger_inputs(ledger))),
+<a href=#903 id=903 data-nosnippet>903</a>    }
+<a href=#904 id=904 data-nosnippet>904</a>    <span class="kw">let _ </span>= <span class="macro">write!</span>(
+<a href=#905 id=905 data-nosnippet>905</a>      out,
+<a href=#906 id=906 data-nosnippet>906</a>      <span class="string">",\"summary\":{{\"blocks\":{blocks},\"with_events\":{with_events},\"held\":{held},\"overflow\":{overflow},\"skipped\":{{"
+<a href=#907 id=907 data-nosnippet>907</a>    </span>);
+<a href=#908 id=908 data-nosnippet>908</a>    <span class="kw">for </span>(i, (reason, count)) <span class="kw">in </span>skipped.iter().enumerate() {
+<a href=#909 id=909 data-nosnippet>909</a>      <span class="kw">if </span>i &gt; <span class="number">0 </span>{
+<a href=#910 id=910 data-nosnippet>910</a>        out.push(<span class="string">','</span>);
+<a href=#911 id=911 data-nosnippet>911</a>      }
+<a href=#912 id=912 data-nosnippet>912</a>      json_str(<span class="kw-2">&amp;mut </span>out, reason);
+<a href=#913 id=913 data-nosnippet>913</a>      <span class="kw">let _ </span>= <span class="macro">write!</span>(out, <span class="string">":{count}"</span>);
+<a href=#914 id=914 data-nosnippet>914</a>    }
+<a href=#915 id=915 data-nosnippet>915</a>    <span class="comment">// (whether a flush's emitter wrote the paper's frontmatter, `Ledger::emitted`)
+<a href=#916 id=916 data-nosnippet>916</a>    </span><span class="kw">let _ </span>= <span class="macro">writeln!</span>(out, <span class="string">"}}}},\"emitted\":{}}}"</span>, ledger.emitted);
+<a href=#917 id=917 data-nosnippet>917</a>    out
+<a href=#918 id=918 data-nosnippet>918</a>  })
+<a href=#919 id=919 data-nosnippet>919</a>}
+<a href=#920 id=920 data-nosnippet>920</a>
+<a href=#921 id=921 data-nosnippet>921</a><span class="kw">fn </span>json_assoc(out: <span class="kw-2">&amp;mut </span>String, assoc: <span class="kw-2">&amp;</span>Assoc) {
+<a href=#922 id=922 data-nosnippet>922</a>  out.push_str(<span class="string">"{\"role\":"</span>);
+<a href=#923 id=923 data-nosnippet>923</a>  json_str(out, <span class="kw-2">&amp;</span>assoc.role);
+<a href=#924 id=924 data-nosnippet>924</a>  out.push_str(<span class="string">",\"text\":"</span>);
+<a href=#925 id=925 data-nosnippet>925</a>  json_str(out, <span class="kw-2">&amp;</span>assoc.text);
+<a href=#926 id=926 data-nosnippet>926</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(label) = <span class="kw-2">&amp;</span>assoc.label {
+<a href=#927 id=927 data-nosnippet>927</a>    out.push_str(<span class="string">",\"label\":"</span>);
+<a href=#928 id=928 data-nosnippet>928</a>    json_str(out, label);
+<a href=#929 id=929 data-nosnippet>929</a>  }
+<a href=#930 id=930 data-nosnippet>930</a>  out.push_str(<span class="string">",\"rule\":"</span>);
+<a href=#931 id=931 data-nosnippet>931</a>  json_str(out, <span class="kw-2">&amp;</span>assoc.rule);
+<a href=#932 id=932 data-nosnippet>932</a>  <span class="comment">// (a link's target, where it points: FM S2a.2 r9)
+<a href=#933 id=933 data-nosnippet>933</a>  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(target) = <span class="kw-2">&amp;</span>assoc.target {
+<a href=#934 id=934 data-nosnippet>934</a>    out.push_str(<span class="string">",\"target\":"</span>);
+<a href=#935 id=935 data-nosnippet>935</a>    json_str(out, target);
+<a href=#936 id=936 data-nosnippet>936</a>  }
+<a href=#937 id=937 data-nosnippet>937</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>((index, span)) = assoc.source {
+<a href=#938 id=938 data-nosnippet>938</a>    <span class="comment">// (keyed by the block and the span: spans are unique only within a block)
+<a href=#939 id=939 data-nosnippet>939</a>    </span><span class="kw">let _ </span>= <span class="macro">write!</span>(out, <span class="string">",\"source\":[{index},"</span>);
+<a href=#940 id=940 data-nosnippet>940</a>    json_span(out, span.map(|(s, e)| (usize::from(s), usize::from(e))));
+<a href=#941 id=941 data-nosnippet>941</a>    out.push(<span class="string">']'</span>);
+<a href=#942 id=942 data-nosnippet>942</a>  }
+<a href=#943 id=943 data-nosnippet>943</a>  out.push(<span class="string">'}'</span>);
+<a href=#944 id=944 data-nosnippet>944</a>}
+<a href=#945 id=945 data-nosnippet>945</a>
+<a href=#946 id=946 data-nosnippet>946</a><span class="kw">fn </span>json_assocs(out: <span class="kw-2">&amp;mut </span>String, key: <span class="kw-2">&amp;</span>str, assocs: <span class="kw-2">&amp;</span>[Assoc]) {
+<a href=#947 id=947 data-nosnippet>947</a>  <span class="kw">let _ </span>= <span class="macro">write!</span>(out, <span class="string">",\"{key}\":["</span>);
+<a href=#948 id=948 data-nosnippet>948</a>  <span class="kw">for </span>(i, assoc) <span class="kw">in </span>assocs.iter().enumerate() {
+<a href=#949 id=949 data-nosnippet>949</a>    <span class="kw">if </span>i &gt; <span class="number">0 </span>{
+<a href=#950 id=950 data-nosnippet>950</a>      out.push(<span class="string">','</span>);
+<a href=#951 id=951 data-nosnippet>951</a>    }
+<a href=#952 id=952 data-nosnippet>952</a>    json_assoc(out, assoc);
+<a href=#953 id=953 data-nosnippet>953</a>  }
+<a href=#954 id=954 data-nosnippet>954</a>  out.push(<span class="string">']'</span>);
+<a href=#955 id=955 data-nosnippet>955</a>}
+<a href=#956 id=956 data-nosnippet>956</a>
+<a href=#957 id=957 data-nosnippet>957</a><span class="doccomment">/// The resolver's tuples: the creators (name without marks, requests, the rule that split it out, its block) with
+<a href=#958 id=958 data-nosnippet>958</a>/// their affiliations, contacts and notes, and the block's own.
+<a href=#959 id=959 data-nosnippet>959</a></span><span class="kw">fn </span>json_resolved(out: <span class="kw-2">&amp;mut </span>String, resolved: <span class="kw-2">&amp;</span>Resolved) {
+<a href=#960 id=960 data-nosnippet>960</a>  out.push_str(<span class="string">"{\"creators\":["</span>);
+<a href=#961 id=961 data-nosnippet>961</a>  <span class="kw">for </span>(i, creator) <span class="kw">in </span>resolved.creators.iter().enumerate() {
+<a href=#962 id=962 data-nosnippet>962</a>    <span class="kw">if </span>i &gt; <span class="number">0 </span>{
+<a href=#963 id=963 data-nosnippet>963</a>      out.push(<span class="string">','</span>);
+<a href=#964 id=964 data-nosnippet>964</a>    }
+<a href=#965 id=965 data-nosnippet>965</a>    out.push_str(<span class="string">"{\"name\":"</span>);
+<a href=#966 id=966 data-nosnippet>966</a>    json_str(out, <span class="kw-2">&amp;</span>creator.name);
+<a href=#967 id=967 data-nosnippet>967</a>    out.push_str(<span class="string">",\"requests\":["</span>);
+<a href=#968 id=968 data-nosnippet>968</a>    <span class="kw">for </span>(j, request) <span class="kw">in </span>creator.requests().enumerate() {
+<a href=#969 id=969 data-nosnippet>969</a>      <span class="kw">if </span>j &gt; <span class="number">0 </span>{
+<a href=#970 id=970 data-nosnippet>970</a>        out.push(<span class="string">','</span>);
+<a href=#971 id=971 data-nosnippet>971</a>      }
+<a href=#972 id=972 data-nosnippet>972</a>      json_str(out, request);
+<a href=#973 id=973 data-nosnippet>973</a>    }
+<a href=#974 id=974 data-nosnippet>974</a>    out.push_str(<span class="string">"],\"rule\":"</span>);
+<a href=#975 id=975 data-nosnippet>975</a>    json_str(out, <span class="kw-2">&amp;</span>creator.rule);
+<a href=#976 id=976 data-nosnippet>976</a>    out.push_str(<span class="string">",\"joins\":["</span>);
+<a href=#977 id=977 data-nosnippet>977</a>    <span class="kw">for </span>(j, join) <span class="kw">in </span>creator.joins.iter().enumerate() {
+<a href=#978 id=978 data-nosnippet>978</a>      <span class="kw">if </span>j &gt; <span class="number">0 </span>{
+<a href=#979 id=979 data-nosnippet>979</a>        out.push(<span class="string">','</span>);
+<a href=#980 id=980 data-nosnippet>980</a>      }
+<a href=#981 id=981 data-nosnippet>981</a>      json_str(out, join.tag());
+<a href=#982 id=982 data-nosnippet>982</a>    }
+<a href=#983 id=983 data-nosnippet>983</a>    out.push(<span class="string">']'</span>);
+<a href=#984 id=984 data-nosnippet>984</a>    <span class="kw">let _ </span>= <span class="macro">write!</span>(out, <span class="string">",\"source\":{}"</span>, creator.source);
+<a href=#985 id=985 data-nosnippet>985</a>    <span class="comment">// (its creator call's role, where a call in its block printed it: `RCreator::role`)
+<a href=#986 id=986 data-nosnippet>986</a>    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(role) = <span class="kw-2">&amp;</span>creator.role {
+<a href=#987 id=987 data-nosnippet>987</a>      out.push_str(<span class="string">",\"role\":"</span>);
+<a href=#988 id=988 data-nosnippet>988</a>      json_str(out, role);
+<a href=#989 id=989 data-nosnippet>989</a>    }
+<a href=#990 id=990 data-nosnippet>990</a>    json_assocs(out, <span class="string">"affiliations"</span>, <span class="kw-2">&amp;</span>creator.affiliations);
+<a href=#991 id=991 data-nosnippet>991</a>    json_assocs(out, <span class="string">"contacts"</span>, <span class="kw-2">&amp;</span>creator.contacts);
+<a href=#992 id=992 data-nosnippet>992</a>    json_assocs(out, <span class="string">"notes"</span>, <span class="kw-2">&amp;</span>creator.notes);
+<a href=#993 id=993 data-nosnippet>993</a>    out.push(<span class="string">'}'</span>);
+<a href=#994 id=994 data-nosnippet>994</a>  }
+<a href=#995 id=995 data-nosnippet>995</a>  out.push(<span class="string">']'</span>);
+<a href=#996 id=996 data-nosnippet>996</a>  json_assocs(out, <span class="string">"block"</span>, <span class="kw-2">&amp;</span>resolved.block);
+<a href=#997 id=997 data-nosnippet>997</a>  json_assocs(out, <span class="string">"dropped"</span>, <span class="kw-2">&amp;</span>resolved.dropped);
+<a href=#998 id=998 data-nosnippet>998</a>  out.push_str(<span class="string">",\"continued\":["</span>);
+<a href=#999 id=999 data-nosnippet>999</a>  <span class="kw">for </span>(i, lines) <span class="kw">in </span>resolved.continued.iter().flatten().enumerate() {
+<a href=#1000 id=1000 data-nosnippet>1000</a>    <span class="kw">if </span>i &gt; <span class="number">0 </span>{
+<a href=#1001 id=1001 data-nosnippet>1001</a>      out.push(<span class="string">','</span>);
+<a href=#1002 id=1002 data-nosnippet>1002</a>    }
+<a href=#1003 id=1003 data-nosnippet>1003</a>    out.push(<span class="string">'['</span>);
+<a href=#1004 id=1004 data-nosnippet>1004</a>    <span class="kw">for </span>(j, line) <span class="kw">in </span>lines.iter().enumerate() {
+<a href=#1005 id=1005 data-nosnippet>1005</a>      <span class="kw">if </span>j &gt; <span class="number">0 </span>{
+<a href=#1006 id=1006 data-nosnippet>1006</a>        out.push(<span class="string">','</span>);
+<a href=#1007 id=1007 data-nosnippet>1007</a>      }
+<a href=#1008 id=1008 data-nosnippet>1008</a>      json_str(out, line);
+<a href=#1009 id=1009 data-nosnippet>1009</a>    }
+<a href=#1010 id=1010 data-nosnippet>1010</a>    out.push(<span class="string">']'</span>);
+<a href=#1011 id=1011 data-nosnippet>1011</a>  }
+<a href=#1012 id=1012 data-nosnippet>1012</a>  out.push(<span class="string">']'</span>);
+<a href=#1013 id=1013 data-nosnippet>1013</a>  out.push_str(<span class="string">",\"policies\":["</span>);
+<a href=#1014 id=1014 data-nosnippet>1014</a>  <span class="kw">for </span>(i, (index, name)) <span class="kw">in </span>resolved.policies.iter().enumerate() {
+<a href=#1015 id=1015 data-nosnippet>1015</a>    <span class="kw">if </span>i &gt; <span class="number">0 </span>{
+<a href=#1016 id=1016 data-nosnippet>1016</a>      out.push(<span class="string">','</span>);
+<a href=#1017 id=1017 data-nosnippet>1017</a>    }
+<a href=#1018 id=1018 data-nosnippet>1018</a>    <span class="kw">let _ </span>= <span class="macro">write!</span>(out, <span class="string">"[{index},"</span>);
+<a href=#1019 id=1019 data-nosnippet>1019</a>    json_str(out, name);
+<a href=#1020 id=1020 data-nosnippet>1020</a>    out.push(<span class="string">']'</span>);
+<a href=#1021 id=1021 data-nosnippet>1021</a>  }
+<a href=#1022 id=1022 data-nosnippet>1022</a>  out.push_str(<span class="string">"]}"</span>);
+<a href=#1023 id=1023 data-nosnippet>1023</a>}
+<a href=#1024 id=1024 data-nosnippet>1024</a>
+<a href=#1025 id=1025 data-nosnippet>1025</a><span class="doccomment">/// Why a block that has no events was not rehearsed: its skip's reason; one deferred by a flush no rehearsal could run
+<a href=#1026 id=1026 data-nosnippet>1026</a>/// at (`JournalUnavailable`) and never rehearsed later, that reason; one no flush came after, `NoFlush`.
+<a href=#1027 id=1027 data-nosnippet>1027</a></span><span class="kw">fn </span>skip_reason(outcome: <span class="kw-2">&amp;</span>Outcome) -&gt; <span class="prelude-ty">Option</span>&lt;SkipReason&gt; {
+<a href=#1028 id=1028 data-nosnippet>1028</a>  <span class="kw">match </span>outcome {
+<a href=#1029 id=1029 data-nosnippet>1029</a>    Outcome::Pending =&gt; <span class="prelude-val">Some</span>(SkipReason::NoFlush),
+<a href=#1030 id=1030 data-nosnippet>1030</a>    Outcome::Skipped(reason) | Outcome::Deferred(reason) =&gt; <span class="prelude-val">Some</span>(<span class="kw-2">*</span>reason),
+<a href=#1031 id=1031 data-nosnippet>1031</a>    Outcome::Events { .. } =&gt; <span class="prelude-val">None</span>,
+<a href=#1032 id=1032 data-nosnippet>1032</a>  }
+<a href=#1033 id=1033 data-nosnippet>1033</a>}
+<a href=#1034 id=1034 data-nosnippet>1034</a>
+<a href=#1035 id=1035 data-nosnippet>1035</a><span class="kw">fn </span>bump&lt;<span class="lifetime">'a</span>&gt;(counts: <span class="kw-2">&amp;mut </span>Vec&lt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>str, usize)&gt;, reason: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>str) {
+<a href=#1036 id=1036 data-nosnippet>1036</a>  <span class="kw">match </span>counts.iter_mut().find(|(r, <span class="kw">_</span>)| <span class="kw-2">*</span>r == reason) {
+<a href=#1037 id=1037 data-nosnippet>1037</a>    <span class="prelude-val">Some</span>((<span class="kw">_</span>, count)) =&gt; <span class="kw-2">*</span>count += <span class="number">1</span>,
+<a href=#1038 id=1038 data-nosnippet>1038</a>    <span class="prelude-val">None </span>=&gt; counts.push((reason, <span class="number">1</span>)),
+<a href=#1039 id=1039 data-nosnippet>1039</a>  }
+<a href=#1040 id=1040 data-nosnippet>1040</a>}
 <a href=#1041 id=1041 data-nosnippet>1041</a>
-<a href=#1042 id=1042 data-nosnippet>1042</a>  <span class="doccomment">/// Every real flush counts, whether it reads anything or not: the epoch a clear compares (`ledger::record_clear`). No
-<a href=#1043 id=1043 data-nosnippet>1043</a>  /// block recorded yet — an early `\maketitle` before any author block — the flush still empties the queue (review
-<a href=#1044 id=1044 data-nosnippet>1044</a>  /// rev92a_r1 S2).
-<a href=#1045 id=1045 data-nosnippet>1045</a>  </span><span class="attr">#[test]
-<a href=#1046 id=1046 data-nosnippet>1046</a>  </span><span class="kw">fn </span>a_flush_that_reads_nothing_still_counts() {
-<a href=#1047 id=1047 data-nosnippet>1047</a>    reset_fm_reading();
-<a href=#1048 id=1048 data-nosnippet>1048</a>    read_at_flush().unwrap();
-<a href=#1049 id=1049 data-nosnippet>1049</a>    read_at_flush().unwrap();
-<a href=#1050 id=1050 data-nosnippet>1050</a>    <span class="macro">assert_eq!</span>(with_ledger(|ledger| ledger.flushes), <span class="number">2</span>);
+<a href=#1042 id=1042 data-nosnippet>1042</a><span class="attr">#[cfg(test)]
+<a href=#1043 id=1043 data-nosnippet>1043</a></span><span class="kw">mod </span>tests {
+<a href=#1044 id=1044 data-nosnippet>1044</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
+<a href=#1045 id=1045 data-nosnippet>1045</a>
+<a href=#1046 id=1046 data-nosnippet>1046</a>  <span class="doccomment">/// Every real flush counts, whether it reads anything or not: the epoch a clear compares (`ledger::record_clear`). No
+<a href=#1047 id=1047 data-nosnippet>1047</a>  /// block recorded yet — an early `\maketitle` before any author block — the flush still empties the queue (review
+<a href=#1048 id=1048 data-nosnippet>1048</a>  /// rev92a_r1 S2).
+<a href=#1049 id=1049 data-nosnippet>1049</a>  </span><span class="attr">#[test]
+<a href=#1050 id=1050 data-nosnippet>1050</a>  </span><span class="kw">fn </span>a_flush_that_reads_nothing_still_counts() {
 <a href=#1051 id=1051 data-nosnippet>1051</a>    reset_fm_reading();
-<a href=#1052 id=1052 data-nosnippet>1052</a>  }
-<a href=#1053 id=1053 data-nosnippet>1053</a>
-<a href=#1054 id=1054 data-nosnippet>1054</a>  <span class="doccomment">/// A block a flush deferred because no journal could open there (the flush was inside a speculative run) and no
-<a href=#1055 id=1055 data-nosnippet>1055</a>  /// later flush rehearsed says so, not "no flush after the call" (review revfms2a1_2 finding 6).
-<a href=#1056 id=1056 data-nosnippet>1056</a>  </span><span class="attr">#[test]
-<a href=#1057 id=1057 data-nosnippet>1057</a>  </span><span class="kw">fn </span>deferred_block_reports_the_journal_not_the_flush() {
-<a href=#1058 id=1058 data-nosnippet>1058</a>    <span class="macro">assert_eq!</span>(
-<a href=#1059 id=1059 data-nosnippet>1059</a>      skip_reason(<span class="kw-2">&amp;</span>Outcome::Deferred(SkipReason::JournalUnavailable)).map(SkipReason::name),
-<a href=#1060 id=1060 data-nosnippet>1060</a>      <span class="prelude-val">Some</span>(<span class="string">"journal unavailable"</span>)
-<a href=#1061 id=1061 data-nosnippet>1061</a>    );
+<a href=#1052 id=1052 data-nosnippet>1052</a>    read_at_flush().unwrap();
+<a href=#1053 id=1053 data-nosnippet>1053</a>    read_at_flush().unwrap();
+<a href=#1054 id=1054 data-nosnippet>1054</a>    <span class="macro">assert_eq!</span>(with_ledger(|ledger| ledger.flushes), <span class="number">2</span>);
+<a href=#1055 id=1055 data-nosnippet>1055</a>    reset_fm_reading();
+<a href=#1056 id=1056 data-nosnippet>1056</a>  }
+<a href=#1057 id=1057 data-nosnippet>1057</a>
+<a href=#1058 id=1058 data-nosnippet>1058</a>  <span class="doccomment">/// A block a flush deferred because no journal could open there (the flush was inside a speculative run) and no
+<a href=#1059 id=1059 data-nosnippet>1059</a>  /// later flush rehearsed says so, not "no flush after the call" (review revfms2a1_2 finding 6).
+<a href=#1060 id=1060 data-nosnippet>1060</a>  </span><span class="attr">#[test]
+<a href=#1061 id=1061 data-nosnippet>1061</a>  </span><span class="kw">fn </span>deferred_block_reports_the_journal_not_the_flush() {
 <a href=#1062 id=1062 data-nosnippet>1062</a>    <span class="macro">assert_eq!</span>(
-<a href=#1063 id=1063 data-nosnippet>1063</a>      skip_reason(<span class="kw-2">&amp;</span>Outcome::Pending).map(SkipReason::name),
-<a href=#1064 id=1064 data-nosnippet>1064</a>      <span class="prelude-val">Some</span>(<span class="string">"no flush after the call"</span>)
+<a href=#1063 id=1063 data-nosnippet>1063</a>      skip_reason(<span class="kw-2">&amp;</span>Outcome::Deferred(SkipReason::JournalUnavailable)).map(SkipReason::name),
+<a href=#1064 id=1064 data-nosnippet>1064</a>      <span class="prelude-val">Some</span>(<span class="string">"journal unavailable"</span>)
 <a href=#1065 id=1065 data-nosnippet>1065</a>    );
 <a href=#1066 id=1066 data-nosnippet>1066</a>    <span class="macro">assert_eq!</span>(
-<a href=#1067 id=1067 data-nosnippet>1067</a>      skip_reason(<span class="kw-2">&amp;</span>Outcome::Skipped(SkipReason::Empty)).map(SkipReason::name),
-<a href=#1068 id=1068 data-nosnippet>1068</a>      <span class="prelude-val">Some</span>(<span class="string">"empty"</span>)
+<a href=#1067 id=1067 data-nosnippet>1067</a>      skip_reason(<span class="kw-2">&amp;</span>Outcome::Pending).map(SkipReason::name),
+<a href=#1068 id=1068 data-nosnippet>1068</a>      <span class="prelude-val">Some</span>(<span class="string">"no flush after the call"</span>)
 <a href=#1069 id=1069 data-nosnippet>1069</a>    );
 <a href=#1070 id=1070 data-nosnippet>1070</a>    <span class="macro">assert_eq!</span>(
-<a href=#1071 id=1071 data-nosnippet>1071</a>      skip_reason(<span class="kw-2">&amp;</span>Outcome::Events {
-<a href=#1072 id=1072 data-nosnippet>1072</a>        formulas:     Vec::new(),
-<a href=#1073 id=1073 data-nosnippet>1073</a>        inks:         Box::default(),
-<a href=#1074 id=1074 data-nosnippet>1074</a>        events:       Vec::new(),
-<a href=#1075 id=1075 data-nosnippet>1075</a>        errors:       <span class="number">0</span>,
-<a href=#1076 id=1076 data-nosnippet>1076</a>        warnings:     <span class="number">0</span>,
-<a href=#1077 id=1077 data-nosnippet>1077</a>        declarations: Vec::new(),
-<a href=#1078 id=1078 data-nosnippet>1078</a>        breaks:       Vec::new(),
-<a href=#1079 id=1079 data-nosnippet>1079</a>        held:         Vec::new(),
-<a href=#1080 id=1080 data-nosnippet>1080</a>        environments: Vec::new(),
-<a href=#1081 id=1081 data-nosnippet>1081</a>        creators:     Box::default(),
-<a href=#1082 id=1082 data-nosnippet>1082</a>        unread:       <span class="prelude-val">None</span>,
-<a href=#1083 id=1083 data-nosnippet>1083</a>        unsaid:       <span class="prelude-val">None</span>,
-<a href=#1084 id=1084 data-nosnippet>1084</a>      }),
-<a href=#1085 id=1085 data-nosnippet>1085</a>      <span class="prelude-val">None
-<a href=#1086 id=1086 data-nosnippet>1086</a>    </span>);
-<a href=#1087 id=1087 data-nosnippet>1087</a>  }
-<a href=#1088 id=1088 data-nosnippet>1088</a>}
+<a href=#1071 id=1071 data-nosnippet>1071</a>      skip_reason(<span class="kw-2">&amp;</span>Outcome::Skipped(SkipReason::Empty)).map(SkipReason::name),
+<a href=#1072 id=1072 data-nosnippet>1072</a>      <span class="prelude-val">Some</span>(<span class="string">"empty"</span>)
+<a href=#1073 id=1073 data-nosnippet>1073</a>    );
+<a href=#1074 id=1074 data-nosnippet>1074</a>    <span class="macro">assert_eq!</span>(
+<a href=#1075 id=1075 data-nosnippet>1075</a>      skip_reason(<span class="kw-2">&amp;</span>Outcome::Events {
+<a href=#1076 id=1076 data-nosnippet>1076</a>        formulas:     Vec::new(),
+<a href=#1077 id=1077 data-nosnippet>1077</a>        inks:         Box::default(),
+<a href=#1078 id=1078 data-nosnippet>1078</a>        events:       Vec::new(),
+<a href=#1079 id=1079 data-nosnippet>1079</a>        errors:       <span class="number">0</span>,
+<a href=#1080 id=1080 data-nosnippet>1080</a>        warnings:     <span class="number">0</span>,
+<a href=#1081 id=1081 data-nosnippet>1081</a>        declarations: Vec::new(),
+<a href=#1082 id=1082 data-nosnippet>1082</a>        breaks:       Vec::new(),
+<a href=#1083 id=1083 data-nosnippet>1083</a>        held:         Vec::new(),
+<a href=#1084 id=1084 data-nosnippet>1084</a>        environments: Vec::new(),
+<a href=#1085 id=1085 data-nosnippet>1085</a>        creators:     Box::default(),
+<a href=#1086 id=1086 data-nosnippet>1086</a>        unread:       <span class="prelude-val">None</span>,
+<a href=#1087 id=1087 data-nosnippet>1087</a>        unsaid:       <span class="prelude-val">None</span>,
+<a href=#1088 id=1088 data-nosnippet>1088</a>      }),
+<a href=#1089 id=1089 data-nosnippet>1089</a>      <span class="prelude-val">None
+<a href=#1090 id=1090 data-nosnippet>1090</a>    </span>);
+<a href=#1091 id=1091 data-nosnippet>1091</a>  }
+<a href=#1092 id=1092 data-nosnippet>1092</a>}
 </code></pre></div></section></main></body></html>
