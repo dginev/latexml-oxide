@@ -2,35 +2,28 @@
 
 ## Threat model
 
-`latexml_oxide` is a **batch document compiler**, not a network service or
-multi-tenant process. The program is invoked from a shell or CI runner on
-locally-trusted LaTeX input that the user already chose to compile. Inputs
-come from arXiv-style preprints, user sources, or test fixtures.
+`latexml_oxide` is a **batch document compiler**, not a network service or a multi-tenant process. It runs from a
+shell or a CI runner on LaTeX input the user chose to compile: arXiv-style preprints, their own sources, test
+fixtures.
 
-What follows from that:
+- **No untrusted-network surface.** Nothing is parsed from a socket, and no `unsafe` block touches a network-derived
+  buffer.
+- **No privilege boundary.** The process holds the invoking user's UID and drops no privileges; nothing crosses a
+  sudo, setuid or capability boundary.
+- **One conversion per thread.** `cortex_worker` runs a pool of workers, but each conversion runs on exactly one OS
+  thread: the engine state is a thread-local global (CLAUDE.md design decision 0.3.2).
+- **Memory-safe by default.** The only code that is not Rust is linked C (libxml2/libxslt through the `libxml` and
+  `libxslt` crates, libkpathsea, libmarpa, mimalloc) and the external programs a conversion runs: TeX Live's
+  `texlua` (document Lua), `kpsewhich` and `pdflatex` (queries of the TeX tree), and the image converters
+  Ghostscript (`gs`, `ps2pdf`), MuPDF (`mutool`), Poppler (`pdftocairo`) and ImageMagick (`convert`/`magick`). The
+  image converters run under a timeout in their own process group (`Graphics::run_with_timeout` in
+  `latexml_post/src/graphics.rs`); `texlua` is sandboxed as the next section describes.
 
-- **No untrusted-network surface.** We do not parse data over a socket, and
-  no `unsafe` block touches a network-derived buffer.
-- **No privilege boundary.** The process holds the invoking user's UID and
-  performs no privilege drops; nothing we do crosses a sudo / setuid /
-  capability boundary.
-- **Single conversion job per process** (in practice). The `cortex_worker`
-  spawns a worker pool, but each worker conversion runs on exactly one
-  OS thread — the engine state is pinned to a thread-local global
-  (CLAUDE.md design decision 0.3.2).
-- **Memory-safe by default.** The dependency graph (libxml2 via the `libxml`
-  crate, gs/pdftocairo/mutool as subprocess CLIs, kpathsea via FFI) is
-  the only place we are not pure-Rust, and we sandbox each subprocess to a
-  short timeout (`Graphics::run_with_timeout`, see graphics.rs).
-
-The output is HTML / MathML / XML rendered from LaTeX — the *content* may
-need sanitisation downstream (CSS / `<script>` injection in author-supplied
-`\href`, `\url`, `\write18`), but those are content-policy concerns, not
-memory-safety concerns. We do not execute **document-driven** `\write18` (the
-`\immediate\write` shell-escape) at all. A **trusted binding** can run external
-commands via the `Command` API (allowed by default, opt-out
-`LATEXML_DISABLE_SHELL_ESCAPE`) — the runtime-bindings analog of shell-escape;
-see that section below.
+The output is HTML, MathML or XML rendered from LaTeX. Its *content* may need sanitising downstream (CSS or
+`<script>` injection through an author's `\href` or `\url`), but that is a content-policy concern, not a
+memory-safety one. **Document-driven** `\write18` (shell escape) never runs. A **trusted binding** can run external
+commands through the `Command` API, allowed by default and blocked by `LATEXML_DISABLE_SHELL_ESCAPE`; see the
+runtime-bindings section below.
 
 ## Untrusted input stays in the job
 
@@ -87,66 +80,40 @@ see that section below.
 
 ## `unsafe` budget
 
-Reconciled **2026-11-24**: the workspace contains **77 `unsafe {}` blocks +
-3 `unsafe impl Send/Sync` + 0 `unsafe fn` = 80 non-comment sites**, plus 3 the ratchet also counts (it counts every
-`unsafe` keyword in code): two `unsafe extern "C"` blocks (`latexml_post/src/xslt.rs`,
-`latexml_oxide/src/util/test.rs`) and one `#[unsafe(link_section)]` (`util/test.rs`) — **83 in all** (54 `unsafe {}`
-+ 3 `unsafe impl` outside test suites — including 3 `test-utils`-gated sites in
-`latexml_oxide/src/util/test.rs` — plus 23 test-only `unsafe {}` sites in
-`latexml_oxide/tests/`, `latexml_post/src/test_env.rs`, and
-`latexml_contrib/src/script_bindings/tests.rs`).
+Reconciled 2026-11-24 against the ratchet below: **83 sites** in all, counting every `unsafe` keyword in code. That
+is 77 `unsafe {}` blocks, 3 `unsafe impl Send/Sync`, 0 `unsafe fn`, two `unsafe extern "C"` blocks
+(`latexml_post/src/xslt.rs`, `latexml_oxide/src/util/test.rs`) and one `#[unsafe(link_section)]` (`util/test.rs`).
+Of the 80 blocks and impls, 57 are outside test code (3 of them in the `test-utils`-gated `util/test.rs`) and 23 are
+test-only (`latexml_oxide/tests/`, `latexml_post/src/test_env.rs`, `latexml_contrib/src/script_bindings/tests.rs`).
 
-**The count may only fall** (issue #937 Phase 0): `unsafe_sites_ratchet::unsafe_sites_only_fall`
+**The count may only fall** (issue #937). `unsafe_sites_ratchet::unsafe_sites_only_fall`
 (`latexml_oxide/tests/cluster_package_guards/unsafe_sites_ratchet.rs`, run by CI's workspace nextest) pins the sites
 per file, read from the lexed source (comments and literals excluded, `#[cfg(test)]` code counted). A change that
 removes sites lowers its file's pin (the failure prints the table to paste); one that adds a site fails it, and
-raising a pin is an exception its commit argues.
-
-Major changes since the 2026-07-20 reconciliation (55 sites):
-- **2026-11-24 (issue #937 Phases 0 and 1, first part), 106 → 80 blocks/impls (83 counting every `unsafe` keyword),
-  no behaviour change:** Unix syscalls with a safe
-  equivalent call it. `lsp_server/unix.rs` 16 → 1 (`rustix::pipe::pipe` + `OwnedFd`/`File::from` for `pipe`, `close`
-  and `from_raw_fd`; `rustix::io::{read, write}`, `rustix::event::poll`, `rustix::process::{waitpid, kill_process}`,
-  `rustix::fs::open` + `rustix::stdio::dup2_stdout` for the child's `/dev/null`; only `fork` stays). `watchdog.rs`
-  22 → 18 (`rustix::param::page_size` ×2, `rustix::fs::statvfs`). `cortex_worker/exit_report.rs` 6 → 4
-  (`File::lock`/`try_lock` for `flock`, `rustix::process::test_kill_process` for `kill(pid, 0)`). `graphics_cache.rs`
-  2 → 1 (`File::try_lock`). `private_files.rs` 1 → 0 (`rustix::process::geteuid`). `xslt.rs` 5 → 2 (its test's
-  stderr capture: `rustix::io::dup` + `rustix::stdio::dup2_stderr`). Left for later phases: `getrusage` (rustix has
-  none), `raise` (thread-directed; `kill_process(getpid())` is process-directed), `sysconf(_SC_PHYS_PAGES)`, the
-  logger's `ftruncate`/`write` on a raw fd shared with the signal path, `setsid` in `pre_exec`, the `mmap` probe.
-- **2026-11-15 (ARENAR):** `latexml_core/src/common/arena.rs` 10 blocks → 1 (category B's eight resolves and `first_bytes`'s raw read fold into one; category C is gone).
-- **2026-11-20:** removed `unsafe impl Send/Sync for Error` (2 sites; `ErrorCategory::Generic` now bounds `Box<dyn Error + Send + Sync>` so `Error` is safely `Send + Sync`), replaced the 2 `unsafe { libc::killpg }` calls in `latexml_post/src/graphics.rs` with safe `rustix::process` helpers in `latexml_core/src/watchdog.rs` (0 new `unsafe`; `graphics.rs` 3 → 1, `watchdog.rs` unchanged at 22), and added `// SAFETY:` comments to all glibc/mimalloc heap-trim & `mallinfo2` sites (`core_interface.rs`, `post.rs`, `render_workers.rs`, `streaming_restart.rs`).
-- **New OS/runtime FFI sites added since July 2026:** `latexml_core/src/watchdog.rs` (22 sites: portable RSS/RAM/disk queries), `latexml_oxide/src/lsp_server/unix.rs` (16 sites: POSIX fork/pipe/poll worker for `--server`), `latexml_oxide/src/{core_interface,heap_trim,post,streaming_restart}.rs` (7 sites: `malloc_trim`/`mi_collect`/`mallinfo2`; the cadenced trims share `heap_trim::release_free_heap`), `latexml_oxide/bin/cortex_worker/exit_report.rs` (6 sites: async-signal-safe crash/exit reporter), `latexml_post/src/xslt.rs` (5 sites), `latexml_oxide/bin/cortex_worker.rs` (4 sites: `mmap`/`raise`/`getrusage`), `latexml_oxide/src/util/test.rs` (3 sites). Every production `unsafe` block carries a `// SAFETY:` comment at the call site.
-
-Counts and exact line numbers drift as the tree changes — this is a
-point-in-time reconciliation, not a live index. Regenerate the authoritative
-enumeration with:
+raising a pin is an exception its commit argues. That table is the live per-file index; the categories below say why
+each site exists, at file and function level so they survive line drift. To list the sites by hand:
 
 ```
 rg -n 'unsafe\s*\{|unsafe impl|unsafe fn' latexml_* -g '*.rs'
 ```
 
-The categories below describe what is unavoidable, what is a deliberate
-performance trade, and what could be refactored away at some cost. Locations
-are given at the file/function level (not exact line) to stay robust against
-drift. **When this count changes, update this section** (see Audit posture).
+Still `unsafe` because no safe API covers them yet (later phases of #937): `getrusage` (rustix has none), `raise`
+(thread-directed; `kill_process(getpid())` is process-directed), `sysconf(_SC_PHYS_PAGES)`, the logger's
+`ftruncate`/`write` on a raw fd shared with the signal path, `setsid` in `pre_exec`, the `mmap` probe. Every
+production `unsafe` block carries a `// SAFETY:` comment at the call site.
 
 ---
 
-### A. `unsafe impl Send/Sync` — pragmatic single-thread markers (3 sites)
+### A. `unsafe impl Send/Sync` — single-thread markers (3 sites)
 
 | Site | Marker | Why |
 |---|---|---|
-| `latexml_core/src/state.rs` | `Send for State` | `State` holds `Rc`/`RefCell`/`libxml::tree::Node`, all `!Send`. We mark it `Send` so the harness can build a State on one thread and *transition* it to another thread before any first use. After that first use, the value is pinned to a single OS thread via `#[thread_local]` switchers (`use_main_state` / `use_std_state` / `use_sty_state`). The crate never reads a `State` from two threads concurrently. |
-| `latexml_core/src/common/store.rs` | `Send/Sync for Stored` | Same shape as `State`: `Stored` variants embed `Rc<RefCell<…>>` and libxml nodes. The marker exists *only* to satisfy `Box<dyn Error + Send + Sync>` trait bounds on error returns — error variants transitively require `Send + Sync` on every embedded type. No code actually shares a `Stored` across threads. |
+| `latexml_core/src/state.rs` | `Send for State` | `State` holds `Rc`/`RefCell`/`libxml::tree::Node`, all `!Send`. It is marked `Send` so the harness can build a `State` on one thread and move it to another before first use. From then on it is pinned to one OS thread by the `#[thread_local]` switchers (`use_main_state` / `use_std_state` / `use_sty_state`); no `State` is read from two threads at once. |
+| `latexml_core/src/common/store.rs` | `Send/Sync for Stored` | `Stored` variants embed `Rc<RefCell<…>>` and libxml nodes. The marker exists only to satisfy the `Box<dyn Error + Send + Sync>` bounds of error returns, which reach every embedded type. No code shares a `Stored` across threads. |
 
-*(Removed 2026-11-20: `latexml_core/src/common/error.rs` `Send/Sync for Error` is no longer needed now that `ErrorCategory::Generic` requires `+ Send + Sync`.)*
-
-**Could we refactor?** Only by swapping every `Rc<RefCell<…>>` in `State`,
-`Stored`, and `Error` for `Arc<Mutex<…>>`. That contradicts the
-deliberately single-threaded-per-conversion design, adds Mutex acquisition
-to the hot path, and would not improve safety — the existing markers are
-sound because the runtime guarantees the invariant by construction.
+**Could we refactor?** Only by replacing every `Rc<RefCell<…>>` in `State` and `Stored` with `Arc<Mutex<…>>`. That
+contradicts the single-threaded-per-conversion design, puts a lock on the hot path and adds no safety: the markers
+are sound because the runtime upholds the invariant by construction.
 
 ### B. Arena `resolve_unchecked` — performance carve-out (1 site)
 
@@ -163,93 +130,82 @@ while a lend is live goes to the overflow page instead of the buffer, so the buf
 `reset` inside any lend, an overflow symbol's included, panics (its `try_borrow_mut` fails). Miri checks the arena tests
 under Stacked and Tree Borrows (`tools/miri_check.sh`).
 
-**Why we accept the `unsafe`**: callgrind measured the checked `resolve`
-(`from_utf8` validation per call) at ~3% of total instruction count. The
-arena is the hottest read site in the engine — every Token-to-string
-serialisation goes through it.
-
-**Refactor option**: replace the `arena.resolve_unchecked(sym)` with `arena.resolve(sym).expect("interned")`. This is
-mechanical and eliminates the block. The cost is a re-validating `from_utf8` per lookup, ~3% of total runtime.
+**Why we accept it:** callgrind measured the checked `resolve` (a `from_utf8` validation per call) at ~3 % of the total
+instruction count; the arena is the engine's hottest read site, since every token-to-string serialisation goes
+through it. **Refactor option:** `arena.resolve(sym).expect("interned")` removes the block at that ~3 % cost.
 
 ### C. Arena re-entrant `&mut *ptr` — removed (0 sites)
 
-Removed 2026-11-15 (ARENAR). `with_arena_mut` cached a raw pointer to the interner on its outermost call, and a
-re-entrant call (a `pin` inside a `with` closure) took `&mut *ptr` while the closure held a `&str` into the buffer: a
-new string could grow and move the buffer under that `&str` (a use-after-free; Stacked Borrows rejected even a nested
-`with` or `get` under a lend). The lends now hold a shared borrow and an intern under one goes to the overflow page
-(category B above); `first_bytes`'s raw-pointer read went with it. Guard:
-`latexml_core::common::arena::tests::lend_survives_interning_many_new_strings` (failed under Miri on the old code at
-the re-entrant `&mut *ptr`).
+A re-entrant `with_arena_mut` used to take `&mut *ptr` to the interner while a closure held a `&str` into its buffer,
+so a new string could move the buffer under that `&str` (a use-after-free). The lends now hold a shared borrow and an
+intern under one goes to the overflow page (category B). Guard:
+`latexml_core::common::arena::tests::lend_survives_interning_many_new_strings` (it fails under Miri on the old code).
 
-### D. Binary entry-point FFI — env + rusage + crash-handler (~7 sites)
+### D. Process, memory and environment FFI
 
-In `latexml_oxide/bin/latexml_oxide.rs`, `latexml_oxide/bin/cortex_worker.rs`,
-and `latexml_oxide/src/util/test.rs`:
+| Sites | Calls | Why |
+|---|---|---|
+| `latexml_oxide/bin/latexml_oxide.rs` (2) | `std::env::set_var("LATEXML_INI_MODE", …)`; `libc::getrusage(RUSAGE_CHILDREN, …)` | `set_var` is `unsafe` in Rust 2024; it runs before any other thread reads the environment. `getrusage` captures child CPU time; `rustix` has no wrapper. |
+| `latexml_oxide/bin/cortex_worker.rs` (4) | `mmap`, the raw allocator, `raise`, `getrusage` | Child CPU time, and the harness tests' injected faults (an address-space reservation in debug builds, allocator exhaustion, a `SIGSEGV`). |
+| `latexml_oxide/bin/cortex_worker/exit_report.rs` (4) | `getpid`, the signal recorders | An async-signal-safe crash and exit reporter. |
+| `latexml_core/src/watchdog.rs` (18) | RSS, RAM and disk queries | Portable resource queries for the `--timeout` / `--max-memory` watchdog. |
+| `latexml_oxide/src/{core_interface,heap_trim,post,streaming_restart}.rs` (7) | `malloc_trim`, `mi_collect`, `mallinfo2` | Heap trims between phases (the cadenced trims share `heap_trim::release_free_heap`) and heap measurements. |
+| `latexml_core/src/util/logger.rs` (2) | `ftruncate`, `write` | The log mirror on a raw fd shared with the signal path. |
+| `latexml_core/src/util/pathname.rs` (1) | `set_var("TEXMFROOT", …)` | Anchors the linked libkpathsea to the ambient TeX Live tree before it initialises. |
+| `latexml_oxide/src/identity.rs` (2), `latexml_oxide/src/util/test.rs` (5) | test `set_var`/`remove_var`; `signal`, `transmute(SIG_DFL)`, `raise`, `set_var("LATEXML_RSS_CAP_BYTES", …)`, an `extern "C"` block, a `link_section` | **Test-only** (`util/test.rs` is `test-utils`-gated): environment setup, and a SIGSEGV/SIGBUS/SIGABRT trap that writes a backtrace to a per-pid file before the signal ends the test binary. |
 
-| Call | Why unsafe is unavoidable |
-|---|---|
-| `std::env::set_var("LATEXML_INI_MODE", …)` (latexml_oxide.rs) | Rust 2024 marked `set_var` `unsafe` by design — pre-thread-spawn env mutation isn't race-free in general. We call it before spawning anything. |
-| `libc::getrusage(RUSAGE_CHILDREN, …)` (latexml_oxide.rs, cortex_worker.rs) | C FFI to capture child user/sys CPU time. No stable safe wrapper in stdlib or `rustix` (1.1). |
-| `libc::signal(SIGSEGV/SIGBUS/SIGABRT, handler)`, `mem::transmute(SIG_DFL)`, `raise(sig)` (util/test.rs) | A **test-only** SIGSEGV/SIGBUS/SIGABRT trap that dumps a backtrace to a per-pid file before the signal kills the test binary. `signal(3)` is `unsafe extern "C"`; the handler-reset path transmutes `SIG_DFL` to `sighandler_t`. |
+None can be removed without losing its function until a safe API exists (the list above the categories).
 
-None can be refactored without losing the functionality (env mutation,
-rusage capture, signal-handler debugging).
+### E. Subprocess process groups, and the test environment (5 sites)
 
-### E. Subprocess process-group lifecycle + test EnvGuard in graphics (~7 sites)
+Image converters (`gs`, `pdftocairo`, `mutool draw`, `ps2pdf`, `convert`) can spawn grandchildren, which a plain
+`Child::kill()` does not reach, so each runs as a process-group leader.
 
-`latexml_post/src/graphics.rs` + `latexml_post/src/graphics_cache.rs` —
-process-group control is needed because subprocess rasterizers (`gs`,
-`pdftocairo`, `mutool draw`, `ps2pdf`, `convert`) can spawn grandchildren,
-and a plain `Child::kill()` does not reap those.
+| Sites | Call | Why |
+|---|---|---|
+| `latexml_post/src/graphics.rs` (1) | `cmd.pre_exec(|| setsid(); setpgid(0,0); prctl(…))` | Runs between `fork()` and `exec()`, so it must be async-signal-safe. `setsid(2)` makes the child a group leader so the whole group can be killed; the signalling itself is safe `rustix::process` (`watchdog.rs`). `Command::process_group` gives no `setsid` + `killpg`. |
+| `latexml_post/src/test_env.rs` (3), `latexml_post/src/graphics_cache.rs` (1) | `set_var`/`remove_var` in `EnvGuard`; one `OnceLock`-initialised test `set_var` | **Test-only.** Both hold the binary-wide `env_lock` across set, use and restore. The residual, documented in `test_env.rs`: a linked C library can call `getenv` concurrently, which no Rust lock serialises, so no correctness rests on these variables (the graphics cache takes an explicit `CachePolicy`). |
 
-| Call | Why |
-|---|---|
-| `cmd.pre_exec(|| setsid(); setpgid(0,0); prctl(…))` | Runs post-`fork()`/pre-`exec()`; must be async-signal-safe. `setsid(2)` makes the child a process-group leader so the whole group is killable (signaling itself now uses safe `rustix::process` via `watchdog.rs`). |
-| `std::env::set_var`/`remove_var` in `EnvGuard` (graphics.rs) + a test `set_var` (graphics_cache.rs) | **Test-only.** `set_var`/`remove_var` are `unsafe` in Rust 2024 (concurrent env mutation races). `EnvGuard` is used only in test setup, but the default `cargo test` harness runs a binary's tests multi-threaded and other tests read the env — so the comment documents the invariant and keeps a `FIXME` proposing `serial_test` to make it airtight. The `graphics_cache.rs` test `set_var` is `OnceLock`-serialized. |
+### F. libxslt global configuration (3 sites)
 
-`Command::process_group` was stabilised but does not give us
-`setsid + killpg`, so the FFI path stays. (The prune lock's `flock` is `File::try_lock` since 2026-11-24.)
+`latexml_post/src/xslt.rs`: a `Once`-guarded write to libxslt's process-global `xsltMaxDepth` recursion cap (1000, as
+Perl's `XML::LibXSLT->max_depth(1000)`), through an `unsafe extern "C"` static declaration resolved at link time
+(WISDOM #56 says why not the crate's binding or `dlsym`), and a read-back in a parity test. The `libxslt` crate has no
+safe setter; libxslt only reads the value when it builds a transform context, so the single guarded write cannot race
+a transform. It stops pathologically deep stylesheet recursion gracefully, as Perl does.
 
-### F. libxslt/libxml global config via FFI (2 sites)
+### G. Editor server child processes (1 site)
 
-`latexml_post/src/xslt.rs` — a `Once`-guarded write to libxslt's
-process-global `xsltMaxDepth` recursion cap (`= 1000`, a faithful port of Perl
-`XML::LibXSLT->max_depth(1000)`) through a plain `unsafe extern "C"` static
-declaration (resolved at link time; WISDOM #56 says why not the crate's binding
-or `dlsym`), plus a read-back in a parity test. (That test's capture of libxslt's fd-2 report is safe `rustix`
-`dup`/`dup2_stderr` since 2026-11-24.)
-The `libxslt` crate exposes no safe setter; libxslt only READS the value (when
-building each transform context), so the single guarded write cannot race a
-transform. Hardens the post-processor against stack-overflow/OOM on
-pathologically-deep stylesheet recursion (it aborts gracefully, like Perl).
+`latexml_oxide/src/lsp_server/unix.rs`, the off-by-default `--server` editor mode (design archived at
+`docs/archive/LSP_SERVER.md`), forks a worker child per request and drives it over a pipe. Only `fork(2)` is
+`unsafe`; `pipe`, `read`/`write`, `poll`, `waitpid`, `kill_process` and the child's `open("/dev/null")` +
+`dup2_stdout` are safe `rustix`, with the pipe ends `OwnedFd`s closed exactly once by their drop. The invariant is
+**single-threaded at fork** (asserted before `fork()`), with plain syscalls between `fork()` and the child's
+conversion.
 
-### G. LSP server POSIX child-process management (1 site)
+### H. Script-bindings context bridge (4 sites; 3 more in its tests)
 
-`latexml_oxide/src/lsp_server/unix.rs` — the **off-by-default** `--server`
-editor mode (design archived at `docs/archive/LSP_SERVER.md`) forks a worker
-child per request and drives it over a pipe. Only `fork(2)` is `unsafe`; the
-rest is safe `rustix` (since 2026-11-24, issue #937): `pipe`, `read`/`write`,
-`poll`, `waitpid`, `kill_process`, and the child's `open("/dev/null")` +
-`dup2_stdout`, with the pipe ends `OwnedFd`s (a `File` by `File::from`), each
-closed exactly once by its drop. The invariant for the fork/child window is
-**single-threaded at fork** (asserted before `fork()`) and plain syscalls
-between `fork()` and the child's conversion.
+`latexml_contrib/src/script_bindings/{engine.rs,mod.rs}`: the `runtime-bindings` (Rhai) front-end re-mints `&`/`&mut`
+references to the in-flight whatsit, document and properties from raw pointers the core publishes on a thread-local
+context stack (`WHATSIT_CTX` and its siblings) for the duration of one hook body. The pointer is the only live
+reference for the call; a `mutable` flag, checked first, gates the `&mut` sites; a call outside a hook context returns
+an error, not undefined behaviour. Provenance and lifetime are argued at `mod.rs::with_doc` (the B1 re-entrancy
+soundness note), and modelled under Miri by the test-only `latexml_core/src/runtime_bindings_reentrancy_model.rs`
+(1 site).
 
-### H. Script-bindings whatsit-pointer bridge (5 sites)
+### I. Integration tests (17 sites)
 
-`latexml_contrib/src/script_bindings/{engine.rs,mod.rs}` — the `runtime-bindings`
-(Rhai) front-end re-mints `&`/`&mut` references to the in-flight whatsit / document
-/ properties from raw pointers the core publishes onto a thread-local
-active-context stack (`WHATSIT_CTX`) for the duration of a single hook body. The
-pointer is the sole live reference for the call; a `mutable` flag (checked first)
-gates the `&mut` sites; calling outside a hook context returns an error, not UB.
-Provenance + lifetime are documented in the `mod.rs::with_doc` *B1 SOUNDNESS
-CAVEAT*.
+`latexml_oxide/tests/`: `set_var`/`remove_var` of the variables a test switches (`117_post_2gib_handoff.rs`,
+`118_streaming_split_parity.rs`), `mallinfo2` (`112_fragment_yield.rs`), `wait4` with its `rusage`
+(`perfect_kernel_batch106t.rs`), and the exit-report harness's signal and process calls
+(`cortex_worker_exit_reports.rs`).
 
-**Ships on.** `runtime-bindings` is in `latexml`'s `default`, and `make_release.sh`
-keeps it while dropping `test-utils`.
+### Runtime bindings in the shipped binaries
 
-| Artifact | Build | These 5 sites |
+**Ships on.** `runtime-bindings` is `latexml`'s only default feature, and `make_release.sh` names it explicitly;
+`test-utils` is never on in a release build.
+
+| Artifact | Build | These 4 sites |
 |---|---|---|
 | GitHub-release binaries | `--no-default-features --features runtime-bindings` | **present** |
 | `cargo install latexml` | `default` | **present** |
@@ -276,7 +232,7 @@ beside an untrusted source executes on a plain conversion and, being first,
 *overrides* the compiled binding of the same name (`article.cls.rhai` shadows the
 built-in). See `script_bindings_plan.md` §7.
 
-**Also reachable from the host TeX tree (#345, 2026-07-22).** A `<pkg>.sty.rhai`
+**Also reachable from the host TeX tree (#345).** A `<pkg>.sty.rhai`
 distributed inside a texmf tree on `$TEXINPUTS` is loaded too, so the executable
 surface is not just the document's directory: it is every directory kpathsea
 searches, including `TEXMFHOME`/`TEXMFLOCAL` and anything an operator has put on
@@ -300,8 +256,8 @@ a Rhai error. Because a `.rhai` beside an untrusted source **auto-loads** (the
 "Reachable without a flag" note above), a bundled binding could otherwise run
 arbitrary commands: **any untrusted-input deployment that ships `--features
 runtime-bindings` MUST set `LATEXML_DISABLE_SHELL_ESCAPE`, or build without the
-feature.** (`cortex_worker` forbids runtime bindings at start, of its own accord, above, so no binding of its runs a command.) The command runs to completion (no artificial per-call timeout, like
-`system()`); the overall conversion wall-time is the outer bound.
+feature.** (`cortex_worker` forbids runtime bindings at start, as above, so no binding of its runs a command.) The
+command runs to completion (no per-call timeout, like `system()`); the conversion's wall-time limit is the outer bound.
 
 ---
 
@@ -309,27 +265,19 @@ feature.** (`cortex_worker` forbids runtime bindings at start, of its own accord
 
 When adding `unsafe`:
 
-1. **Document the invariant in a `// SAFETY:` comment at the site**, not
-   in a separate file. Future readers should see the justification in
-   context. Every `unsafe {}` block must carry one (the sole documented
-   exception is the test-only `EnvGuard`, cat. E, whose comment states the
-   invariant but flags a `FIXME` that the harness doesn't yet enforce it).
-2. **Prefer category B** (perf carve-out with explicit measurement) over
-   category D/E (FFI) when both would work, because B is reversible
-   without losing functionality.
-3. **Avoid `unsafe fn`** — we have zero, intentionally. Internal helpers
-   can take an `unsafe {}` at the call site without polluting the
-   function signature.
-4. **Never add `unsafe impl Send/Sync` for a value the runtime actually
-   shares.** The five existing markers are sound because the
-   single-thread invariant is upheld by construction; new markers must
-   prove the same.
-5. **Reconcile this inventory and run Miri.** When the `unsafe` count
-   changes, refresh the budget section (the `rg` one-liner above). If you
-   touch the FFI-free pure-Rust `unsafe` (the arena/interner, cat. B),
-   run `tools/miri_check.sh` — it UB-checks those sites under Miri (CI runs
-   it as the `miri` job). The FFI sites (cat. D–H) can't run under Miri;
-   their safety rests on the documented invariants, not interpretation.
+First look for a safe API (`std`, `rustix`); the ratchet fails a new site. When one is truly needed:
+
+1. **Document the invariant in a `// SAFETY:` comment at the site**, not in a separate file, so a reader sees the
+   justification in context. Every production `unsafe {}` block carries one.
+2. **Prefer category B** (a measured performance carve-out) over FFI (categories D–H) when both would work: B can be
+   reverted without losing a function.
+3. **Avoid `unsafe fn`**; there are none, on purpose. A helper takes an `unsafe {}` at the call site instead.
+4. **Never add `unsafe impl Send/Sync` for a value the runtime actually shares.** The three existing markers are sound
+   because the single-thread invariant holds by construction; a new marker must prove the same.
+5. **Reconcile this inventory and run Miri.** When the count changes, lower the ratchet's pin and update the budget
+   section and the category. If you touch the pure-Rust `unsafe` (the arena, category B), run `tools/miri_check.sh`,
+   which checks those sites under Miri (CI runs it as the `miri` job). The FFI sites cannot run under Miri; their
+   safety rests on the documented invariants.
 
 ---
 

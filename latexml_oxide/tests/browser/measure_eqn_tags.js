@@ -4,11 +4,12 @@
 // horizontal scroll or off the page), and the formula's offset from the line's
 // centre; per table, its scroll width when it scrolls, and (issue #972) each row's top, height and
 // formulas' vertical extent, and the lefts of its content cells (not the pads or the tag), which an aligned display
-// shares across its rows. Notes are opened, as on hover.
+// shares across its rows; its computed overflow-x, a vertical scrollbar on it or a box above it, and whether its
+// formulas reach into the next table cell. Notes are opened, as on hover.
 //
 // Usage:   node measure_eqn_tags.js <file-url> [width,...]
 //          (Chrome; with LATEXML_FIREFOX=<firefox executable> Firefox as well)
-// Output:  JSON { "<engine>/<width>": { eqns: [{ id, scrollWidth, clientWidth, rows, lines }] } }.
+// Output:  JSON { "<engine>/<width>": { eqns: [{ id, scrollWidth, clientWidth, rows, lines, overflowX, vbar, spill }] } }.
 //          Exit 2 on error.
 const pw = require('playwright-core');
 
@@ -68,7 +69,20 @@ const pw = require('playwright-core');
                 math: ms.length ? [Math.min(...ms.map((m) => m.top)), Math.max(...ms.map((m) => m.bottom))] : null,
               };
             });
-            return { id: t.id, scrollWidth: t.scrollWidth, clientWidth: t.clientWidth, rows, lines };
+            // Issue #972: a scroll container on the way up with a vertical scrollbar (a display's, or a note's), and
+            // the formulas' visible right edge (clipped where an ancestor clips) past their cell into the next one.
+            let vbar = false;
+            let right = Math.max(...Array.from(t.querySelectorAll('math')).map((m) => R(m).right));
+            const cell = t.closest('td, .ltx_td');
+            for (let e = t; e && e !== document.body; e = e.parentElement) {
+              const c = getComputedStyle(e);
+              if (/auto|scroll/.test(c.overflowY) && e.scrollHeight > e.clientHeight) vbar = true;
+              if (c.overflowX !== 'visible' && (!cell || cell.contains(e))) right = Math.min(right, R(e).right);
+            }
+            const next = cell && cell.nextElementSibling;
+            const spill = !!next && right > R(cell).right + 0.5 && right > R(next).left + 0.5;
+            return { id: t.id, scrollWidth: t.scrollWidth, clientWidth: t.clientWidth, rows, lines,
+              overflowX: getComputedStyle(t).overflowX, vbar, spill };
           });
           return { eqns };
         });

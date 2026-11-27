@@ -7,13 +7,19 @@
 %   (it fell into the first column and wrapped); in a note or minipage, with no ltx_inline-block/ltx_td above, the
 %   span table must be a block too (as a CSS table it put the \intertext in its first column: a footnote's 44 px
 %   against 23 in Firefox).
-% oracle:  pdflatex 0 errors; every display set as outside the cells (rows stacked, aligned at &, centred in the cell)
+%   Grow (the last tabular): a display in a box is no scroll container, which drew a phantom vertical scrollbar in
+%   Chrome (MathML text boxes reach past their ink, w3c/mathml-core#349) and in Firefox under a lowered \raisebox;
+%   the box grows to the display's min-content width instead.
+% oracle:  pdflatex 0 errors; every display set as outside the cells (rows stacked, aligned at &, centred in the cell);
+%   the overfull display runs 93pt into the next column (Overfull \hbox), which the browser widens instead
 % engines: SERSTREAM (f84f9e2abcb) and Perl 0.8.8 = the same HTML; in Chrome/Firefox the in-cell rows side by side
 % expect:  in the browser each display's rows stacked, an aligned display's cells at the same x in every row, the
 %   in-cell aligned/align* column offsets those of the same display outside (within the UA's 1px td padding); a
 %   gather*'s rows at least the outside pitch, their formulas apart; an \intertext one line, as tall as outside (in a
-%   \parbox, a footnote and a theorem in a minipage)
-% status:  RED (SERSTREAM) -> GREEN (fix-972-display-math-in-pcolumn); guards
+%   \parbox, a footnote and a theorem in a minipage); no display or note a scroll container with a vertical
+%   scrollbar, no in-cell display computed overflow-x auto, the overfull one not over the next cell
+% status:  RED (SERSTREAM) -> GREEN (fix-972-display-math-in-pcolumn); the scroll box RED (41e6e2212bd) -> GREEN
+%   (GROWBASE); guards
 %   cluster_cli::browser_render_eqn_rows_in_cells, xslt::witnessed_css_delta::equation_rows_in_inline_context_delta_stays_present
 \documentclass{article}
 \usepackage{amsmath}
@@ -144,4 +150,9 @@ x &= 1 \\
 \intertext{and some intertext here}
 xx &= 3
 \end{align}\end{thm}\end{minipage}}
+
+\begin{tabular}{|p{2cm}|l|}
+Overfull: \[ a_1+a_2+a_3+a_4+a_5+a_6+a_7+a_8 = b \] & next \\ \hline
+Lowered: \[ x = \raisebox{-1ex}{$y$} + z \] & next \\ \hline
+\end{tabular}
 \end{document}

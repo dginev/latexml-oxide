@@ -88,7 +88,7 @@ A body is a closure. It receives what Perl's `sub` receives in `@_`, in that ord
 |---|---|---|
 | `DefMacro` | `sub { my ($gullet, $x) = @_; … }` | `\|gullet, x\| …` (each argument is `Tokens`; return `Tokens` or a string of TeX) |
 | `DefPrimitive` | `sub { my ($stomach, $x) = @_; … }` | `\|stomach, x\| …` |
-| `DefConstructor` | `sub { my ($document, $x, %props) = @_; … }` | `\|document, x\| …` |
+| `DefConstructor` | `sub { my ($document, $x, %props) = @_; … }` | `\|document, x, props\| …` (`props`, Perl's `%props` as a map, may be left off) |
 | `DefParameterType` reader | `sub { my ($gullet) = @_; … }` | `\|gullet\| gullet.readArg()` |
 | `reversion`, `sizer` | `sub { my ($whatsit, …) = @_; … }` | `\|whatsit, …\| …` |
 | `beforeDigest`, `beforeDigestEnd` | `sub { my ($stomach) = @_; … }` | `\|stomach\| …` (or `\|\| …`) |
@@ -96,9 +96,9 @@ A body is a closure. It receives what Perl's `sub` receives in `@_`, in that ord
 | `properties` | `sub { my ($stomach, $x) = @_; … }` | `\|stomach, x\| …` (each argument as `whatsit.getArg` gives it) |
 
 A closure is read as the Perl form when it declares the handle **and** every argument (`|gullet, x|`). With fewer
-parameters it is the older form (arguments only, as strings), which still works this release and Warns
-`Warning:deprecated` naming the fix; name an unused argument with a leading underscore (`|gullet, _x|`). A macro with
-no parameters takes `|gullet|` and reads its own arguments (`gullet.readArg()`, `gullet.readOptional()`), as Perl's
+parameters it is the older form (arguments only, as strings), which works in 0.8.0, is removed in the next release,
+and Warns `Warning:deprecated` naming the fix; name an unused argument with a leading underscore (`|gullet, _x|`).
+A macro with no parameters takes `|gullet|` and reads its own arguments (`gullet.readArg()`, `gullet.readOptional()`), as Perl's
 `$gullet->readArg`. A primitive's or a parameter type's `afterDigest` receives the stomach alone, as Perl's (there
 is no whatsit). A definition's `beforeDigest` or `afterDigest` hook returns what Perl's does: `()` (end it with
 `return;`), a box (`Digest(…)`) or an array of boxes, which are kept: a `beforeDigest`'s before the command's own
@@ -139,7 +139,8 @@ external program a binding runs (`Command(…).output()`) is named by an `Info:s
 
 ## Migrating from the deprecated names
 
-Each old name still works this release and Warns `Warning:deprecated` once per binding load, naming its replacement:
+Each old name works in 0.8.0 and is removed in the next release; it Warns `Warning:deprecated` once per binding load,
+naming its replacement:
 
 | old | new |
 |---|---|
@@ -147,15 +148,15 @@ Each old name still works this release and Warns `Warning:deprecated` once per b
 | `lookup_value(k)` | `LookupValue(k)` |
 | `AssignMeaning(cs, "\\other")` (a string meaning) | `Let(cs, other[, scope])`, or `AssignMeaning(T_CS(cs), LookupDefinition(other))` |
 | `whatsit` (the global), `whatsit.argString(n)`, `whatsit.propertyString(k)` | the hook's `whatsit` argument, `whatsit.getArg(n)`, `whatsit.getProperty(k)` |
-| `document.getProperty(k)` in a constructor body | the body's trailing properties map |
+| `document.getProperty(k)`, `document.getProperties()` in a constructor body | the body's trailing properties map |
 | `DefAccent(cs, combining, standalone, true)` | `DefAccent(cs, combining, standalone, #{below: true})` |
 | a body naming only its arguments (`\|x\|`) | the Perl form (`\|gullet, x\|`) |
 | a hook naming only its whatsit or arguments (`afterDigest: \|whatsit\|`, `properties: \|x\|`) | the Perl form (`\|stomach, whatsit\|`, `\|stomach, x\|`) |
 | `value == "string"`, `() == ""` | `ToString(value) == "string"`, `defined(value)` / `!!value` |
-| a digest hook or a primitive body ending in a value that is not a box (a string, a number) | `return;` (or the box) |
+| `value.is_empty()`, `value.len()` (of the string a value used to be) | `!defined(value)` or `ToString(value).is_empty()`, `ToString(value).len()` |
+| a digest hook or a primitive body ending in a value that is not a box (a string, a number; `\|\| RefStepCounter("c")`) | end it with `return;`, or return the boxes it should print |
 | `CounterValue(c) + 1`, `0 < CounterValue(c)`, `roman(CounterValue(c))` (an int before) | `CounterValue(c).valueOf() + 1` — it returns a Number, as Perl's |
 | `document.setAttribute(key, value)` (the current node) | `document.setAttribute(node, key, value)`, e.g. `document.getNode()` |
-| a `DefPrimitive` body whose last value is not a box (`\|\| RefStepCounter("c")`) | end it with `return;`, or return the boxes it should print |
 
 `node.getAttribute(k)` of an absent attribute is `()`, as XML::LibXML's undef: test it with `defined(…)`.
 

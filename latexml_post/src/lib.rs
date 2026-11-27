@@ -20,10 +20,18 @@
 //!
 //! # Modules
 //!
-//! - [`document`] — `PostDocument`: XML wrapper with ID management, XPath, caching
-//! - [`processor`] — `Processor` trait: abstract base for all post-processors
-//! - [`math_processor`] — `MathProcessor` trait: abstract base for math converters
-//! - [`radix`] — Radix utilities for ID generation (a,b,...,z,aa,ab,...)
+//! - Infrastructure: [`document`] (`PostDocument`: the XML, ids, XPath), [`processor`] (the `Processor` trait),
+//!   [`math_processor`], [`object_db`] (cross-page data), [`radix`] (id suffixes), [`diag`] (diagnostics).
+//! - Structure: [`scan`], [`split`], [`stream_split`] (the split of a core result on disk), [`crossref`],
+//!   [`make_bibliography`], [`make_index`], [`collector`].
+//! - Math: [`mathml`] (Presentation and Content MathML), [`unicode_math`], [`open_math`], [`tex_math`], [`xmath`],
+//!   [`lex_math`], [`unicode`].
+//! - Images: [`graphics`] and [`graphics_cache`], [`latex_images`], [`math_images`], [`picture_images`], [`svg`].
+//! - Output: [`xslt`], [`writer`], [`manifest`] (the EPUB package), [`pack`] (zip and EPUB bundles), [`extract`]
+//!   (`--whatsout=fragment` and `math`), [`resource_cache`] and [`sqlite_store`] (the `LaTeXML-oxide.cache` names),
+//!   [`schema_docs`].
+//!
+//! The `latexml` crate's `post` module drives this pipeline for a conversion.
 
 // Crate-wide diagnostic emission macros
 // (`Error!`, `Warn!`, `Info!`,

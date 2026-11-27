@@ -51,7 +51,7 @@ Without an address-space limit neither is needed. The fleet sets both for its ch
 
 | Variable | Values | Default | Effect |
 |---|---|---|---|
-| `LATEXML_FORMAT_CACHE` | directory | `$XDG_CACHE_HOME/latexml-oxide/formats`, else `~/.cache/latexml-oxide/formats`, else the temp directory | Where the format built for your TeX tree is cached. It is built once, on the first conversion with a tree the release's embedded dumps were not built from. |
+| `LATEXML_FORMAT_CACHE` | directory | `$XDG_CACHE_HOME/latexml-oxide/formats`, else `~/.cache/latexml-oxide/formats`, else `latexml-oxide-formats-<uid>` in the temp directory | Where the format built for your TeX tree is cached. It is built once, on the first conversion with a tree the release's embedded dumps were not built from. |
 | `LATEXML_DUMP_DIR` | directory | unset | Also look here for `plain.YYYY.dump.txt` / `latex.YYYY.dump.txt`. |
 | `LATEXML_DUMP_PATH` | file | unset | An explicit LaTeX dump, used when it matches this TeX tree. |
 | `LATEXML_PLAIN_DUMP_PATH` | file | unset | An explicit plain TeX dump. |
@@ -81,10 +81,10 @@ Without an address-space limit neither is needed. The fleet sets both for its ch
 
 | Variable | Values | Default | Effect |
 |---|---|---|---|
-| `LATEXML_TELEMETRY_OUT` | file | none | `latexml_oxide` only. Append one JSON line of timings and counts per conversion; the same as `--telemetry-out`. |
+| `LATEXML_TELEMETRY_OUT` | file | none | `latexml_oxide` only. Append one JSON line of timings and counts per conversion; the same as `--telemetry-out`. The record's host is `HOSTNAME`, else `/etc/hostname`. |
 | `LATEXML_SOURCE_MAP` | presence | off | `latexml_oxide` only. The same as `--source-map`: `data-sourcepos` attributes in the output. |
 | `LATEXML_DISABLE_SHELL_ESCAPE` | presence | allowed | Rhai bindings may not run external commands (builds with runtime bindings). `cortex_worker` loads no runtime binding at all, so it needs no such setting. |
-| `SOURCE_DATE_EPOCH` | Unix seconds | the clock | Fixes `\today`, `\time` and the log banner's time (UTC), and the member times of `--format=zip`/EPUB output, for reproducible builds. |
+| `SOURCE_DATE_EPOCH` | Unix seconds | the clock | Fixes `\today`, `\time` and the log banner's time (UTC), and the member times of a `.zip` destination (`--whatsout=archive`) and of EPUB output, for reproducible builds. |
 | `NO_COLOR` | presence | colour on a terminal | No colour codes on stderr. |
 | `TMPDIR` (`TMP`/`TEMP` on Windows) | directory | the system default | Scratch files and temporary caches. |
 
@@ -141,8 +141,7 @@ binding in any build, nor do the children it spawns (each re-executes its `main`
 | `CORTEX_WORKER_IO_TIMEOUT_SECS` | seconds > 0 | 120 | How long a worker waits on a dead or wedged dispatcher before giving up that exchange. |
 | `CORTEX_HARNESS_RAM_HEADROOM_PCT` | percent, 10-100 | 85 | pericortex's worker-count clamp to RAM; `cortex_worker` never calls it, so it has no effect there (`--workers` and the memory governor size the fleet). |
 
-The Docker entrypoint reads `WORKERS` and
-`PROFILE` (`ar5iv` or `generic`).
+The Docker entrypoint reads `WORKERS` and `PROFILE` (`ar5iv` or `generic`).
 
 ## Diagnosing and measuring (dev)
 

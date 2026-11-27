@@ -647,29 +647,29 @@ foreignObject {
    above, so consecutive displays sat about three times as far apart; the table supplies the skip. */
 .ltx_eqn_table .ltx_eqn_cell > mjx-container[display="true"],
 .ltx_eqn_table .ltx_eqn_cell > .MathJax_Display { margin-top:0; margin-bottom:0; }
-/* latexml-oxide local delta (not in vanilla LaTeXML.css; issue #533): display
-   math is a `.ltx_eqn_table { display:table; width:100% }` whose center-pad
-   cells stretch it to full width. Inside a width-constrained box — a `p{}` cell
-   / \parbox / minipage (.ltx_inline-block) or a table cell (.ltx_td) — the
-   table's intrinsic width exceeds the box, and since `overflow` is ignored on
-   `display:table`, the equation ESCAPES the cell and scatters across the page
-   (lualatex keeps it in the cell). Re-box it as a block scroll container so it
-   stays within the cell and scrolls horizontally when too wide — the same
-   containment `.ltx_listing` already uses for code. Normal full-width display
-   math keeps `display:table` (untouched); this rule fires only under a
-   constrained ancestor. Witness: the issue #533 longtable `p{}` cell with an
-   enumerate whose items hold `\[\begin{aligned}…\end{aligned}\]`. */
+/* latexml-oxide local delta (not in vanilla LaTeXML.css; issue #533): display math is a `display:table` that escaped
+   a box (`p{}` cell, \parbox, minipage: .ltx_inline-block; a cell: .ltx_td), as `overflow` is ignored on a table; it is
+   a block within the box. Witness: the issue #533 longtable `p{}` cell, `\[\begin{aligned}…\]` in enumerate items. */
 .ltx_inline-block .ltx_eqn_table,
-.ltx_td .ltx_eqn_table { display:block; overflow-x:auto; max-width:100%; }
+.ltx_td .ltx_eqn_table { display:block; max-width:100%; }
+/* No scroll box (#972): MathML text boxes reach past their ink (w3c/mathml-core#349), so it drew phantom vertical
+   scrollbars. The box grows to fit its display, the centring pads giving way, a \parbox table float too (2001.00529:
+   else its centred table runs off the page's left edge); a note scrolls a too-wide display. Witnesses 1805.09247,
+   2001.11999, 1805.00336, 2001.03096, 2001.04829. */
+:is(.ltx_inline-block, .ltx_inline-logical-block, .ltx_minipage, .ltx_parbox):has(.ltx_eqn_table) {
+  min-width:min-content; }
+:is(.ltx_inline-block, .ltx_inline-logical-block, .ltx_minipage, .ltx_parbox, .ltx_td) :is(.ltx_eqn_center_padleft, .ltx_eqn_center_padright) {
+  min-width:0; }
+.ltx_note_content:has(.ltx_eqn_table) { overflow-x:auto; }
 /* latexml-oxide local delta (issue #972): in an inline context (a p{} cell, \parbox, minipage, note) the XSLT writes a
    display's table as spans, each tbody a classless span. As an inline box it gave every row an anonymous table of its
    own, so an aligned display's rows ran side by side, their columns apart; they are row groups. A tabular's cell
    padding also reached the display's cells (`ltx_td` too) and widened the gap at each `&`. */
 span.ltx_eqn_table > span:not([class]) { display:table-row-group; }
-/* The span form is always the block scroll box above: a note or a minipage (`ltx_inline-logical-block`) is neither
+/* The span form is always the block above: a note or a minipage (`ltx_inline-logical-block`) is neither
    `ltx_inline-block` nor `ltx_td`, and as a CSS table it put an \intertext row in its first column (Firefox: a
    footnote's wrapped, 44 px against 23 for one line; a minipage's at 375 px, 48 against 25). */
-span.ltx_eqn_table { display:block; overflow-x:auto; max-width:100%; }
+span.ltx_eqn_table { display:block; max-width:100%; }
 .ltx_tabular .ltx_eqn_cell { padding:0; }
 /* The span cells get the UA's 1px <td> padding: Chrome sizes a block <math> to its ink, so rows sharing the table
    without it touched (a gather* row pitch 11 px, 13 outside). CSS tables ignore colspan, so a row of one spanning

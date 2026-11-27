@@ -181,8 +181,8 @@ RUN set -ex; for f in /tmp/THIRD-PARTY-NOTICES.cli /tmp/THIRD-PARTY-NOTICES.work
 # CorTeX fleet worker (--target worker)
 # ===========================================================================
 # build-worker: cortex_worker carries `required-features = ["cortex"]`, so the
-# feature set is MANDATORY. `--no-default-features` drops test-utils; the worker
-# uses compiled-in bindings, so `runtime-bindings` is unused. Profile
+# feature set is MANDATORY. `--no-default-features` drops `runtime-bindings`: the
+# worker uses compiled-in bindings only. Profile
 # `maxperf-cortex` = maxperf's real levers (opt-level=3, fat LTO, CGU=1) but with
 # `panic = "unwind"` restored — MANDATORY, because the worker relies on
 # `catch_unwind` to isolate per-paper panics (maxperf's abort would crash the
@@ -247,8 +247,7 @@ ENTRYPOINT ["cortex-worker-entrypoint.sh"]
 # ===========================================================================
 # General-purpose CLI (--target cli) — DEFAULT target (last stage)
 # ===========================================================================
-# build-cli: the distribution recipe (drop test-utils, keep runtime-bindings,
-# maxperf) — the same feature set as the GitHub-release binaries.
+# build-cli: the distribution recipe (`runtime-bindings`, maxperf) — the same feature set as the GitHub-release binaries.
 #
 # `runtime-bindings` is ON for END-USER CONVENIENCE: drop a `<pkg>.sty.rhai` beside
 # a document to add or override a binding, no toolchain, no rebuild.

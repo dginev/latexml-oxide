@@ -1,382 +1,208 @@
 # Release Criteria — what must be true before a public 1.0
 
-The externally-readable "what must be true before we ship" contract, kept
-*separate* from [`SYNC_STATUS.md`](../SYNC_STATUS.md) (the engine-sync /
-parity log). Two non-competing missions:
-
-- **Parity** (SYNC_STATUS): match Perl on the arXiv corpus, no
-  error-downgrading. Compass: ~99.4% on the 100k warning subset.
-- **Release-readiness** (here): speed, RAM, size, portability, licensing,
-  safety, downstream tooling.
-
-Origin: the 2026-05-24 codex "public-quality gaps" pass + a code-checked
-review. Corrected positions are stated, not the original where it was wrong
-(see §10).
+The release-readiness contract: speed, RAM, size, portability, licensing, safety and downstream tooling. Parity with
+Perl LaTeXML on the arXiv corpus, without downgrading errors, is the other mission; its worklist is
+[`SYNC_STATUS.md`](../SYNC_STATUS.md). This file states each criterion and where it stands; §10 records positions
+that correct the original review this list grew from.
 
 ## 1. Gates
 
-Each row carries the date of its figure. The test count is not copied here (it
-drifts with every PR): the gate is a green `cargo nextest run --workspace` on the
-release commit, and the tag's `ci` and `windows-ci` jobs re-run it on every
-platform before `release` publishes. The corpus / tail-latency rows still carry
-their 2026-05-24 values.
+The test count is not copied here (it changes with every PR): the gate is a green `cargo nextest run --workspace` on
+the release commit, which the tag's `ci` and `windows-ci` jobs rerun on every platform before `release` publishes.
 
 | Gate | Current | Target |
 |---|---|---|
-| `cargo nextest run --workspace` | green on the release commit (Linux + macOS via `release.yml` `ci`, Windows via `windows-ci`) | green |
-| `cargo clippy --all-targets` | 0 | 0 |
-| Corpus (100k warning subset) | ~99.39% / ~99.44% rerun-adj | no regression; gate cohorts separately (`no-problem`, warning subset, random full sample, hard package/class) |
-| Tail latency / RSS | mean bands only ([`PERFORMANCE.md`](../performance/PERFORMANCE.md)); **P50/P90/P99 + RSS dashboard + growth gate built** (`tools/telemetry_dashboard.py`) | §5 — capture a fleet baseline + wire `--gate` into release (absolute red lines gate today) |
-| Binary size (`maxperf`) | x86_64 Linux tarball **20.7 MB** at 0.7.6 (the GitHub asset size; 17.8 MB at 0.7.4); the stripped binary is checked against the 64 MB gate by both Linux release legs (`release.yml` "binary size budget") | budget + growth alarm — **§2 DONE** (release.yml 64 MB gate) |
-| OS/arch | `x86_64-linux-gnu` + **`aarch64-unknown-linux-gnu`** + `aarch64-apple-darwin` + `x86_64-apple-darwin` + **`x86_64-pc-windows-msvc`** + **GHCR container (amd64/arm64)** | staged ladder — §3 (aarch64-linux + container DONE 2026-07-09; Windows DONE 2026-07-14; next rung: musl) |
-| Toolchain | **nightly**, **deliberately floating** (`rust-toolchain.toml`, 2026-07-03) | keep floating; pin a dated nightly only if release-day reproducibility is needed (#143) |
-| License inventory | **inventoried + gated** ([`LICENSE_INVENTORY.md`](LICENSE_INVENTORY.md)); NOTICE + README + release-workflow wiring landed | **§4/§7 DONE** (F4 landed; F1 pericortex relicensed CC0-1.0, 2026-07-13) |
-| Safety | local-CLI model ([`SAFETY.md`](SAFETY.md)); URI-passthrough posture documented | remaining §6 items (CSP/sandboxing/`--hardened`) — **1.0-scoped, not a 0.7.4 blocker** |
+| `cargo nextest run --workspace` | green on the release commit (Linux and macOS through `release.yml`'s `ci`, Windows through `windows-ci`) | green |
+| `cargo clippy --all-targets` | 0 warnings | 0 |
+| Corpus | full arXiv, November 2026: 98.1 % of 2,962,950 articles error-free; 100k warning subset, 2026-05-24: ~99.39 % (~99.44 % rerun-adjusted) | no regression; gate cohorts separately (no-problem, warning subset, random full sample, hard package/class) |
+| Tail latency / RSS | P50/P90/P99 + RSS dashboard and growth gate built (`tools/telemetry_dashboard.py`); its absolute red lines gate today | §5: commit a fleet baseline and wire `--gate --baseline` into the release |
+| Binary size (`maxperf`) | x86_64 Linux tarball 24.1 MB at 0.8.0-rc5 (GitHub asset size; 20.7 MB at 0.7.6); both Linux legs check the stripped binary against a 64 MB budget | budget + growth alarm (§2) |
+| OS/arch | `x86_64-unknown-linux-gnu`, `aarch64-unknown-linux-gnu`, `aarch64-apple-darwin`, `x86_64-apple-darwin`, `x86_64-pc-windows-msvc`, and the GHCR images (CLI amd64/arm64, worker amd64) | the §3 ladder; next rungs: a macOS universal binary, then musl |
+| Toolchain | nightly, floating in `rust-toolchain.toml`; each release pins one dated nightly and one `Cargo.lock` for every leg and attaches both (`BUILD-INPUTS`, `Cargo.lock`) | reproducible per release (#143) — met |
+| License inventory | inventoried and gated ([`LICENSE_INVENTORY.md`](LICENSE_INVENTORY.md)); notices assembled by the release workflow | §4 — met |
+| Safety | local-CLI model ([`SAFETY.md`](SAFETY.md)); Lua sandbox, archive and stylesheet containment in place | the remaining §6 items, scoped to 1.0 |
 
 ## 2. Binary size (issue #101)
 
-Get attribution right first — it's **code, not data**:
-- `.text` ≈ **36.7 MB** (`size -A`) — measured when the binary was 45 MB; the
-  shipped 0.7.4 binary is 53.5 MB, so **re-derive this before acting on it**
-  (the lever below already says to re-run `cargo bloat` first). Dominated by the compile-time
-  binding pool (`latexml_package::pool::*::load_definitions`; ~56% of
-  `.text` in #101's 2023 `cargo bloat`, grown since).
-- Dumps are **not** a driver: already gzip-embedded (DEP-12,
-  `embedded_dumps.rs`), ~7.6 MB text → **~870 KB `.rodata`**, lazy-inflated
-  at bootstrap. "Gzip the dumps" is *done* — don't re-propose it.
+The size is **code, not data**:
+- `.text` was ≈ 36.7 MB (`size -A`) when the binary was 45 MB; re-derive it with `cargo bloat` before acting. The
+  compile-time binding pool (`latexml_package::pool::*::load_definitions`) dominates: ~56 % of `.text` in #101's
+  2023 `cargo bloat`, and grown since.
+- The dumps are not a driver: they are embedded gzipped (DEP-12, `embedded_dumps.rs`), ~7.6 MB of text in ~870 KB
+  of `.rodata`, inflated lazily at bootstrap. Do not re-propose gzipping them.
 
-Levers: (1) re-run `cargo bloat` to refresh attribution before acting;
-(2) attack binding-pool codegen density (relates to #93); (3) `maxperf`
-already does fat-LTO + `codegen-units=1` + strip + `panic=abort` +
-`--no-default-features`. Gate: CI prints size + top `.text` contributors,
-fails on budget breach (§7).
+Levers: (1) re-run `cargo bloat` to refresh the attribution; (2) make the binding pool's code denser (relates to
+#93). `maxperf` already does fat LTO, `codegen-units=1`, strip and `panic=abort`. Gate: the release legs print the
+size and fail past the 64 MB budget (§7).
 
-## 3. Portability staging (issues #217, #143)
+## 3. Portability (issues #217, #143)
 
-Current: **five** self-contained published platform builds — `x86_64-linux-gnu`
-and `aarch64-unknown-linux-gnu` (both Ubuntu 22.04 / glibc 2.35),
-`aarch64-apple-darwin` (macOS Apple Silicon), `x86_64-apple-darwin`
-(macOS Intel) and `x86_64-pc-windows-msvc` (stage 5 below) — each embedding our XSLT/CSS/JS/schema/dumps, host TeX Live +
-system libs ([`RELEASING.md`](RELEASING.md) → "Release asset strategy").
-A native binary is never cross-OS (ELF vs Mach-O), so it is one artifact
-per `(OS, arch)` triple, built on its own native runner — not
-cross-compiled. Ladder — each stage needs a smoke corpus + size gate +
-dependency check:
+Five self-contained platform builds ship, each embedding our XSLT/CSS/JS/schema/dumps and needing only TeX Live on the
+host ([`RELEASING.md`](RELEASING.md) → "Release asset strategy"):
 
-1. Debian/Ubuntu x86_64 (current).
-2. aarch64 Linux — **DONE 2026-07-09**: `release.yml`'s `build-linux-arm64`
-   leg (`ubuntu-22.04-arm`) publishes a tarball + `arm64` `.deb`, a full
-   build+gate peer of the x86_64 leg (static libxml2/libxslt/kpathsea, `ldd`
-   self-contained check, conversion + embedded-resource smokes, 64 MB size
-   budget).
-3. Container image (reproducible TeX Live + graphics) — **DONE 2026-07-09**:
-   `.github/workflows/docker.yml` publishes two images from ONE unified root
-   `Dockerfile` (`--target cli`/`--target worker`, DRY shared deps): the
-   general-purpose CLI `ghcr.io/dginev/latexml-oxide` (multi-arch amd64+arm64,
-   native runners) and the CorTeX fleet worker
-   `ghcr.io/dginev/latexml-oxide/cortex-worker` (amd64), on `release: published`.
-   Each BUILDS its own binary + regenerates dumps against its own TeX Live; the
-   CLI embeds them behind a runtime-stage self-test.
-4. macOS (#217) — **DONE 2026-06-08**
-   ([`archive/PORTABILITY_MACOS_PROBE_2026-06-07.md`](../archive/PORTABILITY_MACOS_PROBE_2026-06-07.md)):
-   the full `cargo test --tests --workspace` suite is **green on `macos-15`
-   arm64** (brew-texlive gating leg: 1390 passed / 0 failed / 0 crashes,
-   43 binaries). MacTeX ships NO libkpathsea → covered by **kpathsea 0.3.0
-   (crates.io)** subprocess-`kpsewhich` fallback. The macOS-only
-   worker-thread Node corruption was a **use-after-free of a
-   libxml2-merged text node** — detected via a read of the freed node
-   (benign on glibc, exposed by macOS libmalloc); fixed in
-   `open_text_internal` with a pointer-identity merge check (WISDOM #58)
-   and audited for sibling sites. crates.io release + dep swap, README
-   install matrix, and the gating CI job all **done**. **Release asset
-   automated 2026-06-08**: `release.yml`'s `build-macos` job builds the
-   `aarch64-apple-darwin` tarball natively on `macos-15` (subprocess-
-   `kpsewhich`, host brew libxml2/libxslt, same embedded TL-window dumps)
-   and the Linux `release` job publishes it alongside the Linux assets.
-   **Intel macOS (`x86_64-apple-darwin`) published** via the
-   `build-macos-intel` leg (`macos-15-intel`, `MACOSX_DEPLOYMENT_TARGET=10.13`
-   for older Intel Macs) — arm64 binaries don't run on Intel, so it is a
-   separate native leg (not a cross-compile / `lipo` universal, which is
-   revisited only when GitHub sunsets the Intel runner ~Fall 2027).
-5. **Windows — DONE (0.7.4, 2026-07-14).** `x86_64-pc-windows-msvc`, a single
-   fully-static `.exe`: in-process `build_from_source` libkpathsea + `+crt-static`
-   (imports only core OS DLLs), with `select_kpaths` picking the in-process
-   backend on TeX Live and subprocess `kpsewhich` on MiKTeX at runtime. All
-   former blockers cleared — the `libmarpa-sys` cc-crate port, vcpkg-static
-   libxml2/libxslt, and the `graphics*.rs` cfg(unix) delegate paths. Full record:
-   [`WINDOWS_COMPATIBILITY_PLAN.md`](WINDOWS_COMPATIBILITY_PLAN.md). **musl**
-   remains deferred.
+| Target | Runner | Notes |
+|---|---|---|
+| `x86_64-unknown-linux-gnu`, `aarch64-unknown-linux-gnu` | `ubuntu-22.04`, `ubuntu-22.04-arm` | glibc 2.35+; tarball and `.deb` each |
+| `aarch64-apple-darwin` | `macos-15` | the arch CI's macOS suite runs on |
+| `x86_64-apple-darwin` | `macos-15-intel` | `MACOSX_DEPLOYMENT_TARGET=10.13`; GitHub retires the Intel runner ~Fall 2027 |
+| `x86_64-pc-windows-msvc` | `windows-latest` | one fully static `.exe` (`+crt-static`, in-process libkpathsea built from source); [`WINDOWS_COMPATIBILITY_PLAN.md`](WINDOWS_COMPATIBILITY_PLAN.md) |
+| GHCR images | native amd64/arm64 | `ghcr.io/dginev/latexml-oxide` (CLI) and `…/cortex-worker`, from one root `Dockerfile` |
 
-**Self-contained libxml2/libxslt — DONE (shipped 0.7.1).** 0.7.0 dynamically
-linked the build host's libxml2/libxslt SONAME (`libxml2.so.2` on the
-ubuntu-22.04 runner), which loads on libxml2-2.x systems but **NOT** on
-libxml2 ≥ 2.14 (SONAME bumped `.so.2` → `.so.16`). 0.7.1 **static-links
-libxml2 + libxslt + libexslt** (PIC, source-built) on top of libkpathsea —
-the kpathsea playbook: `tools/build_static_libxml.sh` +
-`tools/build_static_kpathsea.sh` build the PIC `.a` archives (libxml2-dev's
-`libxml2.a` plus source-built `libxslt`/`libexslt`, which ship no packaged
-`.a`), and the `LIBXML2_STATIC` / `LIBXSLT_STATIC` build.rs branches in the
-`libxml`/`libxslt` forks emit the `static=` link. `release.yml` runs both
-scripts on the Linux and macOS legs, and a CI step asserts the binary carries
-**no** dynamic libxml2/libxslt/kpathsea. Since #261 the transitive `-lz`/`-lgcrypt`
-are not linked *at all* rather than left dynamic: libxml2 is built
-`--without-zlib --without-lzma --without-icu` and libxslt `--without-crypto`, so
-the net closure is libm (plus libiconv on macOS). Net: only the glibc family remains
-dynamic → "any glibc-2.35+ Linux, any libxml/libxslt version," and the `.deb`
-declares no libxml2 SONAME dependency (RELEASING.md). **Portability gate** (a
-static `latexml_oxide --version` running on this dev box, which is on
-libxml2.so.16 / 2.15.2 where a 0.7.0 `.so.2` binary fails to load): met by the
-0.7.1 release build. The **default dev build stays dynamic** (`cargo build`
-with no static env) — static is the release-only path.
+A native binary is never cross-OS, so each `(OS, arch)` triple is its own artifact, built on its own native runner,
+not cross-compiled. Each rung needs a smoke conversion, the size gate and a dependency check.
 
-**Nightly (#143):** required (`thread_local`). For a long-lived tool, a
-reproducibility risk — pin a known-good nightly, track stabilization.
-"Carries our resources" ≠ "portable across platforms."
+**Self-contained linkage.** Every leg statically links libxml2, libxslt, libexslt and libkpathsea (source-built PIC
+archives: `tools/build_static_libxml.sh`, `tools/build_static_kpathsea.sh`; on Windows vcpkg's static libxml2/libxslt
+and `kpathsea_sys`'s `build_from_source`), and a release step asserts with `ldd`/`otool`/`dumpbin` that none of them
+stays dynamic. libxml2 is built `--without-zlib --without-lzma --without-icu` and libxslt `--without-crypto`, so only
+the platform runtime stays dynamic (glibc and libm on Linux; libSystem and libiconv on macOS). The binary therefore
+runs on any glibc-2.35+ Linux whatever its libxml2 SONAME (2.14 moved `.so.2` → `.so.16`), and the `.deb` declares no
+libxml2 dependency. At runtime `select_kpaths` may still choose the subprocess `kpsewhich` backend (MiKTeX, or MacTeX,
+which ships no libkpathsea); the library stays linked either way. The default dev build (`cargo build`) links
+dynamically; static linking is the release path only.
 
-**Editor-distributed binary is a stricter bar than the CLI.** The ladder
-above allows "host system libs" — fine for the CLI/sandbox, where the user
-(or the .deb deps) provides libxml2/libxslt. A binary shipped *inside a
-VSCode extension* cannot assume that, especially on macOS/Windows: it must
-be **self-contained** re: libxml2/libxslt (static/vendored). That stricter
-bar — and the editor distribution model it gates — is §11.
+**Nightly (#143).** Required (`#![feature(thread_local)]`). Each release resolves one dated nightly in its `prepare`
+job and builds every leg with it; `rust-toolchain.toml` keeps floating for development.
 
-## 4. License audit (blocker)
+Deferred: musl; a macOS `lipo` universal binary (due when the Intel runner retires). The editor-distribution bar
+(§11) is met by these same assets.
 
-Crates are `CC0`, but the binary ships more. Full inventory:
-[`LICENSE_INVENTORY.md`](LICENSE_INVENTORY.md) (living). **Analysis complete
-2026-07-09**; posture is clean, all outward-facing items now landed (F1/F4
-closed 2026-07-13):
+## 4. License audit
 
-- **Rust deps — DONE (gated).** `deny.toml` allow-list + cargo-deny CI;
-  `cargo deny --all-features check licenses` → *licenses ok*. Distributed
-  feature set clean too (the `pericortex` no-license warning is **resolved
-  2026-07-13** — pericortex now declares `license = "CC0-1.0"` upstream, inventory F1).
-- **Embedded assets — DONE.** CSS/XSLT/RelaxNG/DTD/Profiles + one JS are Perl
-  LaTeXML (NIST public domain ≈ CC0); the other JS is ours (CC0). No notice
-  burden.
-- **Graphics tools — DONE (confirmed subprocess-only).** `gs`/`mutool`/
-  `pdftocairo`/`convert` are `Command::new` only, never linked → their (A)GPL
-  does not propagate.
-- **Dumps (TeX-Live-derived) — POSITION APPROVED + LANDED 2026-07-09.**
-  Gitignored (repo ships none); embedded in the release binary at build time,
-  derived from LaTeX kernel (LPPL 1.3c) + plain TeX (Knuth). Owner-approved:
-  CC0 scoped to our source; `THIRD-PARTY-NOTICES` (assembled by
-  `tools/gen_notices.sh` = hand-authored §1-4 + cargo-about §5) attributes the
-  kernel/plain-TeX + linked libs + Rust crates; README License section scopes
-  the claim (inventory §C).
-- **Remaining: none outward-facing.** F4 (gen_notices wired into `release.yml`'s
-  `assemble THIRD-PARTY-NOTICES` step + the asset-inventory gate, §7) and F1
-  (`pericortex` relicensed MIT → CC0-1.0, 2026-07-13) are both landed.
+Our crates are CC0, but the binary ships more. The living inventory is [`LICENSE_INVENTORY.md`](LICENSE_INVENTORY.md);
+every item below is in place.
 
-## 5. Tail latency & RSS
+- **Rust dependencies:** the `deny.toml` allow-list and cargo-deny in CI (`cargo deny --all-features check licenses`).
+- **Embedded assets:** the Perl LaTeXML CSS/XSLT/RelaxNG and JavaScript are public domain (NIST, ≈ CC0); the
+  exceptions (the W3C/Mozilla SVG schema, rustdoc's Ayu palette, the bundled `ar5iv.css`, MIT) carry their notices.
+- **Graphics and TeX tools:** run as subprocesses only (`Command::new`), never linked, so their (A)GPL terms do not
+  propagate.
+- **Dumps (TeX Live-derived):** not in git; embedded at release build time, derived from the LaTeX kernel (LPPL 1.3c)
+  and plain TeX (Knuth). The CC0 claim covers our source; `THIRD-PARTY-NOTICES` (`tools/gen_notices.sh`: the
+  hand-authored sections plus the cargo-about appendix) attributes the kernel, plain TeX, the linked libraries and the
+  Rust crates, and the README scopes the claim.
+- **Release wiring:** the `notices` job assembles and content-gates the notices once for every leg (§7).
 
-The public-quality risk is outliers, not the mean: 60s+ timeout/fatal tail;
-math-bocage ambiguity explosions
-([`archive/MATH_AMBIGUITY_AUDIT_2026-05-21.md`](../archive/MATH_AMBIGUITY_AUDIT_2026-05-21.md));
-4 GiB alloc failures; high-RSS package loads; ar5iv limit creep hiding
-over-evaluation. Build a rolling dashboard from `telemetry.jsonl.gz`
-(schema exists, [`TELEMETRY.md`](../performance/TELEMETRY.md)): P50/P90/P99 wall+RSS, top
-fatal/timeout/ambiguity witnesses. Gate "no unbounded growth" *separately*
-from "mean beats Perl."
+## 5. Tail latency and RSS
 
-**Status (2026-07-09) — dashboard + gate BUILT.**
-[`tools/telemetry_dashboard.py`](../../tools/telemetry_dashboard.py) reads a
-`telemetry.jsonl.gz` (or a dir of output ZIPs) and reports P50/P90/P99/max
-wall + peak-RSS, the phase that drives the P99, and the top slowest / highest-RSS
-/ fatal-timeout-error / math-ambiguity witnesses. `--gate` enforces the
-"no unbounded growth" contract — **absolute red lines** (peak RSS → the 4 GiB
-alloc wall via `--rss-redline-mb`; P99 wall → the timeout via
-`--wall-redline-frac`; any hard-timeout job) plus an **optional regression check**
-vs a committed baseline (`--baseline`, `--update-baseline`, `--tolerance`) — and
-it is deliberately independent of any mean/Perl comparison. Complements the
-phase-attribution rollup [`tools/perf_phase_summary.py`](../../tools/perf_phase_summary.py).
-**Remaining:** capture a representative fleet-run baseline
-(`--update-baseline`), commit it, and wire `--gate --baseline` into the release
-job. The absolute red lines already gate today without a baseline.
+The public-quality risk is outliers, not the mean: the 60 s+ timeout and Fatal tail, math-parse ambiguity explosions
+([`archive/MATH_AMBIGUITY_AUDIT_2026-05-21.md`](../archive/MATH_AMBIGUITY_AUDIT_2026-05-21.md)), 4 GiB allocation
+failures, high-RSS package loads, and ar5iv limits creeping to hide over-evaluation. Gate "no unbounded growth"
+separately from "the mean beats Perl".
 
-**Live aggregation view — hosted in cortex (2026-07-10).** The standalone
-`telemetry_dashboard.py` is the CI/release *gate*; the *live monitoring* twin
-now lives in the cortex frontend (its natural home), reading each run's
-`telemetry.json` straight out of the persisted result archives: `GET
-/telemetry/<corpus>/<service>` (+ `/api/telemetry/...`) — outcome mix, wall/RSS
-P50/P90/P99/max, per-phase P99, and slowest/highest-RSS witnesses (cortex PR
-#399). Fed by the containerized worker built from the unified `Dockerfile`
-(`--target worker`); validated 2026-07-10 over the sandbox-arxiv-2605/2606
-reruns (baked dumps drop the bootstrap phase P99 to 0; math_parse + digest are
-the phase tails).
+**Built.** [`tools/telemetry_dashboard.py`](../../tools/telemetry_dashboard.py) reads a `telemetry.jsonl.gz` (or a
+directory of output ZIPs; schema in [`TELEMETRY.md`](../performance/TELEMETRY.md)) and reports P50/P90/P99/max wall
+time and peak RSS, the phase that drives the P99, and the slowest, highest-RSS, fatal/timeout/error and
+math-ambiguity witnesses. `--gate` enforces absolute red lines (peak RSS against the 4 GiB wall,
+`--rss-redline-mb`; P99 wall against the timeout, `--wall-redline-frac`; any hard timeout) and an optional
+regression check against a committed baseline (`--baseline`, `--update-baseline`, `--tolerance`). The phase rollup is
+[`tools/perf_phase_summary.py`](../../tools/perf_phase_summary.py). The live view runs in the cortex frontend
+(`GET /telemetry/<corpus>/<service>` and `/api/telemetry/...`), reading each run's `telemetry.json` from its result
+archives.
 
-**Empirical "no unbounded growth" evidence (2026-07-10, 60,469 docs).** The §5
-worry — the 60s+ timeout tail and the 4 GiB alloc wall — is **measured, not
-assumed**, and controlled: **zero timeouts across 60k docs** (wall median 3.07s,
-P99 34.9s, max 149s; only 120 papers / 0.20% over 60s, 4 over 120s, none at
-180s), and **peak RSS median 0.94 / P99 2.05 / max 4.52 GiB — exactly one doc
-over 4 GiB**, 53 (0.09%) over 3 GiB. The residual worst-case tail is a *reliability*
-cluster (digest-runaway fatals, `STABILITY_WITNESSES.md` Cluster H), not
-unbounded growth. This is direct go-signal evidence for the release gate; capture
-it as the committed `--gate --baseline` snapshot (the "Remaining" item above).
-Full phase budget + tail analysis: `ARXIV_PERFORMANCE.md` "Corpus-wide phase
-budget 2026-07-10".
+**Measured (2026-07-10, 60,469 documents).** No timeouts; wall median 3.07 s, P99 34.9 s, max 149 s (120 papers,
+0.20 %, over 60 s; 4 over 120 s; none at 180 s); peak RSS median 0.94, P99 2.05, max 4.52 GiB (one document over
+4 GiB, 53 or 0.09 % over 3 GiB). The worst tail is a reliability cluster (digest-runaway Fatals,
+[`STABILITY_WITNESSES.md`](../performance/STABILITY_WITNESSES.md)), not unbounded growth. Phase budget:
+[`ARXIV_PERFORMANCE.md`](../performance/ARXIV_PERFORMANCE.md), "Corpus-wide phase budget 2026-07-10".
 
-## 6. Safety: distribution profile
+**Remaining:** capture a representative fleet baseline (`--update-baseline`), commit it, and wire `--gate --baseline`
+into the release job.
 
-[`SAFETY.md`](SAFETY.md)'s local-CLI batch-compiler model is honest but not
-the public-deployment story (arXiv-scale = hostile input, *published*
-HTML/SVG). Don't change converter behavior during parity work — *document*
-what's safe where:
-- **URIs:** `\href{javascript:…}` / data URLs pass through today. Keep
-  sanitization out of the parity converter; offer an optional output pass /
-  downstream responsibility.
-- CSP for published HTML/SVG; archive/path-traversal + temp-dir
-  invariants; subprocess sandboxing beyond timeout+pgroup-kill; whether a
-  `--hardened`/`--public-html` profile should diverge from parity (cf. §8).
+## 6. Safety: the distribution profile
 
-## 7. CI must prove artifact properties
+[`SAFETY.md`](SAFETY.md) describes a local batch compiler; a public deployment (arXiv-scale hostile input, published
+HTML/SVG) needs more. In place: document Lua runs sandboxed; archive entries, `00README` main files, image copies and
+stylesheet copies stay inside their directories; `cortex_worker` never loads a runtime binding. Do not change converter
+behaviour for this during parity work; document what is safe where. Open, for 1.0:
+- **URIs:** `\href{javascript:…}` and data URLs pass through. Keep sanitising out of the parity converter: an optional
+  output pass, or the downstream consumer's responsibility.
+- A CSP for published HTML/SVG; sandboxing the image converters beyond a timeout and a process-group kill; whether a
+  `--hardened` / `--public-html` profile should diverge from parity (cf. §8).
 
-`CI.yml` is RAM-bounded for the test suite (correct). Release-artifact
-properties are proven in `release.yml` (release-only, so per-PR CI cost is
-unaffected). Status:
+## 7. CI proves the artifact's properties
 
-**Landed (`release.yml`, Linux job):**
-- **Size budget** (§2) — `binary size budget` step, 64 MB cap, runaway-growth
-  alarm.
-- **Embedded-resource smoke** — `embedded-resource smoke` step re-runs a
-  conversion with `resources/` renamed away (dumps/XSLT/RelaxNG/CSS must come
-  from the embedded tables); complements `tests/001_single_binary_smoke.rs`
-  (which only isolates cwd) and the functional conversion smoke inside `verify
-  self-contained binary`.
-- **License / notices** (§4 F4) — `assemble THIRD-PARTY-NOTICES` runs
-  `tools/gen_notices.sh`; the notices are bundled in the tarball + `.deb`
-  (`/usr/share/doc`) and published as a release asset.
-- **No dynamic C-lib** — `verify self-contained binary` (`ldd` gate, since
-  0.7.1).
+`CI.yml` stays RAM-bounded for the test suite. The artifact's properties are proven in `release.yml`, so per-PR CI
+cost is unaffected:
+- **Size budget** (§2): 64 MB, a runaway-growth alarm, on both Linux legs.
+- **Self-contained:** `ldd`/`otool`/`dumpbin` assert that no bundled C library stays dynamic.
+- **Embedded resources and a real conversion:** on all five legs, `tools/release_smoke.sh` converts `hello.tex` with
+  the shipped binary and `resources/` moved aside; `cluster_cli::single_binary_smoke` isolates the working directory.
+- **Version and signature:** `--version` prints the tag and commit; both macOS legs verify the ad-hoc signature.
+- **Notices:** the `notices` job runs `tools/gen_notices.sh` and `tools/audit_vendored_natives.py`; the notices ship in
+  every archive, both `.deb`s (`/usr/share/doc`) and as a release asset.
 
-**Already in `CI.yml` `lint` job (per-PR, cheap):** `cargo clippy
---all-targets`; `cargo-deny` (license allow-list + RUSTSEC advisories).
+Per-PR in `CI.yml`'s `lint` job: `cargo clippy --all-targets`, and cargo-deny (license allow-list and RUSTSEC
+advisories).
 
-**Deferred / out of scope:**
-- `strace` no-own-disk-read — the rename-`resources/` smoke covers the
-  functional equivalent; the structural `strace` proof is lower-value, deferred.
-- Graphics-tool matrix (with/without `gs`/`mutool`/`pdftocairo`, asserting
-  graceful degradation via the missing-tool hint) — future.
-- **Corpus smoke + telemetry — OUT OF SCOPE for CI** (too expensive, decided
-  2026-07-09). Run out-of-band on the sandbox fleet, not the release workflow.
+Deferred: an `strace` proof of no own-resource disk reads (the moved-aside smoke covers it functionally); a
+graphics-tool matrix (with and without `gs`/`mutool`/`pdftocairo`, asserting graceful degradation). Out of scope for
+CI: the corpus smoke and telemetry, which run on the sandbox fleet (too expensive for a workflow).
 
 ## 8. Surpass-Perl policy
 
-Many open clusters are *shared* failures, not Rust regressions. Rule:
-- Both fail on malformed/UB source → **SHARED-FAILURE**, no fix.
-- Both fail only because a binding could read an arg under a more correct
-  parameter type without harming valid content → documented **surpass-Perl**
-  fix allowed.
-- Visible output-shape change beyond error recovery → needs an
-  [`OXIDIZED_DESIGN.md`](../parity/OXIDIZED_DESIGN.md) entry + witness comparison.
+Many open clusters are failures Perl shares, not Rust regressions:
+- Both fail on malformed or undefined source → shared failure, no fix.
+- Both fail only because a binding could read an argument with a more correct parameter type without harming valid
+  content → a documented surpass-Perl fix is allowed.
+- A visible change of output shape beyond error recovery → an [`OXIDIZED_DESIGN.md`](../parity/OXIDIZED_DESIGN.md)
+  entry and a witness comparison.
 - Report the opportunity upstream where practical.
 
-"Do not downgrade errors" stays non-negotiable. Existing cases:
-`memory/project_rust_supersedes_perl.md` + SYNC_STATUS "Permanent ignores."
+"Do not downgrade errors" is non-negotiable. The surpass-Perl cases taken so far are entries in
+[`OXIDIZED_DESIGN_DIVERGENCES.md`](../parity/OXIDIZED_DESIGN_DIVERGENCES.md).
 
 ## 9. Source provenance — the beyond-Perl showcase (issues #47, #92)
 
-**Prioritized showcase**, designed in
-[`SOURCE_PROVENANCE.md`](../performance/SOURCE_PROVENANCE.md). Live source ↔ preview over a
-shared locator substrate, with **two clients**: the **ar5iv-editor**
-(CodeMirror + live HTML preview web UI) and a **VSCode extension** (webview
-preview), both syncing identically on every edit. The same substrate gives
-accurate linting (#47) and Rust-compiler-grade author error messages (#92)
-for free. Perl chased this for a decade (brucemiller/LaTeXML#101) and never
-cracked the accuracy; Rust's data model removes the blocker (provenance
-out-of-band, `Token` stays 8 bytes).
+Designed in [`SOURCE_PROVENANCE.md`](../performance/SOURCE_PROVENANCE.md): live source ↔ preview over a shared locator
+substrate, with two clients, the ar5iv-editor (CodeMirror and a live HTML preview) and a VSCode extension (a webview
+preview), both syncing on every edit. The same substrate gives accurate linting (#47) and compiler-grade author error
+messages (#92). Perl pursued this for a decade (brucemiller/LaTeXML#101); keeping provenance out of band, with
+`Token` at 8 bytes in the default build, removes the blocker.
 
-- **Tier A** (near-term, parity-neutral): plumb the existing box-level
-  `Locator` to DOM nodes behind `--source-map` → the editor sync + better
-  error locators. `Locator::to_attribute()` already emits the right form.
-- **Tier B** (the linting payoff): out-of-band token/char expansion
-  provenance — **do not widen `Token`**.
-- **Process model:** a persistent server/LSP with warm state + debounced
-  incremental reconversion — the editor backend, not optional.
+- **Tier A** (near-term, parity-neutral): carry the box-level `Locator` to DOM nodes behind `--source-map`, for the
+  editor sync and better error locators. `Locator::to_attribute()` already emits the right form.
+- **Tier B** (the linting payoff): out-of-band token and character expansion provenance. The default `Token` stays
+  8 bytes; the opt-in `token-locators` feature widens it.
+- **Process model:** a persistent server with warm state and debounced incremental reconversion — the editor
+  backend.
 
-Design pull on current work: don't discard locator info where keeping it is
-cheap and parity-neutral. #199 (HTML-dialect RelaxNG) gives the preview a
-validation contract.
+On current work: do not discard locator information where keeping it is cheap and parity-neutral. #199 (the
+HTML-dialect RelaxNG) gives the preview a validation contract.
 
-## 10. Corrections to the codex pass
+## 10. Positions that correct the original review
 
-- **#191 (CLI) was PARTIAL at the time of this codex pass; it was closed 2026-07-09 via #276** — — `clap` 4 derive adopted; 2026-07-09
-  wired every flag whose engine feature already works (`--strict`,
-  `--includestyles`, `--debug`, `--navtoc`, plus batch 2: `--timestamp`,
-  `--icon`, `--nographicimages`, `--numbersections`, `--mathparse` +
-  `--invisibletimes`/`--defaultresources`). `--validate` postponed to the next
-  release (gated on a rust-libxml RelaxNG publish). Remaining = `--profile`
-  (+`--mode`) and the feature-tied long tail (mathimages, svg, jats,
-  crossref/index, daemon) — kept as **hard parse errors, not stubbed** (option C).
-  `--output` is an intentional non-goal. Full detail in
-  [`WISDOM.md`](../parity/WISDOM.md) #83.
-- **Single-binary smoke test exists** (`tests/001_single_binary_smoke.rs`) —
-  §7 is promote/extend, not create.
-- **BibTeX is ported** (Phases 1–8, [`archive/BIBTEX_PORT_PLAN_2026-06-20.md`](../archive/BIBTEX_PORT_PLAN_2026-06-20.md));
-  the stale SYNC_STATUS "unported" line is fixed. B1–B6 / Phase 4–5 polish is
-  product correctness; `--nobibtex` is not the default escape hatch.
-- **#47 is not purely post-1.0** — Tier A is near-term.
+- **CLI (#191, closed by #276).** `clap` 4 derive; every flag whose engine feature works is wired. `--validate` waits
+  on a rust-libxml RelaxNG release. `--profile`/`--mode` and the feature-tied long tail (math images, SVG, JATS,
+  crossref/index, daemon) are hard parse errors, not stubs; `--output` is a non-goal
+  ([`WISDOM.md`](../parity/WISDOM.md) #83).
+- **A single-binary smoke test exists** (`cluster_cli::single_binary_smoke`); §7 extends it.
+- **BibTeX is ported** ([`archive/BIBTEX_PORT_PLAN_2026-06-20.md`](../archive/BIBTEX_PORT_PLAN_2026-06-20.md));
+  `--nobibtex` is not the default escape hatch.
+- **#47 is not purely post-1.0:** Tier A (§9) is near-term.
 
 ## 11. Editor distribution — the rust-analyzer model (issues #47, #92, #217, #143)
 
-§9's "persistent server/LSP" is the editor backend; this section is **how it
-reaches every VSCode user (and beyond)**, modeled on rust-analyzer: a native
-LSP server binary + a thin client extension. The bundling mechanism is the
-easy part — **Stage 1 (a self-contained cross-platform binary) is the gate**,
-an engine/release-pipeline effort, not extension code.
+§9's persistent server reaches editors the way rust-analyzer does: a native server binary and a thin client
+extension.
 
-**Architecture (correct, already in place).** `latexml_oxide --server` — the
-warm-preamble, fork-isolated, resource-guarded JSON-RPC/LSP server — *is* the
-server; the extension only spawns + supervises it. Two invariants to keep:
-- **Editor-agnostic.** Diagnostics/linting (#47) and author errors (#92) must
-  ride **standard LSP** (`publishDiagnostics`), so the same server serves
-  Neovim/Emacs/Helix/Zed, not just VSCode. Only the *preview* is a custom
-  request (`latexml/convert`) + a VSCode webview — rust-analyzer likewise
-  mixes standard LSP with custom requests.
-- **Supervised subprocess, never in-process.** A runaway must not take down
-  the editor, so the per-conversion **timeout + RAM (`--timeout` /
-  `--max-memory`) + fork-reap + same-document preemption guards are mandatory**
-  (built; shared `latexml_core::watchdog::Watchdog`). This is *why* the engine
-  stays an out-of-process binary rather than an in-process N-API `.node`
-  addon — an addon in the extension host can't be killed without killing
-  VSCode. (`.node` ≠ WASM; WASM is Stage 4.)
+**Architecture (in place).** `latexml_oxide --server`, the warm-preamble, fork-isolated, resource-guarded
+JSON-RPC/LSP server, *is* the server; the extension only spawns and supervises it. Two invariants:
+- **Editor-agnostic.** Diagnostics and linting (#47) and author errors (#92) ride standard LSP
+  (`publishDiagnostics`), so the same server serves Neovim, Emacs, Helix and Zed. Only the preview is a custom request
+  (`latexml/convert`) and a VSCode webview.
+- **A supervised subprocess, never in-process.** A runaway must not take the editor down, so the per-conversion
+  timeout and memory limit (`--timeout`, `--max-memory`), fork-reaping and same-document preemption are mandatory
+  (built, on the shared `latexml_core::watchdog::Watchdog`). This is why the engine stays an out-of-process binary and
+  not an N-API `.node` addon, which cannot be killed without killing VSCode.
 
-**Stage 1 — self-contained, cross-platform binary (the pacing item).**
-Nothing reaches macOS/Windows until `latexml_oxide` *builds and runs* there
-**without the user installing system libs**:
-- **Static/vendor the C deps** (libxml2, libxslt) so the shipped binary is
-  self-contained — the real work; §3's "host system libs" allowance does not
-  hold for an editor-bundled binary.
-- **CI release matrix**: {linux, macOS, windows} × {x64, arm64} (a subset of
-  §3's ladder), each emitting a self-contained `latexml_oxide`; per-target
-  size + smoke + *no-host-lib-dependency* gate (extend §7).
-- **kpathsea / TeX Live stays out of scope** (CLAUDE.md) and is *expected* on
-  the user's machine; when it is absent the editor must **degrade with a clear
-  diagnostic, not crash** — we do not vendor a TeX tree.
+| Stage | Deliverable | Reaches | Status |
+|---|---|---|---|
+| 0 | `--server` + guards + thin client | Linux desktop (PATH or download) | done |
+| 1 | a self-contained binary per platform: static C libraries, per-target size, smoke and no-host-library gates | all desktop OSes | met by the five release assets (§3); a Windows arm64 build is not made |
+| 2 | platform-specific VSIXes (`vsce package --target linux-x64 \| win32-x64 \| darwin-arm64 \| …`), with a download-on-activation fallback (fetch the matching release asset into the extension's storage, checksum-verified, cached) and a PATH or explicit-path override (`ar5iv.latexmlOxidePath`, works today) | all desktop VSCode, turnkey | open |
+| 3 | standard-LSP diagnostics and linting (#47, #92) | all LSP editors | open |
+| 4 | a `wasm32` server, for the web extension host (vscode.dev, github.dev), which has no subprocess | web editors | separate track: [`WASM_COMPATIBILITY_AUDIT_2026-09-03.md`](WASM_COMPATIBILITY_AUDIT_2026-09-03.md), [`WASM_COMPATIBILITY_PLAN.md`](WASM_COMPATIBILITY_PLAN.md) |
 
-**Stage 2 — turnkey distribution (once Stage 1 exists).**
-- **Platform-specific VSIXes** (`vsce package --target linux-x64 | win32-x64 |
-  darwin-arm64 | …`), each bundling the matching self-contained binary; the
-  Marketplace auto-serves the right one → single install, works immediately,
-  no download, no path. The turnkey end-state.
-- **Download-on-activation fallback** for unlisted platforms / a universal
-  VSIX — fetch the matching release asset into extension global storage,
-  checksum-verified, cached (mirrors the ar5iv-editor `managedServer`
-  pattern). The near-term interim while the platform-VSIX matrix is built.
-- **PATH / explicit-path override** for devs (works today via
-  `ar5iv.latexmlOxidePath`).
-
-**Stage 4 — WASM (web-only).** The native model fails *only* in the web
-extension host (vscode.dev, github.dev): no subprocess. That alone needs a
-`wasm32` server build — hard for the same libxml2/libxslt reason — and is a
-separate, later track (see technical audit in [`WASM_COMPATIBILITY_AUDIT_2026-09-03.md`](WASM_COMPATIBILITY_AUDIT_2026-09-03.md) and actionable execution roadmap in [`WASM_COMPATIBILITY_PLAN.md`](WASM_COMPATIBILITY_PLAN.md)).
-**Not** required for "all desktop VSCode users."
-
-| Stage | Deliverable | Reaches |
-|---|---|---|
-| 0 (done) | `--server` + guards + thin client | linux desktop (PATH / download) |
-| 1 | self-contained cross-platform binary matrix | all desktop OSes — **pacing item** |
-| 2 | platform-specific VSIXes (+ download fallback) | all desktop VSCode, turnkey |
-| 3 | standard-LSP diagnostics/linting (#47/#92) | all LSP editors |
-| 4 | WASM server | web / browser editors |
+TeX Live stays out of scope and is expected on the user's machine; where it is absent the editor must degrade with a
+clear diagnostic, not crash. We do not bundle a TeX tree.

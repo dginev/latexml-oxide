@@ -1,6 +1,6 @@
 # The ar5iv-css release whose dist/ar5iv.min.css release builds embed as the bundled `ar5iv.css`
 # (docs/release/RELEASING.md "The bundled ar5iv.css"). Read by tools/fetch_ar5iv_css.sh, which fetches the file at
 # the commit (immutable; the tag is the name it is known by) and checks the SHA-256. Bump all three lines together.
-AR5IV_CSS_TAG=0.9.5
-AR5IV_CSS_COMMIT=cf36205fde48350d2f525d871150f42b7739d104
-AR5IV_CSS_SHA256=de280c95aa089f8a7c616ab947ba0009b51a4614fe506a89ffb18977257420b3
+AR5IV_CSS_TAG=0.9.6
+AR5IV_CSS_COMMIT=bb987236b9b527f8366c656acea0e0a16e853db3
+AR5IV_CSS_SHA256=666538fd765fec00fce8780614b5ea0f04225937d571c424dd3ef2e8d052a7e6

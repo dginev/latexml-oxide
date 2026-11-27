@@ -6,11 +6,10 @@
 [![ar5iv: 98%](https://img.shields.io/badge/ar5iv-98%25-brightgreen.svg)](https://ar5iv.labs.arxiv.org)
 [![arXiv](https://img.shields.io/badge/arXiv-2605.16562-b31b1b.svg)](https://arxiv.org/abs/2605.16562)
 
-latexml-oxide turns LaTeX sources into accessible web documents.
-It is used in the [ar5iv Lab](https://ar5iv.labs.arxiv.org) and in the production
-[arXiv HTML Papers](https://info.arxiv.org/about/accessible_HTML.html) pages, converting
-98% of arXiv's articles without an error.
-The project is in active public **beta** as of July 2026, approaching mainline LaTeXML parity.
+latexml-oxide turns LaTeX sources into accessible web documents: HTML5 with MathML, XML, and EPUB 3.
+It powers the [ar5iv Lab](https://ar5iv.labs.arxiv.org) and the production
+[arXiv HTML Papers](https://info.arxiv.org/about/accessible_HTML.html), converting 98% of arXiv's articles without an
+error. The project is in public **beta**.
 
 ### Why?
 
@@ -20,72 +19,63 @@ The project is in active public **beta** as of July 2026, approaching mainline L
 
 ### Goals
 
-  * Faithfully rewrite the LaTeXML code base as-is, staying as close as possible to the original Perl sources.
+  * Faithfully rewrite the LaTeXML code base, staying as close as possible to the original Perl sources.
   * Use idiomatic Rust when possible, especially when refactoring Perl idioms.
   * Carefully address the newly required resource constraints.
-  * Offer a platform for iteratively increasing coverage to 90% of all of arXiv.
+  * Raise the coverage and fidelity of arXiv conversions beyond 98%.
 
 ## Usage
 
-**Try it first — no install: [latexml.rs/editor](https://latexml.rs/editor)** — type LaTeX,
-see the converted document live.
+**Try it first, no install:** [latexml.rs/editor](https://latexml.rs/editor) — type LaTeX, see the result live.
 
 ```bash
-# A document → HTML5, with MathML for the math (format inferred from the extension)
+# A document → HTML5 with MathML (the output format follows the extension)
 $ latexml_oxide paper.tex --destination=paper.html
 
-# One formula → Presentation MathML (--cmml for Content MathML, --unicodemath for UnicodeMath)
-# Note: `latexmlmath_oxide` is installed via `cargo +nightly install latexml` or built from source.
-$ latexmlmath_oxide 'a^2+b^2=c^2'
+# … or an EPUB 3 book
+$ latexml_oxide paper.tex --destination=paper.epub
+
+# A book split into one page per chapter
+$ latexml_oxide book.tex --splitat=chapter --destination=book/index.html
 ```
 
-More in [docs/USAGE.md](https://github.com/dginev/latexml-oxide/blob/main/docs/USAGE.md); `--help` lists every option.
+Packages and classes without a LaTeXML binding are read from their own `.sty`/`.cls` sources. `--help` lists every
+option; [docs/USAGE.md](https://github.com/dginev/latexml-oxide/blob/main/docs/USAGE.md) explains them.
 
 ## Install
 
-Prebuilt, self-contained binaries for Linux, macOS and Windows are on the
+Self-contained binaries for Linux, macOS and Windows are on the
 [Releases page](https://github.com/dginev/latexml-oxide/releases); Homebrew, a `.deb`, Docker and
-`cargo install latexml` work too. Basic documents using built-in bindings convert without TeX Live;
-a TeX installation (TeX Live or MiKTeX) is needed at runtime for raw packages/classes, `expl3`, and fonts.
-Per-platform steps and the system dependencies: [docs/INSTALL.md](https://github.com/dginev/latexml-oxide/blob/main/docs/INSTALL.md).
-The Windows release binary is not code-signed; a Microsoft Store package, signed by Microsoft, is planned for a 0.8.x release (see the [code signing policy](https://github.com/dginev/latexml-oxide/blob/main/docs/release/CODE_SIGNING_POLICY.md)).
+`cargo install latexml` work too. Raw packages, `expl3` and fonts need a TeX installation (TeX Live or MiKTeX).
+Steps per platform, including how to run the unsigned Windows binary: [docs/INSTALL.md](https://github.com/dginev/latexml-oxide/blob/main/docs/INSTALL.md).
 
-## Extending: runtime bindings (Rhai)
+## Extending with Rhai
 
-Every released binary reads TeX bindings written in [Rhai](https://rhai.rs) — no Rust toolchain, no recompile.
-Drop a file named `<pkg>.sty.rhai` (or `<class>.cls.rhai`) **next to your document**, and `\usepackage{<pkg>}` finds
-and loads it:
+Released binaries read TeX bindings written in [Rhai](https://rhai.rs), with no Rust toolchain. Put a
+`<pkg>.sty.rhai` next to your document and `\usepackage{<pkg>}` loads it:
 
 ```rust
-// mypkg.sty.rhai  —  note: backslashes are doubled in Rhai strings
+// mypkg.sty.rhai (backslashes are doubled in Rhai strings)
 DefMacro("\\greet{}", |gullet, name| "Hello, " + name + "!");
-DefConstructor("\\mytext{}", "<ltx:text class=\"rhai\">#1</ltx:text>", #{ enterHorizontal: true });
 ```
 
-Start with the [Rhai guide](https://github.com/dginev/latexml-oxide/blob/main/docs/parity/RHAI_BINDINGS_GUIDE.md).
+Start with the [Rhai guide](https://github.com/dginev/latexml-oxide/blob/main/docs/parity/RHAI_BINDINGS_GUIDE.md); the
+[Perl | Rust | Rhai cheat sheet](https://github.com/dginev/latexml-oxide/blob/main/latexml_contrib/src/script_bindings/CHEATSHEET.md)
+maps each Perl LaTeXML call to its Rhai form.
 
 ## Documentation
 
 [Installing](https://github.com/dginev/latexml-oxide/blob/main/docs/INSTALL.md) · [Usage](https://github.com/dginev/latexml-oxide/blob/main/docs/USAGE.md) · [Changes](https://github.com/dginev/latexml-oxide/blob/main/CHANGELOG.md) ·
-[Rust API](https://dginev.github.io/latexml-oxide/latexml/)
-
-Everything else (environment variables, the files a conversion writes, building from source, supported packages,
-Rhai bindings, how we differ from Perl LaTeXML, performance, releases and licensing) is indexed by theme in
-[docs/README.md](https://github.com/dginev/latexml-oxide/blob/main/docs/README.md).
+[Rust API](https://dginev.github.io/latexml-oxide/latexml/) · [all docs, by theme](https://github.com/dginev/latexml-oxide/blob/main/docs/README.md)
 
 ## License
 
-latexml-oxide's source code and original resources are dedicated to the public
-domain under [CC0 1.0 Universal](https://github.com/dginev/latexml-oxide/blob/main/LICENSE).
+latexml-oxide's source code and original resources are dedicated to the public domain under
+[CC0 1.0 Universal](https://github.com/dginev/latexml-oxide/blob/main/LICENSE).
 
-The release binary also embeds and links third-party material that keeps its own license:
-most notably compiled TeX format dumps derived from TeX Live (the LaTeX kernel, LPPL 1.3c; plain TeX, Knuth),
-the libxml2/libxslt libraries (MIT), the libmarpa parser engine (MIT, with LGPL parts)
-and libkpathsea (LGPL-2.1).
-
-These are attributed in [`THIRD-PARTY-NOTICES`](https://github.com/dginev/latexml-oxide/blob/main/THIRD-PARTY-NOTICES), published as an asset on every release
-and bundled inside every download — the tarballs, the Windows `.zip`, the `.deb`s, and the container
-images (under `/usr/local/share/doc/latexml-oxide`).
-The public-domain dedication above applies to the latexml-oxide source and original resources,
-**not** to that embedded or linked third-party material.
-Full breakdown: [`docs/release/LICENSE_INVENTORY.md`](https://github.com/dginev/latexml-oxide/blob/main/docs/release/LICENSE_INVENTORY.md).
+The release binaries also embed or link third-party material under its own license: TeX Live's format dumps (LaTeX
+kernel LPPL 1.3c; plain TeX, Knuth), libxml2/libxslt (MIT), libmarpa (MIT, with LGPL parts), libkpathsea
+(LGPL-2.1), `ar5iv.css` (MIT) and, on Windows, GNU libiconv (LGPL-2.1+). The CC0 dedication covers only the
+latexml-oxide source and original resources, **not** that third-party material. It is attributed in
+[`THIRD-PARTY-NOTICES`](https://github.com/dginev/latexml-oxide/blob/main/THIRD-PARTY-NOTICES), which ships with every download, and itemised in
+[`LICENSE_INVENTORY.md`](https://github.com/dginev/latexml-oxide/blob/main/docs/release/LICENSE_INVENTORY.md).
