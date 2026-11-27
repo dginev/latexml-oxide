@@ -183,9 +183,11 @@ struct ConvertJob {
   copy_source:  bool,
   /// The ops to apply to the raster's pixels ([`Graphics::physical_ops`]).
   ops:          Vec<GraphicxOp>,
-  /// The raster's pixels per bp: its own resolution for a copied raster
-  /// (72 dpi when it states none, as pdfTeX takes it), the render density
-  /// for a converted one.
+  /// The density the source is rendered at ([`Graphics::raster_density_for_source`]), read once for the render, its
+  /// cache key and the crop.
+  density:      u32,
+  /// The raster's pixels per bp: a drawn source's (PDF, EPS) render density over 72, a raster's own resolution (72 dpi
+  /// when it states none, as pdfTeX takes it).
   px_per_bp:    f64,
 }
 
@@ -260,8 +262,8 @@ struct ConvertDesc {
   page:             Option<u32>,
   needs_conversion: bool,
   ops:              Vec<GraphicxOp>,
-  /// Whether the source is a raster (its own pixels, else the render density).
-  raster:           bool,
+  /// Whether the source is drawn (a `unit: "point"` type: PDF, PS, EPS, AI), so its pixels are the render density's.
+  drawn:            bool,
   request:          Request,
 }
 
@@ -368,6 +370,7 @@ impl Graphics {
     // omits these from its type_properties so the files were copied
     // verbatim and rendered as broken images. Witness:
     // hep-ph0608319 Fig 1 (refit_av_extra.epsi, HIGZ 1.29/04 output).
+    // `unit: "point"`: drawn, so a crop is cut at the render density (2011.13011).
     for ext in &["ai", "pdf", "ps", "eps", "epsi", "epsf"] {
       type_properties.insert(ext.to_string(), TypeProperties {
         destination_type: Some("png".to_string()),
@@ -1198,6 +1201,9 @@ impl Graphics {
       // `trim=…,clip` figures). A non-raster source keeps Perl's refusal
       // (warned in `Plan::Copy` below).
       let raster = props.as_ref().and_then(|p| p.raster).unwrap_or(true);
+      // Perl's `raster` is "may be transformed as pixels" (`Post/Graphics.pm` L266), true for a PDF; its pixels are
+      // drawn at the render density when its size is in points (`unit`, L40).
+      let drawn = props.as_ref().is_some_and(|p| p.unit == "point");
       let ops = if needs_conversion || raster {
         Self::physical_ops(&options)
       } else {
@@ -1267,7 +1273,7 @@ impl Graphics {
           page,
           needs_conversion,
           ops,
-          raster,
+          drawn,
           request,
         })));
       } else {
@@ -1401,7 +1407,7 @@ impl Graphics {
             page,
             needs_conversion,
             ops,
-            raster,
+            drawn,
             ..
           } = *desc;
           let memo = (dest_dir.clone(), name.dest.clone());
@@ -1427,14 +1433,14 @@ impl Graphics {
                   .alt
                   .as_ref()
                   .map(|rel_svg| (rel_svg.clone(), abs(rel_svg)));
-                // The source's own pixels when it is a raster (a `page=` on a PNG,
-                // or a TIFF converted to PNG, keeps them: `-density` does not
-                // resample a raster); the render density for a vector source.
-                let px_per_bp = if raster {
+                // A drawn source is cropped at the density it is rendered at (2011.13011 fig3.pdf, 26 dpi, was cropped
+                // at 72); a raster in its own pixels (a TIFF converted to PNG keeps them: `-density` does not resample).
+                let density = Self::raster_density_for_source(&source);
+                let px_per_bp = if drawn {
+                  density as f64 / 72.0
+                } else {
                   latexml_core::util::image::raster_resolution_dpi(&source).map_or(72.0, |(x, _)| x)
                     / 72.0
-                } else {
-                  Self::raster_density_for_source(&source) as f64 / 72.0
                 };
                 let job = ConvertJob {
                   job_id,
@@ -1446,6 +1452,7 @@ impl Graphics {
                   rel_dest: name.dest.clone(),
                   svg_paths,
                   ops,
+                  density,
                   px_per_bp,
                 };
                 names.converted.insert(memo, (job.clone(), None));
@@ -2573,7 +2580,7 @@ impl Graphics {
   /// `page` is 1-based (graphicx convention); converted to 0-based for ImageMagick.
   /// `dest` is the job's private staged file (`writer::Staged`), as for [`Self::convert_image_svg`]:
   /// the converters write and remove it freely, and the worker installs it.
-  fn convert_image(source: &str, dest: &str, dpi: u32, page: Option<u32>) -> bool {
+  fn convert_image(source: &str, dest: &str, density: u32, page: Option<u32>) -> bool {
     let alias = Self::reachable_source(source);
     let source = alias
       .as_ref()
@@ -2589,13 +2596,13 @@ impl Graphics {
         .and_then(|copy| copy.path().to_str())
         .unwrap_or(source),
       dest,
-      dpi,
+      density,
       page,
     )
   }
 
-  /// [`Self::convert_image`] of the file `source` as it is.
-  fn convert_image_from(source: &str, dest: &str, _dpi: u32, page: Option<u32>) -> bool {
+  /// [`Self::convert_image`] of the file `source` as it is, a drawn one at `density`.
+  fn convert_image_from(source: &str, dest: &str, density: u32, page: Option<u32>) -> bool {
     // Build the source argument with optional page selector
     // Perl: image_read reads "$source[$page]" where $page = ($page // 1) - 1
     let source_arg = if let Some(p) = page {
@@ -2610,7 +2617,6 @@ impl Graphics {
     };
     // Shell out to convert (matching Perl's approach)
     // -define pdf:use-cropbox=true matches Perl's Image::Magick option (line 466)
-    let density = Self::raster_density_for_source(source);
     if Self::should_try_eps_pdf_path(source, page)
       && Self::convert_eps_via_pdf(source, dest, density)
     {
@@ -3193,6 +3199,7 @@ impl Processor for Graphics {
                       svg_paths,
                       copy_source,
                       ops,
+                      density,
                       px_per_bp,
                     } = jobs[i];
                     // Fresh converter-diagnostic slate for this node, so the
@@ -3340,7 +3347,7 @@ impl Processor for Graphics {
                       } else {
                         let raster_key = crate::graphics_cache::RenderKey {
                           page:    *page,
-                          density: Self::raster_density_for_source(source),
+                          density: *density,
                           ext:     ext_from_path(abs_dest_str),
                         };
                         crate::graphics_cache::with_cache_dims(
@@ -3351,7 +3358,7 @@ impl Processor for Graphics {
                           raster_key,
                           || {
                             subproc_ref.fetch_add(1, Ordering::Relaxed);
-                            Self::convert_image(source, &stage, dpi, *page)
+                            Self::convert_image(source, &stage, *density, *page)
                           },
                           || {
                             Self::read_image_dimensions(&stage).map(|(w, h)| {
@@ -4349,6 +4356,170 @@ endobj
     let size = |id: &str| (attr(id, "imagewidth"), attr(id, "imageheight"));
     assert_eq!(size("g1"), ("100".into(), "50".into()), "{out}");
     assert_eq!(size("g4"), ("100".into(), "200".into()), "{out}");
+  }
+
+  /// A PDF or EPS is cropped in the pixels it is rendered at, its render density over 72 per bp, and a raster in its
+  /// own (its dpi over 72), as pdfTeX trims the box in bp (2011.13011 fig3.pdf: 5669 bp at 26 dpi was cropped at 72,
+  /// keeping 998×639 pixels of 2048×2048 for 1669×1539). Fixtures `tests/fixtures/trim_quadrants{,_huge}.tex`; each
+  /// row keeps one quadrant. Needs ImageMagick and Ghostscript; without them the test says so and returns.
+  #[test]
+  fn a_vector_render_is_cropped_at_its_density() {
+    use crate::{
+      document::{PostDocument, PostDocumentOptions},
+      graphics_cache::CachePolicy,
+    };
+    let _env = EnvGuard::acquire();
+    let convert = im_convert_program();
+    let run = |program: &str, args: &[&str]| {
+      std::process::Command::new(program)
+        .args(args)
+        .output()
+        .ok()
+        .filter(|o| o.status.success())
+        .map(|o| String::from_utf8_lossy(&o.stdout).into_owned())
+    };
+    for (program, probe) in [(convert, "-version"), (gs_program(), "--version")] {
+      if run(program, &[probe]).is_none() {
+        eprintln!("SKIP a_vector_render_is_cropped_at_its_density: no `{program}`");
+        return;
+      }
+    }
+    let tmp = TempDir::new("graphics_vector_crop");
+    let fixtures = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures");
+    for name in ["trim_quadrants.pdf", "trim_quadrants_huge.pdf"] {
+      std::fs::copy(fixtures.join(name), tmp.join(name)).unwrap();
+    }
+    // trim_quadrants.pdf's page 1 as an EPS, and a 300-dpi PNG of 144x72 bp.
+    let eps = "%!PS-Adobe-3.0 EPSF-3.0\n%%BoundingBox: 0 0 216 108\n%%EndComments\n\
+               1 0 0 setrgbcolor 0 54 108 54 rectfill 0 1 0 setrgbcolor 108 54 108 54 rectfill\n\
+               0 0 1 setrgbcolor 0 0 108 54 rectfill 1 1 0 setrgbcolor 108 0 108 54 rectfill\nshowpage\n";
+    std::fs::write(tmp.join("trim_quadrants.eps"), eps).unwrap();
+    let png = tmp.join("q300.png");
+    run(convert, &[
+      "-size",
+      "300x150",
+      "xc:red",
+      "xc:lime",
+      "+append",
+      "(",
+      "-size",
+      "300x150",
+      "xc:blue",
+      "xc:yellow",
+      "+append",
+      ")",
+      "-append",
+      "-units",
+      "PixelsPerInch",
+      "-density",
+      "300",
+      png.to_str().unwrap(),
+    ])
+    .expect("make the 300-dpi PNG");
+    // graphicx's lengths in pt, as the engine writes them: 108bp = 108.405pt, 54bp = 54.2025pt.
+    let rows = [
+      (
+        "pdf",
+        "trim_quadrants.pdf",
+        "trim=108.405pt 0.0pt 0.0pt 54.2025pt,clip=true",
+        "180x90",
+        "#FFFF00",
+      ),
+      (
+        "viewport",
+        "trim_quadrants.pdf",
+        "viewport=0.0pt 0.0pt 108.405pt 54.2025pt,clip=true",
+        "180x90",
+        "#0000FF",
+      ),
+      (
+        "page2",
+        "trim_quadrants.pdf",
+        "page=2,trim=0.0pt 108.405pt 54.2025pt 0.0pt,clip=true",
+        "90x180",
+        "#00FFFF",
+      ),
+      (
+        "angle",
+        "trim_quadrants.pdf",
+        "trim=108.405pt 0.0pt 0.0pt 54.2025pt,clip=true,angle=90",
+        "90x180",
+        "#FFFF00",
+      ),
+      (
+        "huge",
+        "trim_quadrants_huge.pdf",
+        "trim=3011.25pt 0.0pt 0.0pt 1505.625pt,clip=true",
+        "1000x500",
+        "#FFFF00",
+      ),
+      (
+        "eps",
+        "trim_quadrants.eps",
+        "trim=108.405pt 0.0pt 0.0pt 54.2025pt,clip=true",
+        "180x90",
+        "#FFFF00",
+      ),
+      (
+        "png300",
+        "q300.png",
+        "trim=72.27pt 0.0pt 0.0pt 36.135pt,clip=true",
+        "300x150",
+        "#FFFF00",
+      ),
+    ];
+    let nodes: String = rows
+      .iter()
+      .map(|(id, file, options, ..)| {
+        let path = tmp.join(file);
+        format!(
+          r#"<graphics graphic="{file}" candidates="{}" options="{options}" xml:id="{id}"/>"#,
+          path.display()
+        )
+      })
+      .collect();
+    let xml = format!(
+      r#"<?xml version="1.0"?><document xmlns="http://dlmf.nist.gov/LaTeXML" xml:id="d">{nodes}</document>"#
+    );
+    let dest = tmp.join("out").join("out.html");
+    std::fs::create_dir_all(dest.parent().unwrap()).unwrap();
+    let doc_opts = PostDocumentOptions {
+      destination: Some(dest.display().to_string()),
+      source_directory: Some(tmp.path().display().to_string()),
+      ..Default::default()
+    };
+    let doc = PostDocument::new_from_string(&xml, doc_opts).unwrap();
+    // A PDF over the 1 KiB threshold is rasterized, as a large or raster-bearing one is.
+    let mut graphics = Graphics::new(None, true)
+      .with_svg_threshold_kb(1)
+      .with_cache_policy(CachePolicy::Bypass);
+    let nodes = graphics.to_process(&doc);
+    let out = graphics.process(doc, nodes).unwrap()[0].to_xml_string();
+    let kept = |id: &str| {
+      let at = out.find(&format!(r#"xml:id="{id}""#)).expect(id);
+      let element = &out[out[..at].rfind('<').unwrap()..at + out[at..].find('>').unwrap()];
+      let src = element
+        .split(r#"imagesrc=""#)
+        .nth(1)
+        .unwrap_or_else(|| panic!("{element}"));
+      let file = dest.parent().unwrap().join(&src[..src.find('"').unwrap()]);
+      let file = file.to_str().unwrap();
+      let got = run(convert, &[file, "-format", "%wx%h", "info:"]).unwrap();
+      let histogram = run(convert, &[file, "-format", "%c", "histogram:info:-"]).unwrap();
+      let mut colours: Vec<&str> = histogram
+        .split_whitespace()
+        .filter(|w| w.starts_with('#') && w.len() >= 7)
+        .map(|w| &w[..7])
+        .collect();
+      colours.sort();
+      format!("{id} {} {}", got, colours.join(","))
+    };
+    let got: Vec<String> = rows.iter().map(|row| kept(row.0)).collect();
+    let want: Vec<String> = rows
+      .iter()
+      .map(|(id, _, _, size, colour)| format!("{id} {size} {colour}"))
+      .collect();
+    assert_eq!(got, want, "{out}");
   }
 
   /// A crop's routing and size, with a fake `convert` that logs its arguments

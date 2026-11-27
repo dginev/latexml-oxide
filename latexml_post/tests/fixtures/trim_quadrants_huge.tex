@@ -1,0 +1,16 @@
+% Source of trim_quadrants_huge.pdf: `pdftex -no-shell-escape trim_quadrants_huge.tex` (TeX Live 2025). One 6000x3000 bp
+% page, red and lime over blue and yellow: past the 2048-pixel cap, so it renders at 24 dpi (2011.13011 fig3.pdf, 5669 bp,
+% at 26). An unused 1 KiB object takes it past the guard's 1 KiB SVG threshold, to the raster path. The guard is
+% graphics::tests::a_vector_render_is_cropped_at_its_density.
+\pdfcompresslevel=0 \pdfobjcompresslevel=0
+\pdfinfoomitdate=1 \pdftrailerid{} \pdfsuppressptexinfo=-1
+\hoffset=-1in \voffset=-1in
+\topskip=0pt \parindent=0pt \parskip=0pt \baselineskip=0pt \lineskip=0pt \lineskiplimit=0pt
+\nopagenumbers
+\immediate\pdfobj{(\romannumeral 1024000 )}
+\def\quad#1#2#3{\hbox{\pdfliteral{#1 rg}\vrule width #2 height #3 depth 0pt}}
+\def\page#1#2#3#4#5#6{\pdfpagewidth=#1 \pdfpageheight=#2 \hsize=#1 \vsize=#2
+  \vbox to #2{\offinterlineskip\hbox{\quad{#3}{.5\hsize}{.5\vsize}\quad{#4}{.5\hsize}{.5\vsize}}%
+    \hbox{\quad{#5}{.5\hsize}{.5\vsize}\quad{#6}{.5\hsize}{.5\vsize}}\vss}\vfill\eject}
+\page{6000bp}{3000bp}{1 0 0}{0 1 0}{0 0 1}{1 1 0}
+\bye

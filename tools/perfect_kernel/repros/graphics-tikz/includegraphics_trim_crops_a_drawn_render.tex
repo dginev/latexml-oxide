@@ -1,0 +1,27 @@
+% witness: 2011.13011 (ar5iv issue 220: `trim=350 1400 700 10, clip` on a 5669 bp fig3.pdf, rendered at 26 dpi under the
+%          2048-pixel cap, and `trim=0 0 150 0, clip` on a 960x540 bp fig0.pdf at 120 dpi; DIVERGENCES #337); fixtures
+%          latexml_post/tests/fixtures/trim_quadrants{,_huge}.pdf (sources beside them): page 1 216x108 bp red and lime
+%          over blue and yellow, page 2 108x216 bp cyan and magenta over black and white; the huge one 6000x3000 bp
+% oracle:  pdflatex: A yellow 108x54bp, B blue 108x54bp, C cyan 54x108bp, D yellow turned 54x108bp, E yellow
+%          3000x1500bp scaled to 108x54bp, each one colour. perl crops at (ImageMagick's density)/72.27 per bp
+%          (Util/Image.pm:403, KNOWN_PERL_ERRORS #307): the same quadrants, 0.4 % short (read from the code)
+% engines: rust INT081DM (HTML): D (`angle=`, so rasterized) 126x252 holding all four colours; A, B, C, E take the
+%          vector-SVG path (a small PDF) and are right. Rasterized (the guard's 1 KiB SVG threshold, as a large or
+%          raster-bearing PDF): A 252x126 and C 126x252 four colours each, B a 108x54 corner of blue, E 2000x1000 uncut
+% expect:  HTML: D 90x180 yellow; rasterized, A 180x90 yellow, B 180x90 blue, C 90x180 cyan (120 dpi), E 1000x500
+%          yellow (24 dpi); 0 errors, 0 warnings
+% status:  RED -> GREEN (GFXTRIM, guard latexml_post graphics::tests::a_vector_render_is_cropped_at_its_density)
+\documentclass{article}
+\usepackage{graphicx}
+\graphicspath{{../../../../latexml_post/tests/fixtures/}}
+\begin{document}
+A\includegraphics[trim=108 0 0 54, clip]{trim_quadrants.pdf}
+
+B\includegraphics[viewport=0 0 108 54, clip]{trim_quadrants.pdf}
+
+C\includegraphics[page=2, trim=0 108 54 0, clip]{trim_quadrants.pdf}
+
+D\includegraphics[trim=108 0 0 54, clip, angle=90]{trim_quadrants.pdf}
+
+E\includegraphics[trim=3000 0 0 1500, clip, width=108bp]{trim_quadrants_huge.pdf}
+\end{document}

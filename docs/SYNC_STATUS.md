@@ -89,7 +89,7 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (436 items on 2026-11-26 on `int/towards_v0_8_1`: 436 open, weight 960, 35 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (438 items on 2026-11-26 on `int/towards_v0_8_1`: 438 open, weight 967, 35 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
 
 
   - ODR6 — OD ruling 12 (recorded in OD #449): `dump_reader.rs`'s "add-only" docstrings (:365, :574) corrected, then a removal trial of the skip lists against CLAUDE.md rule 2; 1
@@ -1338,7 +1338,31 @@ Rules that keep this file honest and mergeable:
     are no-ops (`framed_sty.rs:332-334`), so an author's framed or shaded environment loses its box (2003.04755 `formal`;
     ar5iv #269); (f) titletoc's `\printcontents` prints nothing (2310.11511; ar5iv #429). Leads from Gemini's study,
     unverified: ACL/COLM parenthetical citations rendering bare, 1908.05686 losing 36 % of its words at 0 errors, empty
-    `{forest}`/`tcolorbox` figures (`/home/deyan/data/ar5iv_triage/master_open_witnesses.tsv`); 4
+    `{forest}`/`tcolorbox` figures (`/home/deyan/data/ar5iv_triage/master_open_witnesses.tsv`). Batch 2 (2026-11-26,
+    Gemini `GN_AR5IVBUGS2_2026-11-26.md`, anchors checked): (g) #220 PDF/EPS `trim`+`clip` crop scale — FIXED by GFXTRIM;
+    (h) #127 1607.06945: sigsam's `\renewcommand\abstractname{\large\bfseries Abstract\vspace*{6pt}}` prints
+    `Abstract\vskip6.0pt` (SHARED with Perl; ~930 papers): `queue_digest.rs:976,986` digest the name to text, so the glue
+    reverts — skip glue/kern whatsits, keep `TBox` text and the no-break space (OD #121); (i) #408 2303.10475: dingbat.sty's
+    `\checkmark` = `\dingbat@sym{'104}` in a U-encoded font with no fontmap → a silent "D" (Rust-only silent wrong glyph,
+    ~279 papers; Perl has no dingbat binding and errs): `ark`/`dingbat` fontmaps like `ding_fontmap.rs`, and an unmapped
+    U-encoded family a Warning rather than `Info:unexpected` (`sect13.rs` ~:2616-2626; A/B the noise first); (j) #419
+    2311.07621: glossaries' `\glspostdescription` period is never printed (SHARED, Perl's binding omits it; ~465 papers): print
+    it from `glossaries_sty.rs` `\lx@printglossary` (~:418), honouring `nopostdot` and `\nopostdesc` (a surpass → OD); 5
+  - GFXTRIM-RESIDUAL — after GFXTRIM (OD #337): `.postscript` still has no type properties (`graphics.rs` ~:374, and the
+    density reader's own extension list ~:2182, while ~:430 accepts it), so it is cropped at 72 dpi and a byte-identical
+    `.eps` in the same document inherits that output file (review probe `scratch_revGFXTRIM/`; one shared `drawn` predicate
+    for both lists); pdftocairo is called without `-cropbox` (~:2332, and the SVG path ~:1841), so where mutool is missing a
+    PDF whose CropBox differs from its MediaBox renders the MediaBox and every crop is offset (MediaBox `[0 0 216 108]`,
+    CropBox `[108 0 216 108]`); `holds_output` (~:1580) still recomputes the density for the cache key; 1
+  - RENDERCMP — (DG 2026-11-26 request) render our HTML with the bundled ar5iv.css in a pinned headless Chrome and compare it
+    per OBJECT with the author's PDF (figures by aspect ratio and edges, leaked TeX, lost punctuation, font-aware glyphs,
+    frontmatter containment), never by page pixels. DG: arXiv's own PDF (cached locally) is the truth, local pdflatex only
+    for SyncTeX locations; a pinned Chrome for Testing build; report-only (ar5iv triage, base-vs-head A/B deltas) until the
+    false-flag rate is measured on ~200 papers; systematic differences (section-number period, author-year bibitem tags,
+    biblatex links) whitelisted and listed for rulings. Study `agent_reports/ADV_RENDERCMP_2026-11-26.md` (prototype flagged
+    #220, #408, #127, #419 at the right object; 8 false flags on 5 clean papers from two named mechanisms). Batches: RC1
+    render (DevTools pipe client), RC2 pdf (stext tokens, drawing-operator regions, validity check), RC3 compare, RC4 A/B
+    hook, in a workspace tool crate; open: the crate and the `command-fds` dependency (DG); 5
   - NATBIBRES — residuals of the natbib apalike-label fix (OD #1161; review 2026-11-24). (a) An authoryear label with an
     empty author, `\bibitem[, 1998]{l}`, prints the key as the author: "(l, 1998)" / "l (1998)", where pdflatex prints "(, 1998)" /
     "(1998)". It is the general fallback for an entry with no authors; synthetic, with no corpus witness; RED repro first.

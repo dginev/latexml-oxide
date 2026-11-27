@@ -8421,7 +8421,7 @@ graphicx's `trim=` and `viewport=` lengths are bp. pdfTeX sizes a raster by its 
 **Perl** (KNOWN_PERL_ERRORS #307): `image_graphicx_complex` crops with `$idppt = (x-resolution // $dpi)/72.27` (Util/Image.pm:402-403). That divides bp by a pt's 72.27, and takes ImageMagick's `x-resolution` without its unit. ImageMagick reports a PNG's in pixels per centimetre, so a 300-dpi PNG (118.11 px/cm) is under-cropped 2.54 times over.
 
 **Rust** (batch 56kx):
-- `latexml_core::util::image::graphicx_crop_rect` ports the crop arithmetic (Util/Image.pm:404-418), with pixels per bp the raster's dpi over 72 or, for a rendered PDF/EPS, the render density over 72.
+- `latexml_core::util::image::graphicx_crop_rect` ports the crop arithmetic (Util/Image.pm:404-418), with pixels per bp the raster's dpi over 72 or, for a source drawn at a density (a `unit: "point"` type: PDF, PS, EPS, AI), the render density over 72 — Perl's `$imagedpi`, the density ImageMagick read it at. The job reads that density once (`raster_density_for_source`, capped at 2048 pixels) for the render, its cache key and the crop (2011.13011's 5669 bp fig3.pdf renders at 26 dpi).
 - `raster_resolution_dpi` reads the dpi as pdfTeX takes it: a PNG's per-metre value rounded, a per-centimetre JFIF value truncated (pdflatex sizes an 11811 px/m PNG at 300 dpi and a 118 px/cm JPEG at 299), 72 when none is stated.
 - A `viewport` reaching past the image's left or top edge keeps only its overlap with the image; Perl's crop width `min($ww, $w-$x0p)` (L417) runs that far past the box's right or bottom edge.
 - The displayed size applies every op but the crop to what the file holds: a crop that keeps the whole image, or a negative trim, sizes nothing (Perl shows the processed image at its own size; 2605.06510's colorbars, `trim=0cm -4cm 0cm 0cm`, were stretched 24 %).
@@ -8436,7 +8436,7 @@ What stays Perl's:
 
 A small PDF's vector render (beyond Perl, which only rasterizes) is cropped through its root `viewBox`, which spans the page in bp; `width`/`height` shrink with it (`crop_svg_inplace`). `reflect` is still not applied.
 
-**Guard**: `latexml_post graphics::tests::{trim_and_viewport_crop_the_raster_into_its_own_file, a_crop_gets_its_own_file_and_a_zero_trim_none, crop_svg_narrows_the_view_box}`, `perfect_kernel_batch56::a_natural_figure_box_follows_its_crop_and_turn` and `latexml_core util::image::…::{graphicx_crop_rect_follows_perl_trim_and_viewport, raster_resolution_reads_png_and_jfif_units}`. Witness 2510.17772 (S3.F4: `trim=90 30 50 50` on a 3000×1500 300-dpi PNG keeps 2417×1167 pixels). Repro `graphics-tikz/includegraphics_trim_crops_the_raster.tex`.
+**Guard**: `latexml_post graphics::tests::{trim_and_viewport_crop_the_raster_into_its_own_file, a_vector_render_is_cropped_at_its_density, a_crop_gets_its_own_file_and_a_zero_trim_none, crop_svg_narrows_the_view_box}`, `perfect_kernel_batch56::a_natural_figure_box_follows_its_crop_and_turn` and `latexml_core util::image::…::{graphicx_crop_rect_follows_perl_trim_and_viewport, raster_resolution_reads_png_and_jfif_units}`. Witnesses 2510.17772 (S3.F4: `trim=90 30 50 50` on a 3000×1500 300-dpi PNG keeps 2417×1167 pixels), 2011.13011 (ar5iv issue 220: `trim=350 1400 700 10,clip` on fig3.pdf kept 998×639 of 2048×2048 pixels, 1669×1539 now). Repros `graphics-tikz/includegraphics_trim_crops_the_raster.tex`, `graphics-tikz/includegraphics_trim_crops_a_drawn_render.tex`.
 
 ### 338. → #97 (A `\parbox` or minipage between paragraphs starts one (Perl: a block of its own))
 
