@@ -1225,6 +1225,309 @@ fn a_framed_collaboration_and_an_institution_keep_their_reading() {
   ]);
 }
 
+/// Round 3 (DG's bar: rc6 where the rules are not reached): the look-ahead that makes a list go on. A run of groups
+/// that ends in a place is a chain of the person's affiliations, and a framed remark after a team is no list's next
+/// piece (`lines.rs` `place_after`, `list_goes_on`). f09ffb5d88e made the first group an author holding the place
+/// (review B1, ADV_TEAMAUTH4 §4) or the team an author beside its remark (Gemini TEAMAUTH.10).
+#[test]
+fn a_group_run_before_a_place_or_a_remark_keeps_rc6() {
+  let two_groups = |class: &str, sep: &'static str| {
+    row(
+      "two groups and a place",
+      doc(
+        class,
+        r#"\author{Ann Able, Bob Baker, the XYZ Collaboration and the ABC Collaboration, CERN, Geneva}"#,
+      ),
+      (0, 0),
+      &[
+        &[
+          "role=author",
+          "Ann Able",
+          "collaboration=the XYZ Collaboration",
+          "collaboration=the ABC Collaboration",
+        ],
+        &[
+          "role=author",
+          sep,
+          "Bob Baker",
+          "collaboration=the XYZ Collaboration",
+          "collaboration=the ABC Collaboration",
+          "affiliation=CERN, Geneva",
+        ],
+      ],
+    )
+  };
+  let mut rows = vec![
+    row(
+      "a team, a for remark (Gemini F1)",
+      doc(
+        ARTICLE,
+        r#"\author{Bob Baker, ALICE Trigger Team, for the ALICE Collaboration}"#,
+      ),
+      (0, 0),
+      &[&[
+        "role=author",
+        "Bob Baker",
+        "affiliation=ALICE Trigger Team",
+        "collaboration=for the ALICE Collaboration",
+      ]],
+    ),
+    row(
+      "a collaboration, an on behalf of remark",
+      doc(
+        ARTICLE,
+        r#"\author{Chris Howard, SNO Collaboration, on behalf of the SNO Collaboration}"#,
+      ),
+      (0, 0),
+      &[&[
+        "role=author",
+        "Chris Howard",
+        "collaboration=SNO Collaboration",
+        "collaboration=on behalf of the SNO Collaboration",
+      ]],
+    ),
+    row(
+      "a team, a representing remark",
+      doc(
+        ARTICLE,
+        r#"\author{Bob Baker, Google Brain Team, representing the LHCb Collaboration}"#,
+      ),
+      (0, 0),
+      &[&[
+        "role=author",
+        "Bob Baker",
+        "affiliation=Google Brain Team",
+        "collaboration=representing the LHCb Collaboration",
+      ]],
+    ),
+    row(
+      "a team, a bracketed collaboration",
+      doc(
+        ARTICLE,
+        r#"\author{Bob Baker, Google Brain Team, (XYZ Collaboration)}"#,
+      ),
+      (0, 0),
+      &[&[
+        "role=author",
+        "Bob Baker",
+        "affiliation=Google Brain Team",
+        "collaboration=(XYZ Collaboration)",
+      ]],
+    ),
+    row(
+      "two teams and a place (Gemini F10)",
+      doc(
+        ARTICLE,
+        r#"\author{Bob Baker, Google Brain Team, DeepMind Team, London}"#,
+      ),
+      (0, 0),
+      &[&[
+        "role=author",
+        "Bob Baker",
+        "affiliation=Google Brain Team",
+        "affiliation=DeepMind Team, London",
+      ]],
+    ),
+    row(
+      "a team, a collaboration, a place (review B1 q1)",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able, XYZ Team, ABC Collaboration, CERN}"#,
+      ),
+      (0, 0),
+      &[&[
+        "role=author",
+        "Ann Able",
+        "affiliation=XYZ Team",
+        "affiliation=ABC Collaboration",
+        "affiliation=CERN",
+      ]],
+    ),
+    row(
+      "two names, a team, a collaboration, a place (q2)",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able, Bob Baker, XYZ Team, ABC Collaboration, CERN}"#,
+      ),
+      (0, 0),
+      &[&["role=author", "Ann Able"], &[
+        "role=author",
+        SEP,
+        "Bob Baker",
+        "affiliation=XYZ Team",
+        "affiliation=ABC Collaboration",
+        "affiliation=CERN",
+      ]],
+    ),
+    row(
+      "the collaboration before a place with a comma (q3)",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able, XYZ Team, the ABC Collaboration, CERN, Geneva}"#,
+      ),
+      (0, 0),
+      &[&[
+        "role=author",
+        "Ann Able",
+        "affiliation=XYZ Team",
+        "collaboration=the ABC Collaboration",
+        "affiliation=CERN, Geneva",
+      ]],
+    ),
+    row(
+      "a team, a consortium, an institution, a name (q6)",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able, XYZ Team, ABC Consortium, Univ A, Bob Baker}"#,
+      ),
+      (0, 0),
+      &[
+        &[
+          "role=author",
+          "Ann Able",
+          "affiliation=XYZ Team",
+          "affiliation=ABC Consortium",
+          "affiliation=Univ A",
+        ],
+        &["role=author", SEP, "Bob Baker"],
+      ],
+    ),
+    row(
+      "a list's and, a team, a collaboration, a place (q7)",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able, Bob Baker and XYZ Team, ABC Collaboration, CERN}"#,
+      ),
+      (0, 0),
+      &[&["role=author", "Ann Able", "collaboration=XYZ Team"], &[
+        "role=author",
+        SEP,
+        "Bob Baker",
+        "collaboration=XYZ Team",
+        "affiliation=ABC Collaboration",
+        "affiliation=CERN",
+      ]],
+    ),
+    row(
+      "a team and a collaboration, a place (q8)",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able, XYZ Team and ABC Collaboration, CERN}"#,
+      ),
+      (0, 0),
+      &[&[
+        "role=author",
+        "Ann Able",
+        "affiliation=XYZ Team",
+        "collaboration=ABC Collaboration",
+        "affiliation=CERN",
+      ]],
+    ),
+    row(
+      "two groups and a place, semicolons",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able; Bob Baker; the XYZ Collaboration and the ABC Collaboration, CERN, Geneva}"#,
+      ),
+      (0, 0),
+      &[
+        &[
+          "role=author",
+          "Ann Able",
+          "collaboration=the XYZ Collaboration",
+          "collaboration=the ABC Collaboration",
+        ],
+        &[
+          "role=author",
+          SEP,
+          "Bob Baker",
+          "collaboration=the XYZ Collaboration",
+          "collaboration=the ABC Collaboration",
+          "affiliation=CERN, Geneva",
+        ],
+      ],
+    ),
+    row(
+      "three groups and a place",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able, Bob Baker, the XYZ Collaboration, the ABC Collaboration and the DEF Team, CERN, Geneva}"#,
+      ),
+      (0, 0),
+      &[
+        &[
+          "role=author",
+          "Ann Able",
+          "collaboration=the XYZ Collaboration",
+          "collaboration=the ABC Collaboration",
+          "collaboration=the DEF Team",
+        ],
+        &[
+          "role=author",
+          SEP,
+          "Bob Baker",
+          "collaboration=the XYZ Collaboration",
+          "collaboration=the ABC Collaboration",
+          "collaboration=the DEF Team",
+          "affiliation=CERN, Geneva",
+        ],
+      ],
+    ),
+    row(
+      "one name, two groups and a place",
+      doc(
+        ARTICLE,
+        r#"\author{Bob Baker, the XYZ Collaboration and the ABC Team, CERN}"#,
+      ),
+      (0, 0),
+      &[&[
+        "role=author",
+        "Bob Baker",
+        "collaboration=the XYZ Collaboration",
+        "collaboration=the ABC Team",
+        "affiliation=CERN",
+      ]],
+    ),
+    // (rc6's: the places' marks gather on the last name, `2,1`)
+    row(
+      "two groups and marked places",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able$^1$, Bob Baker$^2$, the XYZ Collaboration and the ABC Collaboration, $^1$CERN, $^2$DESY}"#,
+      ),
+      (0, 0),
+      &[
+        &[
+          "role=author",
+          "Ann Able",
+          "note:footnotemark[1]=",
+          "collaboration=the XYZ Collaboration",
+          "collaboration=the ABC Collaboration",
+        ],
+        &[
+          "role=author",
+          SEP,
+          "Bob Baker",
+          "note:footnotemark[2,1]=",
+          "collaboration=the XYZ Collaboration",
+          "collaboration=the ABC Collaboration",
+          "affiliation=CERN",
+          "affiliation=DESY",
+        ],
+      ],
+    ),
+  ];
+  rows.extend([
+    two_groups(ARTICLE, SEP),
+    two_groups(LLNCS, SEP),
+    two_groups(r"\documentclass{amsart}", AMS_SEP),
+    two_groups(r"\documentclass{revtex4-2}", SEP),
+    two_groups(r"\documentclass{PoS}", SEP),
+    two_groups(r"\documentclass{iopart}", SEP),
+  ]);
+  check(&rows);
+}
+
 /// Rule 1's owners: a group the enumeration made an author is no owner of what a class gives the call's last author —
 /// the person keeps it, as rc6 gave it (`api.rs` `annotate:last`; ADV_TEAMAUTH3 G3: nucl-ex0510076 jpconf,
 /// astro-ph0311630 kapproc) — and a sole author's block institute is every listed group's too, no nameless creator
@@ -1255,6 +1558,7 @@ fn a_listed_group_owns_no_address_of_the_person() {
       (0, 0),
       person("affiliation", SEP),
     ),
+    // (the Warning is the missing class's: jpconf is in no TeX Live)
     (
       "jpconf",
       doc(r"\documentclass{jpconf}", MITCHELL),
@@ -1364,6 +1668,53 @@ fn a_listed_group_owns_no_address_of_the_person() {
           SEP,
           "the PHENIX Collaboration",
           "affiliation=BNL, Upton, NY",
+        ],
+      ],
+    ),
+    // (each of a sole author's institutes is the listed group's too — f09ffb5d88e gave it the first only, review S1)
+    row(
+      "svjour3, a team and two institutes (review S1)",
+      doc(
+        r"\documentclass{svjour3}",
+        r#"\author{Ann Able and the GAPS Team}\institute{CERN \and Univ B}"#,
+      ),
+      (0, 0),
+      &[
+        &[
+          "role=author",
+          "Ann Able",
+          "affiliation=CERN",
+          "affiliation=Univ B",
+        ],
+        &[
+          "role=author",
+          SEP,
+          "the GAPS Team",
+          "affiliation=CERN",
+          "affiliation=Univ B",
+        ],
+      ],
+    ),
+    row(
+      "llncs, a team and two institutes (review S1)",
+      doc(
+        LLNCS,
+        r#"\author{Ann Able and the GAPS Team}\institute{CERN \and Univ B}"#,
+      ),
+      (0, 0),
+      &[
+        &[
+          "role=author",
+          "Ann Able",
+          "affiliation=CERN",
+          "affiliation=Univ B",
+        ],
+        &[
+          "role=author",
+          SEP,
+          "the GAPS Team",
+          "affiliation=CERN",
+          "affiliation=Univ B",
         ],
       ],
     ),

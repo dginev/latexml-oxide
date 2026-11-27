@@ -1,0 +1,17 @@
+% mechanism: a note printed on a listed team's name goes to the team (marks win), even an e-mail that is the person's
+%            (OXIDIZED_DESIGN_DIVERGENCES #459)
+% witness: 1611.07751 (`J.-F. Donati and the BCool Collaboration \thanks{E-mail:…}`); 1108.4847, 1906.09251 the same
+% oracle:  pdflatex 0 `!`: "J.-F. Donati and the BCool Collaboration*", the note "E-mail: jf@a.edu"
+% engines: rust 0.8.0-rc6: the note on Donati, the collaboration his contact; TEAMAUTH: the note on the author "the BCool
+%          Collaboration"; 0 errors, 0 warnings
+% expect:  two creators, the e-mail note on "J.-F. Donati"
+% status:  RED
+% moves:   post-merge (a note's owner read from what it holds, an e-mail a person's)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{J.-F. Donati and the BCool Collaboration\thanks{E-mail: jf@a.edu}}
+\maketitle
+Text.
+\end{document}

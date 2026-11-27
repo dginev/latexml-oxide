@@ -1,0 +1,16 @@
+% mechanism: a list pairing each name with its team (OXIDIZED_DESIGN_DIVERGENCES #459, rule 1)
+% witness: synthetic (ADV_TEAMAUTH4 §5; 0 found in its two corpus scans)
+% oracle:  pdflatex 0 `!`: "Bob Baker, Google Brain Team and Carl Clark, DeepMind Team"
+% engines: rust 0.8.0-rc6: each name with its team as `affiliation`; TEAMAUTH: four creators (rule 1's letter); 0 errors,
+%          0 warnings
+% expect:  two creators, each holding its own team as an affiliation (open: DG's ruling, rule 1's letter gives four)
+% status:  RED
+% moves:   post-merge (a ruling on paired lists)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Bob Baker, Google Brain Team and Carl Clark, DeepMind Team}
+\maketitle
+Text.
+\end{document}

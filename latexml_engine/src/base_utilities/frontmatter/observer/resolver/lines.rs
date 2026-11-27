@@ -1592,20 +1592,27 @@ impl Resolver {
     // line read an institution, inside a remark left open (1311.7305, hep-ex0611001), nor before a place)
     // (a piece of the line holding a letter or digit, no closing `.`: `…, and EAST Team$^{b}$.`, 2404.07458)
     let piece = |e: &Event| e.kind == EventKind::Name && e.text.chars().any(char::is_alphanumeric);
-    // (a place after a piece on the line: its next name neither a person, a group, nor a name before its remark)
-    let place_after = |at: usize| {
-      events[at + 1..].iter().find(|e| piece(e)).is_some_and(|e| {
-        !reads_as_names(&e.text)
-          && !reads_as_collaboration(&e.text, true)
-          && name_before_remark(&e.text).is_none()
-      })
+    // (a place after a piece on the line: its next name — `past_groups`, past a run of groups, a chain of affiliations,
+    // `Ann Able, XYZ Team, ABC Collaboration, CERN` — neither a person, a group, nor a name before its remark)
+    let place_after = |at: usize, past_groups: bool| {
+      events[at + 1..]
+        .iter()
+        .filter(|e| piece(e))
+        .find(|e| !(past_groups && reads_as_collaboration(&e.text, true)))
+        .is_some_and(|e| {
+          !reads_as_names(&e.text)
+            && !reads_as_collaboration(&e.text, true)
+            && name_before_remark(&e.text).is_none()
+        })
     };
-    // (the next piece after `at` is a group, or a person after a list's "and", `&` or `\and`)
+    // (the next piece after `at` is a group no remark frames — not `, for the ALICE Collaboration` — or a person after
+    // a list's "and", `&` or `\and`)
     let list_goes_on = |at: usize| {
       let rest = &events[at + 1..];
       rest.iter().position(|e| piece(e)).is_some_and(|n| {
         let text = &rest[n].text;
-        (reads_as_collaboration(text, true) && !names_a_group(text))
+        (collaboration_framing(text, true, false).is_some_and(|f| f != Framing::Framed)
+          && !names_a_group(text))
           || (rest[..n].iter().any(|e| enumerates(Some(e))) && reads_as_names(text))
       })
     };
@@ -1650,7 +1657,7 @@ impl Resolver {
           .iter()
           .filter(is_name)
           .any(|e| remark_left_open(&e.text))
-        && !place_after(at)
+        && !place_after(at, true)
     };
     // (a piece the line reads as the affiliation of the name before it, unless a list enumerates it)
     let institution_piece = |at: usize, enumerated: bool| {
@@ -1802,7 +1809,7 @@ impl Resolver {
               && !self.uncovered_creators().is_empty()))
             && reads_as_listed_collaboration(
               &event.text,
-              listed(last_sep) && !(names_a_group(&event.text) && place_after(i)),
+              listed(last_sep) && !(names_a_group(&event.text) && place_after(i, false)),
               enumerated(&self.out.creators, &made, last_sep, i, read_institution),
             ) =>
         {

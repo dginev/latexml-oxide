@@ -6,6 +6,9 @@
 % engines: rust 0.8.0-rc6 and TEAMAUTH: "Ann Able" with `affiliation` "R Core Team", then "Bob Baker"; 0 errors, 0 warnings
 % expect:  three creators "Ann Able", "R Core Team", "Bob Baker"
 % status:  RED
+% sibling: `Ann Able, XYZ Collaboration, Bob Baker and Carl Cole` (review of f09ffb5d88e S2): the "and" after the
+%          collaboration shows a list, yet rc6 and TEAMAUTH keep it Ann's `collaboration` contact; expect four creators
+%          (pdflatex 0 `!`)
 % moves:   post-merge (a place word the reading can tell from a name)
 % preload: ar5iv.sty
 \documentclass{article}

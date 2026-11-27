@@ -20,6 +20,11 @@ impl Resolver {
       return;
     }
     let affiliated = !self.out.creators[sole].affiliations.is_empty();
+    // (each group holding none before the block, so it takes every institute, `\institute{CERN \and Univ B}`)
+    let groups: Vec<usize> = groups
+      .into_iter()
+      .filter(|&g| self.out.creators[g].affiliations.is_empty())
+      .collect();
     let mut kept = Vec::new();
     for assoc in std::mem::take(&mut self.out.block) {
       let institute = matches!(assoc.role.as_str(), "affiliation" | "address");
@@ -34,9 +39,6 @@ impl Resolver {
       let rule = s!("{} owner:sole-author", assoc.rule);
       if institute {
         for &g in &groups {
-          if !self.out.creators[g].affiliations.is_empty() {
-            continue;
-          }
           let rule = rule.clone();
           self.attach(Some(g), Assoc { rule, ..assoc.clone() }, note);
         }

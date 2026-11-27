@@ -1,0 +1,18 @@
+% mechanism: a piece a mark leads is an address the mark labels, no name, whatever word it ends in (OXIDIZED_DESIGN_DIVERGENCES
+%            #459, `marked_name`)
+% witness: synthetic (review of f09ffb5d88e S3, ADV_TEAMAUTH round 1 sliver)
+% oracle:  pdflatex 0 `!`: "Ann Able¹, Bob Baker² and ²Robotics Group"
+% engines: rust 0.8.0-rc6: "Robotics Group" a `collaboration` contact on both names; TEAMAUTH: a third creator
+%          "Robotics Group" with the mark 2; 0 errors, 0 warnings
+% sibling: `Ann Able$^1$, Bob Baker$^1$, $^1$XYZ Consortium` — rc6: Bob's contact; TEAMAUTH: a third creator
+% expect:  two creators, "Bob Baker" with the affiliation "Robotics Group" (the sibling: both names hold "XYZ Consortium")
+% status:  RED
+% moves:   post-merge (a mark-led piece read as an address the mark labels)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$, Bob Baker$^2$ and $^2$Robotics Group}
+\maketitle
+Text.
+\end{document}
