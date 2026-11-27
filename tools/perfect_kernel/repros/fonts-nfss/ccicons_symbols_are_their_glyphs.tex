@@ -1,0 +1,20 @@
+% witness: 2602.07369 (19 captions printed "Γ Δsin_nass"), 2203.09493, 2210.04484 (their lni.cls v1.7 prints `\ccbysa`
+%          on the title page, lni.cls:167, :385-387); ccicons.sty sets every icon as `\char<n>` in U/ccicons, a font with
+%          no map, read as OT1 Greek
+% oracle:  pdflatex 0 `!`; the fourteen CC icons, then "by", "by-nc-sa", "zero" and "by-sa" in a box each; the text
+%          layer (pdftotext) "c b a d n e y p z m s r © P"; Perl 0.8.8: undefined (no binding), or with --includestyles
+%          the same OT1 Greek
+% engines: rust DINGBAT "Γ Δ Θ Λ Ξ Π Σ Υ Φ Ψ Ω ff fi fl", `\ccby` "Γ Δ", `\ccbysa` "Γ Δ Θ", 0 errors,
+%          Warning:unexpected:ccicons (a U family without a map)
+% expect:  0 errors, 0 warnings; the Unicode 13 CC symbols "🅭 🅯 🄎 ⊜ 🄏 🄏 🄏 🅮 🄍 m s r © 🅮", "🅭 🅯", "🅭 🅯 🄏 🄎",
+%          "🅭 🄍", "🅭 🅯 🄎", a hair space for each `\kern0.1em` (the `ccicons` family map, ccicons_fontmap.rs)
+% status:  RED (DINGBAT) -> GREEN (ICONFONTS)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{ccicons}
+\begin{document}
+Icons: \ccLogo\ \ccAttribution\ \ccShareAlike\ \ccNoDerivatives\ \ccNonCommercial\ \ccNonCommercialEU\
+\ccNonCommercialJP\ \ccPublicDomain\ \ccZero\ \ccSampling\ \ccShare\ \ccRemix\ \ccCopy\ \ccPublicDomainAlt
+
+Licenses: \ccby, \ccbyncsa, \cczero, \ccbysa.
+\end{document}

@@ -1,0 +1,18 @@
+% witness: 1012.0265, 2008.09297, 2410.22549 (`\font\manual=manfnt \def\dbend{{\manual\char127}}`, the TeXbook's
+%          dangerous bend), 2004.07097, 2011.01162, 2403.06925 (manfnt.sty `\mancube`), 2105.09724 (`\textdbend`)
+% oracle:  pdflatex 0 `!`; the dangerous bends, the cubes, the star, the METAFONT logo; Perl 0.8.8: undefined
+%          (no binding), the plain `\font` route dropping `\char127`
+% engines: rust DINGBAT `\dbend` "¨", `\lhdbend` "˜", `\mancube` "ø", `\manstar` "Œ" (OT1), Warning:unexpected:manual; the `\font`
+%          route printed nothing for `\char127`
+% expect:  0 errors, 0 warnings; "☡ ☡ ☡ ☡ ⧉ ⧉ ☆" (the `manual` family map) and "☡ METAFONT" (the same table as the
+%          `manfnt` encoding of the plain `\font`, manfnt_fontmap.rs)
+% status:  RED (DINGBAT) -> GREEN (ICONFONTS)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{manfnt}
+\font\manual=manfnt
+\begin{document}
+NFSS: \dbend\ \lhdbend\ \reversedvideodbend\ \textdbend\ \mancube\ \manimpossiblecube\ \manstar
+
+Font: {\manual\char127} {\manual METAFONT}
+\end{document}

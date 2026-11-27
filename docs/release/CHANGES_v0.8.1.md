@@ -20,6 +20,11 @@ top of its group.
     aastex701.cls), and AASTeX 5 and the standalone deluxetable.sty at the end of its `{table}` or of the next one
     (aastex.cls 5.x, deluxetable.sty) (1310.5776, ar5iv #637; KNOWN_PERL_ERRORS #1345). Guard
     `perfect_kernel_batch68y::tablecomments_print_where_each_class_prints_them`.
+  - **ccicons and manfnt print their symbols.** The Creative Commons icons are their Unicode CC symbols (`\ccby` is
+    🅭 🅯, where it printed "Γ Δ", 2602.07369), and manfnt's dangerous bend is ☡, both through manfnt.sty's `\dbend` (it
+    printed "¨") and through plain's `\font\manual=manfnt` (`\char127` printed nothing, 1012.0265); the cubes stand in
+    as ⧉ and the METAFONT logo's slots are its letters. Neither family warns any longer (OXIDIZED_DESIGN_DIVERGENCES
+    #645). Guards `cluster_fontmap::dingbat_family_maps`.
   - **After a digestion Fatal, an unfinished construct is closed as its own.** The salvage of the boxes digested
     before a Fatal spliced an unfinished construct's text into the running paragraph: a footnote's words fused with
     the sentence, an `\author{…}` became a body paragraph, a formula became italic text, a list left rootless items

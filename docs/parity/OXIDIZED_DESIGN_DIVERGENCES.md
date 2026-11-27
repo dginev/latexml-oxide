@@ -12703,6 +12703,12 @@ fonts-nfss/{amsfonts_try_load_fontshape, u_symbol_font_without_map}; guards
   `nfss_selected_font`), not Perl's Info (:5217-5219); an undeclared family stays an Info, as TeX substitutes the
   encoding's default (`\wrong@fontshape`, latex.ltx:10689-10705). Repros fonts-nfss/{dingbat_symbols_are_their_glyphs,
   u_family_without_a_map_is_reported}; guards `cluster_fontmap::dingbat_family_maps`.
+  The same branch reaches ccicons' `U/ccicons` (ccicons-u.enc → the Unicode 13 CC symbols, `ccicons_fontmap.rs`; `\ccby`
+  🅭 🅯 where it was "Γ Δ", 2602.07369, 2203.09493) and manfnt.sty's `U/manual`, whose map (`manfnt_fontmap.rs`, from
+  manfnt.mf) is also the `manfnt` encoding plain's `\font\x=manfnt` selects (Common/Font.pm:117, where `\char127` was
+  dropped): `\dbend` is ☡ on both routes (1012.0265, 2004.07097, 2105.09724). Repros
+  fonts-nfss/{ccicons,manfnt}_symbols_are_their_glyphs, u_family_char_metrics_are_not_its_tfm_red (a U family's char
+  is measured from its mapped glyph, not its TFM); guards in the same module.
 
 ### 646. empheq's `left`/`right` material is kept, and `overload` gives the AMS environments the option
 

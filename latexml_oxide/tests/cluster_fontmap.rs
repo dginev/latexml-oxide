@@ -614,9 +614,9 @@ mod non_bmp_characters {
 
 mod dingbat_family_maps {
   //! dingbat.sty's U-encoded families `ark` and `dingbat` decode through their own maps (ark_fontmap.rs,
-  //! dingbat_fontmap.rs; witness 2303.10475, whose `\checkmark` printed "D"), and a U family TeX has but no map reads
-  //! as OT1 with a Warning, not an Info (sect13.rs `nfss_selected_font`). Repros in
-  //! `tools/perfect_kernel/repros/fonts-nfss/`.
+  //! dingbat_fontmap.rs; witness 2303.10475, whose `\checkmark` printed "D"), as do ccicons' and manfnt's
+  //! (ccicons_fontmap.rs, manfnt_fontmap.rs), and a U family TeX has but no map reads as OT1 with a Warning, not an
+  //! Info (sect13.rs `nfss_selected_font`). Repros in `tools/perfect_kernel/repros/fonts-nfss/`.
   use latexml::util::test::{
     assert_element, check_requirements, convert_files_with, error_count, warning_count,
   };
@@ -706,6 +706,90 @@ mod dingbat_family_maps {
       "p",
       &["xml:id=\"p2.1\""],
       "<p xml:id=\"p2.1\">C F</p>",
+    );
+  }
+
+  /// ccicons' icons are their Unicode 13 CC symbols, no longer OT1 Greek with a Warning (2602.07369's captions,
+  /// 2203.09493's and 2210.04484's lni.cls title pages). `\kern0.1em` between two icons is a hair space.
+  #[test]
+  fn ccicons_symbols_decode_through_their_family_map() {
+    if !check_requirements(&["ccicons.sty"]) {
+      return;
+    }
+    let (log, xml) = convert_files_with(
+      include_str!(
+        "../../tools/perfect_kernel/repros/fonts-nfss/ccicons_symbols_are_their_glyphs.tex"
+      ),
+      &[],
+      Some("ar5iv.sty"),
+    );
+    assert_eq!(
+      (
+        error_count(&log),
+        warning_count(&log),
+        log.contains("Fatal:")
+      ),
+      (0, 0, false),
+      "{log}"
+    );
+    assert!(!log.contains("has no glyph map"), "{log}");
+    assert_element(
+      &xml,
+      "p",
+      &["xml:id=\"p1.1\""],
+      "<p xml:id=\"p1.1\">Icons: \u{1F16D} \u{1F16F} \u{1F10E} \u{229C} \u{1F10F} \u{1F10F} \u{1F10F} \u{1F16E} \
+       \u{1F10D} m s r \u{A9} \u{1F16E}</p>",
+    );
+    assert_element(
+      &xml,
+      "p",
+      &["xml:id=\"p2.1\""],
+      "<p xml:id=\"p2.1\">Licenses: <text xml:id=\"p2.1.1\">\u{1F16D}\u{200A}\u{1F16F}</text>, <text \
+       xml:id=\"p2.1.2\">\u{1F16D}\u{200A}\u{1F16F}\u{200A}\u{1F10F}\u{200A}\u{1F10E}</text>, <text \
+       xml:id=\"p2.1.3\">\u{1F16D}\u{200A}\u{1F10D}</text>, <text \
+       xml:id=\"p2.1.4\">\u{1F16D}\u{200A}\u{1F16F}\u{200A}\u{1F10E}</text>.</p>",
+    );
+  }
+
+  /// manfnt's one table under both of its names: manfnt.sty's family `U/manual` (`\dbend` printed "¨" with a Warning)
+  /// and plain's `\font\manual=manfnt` (`\char127` was dropped; 1012.0265, 2008.09297, 2410.22549). The raise is
+  /// `\textdbend`'s 22/15 of the glyph's height: 11pt in TeX, whose U-family metrics we lack
+  /// (u_family_char_metrics_are_not_its_tfm_red.tex).
+  #[test]
+  fn manfnt_symbols_decode_under_both_names() {
+    if !check_requirements(&["manfnt.sty", "manfnt.tfm"]) {
+      return;
+    }
+    let (log, xml) = convert_files_with(
+      include_str!(
+        "../../tools/perfect_kernel/repros/fonts-nfss/manfnt_symbols_are_their_glyphs.tex"
+      ),
+      &[],
+      Some("ar5iv.sty"),
+    );
+    assert_eq!(
+      (
+        error_count(&log),
+        warning_count(&log),
+        log.contains("Fatal:")
+      ),
+      (0, 0, false),
+      "{log}"
+    );
+    assert!(!log.contains("has no glyph map"), "{log}");
+    assert_element(
+      &xml,
+      "p",
+      &["xml:id=\"p1.1\""],
+      "<p xml:id=\"p1.1\">NFSS: \u{2621} \u{2621} \u{2621} <text yoffset=\"10.3pt\" \
+       xml:id=\"p1.1.1\">\u{2621}</text> \u{29C9} \u{29C9} \u{2606}</p>",
+    );
+    assert_element(
+      &xml,
+      "p",
+      &["xml:id=\"p2.1\""],
+      "<p xml:id=\"p2.1\">Font: <text font=\"graphic\" xml:id=\"p2.1.1\">\u{2621}</text> <text font=\"graphic\" \
+       xml:id=\"p2.1.2\">METAFONT</text></p>",
     );
   }
 }

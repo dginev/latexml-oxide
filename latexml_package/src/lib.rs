@@ -662,6 +662,22 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
     package::dingbat_fontmap::load_definitions,
   ),
   ("ark", "fontmap", package::ark_fontmap::load_definitions),
+  (
+    "ccicons",
+    "fontmap",
+    package::ccicons_fontmap::load_definitions,
+  ),
+  // One map, two names: plain's `\font\x=manfnt` (encoding) and manfnt.sty's NFSS family `U/manual`.
+  (
+    "manfnt",
+    "fontmap",
+    package::manfnt_fontmap::load_definitions,
+  ),
+  (
+    "manual",
+    "fontmap",
+    package::manfnt_fontmap::load_definitions,
+  ),
   ("ifblk", "fontmap", package::ifblk_fontmap::load_definitions),
   ("ifclk", "fontmap", package::ifclk_fontmap::load_definitions),
   ("ifgeo", "fontmap", package::ifgeo_fontmap::load_definitions),

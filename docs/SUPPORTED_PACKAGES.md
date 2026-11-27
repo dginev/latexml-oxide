@@ -960,7 +960,7 @@ raw mode.
 | `xypic` | `.sty` | ported |  |
 | `yfonts` | `.sty` | ported |  |
 
-## Other binding files (engine pools, encodings, language and font-map files, TeX code files) (110)
+## Other binding files (engine pools, encodings, language and font-map files, TeX code files) (113)
 
 | Name | Kind | Support | Note |
 |---|---|---|---|
@@ -980,6 +980,7 @@ raw mode.
 | `brazilian` | `.ldf` | beyond Perl, raw + overrides | babel-language stubs for `.ldf` files that aren't installed in minimal TeXLive environments. |
 | `british` | `.ldf` | beyond Perl, raw + overrides | babel-language stubs for `.ldf` files that aren't installed in minimal TeXLive environments. |
 | `canadian` | `.ldf` | beyond Perl, raw + overrides | babel-language stubs for `.ldf` files that aren't installed in minimal TeXLive environments. |
+| `ccicons` | `.fontmap` | beyond Perl |  |
 | `cp852` | `.def` | ported, raw + overrides |  |
 | `croatian` | `.ldf` | beyond Perl, raw + overrides | babel-language stubs for `.ldf` files that aren't installed in minimal TeXLive environments. |
 | `csquotes` | `.def` | ported, raw + overrides |  |
@@ -1021,6 +1022,8 @@ raw mode.
 | `lmc` | `.fontmap` | beyond Perl |  |
 | `ltluatex` | `.tex` | contributed |  |
 | `ly1` | `.fontmap` | ported |  |
+| `manfnt` | `.fontmap` | beyond Perl |  |
+| `manual` | `.fontmap` | beyond Perl | *alias of* `manfnt.fontmap` |
 | `mssymb` | `.tex` | contributed |  |
 | `newzealand` | `.ldf` | beyond Perl, raw + overrides | babel-language stubs for `.ldf` files that aren't installed in minimal TeXLive environments. |
 | `ngerman` | `.ldf` | beyond Perl |  |
