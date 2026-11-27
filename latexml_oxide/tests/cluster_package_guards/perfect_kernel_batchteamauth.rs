@@ -2,7 +2,8 @@
 //! enumerates — after a comma, "and" or "and the", or an `\and` column that is its name alone — is an author as pdflatex
 //! prints it (`resolver::lines` `reads_as_listed_collaboration`, `resolver::blocks` `shared_column`; OXIDIZED_DESIGN_DIVERGENCES
 //! #459). Two code paths, one test each with its controls: the names line (`an_enumerated_team_is_an_author`) and what keeps
-//! its reading (`a_framed_collaboration_and_an_institution_column_keep_their_reading`).
+//! its reading (`a_framed_collaboration_and_an_institution_column_keep_their_reading`); a group alone stays the creator
+//! (`a_collaboration_alone_is_the_creator`).
 
 use latexml::util::test::{error_count, warning_count};
 
@@ -119,6 +120,19 @@ fn an_enumerated_team_is_an_author() {
       names(&["A. Author", "B. Author", "R Core Team"]),
     ),
   ];
+  let bad = mismatches(&rows);
+  assert!(bad.is_empty(), "{}", bad.join("\n"));
+}
+
+/// A collaboration that is the line's only name is its creator, as rc6 reads it: the enumeration rule needs a person
+/// before the group, so it never leaves a block without a creator (a red-team probe of the rule).
+#[test]
+fn a_collaboration_alone_is_the_creator() {
+  let tex = with_author(
+    repro!("author_enumerated_team_is_an_author"),
+    "The IceCube Collaboration",
+  );
+  let rows = [("alone", tex, (0, 0), names(&["The IceCube Collaboration"]))];
   let bad = mismatches(&rows);
   assert!(bad.is_empty(), "{}", bad.join("\n"));
 }
