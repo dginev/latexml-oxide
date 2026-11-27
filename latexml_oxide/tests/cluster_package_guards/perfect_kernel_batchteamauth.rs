@@ -1279,6 +1279,23 @@ fn a_group_run_before_a_place_or_a_remark_keeps_rc6() {
     )
   };
   let mut rows = vec![
+    // (a framed remark ends a run of groups after one name's commas: rc6's affiliations, no invented co-authors —
+    // round 3's blocker B1 r02, a harness pick)
+    row(
+      "a team run before a framed remark",
+      doc(
+        ARTICLE,
+        r#"\author{Bob Baker, Google Brain Team, DeepMind Team, on behalf of the CMS Collaboration}"#,
+      ),
+      (0, 0),
+      &[&[
+        "role=author",
+        "Bob Baker",
+        "affiliation=Google Brain Team",
+        "affiliation=DeepMind Team",
+        "collaboration=on behalf of the CMS Collaboration",
+      ]],
+    ),
     row(
       "a team, a for remark (Gemini F1)",
       doc(
@@ -1812,6 +1829,125 @@ fn a_promotion_no_check_finds_worse_than_rc6() {
         ],
       ],
     ),
+    // (a run split over a line break promotes with its line or not at all: a line under the names that opens with a
+    // list's conjunction keeps rc6's reading whole — pre-review of round 4c)
+    row(
+      "a run going on under the names keeps rc6's reading",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able, Bob Baker and the XYZ Team \\ and the ABC Team}"#,
+      ),
+      (0, 1),
+      &[
+        &[
+          "role=author",
+          "Ann Able",
+          "collaboration=the XYZ Team",
+          "affiliation=and the ABC Team",
+        ],
+        &[
+          "role=author",
+          SEP,
+          "Bob Baker",
+          "collaboration=the XYZ Team",
+          "affiliation=and the ABC Team",
+        ],
+      ],
+    ),
+    row(
+      "a run going on under a spaced break keeps rc6's reading",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able, Bob Baker and the XYZ Team \\[2pt] and the ABC Team}"#,
+      ),
+      (0, 1),
+      &[
+        &[
+          "role=author",
+          "Ann Able",
+          "collaboration=the XYZ Team",
+          "affiliation=and the ABC Team",
+        ],
+        &[
+          "role=author",
+          SEP,
+          "Bob Baker",
+          "collaboration=the XYZ Team",
+          "affiliation=and the ABC Team",
+        ],
+      ],
+    ),
+    row(
+      "a run going on with an ampersand keeps rc6's reading",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able, Bob Baker and the XYZ Team \\ \& the ABC Team}"#,
+      ),
+      (0, 0),
+      &[
+        &[
+          "role=author",
+          "Ann Able",
+          "collaboration=the XYZ Team",
+          "affiliation=the ABC Team",
+        ],
+        &[
+          "role=author",
+          SEP,
+          "Bob Baker",
+          "collaboration=the XYZ Team",
+          "affiliation=the ABC Team",
+        ],
+      ],
+    ),
+    row(
+      "a run going on after a comma keeps rc6's reading",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able, Bob Baker and the XYZ Team, \\ and the ABC Team}"#,
+      ),
+      (0, 1),
+      &[
+        &[
+          "role=author",
+          "Ann Able",
+          "collaboration=the XYZ Team",
+          "affiliation=and the ABC Team",
+        ],
+        &[
+          "role=author",
+          SEP,
+          "Bob Baker",
+          "collaboration=the XYZ Team",
+          "affiliation=and the ABC Team",
+        ],
+      ],
+    ),
+    row(
+      "a run going on in an and column keeps rc6's reading",
+      doc(
+        ARTICLE,
+        r#"\author{Cat Cole \and Ann Able, Bob Baker and the XYZ Team \\ and the ABC Team}"#,
+      ),
+      (0, 1),
+      &[
+        &["role=author", "Cat Cole"],
+        &[
+          "role=author",
+          SEP,
+          "Ann Able",
+          "collaboration=the XYZ Team",
+          "affiliation=and the ABC Team",
+        ],
+        &[
+          "role=author",
+          SEP,
+          "Bob Baker",
+          "collaboration=the XYZ Team",
+          "affiliation=and the ABC Team",
+        ],
+      ],
+    ),
     // (a name its events spell only through a macro's run: W 0 -> 2 promoted, advisor TEAMAUTH6 C)
     row(
       "names written from their text keep rc6's reading",
@@ -1898,26 +2034,28 @@ fn a_promotion_no_check_finds_worse_than_rc6() {
         ],
       ],
     ),
-    // (only lost ink moves to another creator: an ORCID icon's block keeps its promotion, W as rc6's — Gemini
-    // TEAMAUTH.21 2)
+    // (only lost ink moves to another creator: a picture's block keeps its promotion, W as rc6's — Gemini TEAMAUTH.21 2;
+    // 06ec6712c31 gave it up for the unwritten picture)
     row(
-      "an ORCID icon keeps the promotion",
+      "an unwritten picture keeps the promotion",
       doc(
-        "\\documentclass{article}\n\\usepackage{graphicx,hyperref}",
-        r#"\author{Ann Able\href{https://orcid.org/0000-0002-1825-0097}{\includegraphics[height=1ex]{example-image}} and the GAPS Team \\ CERN}"#,
+        "\\documentclass{article}\n\\usepackage{graphicx}",
+        r#"\author{Ann Able and the GAPS Team \\ \includegraphics[height=1ex]{example-image} \texttt{ann@x.org}}"#,
       ),
-      (0, 0),
-      &[
-        &["role=author", "Ann Able", "orcid=", "affiliation=CERN"],
-        &["role=author", SEP, "the GAPS Team", "affiliation=CERN"],
-      ],
+      (0, 1),
+      &[&["role=author", "Ann Able", "email=ann@x.org"], &[
+        "role=author",
+        SEP,
+        "the GAPS Team",
+      ]],
     ),
   ]);
 }
 
 /// Hand-picked lines of the generated harness (kit `teamauth_fuzz`), at most ten (DG), one behaviour each, every one red on
-/// round 3 (3689214c83b) or round 4 (52eeaf68a5e) and green here (a team run before a framed remark and a bare comma: the
-/// rows "a team, a for remark (Gemini F1)" and "a company group after a comma (advisor 3)"): the reading with the enumeration is rc6's plus its teams, else rc6's whole
+/// round 3 (3689214c83b) or round 4 (52eeaf68a5e) and green here (round 3's blocker B1 r02, a run of teams before a framed
+/// remark, is a row of `a_group_run_before_a_place_or_a_remark_keeps_rc6`; a bare comma is "a company group after a comma
+/// (advisor 3)"): the reading with the enumeration is rc6's plus its teams, else rc6's whole
 /// (`resolver::enumeration`, OXIDIZED_DESIGN_DIVERGENCES #459). Each pdflatex-clean.
 #[test]
 fn harness_picks_keep_rc6_or_add_only_the_team() {

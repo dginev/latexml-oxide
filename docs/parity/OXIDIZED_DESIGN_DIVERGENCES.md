@@ -9607,7 +9607,8 @@ author's contact, never part of the name and never a creator.
   (Gemini TEAMAUTH.17, advisor TEAMAUTH6 C); the
   chosen reading's checks are the ones the emitter uses. A run promotes all its teams or none: a names line's
   collaboration a person keeps in a block where a team was promoted keeps rc6's reading (`-- the X Collaboration and
-  the Y Collaboration`, its `;` form); revtex's `\collaboration` block (`\author{#1}` as Perl's, marked
+  the Y Collaboration`, its `;` form), as does a line under the names that opens with a list's conjunction (`… and the
+  X Team \\ and the Y Team`, by its events: `enumeration::line_opens_a_list`); revtex's `\collaboration` block (`\author{#1}` as Perl's, marked
   `AuthorBlock::collaboration`, set and cleared by the stomach around its `\author`) enumerates nothing (0705.3322, 2010.14527). Only the kept reading's log calls are
   emitted (`reading_log`). A `;` is no enumeration's comma (the lexer's `Sep(Comma)` keeps
   it as its text);

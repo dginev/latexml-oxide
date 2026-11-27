@@ -200,6 +200,30 @@ fn on_a_piece(
   })
 }
 
+/// Whether a line under the names opens with a list's conjunction (`\\ and the ABC Team`, `\\[2pt] \& …`, `, \\ and
+/// …`): the run goes on past the break, so a team before it is promoted only with the rest (pre-review of round 4c).
+fn line_opens_a_list(events: &[Event]) -> bool {
+  let mut after_break = false;
+  for e in events {
+    match &e.kind {
+      EventKind::Break => after_break = true,
+      EventKind::Layout
+      | EventKind::Mark
+      | EventKind::Sep(SepKind::Gap { .. } | SepKind::Comma) => {},
+      EventKind::Sep(SepKind::Word(_)) if after_break => return true,
+      EventKind::Name if after_break => {
+        let first = e.text.split_whitespace().next().unwrap_or_default();
+        if first.eq_ignore_ascii_case("and") || first == "&" {
+          return true;
+        }
+        after_break = false;
+      },
+      _ => after_break = false,
+    }
+  }
+  false
+}
+
 /// A text's words, lowercased.
 fn words(text: &str) -> impl Iterator<Item = String> + '_ {
   text
@@ -278,7 +302,11 @@ pub(super) fn promotion_only(inputs: &[Input], rc6: &Resolved, enumerated: &Reso
           .any(|t| item.source.is_some_and(|(at, _)| at == t.source))
     })
   });
-  if half {
+  if half
+    || teams
+      .iter()
+      .any(|t| line_opens_a_list(events_of(inputs, t.source)))
+  {
     return false;
   }
   let on_a_team = |item: &Assoc| teams.iter().any(|t| items(t).any(|i| same(i, item)));
