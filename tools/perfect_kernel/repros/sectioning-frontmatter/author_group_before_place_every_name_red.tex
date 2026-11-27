@@ -1,0 +1,17 @@
+% mechanism: an institution and its place after names an "and" joins are every name's affiliation
+% witness: TEAMAUTH re-review S4 (synthetic); the same split as rc6's `Ann Able and Bob Baker and Univ A, CERN` and llncs's
+%          `fmw_lncs_and_column_group_then_place_red`
+% oracle:  pdflatex 0 `!`: "Ann Able and Bob Baker and Theory Group, CERN"
+% engines: rust 0.8.0-rc6: `collaboration` "Theory Group" on both, CERN on Bob Baker; TEAMAUTH: Ann Able `affiliation`
+%          "Theory Group", Bob Baker `affiliation` "CERN" (the institution arm's split); 0 errors, 0 warnings
+% expect:  both names with the affiliation "Theory Group, CERN"
+% status:  RED
+% moves:   post-merge (pre-existing split, guard row "a group before a place (review S4)")
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able and Bob Baker and Theory Group, CERN}
+\maketitle
+Text.
+\end{document}

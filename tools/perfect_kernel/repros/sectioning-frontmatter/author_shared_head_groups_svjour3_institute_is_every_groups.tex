@@ -1,0 +1,20 @@
+% mechanism: an unmarked svjour3 `\institute` a sole author takes (`sole_author_takes_the_block`) is the groups' its line
+%            lists beside it too, no block creator (OXIDIZED_DESIGN_DIVERGENCES #459, `resolver::LISTED_GROUP`); two people
+%            keep the block's nameless creator (`\author{Ann Able \and Bob Baker}\institute{CERN}`, rc6 alike)
+% witness: Gemini TEAMAUTH.7 a2, TEAMAUTH.9 (synthetic); svjour3 `\author{J.T. Mitchell and the PHENIX
+%          Collaboration}\institute{BNL}` (ADV_TEAMAUTH3) the same path
+% oracle:  pdflatex: svjour3.cls is not in TeX Live 2025 (a harness limit); the line prints "The ATLAS and CMS
+%          Collaboration" over "CERN"
+% engines: rust 0.8.0-rc6: one creator "The ATLAS" with `collaboration` "CMS Collaboration" and CERN; TEAMAUTH round 1: "The
+%          ATLAS", "CMS Collaboration", and a nameless block creator with CERN; 0 errors, 0 warnings
+% expect:  two creators, each with the affiliation CERN, no nameless creator
+% status:  RED (TEAMAUTH round 1) -> GREEN (TEAMAUTH fix round 2, `perfect_kernel_batchteamauth`)
+% preload: ar5iv.sty
+\documentclass{svjour3}
+\begin{document}
+\title{T}
+\author{The ATLAS and CMS Collaboration}
+\institute{CERN}
+\maketitle
+Text.
+\end{document}

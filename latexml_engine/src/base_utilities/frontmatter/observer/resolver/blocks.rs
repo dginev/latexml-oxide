@@ -35,6 +35,18 @@ impl Resolver {
     anchor: Option<&Assoc>,
     chain: Chain<'_>,
   ) {
+    // (a group the line's enumeration listed owns none of its contacts while a name of it is left, as before: PoS's
+    // `\author{Fermilab Lattice and MILC Collaborations\\ E-mail: \email{…}}`, 1411.6086; OD #459)
+    let named: Vec<usize> = candidates
+      .iter()
+      .copied()
+      .filter(|&c| !self.listed_group(c))
+      .collect();
+    let candidates = if named.is_empty() {
+      candidates
+    } else {
+      &named[..]
+    };
     let led = |rule: String| match chain {
       Chain::Line => rule,
       Chain::DocumentNote { .. } => s!("api:document-note {rule}"),

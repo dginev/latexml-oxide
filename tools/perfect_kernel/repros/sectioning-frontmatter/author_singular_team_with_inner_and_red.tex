@@ -1,0 +1,16 @@
+% mechanism: an "and" inside one group's name (a singular head) is no list (OXIDIZED_DESIGN_DIVERGENCES #459, rule 3)
+% witness: TEAMAUTH re-review NIT m9 (synthetic); 1407.0386's `Databases and Information Systems Group` the same split
+% oracle:  pdflatex 0 `!`: "The Alpha and Omega Team"
+% engines: rust 0.8.0-rc6: "The Alpha" with `collaboration` "Omega Team"; TEAMAUTH: two creators "The Alpha", "Omega
+%          Team"; 0 errors, 0 warnings
+% expect:  one creator "The Alpha and Omega Team"
+% status:  RED
+% moves:   post-merge (DG's ruling 3 splits a shared head, singular too; telling one group's "and" needs a ruling)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{The Alpha and Omega Team}
+\maketitle
+Text.
+\end{document}

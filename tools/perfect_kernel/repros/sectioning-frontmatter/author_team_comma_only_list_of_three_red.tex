@@ -1,0 +1,17 @@
+% mechanism: a team one name's comma parts from it is an author only where the list goes on (a group, or a person after
+%            "and"); a list of commas alone keeps rc6's reading (OXIDIZED_DESIGN_DIVERGENCES #459)
+% witness: synthetic (TEAMAUTH fix2: the reading cannot tell `Ann Able, R Core Team, Bob Baker` from `Bob Baker, Google
+%          Brain Team, Palo Alto`, Gemini TEAMAUTH.9 b1)
+% oracle:  pdflatex 0 `!`: "Ann Able, R Core Team, Bob Baker" on one line
+% engines: rust 0.8.0-rc6 and TEAMAUTH: "Ann Able" with `affiliation` "R Core Team", then "Bob Baker"; 0 errors, 0 warnings
+% expect:  three creators "Ann Able", "R Core Team", "Bob Baker"
+% status:  RED
+% moves:   post-merge (a place word the reading can tell from a name)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able, R Core Team, Bob Baker}
+\maketitle
+Text.
+\end{document}

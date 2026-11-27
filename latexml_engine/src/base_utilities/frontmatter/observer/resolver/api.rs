@@ -1075,7 +1075,13 @@ impl Resolver {
       }
       return;
     } else {
-      (vec![n - 1], "api:annotate:last")
+      // (the last author's, past the groups its line listed after it: amsart's `\author{Ann Able and the GAPS
+      // Team}\email{…}`, Ann's as before, OXIDIZED_DESIGN_DIVERGENCES #459)
+      let last = (0..n)
+        .rev()
+        .find(|&c| !self.listed_group(c))
+        .unwrap_or(n - 1);
+      (vec![last], "api:annotate:last")
     };
     // (an e-mail call printing several addresses alone — a list, a group, a list sharing the domain: revtex's
     // `\email{seracre, hanaki, jimliu, pszepiet@umich.edu}` after the last `\author`, 0812.3572; `\email{tuhin@…;

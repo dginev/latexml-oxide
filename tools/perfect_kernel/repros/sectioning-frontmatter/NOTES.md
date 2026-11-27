@@ -246,3 +246,16 @@ shapes `art_comma_company_group`, `art_group_then_address_next_line`, `art_and_c
 - `fmw_iop_unmarked_shared_address_red` (1105.1742, 1205.6912) — iopart unmarked shared `\address`: the last name's only.
 - `fmw_iop_dag_ddag_footnotes_red` (hep-th0406174) — iopart `\footnote[n]` e-mails: notes without their printed marks
   and 2 Warnings "markup lost".
+
+## TEAMAUTH — a team the author list enumerates is an author (2026-11-27)
+
+`author_team_*`, `author_enumerated_*`, `author_shared_head_*`: rows of `perfect_kernel_batchteamauth` (DG's rulings,
+FIDELITY_CHARTER §4, OXIDIZED_DESIGN_DIVERGENCES #459). RED, no guard (`moves: post-merge`):
+- `author_team_comma_only_list_of_three_red` — `A, R Core Team, B` (commas only) keeps rc6's affiliation: the reading
+  cannot tell it from `Bob Baker, Google Brain Team, Palo Alto`.
+- `author_team_comma_place_is_a_creator_red` — that place a creator (pre-existing).
+- `author_group_joined_to_institution_is_an_affiliation_red`, `author_group_and_place_under_is_an_affiliation_red` —
+  rc6's collaboration contact kept where ruling 2 asks for an affiliation.
+- `author_group_before_place_every_name_red` — `A and B and Theory Group, CERN` split over the names.
+- `author_shared_head_shared_mark_red` — a shared head's mark reaches only its last group.
+- `author_singular_team_with_inner_and_red` — `The Alpha and Omega Team` split in two.

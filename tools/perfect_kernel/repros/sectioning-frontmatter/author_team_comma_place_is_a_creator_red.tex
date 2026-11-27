@@ -1,0 +1,16 @@
+% mechanism: a piece after an institution's comma that may name a person is read as a name (`may_name_a_person`)
+% witness: synthetic (TEAMAUTH fix2, Gemini TEAMAUTH.9 b1 c3)
+% oracle:  pdflatex 0 `!`: "Bob Baker, Google Brain Team, Palo Alto"
+% engines: rust 0.8.0-rc6 and TEAMAUTH: "Bob Baker" with `affiliation` "Google Brain Team", and a creator "Palo Alto"; 0
+%          errors, 0 warnings
+% expect:  one creator "Bob Baker" with the affiliation "Google Brain Team, Palo Alto"
+% status:  RED
+% moves:   post-merge (pre-existing; the institution's place continuation)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Bob Baker, Google Brain Team, Palo Alto}
+\maketitle
+Text.
+\end{document}

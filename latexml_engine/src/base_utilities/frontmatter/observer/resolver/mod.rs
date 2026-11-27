@@ -913,6 +913,22 @@ impl Resolver {
       .unwrap_or_default()
   }
 
+  /// The one live creator no list enumerated as a group, and the groups its line listed beside it: a sole author's
+  /// reading of `Ann Able and the GAPS Team` (OXIDIZED_DESIGN_DIVERGENCES #459, [`LISTED_GROUP`]).
+  fn sole_named(&self) -> Option<(usize, Vec<usize>)> {
+    let (named, groups): (Vec<usize>, Vec<usize>) = self
+      .live()
+      .into_iter()
+      .partition(|&c| !self.listed_group(c));
+    match named[..] {
+      [sole] => Some((sole, groups)),
+      _ => None,
+    }
+  }
+
+  /// Whether creator `c` is a group a names line's enumeration made an author ([`LISTED_GROUP`]).
+  fn listed_group(&self, c: usize) -> bool { self.out.creators[c].rule.contains(LISTED_GROUP) }
+
   fn live(&self) -> Vec<usize> {
     (0..self.out.creators.len())
       .filter(|c| !self.replaced.contains(c))
@@ -1169,6 +1185,9 @@ const ENTRY_MAILBOX: &str = " api:entry-mailbox";
 /// which the emitter writes as `frontmatter_api::STOPGAP_ENTRY` for the flush's Link step of an address its Kind step
 /// takes out (`\affil{Univ C; zz@x.org}`, `insert::link_entry_addresses`).
 pub(in crate::base_utilities) const RUN_LEFTOVER: &str = " api:run-leftover";
+/// The rule tag of a creator a names line's enumeration made of a group (`… and R Core Team`, OXIDIZED_DESIGN_DIVERGENCES
+/// #459): what a class gives its sole or last author stays that author's, as before (`sole_named`).
+pub(super) const LISTED_GROUP: &str = " line:listed-group";
 
 /// The one of `names` an address spells (`spelled_owners`), if one — none for a list of local parts the address reader
 /// could not part (`lists_local_parts`); each name read as an address spells it, by its base letters ([`base_letters`])

@@ -201,17 +201,27 @@ missing image, a broken `\ref` or `\cite`, and the like — the fixes are usuall
   1. a team or collaboration (`… Team`, `… Collaboration(s)`, `… Consortium`) in any enumerated position is an author
      (`role="author"`, its text the personname), each its own creator with its own mark and address:
      `Friedrich Leisch, Vincent Goulet and R Core Team` and its `\and` form give three, `A, B, R Core Team, and the GAPS
-     Team` four, `A, B, the TCV team$^3$ and the WPTE team$^4$` five (2502.17397); after a comma only in a list of three
-     or more (one name's comma keeps it that name's: `Chris Howard, SNO Collaboration`, 0906.0040);
+     Team` four, `A, B, the TCV team$^3$ and the WPTE team$^4$` five (2502.17397); after one name's comma only where the
+     list goes on, a group after it or a person after its `and` (`Ann Able, R Core Team and Bob Baker`) — else it keeps
+     rc6's reading: `Chris Howard, SNO Collaboration, \texttt{…}` (0906.0040), `Bob Baker, Google Brain Team, Palo Alto`,
+     and the commas-only `A, R Core Team, B` (RED `author_team_comma_only_list_of_three_red`); what a class gives its
+     sole or last author, and a contact line under the names, stays its holder's before the split (`\author{J.T.
+     Mitchell and the PHENIX Collaboration}\address{BNL}`: Mitchell's; svjour3's `\institute` every listed group's too);
   2. a "group" is an author only after `and`, `and the` or `&` with no address under it, or with its own mark (`and LHD
-     experimental group$^2$`, 1711.07097); otherwise it is an affiliation, as rc6 reads it — after a list's comma, joined
-     to an institution, in an `\and` column, before a place on its line or the next;
+     experimental group$^2$`, 1711.07097, its marked address under the names its own); otherwise it keeps rc6's reading —
+     an affiliation after a list's comma, in an `\and` column, before a place; a `collaboration` contact joined to an
+     institution (`…, Department of Physics and Quantum Optics Group`) or over a place on the next line (`A and B and
+     Theory Group \\ CERN`), whose affiliation reading is RED (`author_group_joined_to_institution_is_an_affiliation_red`,
+     `author_group_and_place_under_is_an_affiliation_red`);
   3. a shared head noun lists one author per group, each named by its own printed text (`The ATLAS`, `CMS
-     Collaborations`; 1503.07589, 2408.02330) — never invented text; a list of groups with no person in its block keeps
-     its reading (RED `author_group_only_list_keeps_one_creator_red`), as REVTeX's `\collaboration{Fermilab Lattice,
-     HPQCD, and MILC Collaborations}` does (2412.18491, RED `revtex_collaboration_list_is_one_contact_red`);
+     Collaborations`; 1503.07589, 2408.02330) — never invented text; a list of whole group names with no person in its
+     block keeps its reading (`R Core Team and the GAPS Team`, RED `author_group_only_list_keeps_one_creator_red`), as
+     REVTeX's `\collaboration{Fermilab Lattice, HPQCD, and MILC Collaborations}` does (2412.18491, RED
+     `revtex_collaboration_list_is_one_contact_red`);
   4. institutions and places keep their reading, an affiliation: `\and The R Foundation`, `\and University of X`, a group
-     before a place (`and Theory Group, CERN`), and nothing after an institution the line read is enumerated;
+     before a place (`and Theory Group, CERN`, split over the names as rc6 splits `and Univ A, CERN`: RED
+     `author_group_before_place_every_name_red`), and nothing after an institution the line read is enumerated; a team or
+     collaboration before a place keeps rc6's contact (`A, B and XYZ Collaboration, CERN`);
   5. a collaboration the line frames stays a contact: a name's `for`/`on behalf of`/`representing` remark (1311.7305,
      hep-ex0611001, 2009.04166), a bracketed line `(XYZ Collaboration)`, a dash (hep-ex0106079), a collaboration line of
      its own (BESIII's), AASTeX's `\collaboration`; a bracket the piece closes is no remark (`Ann Able (MIT), Bob Baker

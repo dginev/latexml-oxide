@@ -23,6 +23,8 @@ const ARTICLE: &str = r"\documentclass{article}";
 const LLNCS: &str = r"\documentclass{llncs}";
 /// The `before=` the author line's separator leaves on every creator after the first.
 const SEP: &str = "before=\u{2003}\u{2003}";
+/// amsart's: the " and " its `\author` list prints before its last name.
+const AMS_SEP: &str = "before= and ";
 
 /// A document of `class` whose title block is `author` (its `\author` and what follows it).
 fn doc(class: &str, author: &str) -> String {
@@ -351,6 +353,69 @@ fn an_enumerated_team_is_an_author() {
         &["role=author", SEP, "Bob Baker"],
         &["role=author", SEP, "R Core Team"],
       ],
+    ),
+    // (one name's comma keeps the piece that name's where the list does not go on — rc6's reading; round 1 made the team
+    // an author and the e-mail a nameless creator's, Gemini TEAMAUTH.9 b1; `Palo Alto` a creator is rc6's,
+    // `author_team_comma_place_is_a_creator_red`)
+    row(
+      "one name's comma, a collaboration, an e-mail (Gemini TEAMAUTH.9 b1)",
+      doc(
+        ARTICLE,
+        r#"\author{Chris Howard, SNO Collaboration, \texttt{c@sno.ca}}"#,
+      ),
+      (0, 0),
+      &[&[
+        "role=author",
+        "Chris Howard",
+        "email=c@sno.ca",
+        "collaboration=SNO Collaboration",
+      ]],
+    ),
+    row(
+      "one name's comma, a team, an e-mail",
+      doc(
+        ARTICLE,
+        r#"\author{Bob Baker, Google Brain Team, \texttt{bob@google.com}}"#,
+      ),
+      (0, 0),
+      &[&[
+        "role=author",
+        "Bob Baker",
+        "email=bob@google.com",
+        "affiliation=Google Brain Team",
+      ]],
+    ),
+    row(
+      "one name's comma, a team, a place",
+      doc(
+        ARTICLE,
+        r#"\author{Bob Baker, Google Brain Team, Palo Alto}"#,
+      ),
+      (0, 0),
+      &[
+        &["role=author", "Bob Baker", "affiliation=Google Brain Team"],
+        &["role=author", SEP, "Palo Alto"],
+      ],
+    ),
+    row(
+      "one name's comma, a team, a trailing comma",
+      doc(ARTICLE, r#"\author{Bob Baker, Google Brain Team,}"#),
+      (0, 0),
+      &[&["role=author", "Bob Baker", "affiliation=Google Brain Team"]],
+    ),
+    row(
+      "one name's comma, a team, a \\thanks after a comma",
+      doc(
+        ARTICLE,
+        r#"\author{Bob Baker, Google Brain Team, \thanks{x}}"#,
+      ),
+      (0, 0),
+      &[&[
+        "role=author",
+        "Bob Baker",
+        "affiliation=Google Brain Team",
+        "note:thanks[*]=x",
+      ]],
     ),
     row(
       "a lone collaboration (rule 6)",
@@ -686,6 +751,39 @@ fn a_group_is_an_author_after_and_or_its_mark() {
         ],
       ],
     ),
+    // (a group with its own mark is an author with its own address, its marked line under the names no place for it —
+    // rc6 and round 1: a contact on each name and a nameless creator holding NIFS, review S2 v7, m14b)
+    row(
+      "and, its own mark, marked lines under the names (review S2)",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able$^1$, Bob Baker$^1$ and LHD experimental group$^2$\\ $^1$Univ A\\ $^2$NIFS}"#,
+      ),
+      (0, 0),
+      &[
+        &["role=author", "Ann Able", "affiliation=Univ A"],
+        &["role=author", SEP, "Bob Baker", "affiliation=Univ A"],
+        &[
+          "role=author",
+          SEP,
+          "LHD experimental group",
+          "affiliation=NIFS",
+        ],
+      ],
+    ),
+    row(
+      "and the, its own mark (review S2 m14b)",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able$^1$, Bob Baker$^1$ and the XYZ Group$^{2}$ \\ $^1$Univ A \\ $^2$Univ B}"#,
+      ),
+      (0, 0),
+      &[
+        &["role=author", "Ann Able", "affiliation=Univ A"],
+        &["role=author", SEP, "Bob Baker", "affiliation=Univ A"],
+        &["role=author", SEP, "the XYZ Group", "affiliation=Univ B"],
+      ],
+    ),
     row(
       "a company group after a comma (advisor 3)",
       doc(ARTICLE, r#"\author{Ann Able, Bob Baker, Alibaba Group}"#),
@@ -869,6 +967,8 @@ fn a_framed_collaboration_and_an_institution_keep_their_reading() {
         ],
       ],
     ),
+    // (the institution arm's split, as rc6 splits `and Univ A, CERN`: every name should hold both,
+    // `author_group_before_place_every_name_red`)
     row(
       "a group before a place (review S4)",
       doc(
@@ -881,6 +981,41 @@ fn a_framed_collaboration_and_an_institution_keep_their_reading() {
         SEP,
         "Bob Baker",
         "affiliation=CERN",
+      ]],
+    ),
+    // (an unframed team or collaboration before a place keeps rc6's contact on each name — round 1 made it the first
+    // name's affiliation, review S1 m1, m3)
+    row(
+      "a collaboration before a place, a list's and (review S1)",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able, Bob Baker and XYZ Collaboration, CERN}"#,
+      ),
+      (0, 0),
+      &[
+        &["role=author", "Ann Able", "collaboration=XYZ Collaboration"],
+        &[
+          "role=author",
+          SEP,
+          "Bob Baker",
+          "collaboration=XYZ Collaboration",
+          "affiliation=CERN",
+        ],
+      ],
+    ),
+    row(
+      "a team before a place, and (review S1 m3)",
+      doc(
+        ARTICLE,
+        r#"\author{Ann Able and Bob Baker and XYZ Team, Univ A}"#,
+      ),
+      (0, 0),
+      &[&["role=author", "Ann Able", "collaboration=XYZ Team"], &[
+        "role=author",
+        SEP,
+        "Bob Baker",
+        "collaboration=XYZ Team",
+        "affiliation=Univ A",
       ]],
     ),
     row(
@@ -1088,4 +1223,175 @@ fn a_framed_collaboration_and_an_institution_keep_their_reading() {
       ],
     ),
   ]);
+}
+
+/// Rule 1's owners: a group the enumeration made an author is no owner of what a class gives the call's last author —
+/// the person keeps it, as rc6 gave it (`api.rs` `annotate:last`; ADV_TEAMAUTH3 G3: nucl-ex0510076 jpconf,
+/// astro-ph0311630 kapproc) — and a sole author's block institute is every listed group's too, no nameless creator
+/// (`post.rs sole_author_takes_the_block`; Gemini TEAMAUTH.7 a2, TEAMAUTH.9). Round 1: the address on the team, the
+/// person none; svjour3's a nameless creator. jpconf's Warning is its unknown class.
+#[test]
+fn a_listed_group_owns_no_address_of_the_person() {
+  const MITCHELL: &str =
+    r#"\author{J.T. Mitchell and the PHENIX Collaboration}\address{BNL, Upton, NY}"#;
+  let person = |role: &'static str, sep: &str| -> Vec<Vec<String>> {
+    vec![
+      vec![
+        "role=author".into(),
+        "J.T. Mitchell".into(),
+        format!("{role}=BNL, Upton, NY"),
+      ],
+      vec![
+        "role=author".into(),
+        sep.into(),
+        "the PHENIX Collaboration".into(),
+      ],
+    ]
+  };
+  let rows = [
+    (
+      "iopart",
+      doc(r"\documentclass{iopart}", MITCHELL),
+      (0, 0),
+      person("affiliation", SEP),
+    ),
+    (
+      "jpconf",
+      doc(r"\documentclass{jpconf}", MITCHELL),
+      (0, 1),
+      person("address", SEP),
+    ),
+    (
+      "ws-procs9x6",
+      doc(r"\documentclass{ws-procs9x6}", MITCHELL),
+      (0, 0),
+      person("address", SEP),
+    ),
+    (
+      "ws-ijmpa",
+      doc(r"\documentclass{ws-ijmpa}", MITCHELL),
+      (0, 0),
+      person("address", SEP),
+    ),
+    (
+      "amsart",
+      doc(r"\documentclass{amsart}", MITCHELL),
+      (0, 0),
+      person("address", AMS_SEP),
+    ),
+    (
+      "jheppub",
+      doc(
+        "\\documentclass{article}\\usepackage{jheppub}",
+        r#"\author{J.T. Mitchell and the PHENIX Collaboration}\affiliation{BNL, Upton, NY}"#,
+      ),
+      (0, 0),
+      person("affiliation", SEP),
+    ),
+  ];
+  let mut rows: Vec<Row> = rows.into_iter().collect();
+  rows.extend([
+    row(
+      "amsart \\email",
+      doc(
+        r"\documentclass{amsart}",
+        r#"\author{Ann Able and the GAPS Team}\email{a@b.c}"#,
+      ),
+      (0, 0),
+      &[&["role=author", "Ann Able", "email=a@b.c"], &[
+        "role=author",
+        AMS_SEP,
+        "the GAPS Team",
+      ]],
+    ),
+    // (a marked group the reading made a creator before is the holder still, and the team after it an author past the
+    // line's closing `.` — round 1: the pile on the team, 2404.07458)
+    row(
+      "iopart, a marked group then a team, a closing period (2404.07458)",
+      doc(
+        r"\documentclass{iopart}",
+        r#"\author{Ann Able$^{1}$, XYZ Working Group$^{a}$, and EAST Team$^{b}$.}
+\address{$^{1}$Univ A}
+\address{$a$ See X for the XYZ Working Group}
+\address{$b$ See Y for the EAST Team}"#,
+      ),
+      (0, 0),
+      &[
+        &["role=author", "Ann Able", "affiliation=1 Univ A"],
+        &[
+          "role=author",
+          SEP,
+          "XYZ Working Group",
+          "note:footnotemark[a]=",
+          "affiliation=a See X for the XYZ Working Group",
+          "affiliation=b See Y for the EAST Team",
+        ],
+        &["role=author", SEP, "EAST Team", "note:footnotemark[b]="],
+      ],
+    ),
+    // (a line's e-mail under a shared head's groups stays the head's, as rc6 gave it — round 1: a nameless creator's,
+    // 1411.6086, 1212.5470, 1112.5642)
+    row(
+      "PoS, an e-mail line under a shared head (1411.6086)",
+      doc(
+        r"\documentclass{PoS}",
+        r#"\author{Ann Able\\ Univ A\\ E-mail: \email{ann@a.edu}}
+\author{Fermilab Lattice and MILC Collaborations\\ E-mail: \email{cc@ill.edu}}"#,
+      ),
+      (0, 0),
+      &[
+        &[
+          "role=author",
+          "Ann Able",
+          "affiliation=Univ A",
+          "email=ann@a.edu",
+        ],
+        &["role=author", SEP, "Fermilab Lattice", "email=cc@ill.edu"],
+        &["role=author", SEP, "MILC Collaborations"],
+      ],
+    ),
+    row(
+      "svjour3, a person and a collaboration",
+      doc(
+        r"\documentclass{svjour3}",
+        r#"\author{J.T. Mitchell and the PHENIX Collaboration}\institute{BNL, Upton, NY}"#,
+      ),
+      (0, 0),
+      &[
+        &["role=author", "J.T. Mitchell", "affiliation=BNL, Upton, NY"],
+        &[
+          "role=author",
+          SEP,
+          "the PHENIX Collaboration",
+          "affiliation=BNL, Upton, NY",
+        ],
+      ],
+    ),
+    row(
+      "svjour3, a shared head, singular (Gemini a2)",
+      repro!("author_shared_head_groups_svjour3_institute_is_every_groups").to_string(),
+      (0, 0),
+      &[&["role=author", "The ATLAS", "affiliation=CERN"], &[
+        "role=author",
+        SEP,
+        "CMS Collaboration",
+        "affiliation=CERN",
+      ]],
+    ),
+    row(
+      "svjour3, a shared head, plural (Gemini TEAMAUTH.9 a2)",
+      doc(
+        r"\documentclass{svjour3}",
+        r#"\author{The ATLAS and CMS Collaborations}\institute{CERN}"#,
+      ),
+      (0, 0),
+      &[&["role=author", "The ATLAS", "affiliation=CERN"], &[
+        "role=author",
+        SEP,
+        "CMS Collaborations",
+        "affiliation=CERN",
+      ]],
+    ),
+  ]);
+  check(&rows);
 }

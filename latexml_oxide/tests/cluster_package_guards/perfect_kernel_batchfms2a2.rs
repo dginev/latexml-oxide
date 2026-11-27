@@ -913,7 +913,8 @@ fn address_lists_in_author_order_and_collaborations() {
       "  a Univ A | ruling1:request",
       "C Bob Baker [1] | line:names sep:comma",
       "  a Univ A | ruling1:request",
-      "C the MAST Team [] | line:names sep:word",
+      // (the tag of a creator only the list's enumeration makes, `resolver::LISTED_GROUP`: TEAMAUTH fix round 2)
+      "C the MAST Team [] | line:names sep:word line:listed-group",
     ]
   );
 }

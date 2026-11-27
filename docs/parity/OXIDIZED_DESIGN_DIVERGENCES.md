@@ -9582,11 +9582,17 @@ author's contact, never part of the name and never a creator.
   collaboration`; formerly #946, #967) where the line frames it — a name's `for`/`on behalf of`/`representing` remark,
   brackets, dashes, a line of its own, a remark left open earlier on the line; in an author enumeration a team or
   collaboration is an author wherever it stands (after `and`, `and the`, `&`, an inline `\and`, an `\and` column alone,
-  or a comma of a list of three or more), a "group" only after `and`/`&` with no address under it or with its own mark,
-  each group a shared head noun lists by its own text (beside names the block printed), never after an institution the
-  line read nor before a place, as article.cls:246-247 prints them and Perl's `@authorsplits` (Base_Utility.pool.ltxml:679)
-  splits them (`lines.rs` `enumerated`, `blocks.rs shared_column`; DG 2026-11-27, charter §4 rules 1-6);
-an `\IEEEmembership` grade is the name's it follows (formerly #1016, #950);
+  or a comma of a list of two names, or of one where the list goes on: a group, or a person after its `and`), a "group"
+  only after `and`/`&` with no address under it or with its own mark, each group a shared head noun lists by its own text
+  (beside names the block printed), never after an institution the line read nor before a place (a team there keeps its
+  contact), as article.cls:246-247 prints them and Perl's `@authorsplits` (Base_Utility.pool.ltxml:679) splits them
+  (`lines.rs` `enumerated`, `blocks.rs shared_column`; DG 2026-11-27, charter §4 rules 1-6); such a group is no second
+  author to the owner rules: a sole author's block institute is every listed group's too, and what a class gives the
+  last author, or a contact line under the names, goes to its owner before the split (`post.rs
+  sole_author_takes_the_block`, `api.rs` `annotate:last`, `blocks.rs place_line_contacts`, `resolver::LISTED_GROUP`;
+  svjour3's `\institute`, amsart's and jpconf's `\address` (nucl-ex0510076, astro-ph0311630), PoS's e-mail line
+  (1411.6086); a marked group the reading made a creator before stays the holder, 2404.07458);
+  an `\IEEEmembership` grade is the name's it follows (formerly #1016, #950);
   IEEEtran's blocks under authblk's `\author` are read as the class reads them (formerly #987).
 
 **Witnesses** 0910.4381, 1908.10448, 2410.11607, 2403.06760, 2212.06489, 2508.03934 (gretsi's `first \textsc{last}`),
@@ -9598,8 +9604,10 @@ an `\IEEEmembership` grade is the name's it follows (formerly #1016, #950);
 each_group_a_shared_head_lists_is_an_author, a_framed_collaboration_and_an_institution_keep_their_reading}`. RED:
 `article_mark_led_second_row_of_one_name_read_as_affiliation_red`, `aa_institute_and_inside_a_macro_group_red`,
 `revtex_collaboration_list_is_one_contact_red`, `author_group_only_list_keeps_one_creator_red`,
-`author_shared_head_groups_svjour3_institute_is_the_blocks_red`, `author_team_witness_*_red` (1311.7305, hep-ex0611001,
-2009.04166, 1205.6912).
+`author_team_witness_*_red` (1311.7305, hep-ex0611001, 2009.04166, 1205.6912), `author_team_comma_only_list_of_three_red`,
+`author_team_comma_place_is_a_creator_red`, `author_group_joined_to_institution_is_an_affiliation_red`,
+`author_group_and_place_under_is_an_affiliation_red`, `author_group_before_place_every_name_red`,
+`author_shared_head_shared_mark_red`, `author_singular_team_with_inner_and_red`.
 **Upstream.** Not offered (reads digested events). Records: [the archive](../archive/OD_FRONTMATTER_RECORDS_2026-11-15.md), under each number.
 
 ### 460. Class bindings map their title-page commands onto the frontmatter API as the class prints them (the CLSFM table) — absorbs #472 #485 #496 #963

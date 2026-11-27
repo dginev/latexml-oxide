@@ -55,7 +55,10 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
   - **A team the author list names is an author.** `\author{A, B and R Core Team}`, its `\and` form and `A, B and the
     GAPS Team` give three authors, as the PDF prints them, and two teams or collaborations listed after the names are
     two authors; the team was a hover-only collaboration note on each name (the `\and` form an affiliation). A "group"
-    is an author only after "and" or with its own mark (`A, B, Quantum Optics Group` stays an affiliation). A team a name
+    is an author only after "and" or with its own mark (`A, B, Quantum Optics Group` stays an affiliation). A shared head
+    lists each group: `The ATLAS and CMS Collaborations` gives the authors "The ATLAS" and "CMS Collaborations", as
+    printed. A team after one name's comma stays that name's (`A, Google Brain Team, Palo Alto`), and the person a team
+    is listed beside keeps the address and e-mail printed for them. A team a name
     speaks for (`for the ATLAS Collaboration`), a bracketed line under the names, AASTeX's `\collaboration` and
     institutions keep their reading; REVTeX's `\collaboration` list is still read as before (a known residual).
     FIDELITY_CHARTER (amended 2026-11-27), OXIDIZED_DESIGN_DIVERGENCES #459; guards `perfect_kernel_batchteamauth`.

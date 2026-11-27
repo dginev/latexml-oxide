@@ -1588,18 +1588,26 @@ impl Resolver {
     };
     let events = &line.events;
     // (a group a list of names enumerates is an author, OXIDIZED_DESIGN_DIVERGENCES #459: after "and", `&`, `\and`, or a
-    // comma of a list — a "group" only after "and" or `&`, or marked, and no address on the line under it; never once the
+    // comma of a list — a "group" only after "and" or `&` with no address on the line under it, or marked; never once the
     // line read an institution, inside a remark left open (1311.7305, hep-ex0611001), nor before a place)
+    // (a piece of the line holding a letter or digit, no closing `.`: `…, and EAST Team$^{b}$.`, 2404.07458)
+    let piece = |e: &Event| e.kind == EventKind::Name && e.text.chars().any(char::is_alphanumeric);
     // (a place after a piece on the line: its next name neither a person, a group, nor a name before its remark)
     let place_after = |at: usize| {
-      events[at + 1..]
-        .iter()
-        .find(|e| e.kind == EventKind::Name)
-        .is_some_and(|e| {
-          !reads_as_names(&e.text)
-            && !reads_as_collaboration(&e.text, true)
-            && name_before_remark(&e.text).is_none()
-        })
+      events[at + 1..].iter().find(|e| piece(e)).is_some_and(|e| {
+        !reads_as_names(&e.text)
+          && !reads_as_collaboration(&e.text, true)
+          && name_before_remark(&e.text).is_none()
+      })
+    };
+    // (the next piece after `at` is a group, or a person after a list's "and", `&` or `\and`)
+    let list_goes_on = |at: usize| {
+      let rest = &events[at + 1..];
+      rest.iter().position(|e| piece(e)).is_some_and(|n| {
+        let text = &rest[n].text;
+        (reads_as_collaboration(text, true) && !names_a_group(text))
+          || (rest[..n].iter().any(|e| enumerates(Some(e))) && reads_as_names(text))
+      })
     };
     let person_before = self
       .uncovered_creators()
@@ -1617,13 +1625,9 @@ impl Resolver {
       let by_sep = if group {
         listed(sep) || marked_name(events, at, false, policy)
       } else {
-        // (one name's comma alone keeps the piece that name's, `Chris Howard, SNO Collaboration`, 0906.0040)
-        enumerates(sep)
-          || (comma
-            && (made.len() >= 2
-              || events[at + 1..]
-                .iter()
-                .any(|e| enumerates(Some(e)) || e.kind == EventKind::Sep(SepKind::Comma))))
+        // (one name's comma alone keeps the piece that name's, `Chris Howard, SNO Collaboration, \texttt{…}`, 0906.0040,
+        // unless the list goes on: a group after its comma, or a person after its "and" — not `, Palo Alto`)
+        enumerates(sep) || (comma && (made.len() >= 2 || list_goes_on(at)))
       };
       // (a line of groups alone enumerates two "and" joins under names the block printed before, `\and the Solar
       // Orbiter EPD and Parker Solar Probe ISIS teams` (2408.02330); with no person in the block it keeps today's
@@ -1641,12 +1645,20 @@ impl Resolver {
         && !after_institution
         && by_sep
         && people
-        && !(group && next_line_place)
+        && !(group && next_line_place && !marked_name(events, at, false, policy))
         && !events[..at]
           .iter()
           .filter(is_name)
           .any(|e| remark_left_open(&e.text))
         && !place_after(at)
+    };
+    // (a piece the line reads as the affiliation of the name before it, unless a list enumerates it)
+    let institution_piece = |at: usize, enumerated: bool| {
+      let text = &events[at].text;
+      is_institution(text)
+        && !is_collaboration(text, enumerated)
+        && name_before_remark(text).is_none()
+        && !marked_name(events, at, cautious, policy)
     };
     // (a line printing only a collaboration framed for the names before it is theirs, its words as digested: a macro, a
     // `\let` copy, a font group or its own "and" — `\author{\obo{} the KM3NeT Consortium}`, 1201.5050, segaudit col1)
@@ -1790,7 +1802,7 @@ impl Resolver {
               && !self.uncovered_creators().is_empty()))
             && reads_as_listed_collaboration(
               &event.text,
-              listed(last_sep) && !place_after(i),
+              listed(last_sep) && !(names_a_group(&event.text) && place_after(i)),
               enumerated(&self.out.creators, &made, last_sep, i, read_institution),
             ) =>
         {
@@ -1913,13 +1925,10 @@ impl Resolver {
         // (a marked name is a name whatever its words, rows N1-N3: [`marked_name`])
         EventKind::Name
           if !made.is_empty()
-            && is_institution(&event.text)
-            && !is_collaboration(
-              &event.text,
+            && institution_piece(
+              i,
               enumerated(&self.out.creators, &made, last_sep, i, read_institution),
-            )
-            && name_before_remark(&event.text).is_none()
-            && !marked_name(events, i, cautious, policy) =>
+            ) =>
         {
           let c = *made.last().expect("a name");
           institution = Some((c, self.out.creators[c].affiliations.len()));
@@ -2005,7 +2014,17 @@ impl Resolver {
           let name = remark
             .as_ref()
             .map_or_else(|| event.text.clone(), |(name, _)| name.clone());
-          let c = self.new_creator(name, split_rule(last_sep), index, marks, group);
+          // (a creator only the enumeration makes, a contact or an affiliation before it — not a marked group, 2404.07458)
+          let listed_group = reads_as_collaboration(&event.text, true)
+            && enumerated(&self.out.creators, &made, last_sep, i, read_institution)
+            && (reads_as_listed_collaboration(&event.text, listed(last_sep), false)
+              || institution_piece(i, false));
+          let rule = s!(
+            "{}{}",
+            split_rule(last_sep),
+            if listed_group { LISTED_GROUP } else { "" }
+          );
+          let c = self.new_creator(name, &rule, index, marks, group);
           self.out.creators[c].role.clone_from(&event.role);
           self.out.creators[c].call = event.creator_call;
           made.push(c);
