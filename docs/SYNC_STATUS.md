@@ -89,7 +89,7 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (441 items on 2026-11-27 on `int/towards_v0_8_1`: 441 open, weight 970, 35 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (442 items on 2026-11-27 on `int/towards_v0_8_1`: 442 open, weight 973, 35 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
 
 
   - ODR6 — OD ruling 12 (recorded in OD #449): `dump_reader.rs`'s "add-only" docstrings (:365, :574) corrected, then a removal trial of the skip lists against CLAUDE.md rule 2; 1
@@ -1409,7 +1409,15 @@ Rules that keep this file honest and mergeable:
     (reports `agent_reports/2026-11-26_RC{1,2,3}_*.md`). RC4, the base-vs-head hook (`kit/rendercmp/ab_render.sh`; flags
     gained/lost per paper, FIG_* keyed on the graphic file), validated on GFXTRIM's 202 papers: every byte-identical paper
     kept its flags, 196 flags lost on the 32 changed, 4 gained (2 true, 2 false). Left: `pair.py` orders graphics stacked in
-    side-by-side subfigure minipages by row (the false FIG_CONTENT, 2609.10908 S5.F8); then the ~200-paper calibration; 3
+    side-by-side subfigure minipages by row (the false FIG_CONTENT, 2609.10908 S5.F8) — fixed (RC5, container by container);
+    the calibration (206 papers, 1,139 flags, 56 checked by eye: 22 true, 24 false, 10 whitelist) puts the false share at
+    43 %: the words detectors (math glued to text in the PDF's words), figure content on shots under ~160 px and PDF
+    version skew, flattened-EPS pairing; those first, then five whitelist candidates for DG; 3
+  - RENDERFOUND — converter defects the RENDERCMP calibration surfaced (an agent's eye check, each to triage before a fix):
+    figures numbered one too high from Figure 3 (2502.06601); `\scalebox{0.22}` ignored (1307.3809); `width=0.5\textwidth,
+    height=5cm` sized by LaTeXML's own `\textwidth`, not the class's (1905.06981); converted SVGs lose their text labels and
+    are mis-scaled (1605.07806); an image overflows its 243-px figure onto a neighbour (hep-ex0703011); Latin-1 bytes in the
+    bibliography become U+FFFD (1107.2598); plain-TeX math without alttext (1803.09981); 3
   - IMGCAP320 — ar5iv.css `width:auto` on `.ltx_img_*` overrides an image's width attribute, and `.ltx_img_portrait`'s caps do
     not bind at 320 px, so a figure wider than the viewport escapes it (found by RENDERCMP RC4: 1104.1174 S3.F3.g1, 40 px;
     2506.20899 S4.F7.g1, BRK_DOC_OVERFLOW); an ar5iv-css change (mirror rule), DG reviews CSS; 1
