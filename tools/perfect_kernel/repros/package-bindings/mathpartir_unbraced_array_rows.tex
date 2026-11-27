@@ -1,0 +1,18 @@
+% mechanism: mathpartir splits a rule's premises and conclusion only at their own `\\` (mathpartir.sty:133-146
+%   `\mpr@makelist`); a `\\` inside an unbraced environment (`array`, `cases`, `aligned`) is the environment's row
+%   break, which the stub's split must leave alone
+% witness: 1703.06021 (its (In)/(RIn) conclusions: an unbraced `\begin{array}{c}` of two rows)
+% oracle:  pdflatex with the paper's own mathpartir 1.1.1 (2003/07/10): 0 errors, "p" over "q", rule, "M | N" over
+%   "M' | N'"; TL 2025's mathpartir 1.3.2 errs on this shape (123 `!`), so the 1.1.1 reading is the only clean one
+% engines: rust INT081TR = the premise array's `\\` split to `\quad` (1 row), the conclusion's 2 rows kept (3 XMRow);
+%   MPRCONCL 0f30be73115 = both split (2 XMRow); Perl: no binding
+% expect:  0 errors, 1 warning (the stub's missing_file); both arrays keep their 2 rows (4 XMRow)
+% status:  RED (INT081TR, 0f30be73115) -> GREEN
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{mathpartir}
+\begin{document}
+Before
+\begin{mathpar}\inferrule[(In)]{\begin{array}{c} p \\ q \end{array}}{\begin{array}{c} M \mid N \qquad \\ M' \mid N' \end{array}}\end{mathpar}
+After.
+\end{document}

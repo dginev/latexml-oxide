@@ -27,6 +27,57 @@
 //! inference rules.
 use latexml_package::prelude::*;
 
+// mathpartir lays out the `\\`-separated pieces of a rule's premises AND conclusion side by side (mathpartir.sty:305,
+// :133-146 `\mpr@makelist`); in our `\frac` each top-level `\\` becomes `\quad`, as raw it errs in `\frac`, starts a
+// row in `gather*` (1702.02972) or ends a `p{}` cell's row with math open (1706.02701). A `\\` inside a group or an
+// environment stays (braced `cases`, 2604.09165; an unbraced `array`, rows in mathpartir 1.1.1, 1703.06021). A `[dim]`
+// after `\\` is skipped when its `]` closes in the piece, though mathpartir prints it
+// (RED mathpartir_row_break_spacing_red).
+fn split_rows(arg: Tokens, out: &mut Vec<Token>) {
+  let toks = arg.unlist();
+  let is_other = |t: &Token, c: &str| t.get_catcode() == Catcode::OTHER && t.to_string() == c;
+  let (mut depth, mut envs) = (0usize, 0usize);
+  let mut i = 0;
+  while i < toks.len() {
+    let t = toks[i];
+    match t.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => depth = depth.saturating_sub(1),
+      _ if t == T_CS!("\\begin") => envs += 1,
+      _ if t == T_CS!("\\end") => envs = envs.saturating_sub(1),
+      _ => {},
+    }
+    i += 1;
+    if depth > 0 || envs > 0 || t != T_CS!("\\\\") {
+      out.push(t);
+      continue;
+    }
+    out.push(T_CS!("\\quad"));
+    if i < toks.len()
+      && is_other(&toks[i], "[")
+      && let Some(close) = dim_close(&toks[i..])
+    {
+      i += close + 1;
+    }
+  }
+}
+
+// The index of the `]` closing the `[` at `toks[0]` in the same piece: at brace depth 0, before the next `\\`.
+fn dim_close(toks: &[Token]) -> Option<usize> {
+  let mut depth = 0usize;
+  for (j, t) in toks.iter().enumerate().skip(1) {
+    match t.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END if depth == 0 => return None,
+      Catcode::END => depth -= 1,
+      Catcode::OTHER if depth == 0 && t.to_string() == "]" => return Some(j),
+      _ if depth == 0 && *t == T_CS!("\\\\") => return None,
+      _ => {},
+    }
+  }
+  None
+}
+
 LoadDefinitions!({
   Warn!(
     "missing_file",
@@ -57,51 +108,10 @@ LoadDefinitions!({
     out.push(T_BEGIN!());
     out.push(T_CS!("\\frac"));
     out.push(T_BEGIN!());
-    // mathpartir separates premises with `\\`, laying them out SIDE BY SIDE
-    // above the rule line. We render via `\frac`, so the `\\` must become a
-    // horizontal separator (`\quad`) — emitting it raw inside `\frac{…}` is a
-    // hard error in BOTH Perl and Rust ("\\ in \frac"), and inside a display
-    // alignment (`gather*`/`align`) the leaked `\\` starts a spurious row,
-    // desyncing math mode → `\lx@end@inline@math … end mode math in math`
-    // cascade (witness 1702.02972: llncs + `\begin{gather*}\inferrule{A \\ B}{C}`,
-    // Perl 0, raw-mathpartir lays the premises out without leaking `\\`).
-    // Skip a `\\[dim]` optional spacing arg so it doesn't render literally.
-    // Only a `\\` at the premises' own brace level separates them: mathpartir splits them with delimited arguments
-    // (mathpartir.sty:133-146 `\mpr@flatten@ \\#1\\#2`, `\mpr@makelist`), which never see a `\\` inside a group — a
-    // braced `{\begin{cases} a & b \\ c & d \end{cases}}` keeps its rows (2604.09165; was "Extra alignment tab").
-    let prem_toks = prem.unlist();
-    let mut i = 0;
-    let mut depth = 0usize;
-    while i < prem_toks.len() {
-      match prem_toks[i].get_catcode() {
-        Catcode::BEGIN => depth += 1,
-        Catcode::END => depth = depth.saturating_sub(1),
-        _ => {},
-      }
-      if depth == 0 && prem_toks[i] == T_CS!("\\\\") {
-        out.push(T_CS!("\\quad"));
-        i += 1;
-        // Skip an optional `[dim]` spacing argument following `\\`.
-        if i < prem_toks.len() && prem_toks[i].get_catcode() == Catcode::OTHER
-          && prem_toks[i].to_string() == "["
-        {
-          while i < prem_toks.len()
-            && !(prem_toks[i].get_catcode() == Catcode::OTHER && prem_toks[i].to_string() == "]")
-          {
-            i += 1;
-          }
-          if i < prem_toks.len() {
-            i += 1; // consume the `]`
-          }
-        }
-      } else {
-        out.push(prem_toks[i]);
-        i += 1;
-      }
-    }
+    split_rows(prem, &mut out);
     out.push(T_END!());
     out.push(T_BEGIN!());
-    out.extend(conc.unlist());
+    split_rows(conc, &mut out);
     out.push(T_END!());
     out.push(T_END!());
     if let Some(lab) = label

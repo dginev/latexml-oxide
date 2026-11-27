@@ -1,0 +1,16 @@
+% mechanism: mathpartir's `\\` takes no `[dim]` argument: `\mpr@makelist` splits at each `\\` (mathpartir.sty:133-146)
+%   and `\mpr@item` sets the next piece, `[2pt]` included, as math (`$\displaystyle [2pt]b$`, :176, :201); the stub skips the
+%   `[dim]` after a premise's or conclusion's `\\`, so the printed "[2pt]" is lost
+% witness: synthetic (sibling of 1706.02701, 1702.02972)
+% oracle:  pdflatex 0 errors: "a [2pt]b" over "c [3pt]d"
+% engines: rust INT081TR = `\frac{a\quad b}{c\\&#10;d}` (the premise's `[2pt]` skipped by the stub, the conclusion's
+%   read by `\\` as its spacing); MPRCONCL `\frac{a\quad b}{c\quad d}` (both skipped by the stub); Perl: no binding
+% expect:  0 errors, 1 warning (the stub's missing_file); "[2pt]" and "[3pt]" kept in the formula
+% status:  RED (INT081TR, MPRCONCL)
+% moves:   post-merge
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{mathpartir}
+\begin{document}
+\begin{mathpar}\inferrule{a \\[2pt] b}{c \\[3pt] d}\end{mathpar}
+\end{document}

@@ -1,0 +1,15 @@
+% mechanism: `\inferrule*[keys]` reads its optional argument as `mpr` key-values (mathpartir.sty:337-375
+%   `\define@key {mpr}{right}` :363, `left` :360, `Right` :369, `lab` :346, …), so `right=R` sets the name R beside the rule; the stub takes
+%   the whole optional argument as the label text
+% witness: 1712.01800 (`\inferrule*[vcenter,right=…]`), 2105.01632 (`[lab=…]`)
+% oracle:  pdflatex 0 errors: "a b" over "c", "R" to the rule's right
+% engines: rust INT081TR and MPRCONCL = `\frac{a\quad b}{c}\quad\textsc{right=R}` (the key name printed); Perl: no binding
+% expect:  0 errors, 1 warning (the stub's missing_file); the label "R", no "right="
+% status:  RED (INT081TR, MPRCONCL)
+% moves:   post-merge
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{mathpartir}
+\begin{document}
+\begin{mathpar}\inferrule*[right=R]{a \\ b}{c}\end{mathpar}
+\end{document}

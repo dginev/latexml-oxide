@@ -26,6 +26,12 @@ top of its group.
     and every later one were numbered one too high (2502.06601, 2308.06714, 2403.16442, 2008.08136); a `{subtable}`
     inside a `{subfigure}` stepped the table counter (KNOWN_PERL_ERRORS #324). Guard
     `caption_subtype_hook::nested_subfigure_steps_figure_once`.
+  - **mathpartir's `\inferrule` lays out its conclusion's `\\`-separated pieces side by side, as it does the
+    premises.** A conclusion's `\\` went raw into the stub's `\frac`; in a `p{}` table cell it ended the row with the
+    math open, and the rest of the document piled into one unclosed cell (1706.02701, a proof table, its closing
+    paragraph and the bibliography). A `\\` inside a group or an environment (a premise's unbraced `array`, which the
+    stub used to split) stays that environment's row break. Guard
+    `perfect_kernel_batch69a::mathpartir_splits_only_its_own_row_breaks`.
   - **KOMA-Script, versioned SIAM and dmtcs title notes print their fnsymbol marks and step the footnote counter, as the
     classes do.** A binding now answers for the class it actually serves — its own name, the request a versioned or prefix
     fallback answered with it (`siamltex1213`, `siamonline220329`), or the base a raw class file `\LoadClass`es while leaving

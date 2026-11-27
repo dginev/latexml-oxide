@@ -1,0 +1,22 @@
+% mechanism: mathpartir splits a rule's conclusion at its own `\\` as it does the premises (mathpartir.sty:305
+%   `\mpr@fraction{\mpr@hovbox{T}{#2}}{\mpr@hovbox{B}{#3}}`, :133-146 `\mpr@makelist`); the stub split only the
+%   premises, so a conclusion's `\\` reached `\frac`'s denominator raw and, in a p-column cell, ended the row with
+%   math open: the rest of the document piled into one unclosed cell
+% witness: 1706.02701
+% oracle:  pdflatex 0 errors: "Fail | a b over c d", "Next | row", then "The proof can be started here."
+% engines: rust INT081TR = E=9 W=3 (Attempt to close a group …; Warning:unexpected:alignment drops 10 words, the
+%   paragraph among them; open groups at \end{document}; the stub's); Perl: no binding (--includestyles keeps all)
+% expect:  0 errors, 1 warning (the stub's missing_file); the conclusion's pieces side by side; the paragraph kept
+% status:  RED (INT081TR) -> GREEN (MPRCONCL)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{mathpartir}
+\begin{document}
+\begin{tabular}{|p{2cm}|p{5cm}|}
+Fail & \inferrule{a \\ b}{c \\ d} \\
+\hline
+Next & row \\
+\end{tabular}
+
+The proof can be started here.
+\end{document}

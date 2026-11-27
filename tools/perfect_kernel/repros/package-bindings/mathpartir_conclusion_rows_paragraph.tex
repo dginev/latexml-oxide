@@ -1,0 +1,14 @@
+% mechanism: mathpartir splits a rule's conclusion at its own `\\` (mathpartir.sty:305 `\mpr@hovbox{B}{#3}`,
+%   :133-146 `\mpr@makelist`), as it does the premises
+% witness: 1706.02701
+% oracle:  pdflatex 0 errors: "Before." then "a b" over "c d" then "After."
+% engines: rust INT081TR = 0 errors but the Math `tex` holds a raw `\\` (`\frac{a\hskip 8.19447ptb}{c\\&#10;d}`);
+%   Perl: no binding
+% expect:  0 errors, 1 warning (the stub's missing_file); the conclusion's pieces side by side as the premises are
+% status:  RED (INT081TR) -> GREEN (MPRCONCL)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{mathpartir}
+\begin{document}
+Before. \inferrule{a \\ b}{c \\ d} After.
+\end{document}

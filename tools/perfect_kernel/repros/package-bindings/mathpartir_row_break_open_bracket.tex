@@ -1,0 +1,15 @@
+% mechanism: the stub skips a `[dim]` after a premise's or conclusion's `\\` (mathpartir.sty:133-146 splits without
+%   reading one); a `[` whose `]` does not close in the same piece is no `[dim]` and is printed, as pdflatex does
+% witness: synthetic (review of 0f30be73115, sibling of 1706.02701)
+% oracle:  pdflatex (TL 2025, mathpartir 1.3.2) 0 errors: "a [0,1)b" over "c [0,1)d"
+% engines: rust INT081TR = `\frac{a\hskip 8.19447pt}{c\\&#10;0,1)d}` (the premise's `[0,1) b` skipped silently, the
+%   conclusion's `[` read by `\\`); MPRCONCL 0f30be73115 = `\frac{a\hskip 8.19447pt}{c\hskip 8.19447pt}` (both pieces
+%   eaten, no Warning); Perl: no binding
+% expect:  0 errors, 3 warnings (the stub's missing_file + two unparsed-math); `[0,1)b` and `[0,1)d` kept
+% status:  RED (INT081TR, 0f30be73115) -> GREEN
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{mathpartir}
+\begin{document}
+Before \inferrule{a \\[0,1) b}{c \\[0,1) d} After.
+\end{document}

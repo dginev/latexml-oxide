@@ -200,22 +200,83 @@ fn cases_amsstyle_explanation_is_math() {
   ]);
 }
 
-/// A braced `cases` in an `\inferrule` premise (2604.09165): only the premises' own `\\` separates them
-/// (mathpartir.sty:133-146), so the cases keep both rows. The stub's one missing_file Warning stays.
+/// mathpartir splits a rule's premises and conclusion at their own `\\` only (mathpartir.sty:133-146, 305): a `\\` in
+/// a braced `cases` (2604.09165) or an unbraced `array` (1703.06021) is the environment's row; a conclusion's `\\` is a
+/// separator, where raw it ended a `p{}` cell's row and lost the rest of the document (1706.02701); a `[` not closed
+/// in its piece is printed. Each row: (repro, (errors, warnings), parts); the stub's one Warning stays.
 #[test]
-fn mathpartir_splits_only_its_own_premise_breaks() {
-  let (log, xml) = convert_with(
-    include_str!(
-      "../../../tools/perfect_kernel/repros/package-bindings/mathpartir_premise_braced_rows.tex"
+fn mathpartir_splits_only_its_own_row_breaks() {
+  // The side-by-side pieces' fraction, their tokens and no `\\` left in the formula; not the parser's reading of them.
+  const PIECES: &[&str] = &[
+    r#"<XMTok mathstyle="text" meaning="divide" role="FRACOP"/>"#,
+    r#"<XMTok font="italic" fontsize="70%" role="UNKNOWN" rpadding="8.2pt">c</XMTok> <XMTok font="italic" fontsize="70%" role="UNKNOWN">d</XMTok>"#,
+  ];
+  const TEX: &str = r#"tex="\frac{a\hskip 8.19447ptb}{c\hskip 8.19447ptd}""#;
+  const ROWS: &[(&str, (usize, usize), &[&str])] = &[
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/package-bindings/mathpartir_premise_braced_rows.tex"
+      ),
+      (0, 1),
+      &[
+        r#"tex="\frac{o={\begin{cases}a&amp;\text{if }b\\&#10;c&amp;\text{otherwise}\end{cases}}\quad d}{e}\quad\textsc{Step}""#,
+        r#"<XMRow xml:id="S0.Ex1.m1.2.3.2.2.2"> <XMCell align="left" xml:id="S0.Ex1.m1.2.3.2.2.2.1"> <XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.5">c</XMTok> </XMCell> <XMCell align="left" xml:id="S0.Ex1.m1.2.3.2.2.2.2"> <XMText xml:id="S0.Ex1.m1.6">otherwise</XMText> </XMCell> </XMRow>"#,
+      ],
     ),
-    Some("ar5iv.sty"),
-  );
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
-  let xml = squash(&xml);
-  assert_all(&xml, &[
-    r#"tex="\frac{o={\begin{cases}a&amp;\text{if }b\\&#10;c&amp;\text{otherwise}\end{cases}}\quad d}{e}\quad\textsc{Step}""#,
-    r#"<XMRow xml:id="S0.Ex1.m1.2.3.2.2.2"> <XMCell align="left" xml:id="S0.Ex1.m1.2.3.2.2.2.1"> <XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.5">c</XMTok> </XMCell> <XMCell align="left" xml:id="S0.Ex1.m1.2.3.2.2.2.2"> <XMText xml:id="S0.Ex1.m1.6">otherwise</XMText> </XMCell> </XMRow>"#,
-  ]);
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/package-bindings/mathpartir_unbraced_array_rows.tex"
+      ),
+      (0, 1),
+      &[
+        r#"tex="\frac{\begin{array}[]{c}p\\&#10;q\end{array}}{\begin{array}[]{c}M\mid N\\&#10;M^{\prime}\mid N^{\prime}\end{array}}\quad\textsc{(In)}""#,
+        r#"<XMRow xml:id="S0.Ex1.m1.1.2.2">"#,
+        r#"<XMRow xml:id="S0.Ex1.m1.1.3.2">"#,
+      ],
+    ),
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/package-bindings/mathpartir_conclusion_rows_tabular.tex"
+      ),
+      (0, 1),
+      &[
+        TEX,
+        r#"<tr xml:id="p1.1.2"> <td align="left" border="l r t" vattach="top" xml:id="p1.1.2.1"><inline-block vattach="top" width="56.9pt" xml:id="p1.1.2.1.1"> <p xml:id="p1.1.2.1.1.1">Next</p> </inline-block></td> <td align="left" border="r t" vattach="top" xml:id="p1.1.2.2"><inline-block vattach="top" width="142.3pt" xml:id="p1.1.2.2.1"> <p xml:id="p1.1.2.2.1.1">row</p> </inline-block></td> </tr> </tbody> </tabular> </para> <para xml:id="p2"> <p xml:id="p2.1">The proof can be started here.</p> </para> </document>"#,
+      ],
+    ),
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/package-bindings/mathpartir_conclusion_rows_paragraph.tex"
+      ),
+      (0, 1),
+      &[
+        TEX,
+        r#"<p xml:id="p1.1">Before. <Math mode="inline""#,
+        r#"</Math> After.</p>"#,
+      ],
+    ),
+    // Two unparsed_math Warnings: the parser cannot read `a[0,1)b`.
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/package-bindings/mathpartir_row_break_open_bracket.tex"
+      ),
+      (0, 3),
+      &[r#"tex="\frac{a\hskip 8.19447pt[0,1)b}{c\hskip 8.19447pt[0,1)d}""#],
+    ),
+  ];
+  for (i, (tex, counts, parts)) in ROWS.iter().enumerate() {
+    let (log, xml) = convert_with(tex, Some("ar5iv.sty"));
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      *counts,
+      "row {i}\n{log}"
+    );
+    let xml = squash(&xml);
+    assert_all(&xml, parts);
+    if parts.contains(&TEX) {
+      assert_all(&xml, PIECES);
+    }
+  }
 }
 
 /// `A & \multicolumn{3}{|c|}{B}` in a three-column `{NiceTabular}` (2505.05139): the span reaches nicematrix's guard
