@@ -1,0 +1,31 @@
+% A line of a raw class's displaced `\institute` store whose address follows words that are no local parts
+%   (`A-1180 Wien (ann.able@a.edu)`) is an address in a line of other words: it stays with its entry, the frontmatter
+%   observer's text reading taking the address out, as the Kind step leaves such a line (`insert.rs
+%   address_line_reading`'s `OtherWords`, `kind::kind_entry_addresses`), never the author block's line.
+% witness: astro-ph9805051 (caosp, `Türkenschanzstr. 17, \\ A-1180 Wien (paunzen@…)`), astro-ph9805033, astro-ph9805076
+%          (`… Wien (surname@astro.ast.univie.ac.at)`); synthetic stand-in
+% oracle:  pdflatex 0 errors: "Ann Able and Bob Baker", "Univ A, Town,", "A-1180 Wien (ann.able@a.edu)"
+% engines: rust INT081RC6 = 0 errors, both authors "Univ A, Town, A-1180 Wien", ann.able@a.edu Ann's; AAAILABEL fix 3's
+%          first build = "A-1180 Wien" the block's, the authors "Univ A, Town,"
+% expect:  0 errors, 0 warnings; as INT081RC6
+% status:  RED (AAAILABEL fix 3, first build) -> GREEN (perfect_kernel_batchaaailabel::aaai_affiliations_rows)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{cainst.cls}
+\ProvidesClass{cainst}\LoadClass{article}
+\newcounter{@inst}
+\def\inst#1{\unskip$^{#1}$}
+\def\institute#1{\gdef\@institute{\it #1}}
+\def\institutename{\par\begingroup\parindent=0pt\setcounter{@inst}{1}%
+  \def\and{\par\stepcounter{@inst}\noindent$^{\the@inst}$\enspace\ignorespaces}%
+  \noindent$^{1}$\enspace\ignorespaces\@institute\par\endgroup}
+\def\@maketitle{\begin{center}{\LARGE\@title\par}\vskip1em{\large\@author\par}\end{center}
+  {\small\institutename}\vskip1em}
+\end{filecontents*}
+\documentclass{cainst}
+\begin{document}
+\title{A Title}
+\author{Ann Able and Bob Baker}
+\institute{Univ A, Town,\\ A-1180 Wien (ann.able@a.edu)}
+\maketitle
+Text.
+\end{document}

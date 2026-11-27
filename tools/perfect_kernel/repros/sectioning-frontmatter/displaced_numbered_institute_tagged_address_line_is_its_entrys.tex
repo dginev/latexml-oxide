@@ -1,0 +1,30 @@
+% A role-tagged address line (`Email: bob@b.edu, cy@b.edu`) of a raw class's last `\and`-numbered `\institute` entry
+%   (caosp.sty:519-527) stays that entry's: no closing move for the class's own entries (frontmatter_stores.rs
+%   `displaced_entries`), so each address goes to the carrier it spells, as before AAAILABEL.
+% witness: astro-ph9805232; synthetic stand-in (the reviewer's cao/c_Email.tex)
+% oracle:  pdflatex 0 errors: "Ann Able1, Bob Baker2 and Cy Cole2", "1Univ A, Town", "Email: ann@a.edu",
+%          "2Univ B, City", "Email: bob@b.edu, cy@b.edu"
+% engines: rust INT081RC6 = 0 errors, cy@b.edu Cy Cole's; 9e7098cc4be = cy@b.edu the block's
+% expect:  0 errors, 0 warnings; each creator its entry, ann@, bob@, cy@ each the name's it spells
+% status:  RED (9e7098cc4be) -> GREEN (AAAILABEL fix 3: perfect_kernel_batchaaailabel::aaai_affiliations_rows)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{cainst.cls}
+\ProvidesClass{cainst}\LoadClass{article}
+\newcounter{@inst}
+\def\inst#1{\unskip$^{#1}$}
+\def\institute#1{\gdef\@institute{\it #1}}
+\def\institutename{\par\begingroup\parindent=0pt\setcounter{@inst}{1}%
+  \def\and{\par\stepcounter{@inst}\noindent$^{\the@inst}$\enspace\ignorespaces}%
+  \noindent$^{1}$\enspace\ignorespaces\@institute\par\endgroup}
+\def\@maketitle{\begin{center}{\LARGE\@title\par}\vskip1em{\large\@author\par}\end{center}
+  {\small\institutename}\vskip1em}
+\end{filecontents*}
+\documentclass{cainst}
+\begin{document}
+\title{A Title}
+\author{Ann Able\inst{1}, Bob Baker\inst{2} and Cy Cole\inst{2}}
+\institute{Univ A, Town\\ Email: ann@a.edu
+\and Univ B, City\\ Email: bob@b.edu, cy@b.edu}
+\maketitle
+Text.
+\end{document}

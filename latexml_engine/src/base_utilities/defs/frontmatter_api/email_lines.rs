@@ -459,5 +459,6 @@ pub(in crate::base_utilities) fn addresses_in_order(
 /// comma authors often leave), as `email_addresses` reads it: every item a full
 /// address or a braced list of local parts before its domain. A prose affiliation
 /// line ("Dept. of Foo, University of Pisa, Italy") is rejected, so this never
-/// misclassifies an address as an email.
+/// misclassifies an address as an email. An `\@` prints no `@` (latex.ltx:9422
+/// `\spacefactor\@m{}`): 2408.10349's `\{chencen, …\}\@scut.edu.cn` is no address.
 pub fn line_is_email_list(line: &Tokens) -> bool { email_addresses(line).is_some() }

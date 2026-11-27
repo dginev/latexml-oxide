@@ -1,0 +1,38 @@
+% An AAAI `\affiliations` line that prints an `@` and a mark inside it (`\{ann, \textsuperscript{\rm 1}cy\}@a.edu`,
+%   aaai25.sty:72), continuing the one unlabelled entry, is no address line to the API, which cuts it at the mark: the
+%   line is an entry of its own, the author block's as it prints (frontmatter_stores.rs `displaced_entries`, DG ruling 1
+%   of 2026-11-26), which the flush's Kind step does not read (`_unread`): its mark places no address (2212.12190's licc.cs09@ had gone
+%   to the name showing the mark).
+% witness: 2212.12190 (licc.cs09@ went to Wei-Wei Du, sf1638.cs05@ to a nameless creator); synthetic stand-in
+% oracle:  pdflatex 0 errors: "Ann Able, Bob Baker, 1Cy Cole", "Univ A, Town", "{ann, 1cy}@a.edu, bob@b.edu"
+% engines: rust INT081RC6 = 0 errors, the two lines a logical-block; 842364fc86c = every author "Univ A, Town", Ann
+%          ann@a.edu, Bob bob@b.edu, cy@a.edu a nameless creator's
+% expect:  0 errors, 0 warnings; every author "Univ A, Town", the block creator's affiliation "{ann, 1cy}@a.edu,
+%          bob@b.edu"; no logical-block
+% status:  RED (842364fc86c) -> GREEN (AAAILABEL fix 1: the class's lines) -> GREEN (AAAILABEL fix 3: the block's line;
+%          perfect_kernel_batchaaailabel::aaai_affiliations_rows)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{aaai25.sty}
+\ProvidesPackage{aaai25}[2025/05/08 AAAI 2025 Submission format]
+\def\showauthors@on{T}
+\DeclareOption{submission}{\gdef\showauthors@on{}}
+\ProcessOptions\relax
+\def\maketitle{\par\begingroup\def\thefootnote{\fnsymbol{footnote}}\twocolumn[\@maketitle]\@thanks\endgroup
+  \setcounter{footnote}{0}\let\maketitle\relax\let\@maketitle\relax
+  \gdef\@thanks{}\gdef\@author{}\gdef\@title{}\let\thanks\relax}
+\long\gdef\affiliations #1{ \def \affiliations_{\if T\showauthors@on#1\fi}}%
+\def\@maketitle{\def\theauthors{\if T\showauthors@on\@author\else Anonymous submission\fi}%
+  \vbox{\hsize\textwidth\linewidth\hsize\centering
+    {\LARGE\bf \@title \par}\vskip 0.1in
+    {\Large{\textbf{\theauthors\ifhmode\\\fi}}}\vskip .2em
+    {\normalsize \affiliations_\ifhmode\\\fi}\vskip .5em}}
+\end{filecontents*}
+\documentclass[letterpaper]{article}
+\usepackage{aaai25}
+\title{A Title}
+\author{Ann Able, Bob Baker, \textsuperscript{\rm 1}Cy Cole}
+\affiliations{Univ A, Town\\ \{ann, \textsuperscript{\rm 1}cy\}@a.edu, bob@b.edu}
+\begin{document}
+\maketitle
+Body.
+\end{document}

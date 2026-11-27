@@ -67,7 +67,8 @@ use std::collections::VecDeque;
 
 use latexml_core::{
   binding::store_setters::{
-    STORE_SETTERS, defined_by_a_binding, defined_by_a_raw_file, in_a_raw_class_read,
+    DISPLACED_ONLY_SETTERS, STORE_SETTERS, defined_by_a_binding, defined_by_a_raw_file,
+    in_a_raw_class_read,
   },
   definition::origin::{DefinitionOrigin, with_origin},
   document::tag::TagContent,
@@ -75,7 +76,7 @@ use latexml_core::{
 use rustc_hash::FxHashSet;
 
 use crate::{
-  base_utilities::{FmArgSeparator, FmSepMeaning, argument_separators},
+  base_utilities::{AddressLineReading, FmArgSeparator, FmSepMeaning, argument_separators},
   prelude::*,
 };
 
@@ -2357,7 +2358,7 @@ fn by_its_label(api: Tokens, line: &[Token]) -> Result<Tokens> {
   // under its run, review rev94b r3 B1: the frontmatter API's Cut cuts it at the marks the names request
   // (`cut_marked_contact`, OD #954), each entry its requesters' and one no name requests the block's; a call the Cut
   // declines is the frontmatter observer's, the font open before each entry kept (`\lx@fm@entry@font`), or whole)
-  if displaced_entries(&Tokens::new(line.to_vec()), None)?.len() > 1 {
+  if displaced_entry_lines(&Tokens::new(line.to_vec()), None)?.len() > 1 {
     return Ok(api);
   }
   contact_line_call(&head.to_string(), &Tokens::new(line.to_vec()))
@@ -3122,8 +3123,7 @@ fn displaced_records() -> Vec<DisplacedRecord> {
     };
     let store = T_CS!(&with(*store, ToString::to_string));
     let part = part.unlist_ref().to_vec();
-    let stands = parameterless_body(&store).is_some_and(|body| {
-      let body = body.unlist_ref();
+    let stands = crate::latex_constructs::no_argument_value(&store).is_some_and(|body| {
       !part.is_empty()
         && body.len() >= part.len()
         && body.windows(part.len()).any(|w| w == part.as_slice())
@@ -3161,13 +3161,24 @@ fn without_labels(tokens: &Tokens) -> Tokens {
   Tokens::new(out)
 }
 
-/// The entries of a displaced setter's argument: its lines (`\\`, `\par`, `relocate::split_top_level_lines`), an entry
-/// starting at each line led by a printed label (`relocate::leading_line_label`, the shared reader: `$^{1}$`,
-/// `\textsuperscript{1}`, `${}^{1}$`, a hand-printed `1)`), an unlabelled line the entry's before it, the unlabelled
-/// lines before the first label one entry — rstransa's `\address{$^{1}$… \\ $^{2}$…}`, each line an author's;
-/// 2607.25849's `\affiliation{email: \email{…}\\ $^1$Argelander-Institut …}` —; the whole argument one entry when no
-/// line leads with a label (one address over two lines). Marks inside one line are the API's to cut.
-fn displaced_entries(arg: &Tokens, store: Option<&str>) -> Result<Vec<Tokens>> {
+/// How a displaced setter's entry is bounded ([`displaced_entry_lines`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum EntryExtent {
+  /// An `\and` entry the class's title page numbers (`class_numbered_institutes`): the class's own entry, handed whole.
+  Numbered,
+  /// From a line led by a printed label to the next such line.
+  Labelled,
+  /// The lines before the first label, or the whole argument when no line but a lone one leads with a label.
+  Unlabelled,
+}
+
+/// The entries of a displaced setter's argument, each with its extent: its lines (`\\`,
+/// `relocate::split_top_level_lines`), an entry starting at each line led by a printed label (`relocate::leading_line_label`,
+/// the shared reader: `$^{1}$`, `\textsuperscript{1}`, `${}^{1}$`, a hand-printed `1)`), an unlabelled line the entry's
+/// before it, the unlabelled lines before the first label one entry — rstransa's `\address{$^{1}$… \\ $^{2}$…}`, each
+/// line an author's; 2607.25849's `\affiliation{email: \email{…}\\ $^1$Argelander-Institut …}` —; the whole argument one
+/// entry when no line leads with a label (one address over two lines). Marks inside one line are the API's to cut.
+fn displaced_entry_lines(arg: &Tokens, store: Option<&str>) -> Result<Vec<(Tokens, EntryExtent)>> {
   use crate::base_utilities::{leading_line_label, split_top_level_lines};
   // (an `\and` list the class's title page numbers: entry n labelled n, `class_numbered_institutes` — caosp.sty:519-527's
   // `\institutename`, astro-ph9805069; review rev99b B2; its `\and`s by meaning, P4d)
@@ -3176,6 +3187,7 @@ fn displaced_entries(arg: &Tokens, store: Option<&str>) -> Result<Vec<Tokens>> {
       split_tokens(numbered, vec![T_CS!("\\and").into()])
         .into_iter()
         .filter(|entry| entry.unlist_ref().iter().any(|t| *t != T_SPACE!()))
+        .map(|entry| (entry, EntryExtent::Numbered))
         .collect(),
     );
   }
@@ -3185,45 +3197,248 @@ fn displaced_entries(arg: &Tokens, store: Option<&str>) -> Result<Vec<Tokens>> {
     .filter(|line| line.iter().any(|t| *t != T_SPACE!()))
     .collect();
   let labelled = |line: &[Token]| leading_line_label(&Tokens::new(line.to_vec())).is_some();
+  let extent = |labelled: bool| {
+    if labelled {
+      EntryExtent::Labelled
+    } else {
+      EntryExtent::Unlabelled
+    }
+  };
   if lines.len() < 2 || !lines.iter().any(|line| labelled(line)) {
-    return Ok(vec![arg.clone()]);
+    return Ok(vec![(
+      arg.clone(),
+      extent(lines.first().is_some_and(|line| labelled(line))),
+    )]);
   }
-  let mut entries: Vec<Vec<Token>> = Vec::new();
+  let mut entries: Vec<(Vec<Token>, EntryExtent)> = Vec::new();
   for line in lines {
     match entries.last_mut() {
-      Some(entry) if !labelled(line) => {
+      Some((entry, _)) if !labelled(line) => {
         entry.push(T_CS!("\\\\"));
         entry.extend_from_slice(line);
       },
-      _ => entries.push(line.to_vec()),
+      _ => entries.push((line.to_vec(), extent(labelled(line)))),
     }
   }
-  // (each without the spaces around it: the space after a `\\` is no part of the next entry)
   Ok(
     entries
       .into_iter()
-      .map(|entry| {
-        let start = entry
-          .iter()
-          .position(|t| *t != T_SPACE!())
-          .unwrap_or(entry.len());
-        let end = entry
-          .iter()
-          .rposition(|t| *t != T_SPACE!())
-          .map_or(start, |e| e + 1);
-        Tokens::new(entry[start..end.max(start)].to_vec())
-      })
+      .map(|(entry, extent)| (spaces_trimmed(&entry), extent))
       .collect(),
   )
+}
+
+/// `entry` without the spaces around it: the space after a `\\` is no part of the next entry.
+fn spaces_trimmed(entry: &[Token]) -> Tokens {
+  let start = entry
+    .iter()
+    .position(|t| *t != T_SPACE!())
+    .unwrap_or(entry.len());
+  let end = entry
+    .iter()
+    .rposition(|t| *t != T_SPACE!())
+    .map_or(start, |e| e + 1);
+  Tokens::new(entry[start..end.max(start)].to_vec())
+}
+
+/// An entry of a displaced setter's argument ([`displaced_entries`]).
+struct DisplacedEntry {
+  tokens: Tokens,
+  /// A piece printing an `@` the frontmatter reads as no line of addresses (`AddressLineReading::Unread`): the author
+  /// block's, `label={addresses:block}`, never an author's by its place.
+  block:  bool,
+}
+
+/// A piece of a displaced entry ([`displaced_entries`]): a line (`\\`) or a paragraph of one (`\par`), with the
+/// separator before it in its line and how the frontmatter reads it.
+struct EntryPiece {
+  line:      usize,
+  delimiter: Vec<Token>,
+  tokens:    Tokens,
+  reading:   Option<AddressLineReading>,
+}
+
+/// The entries of a displaced setter's argument ([`displaced_entry_lines`]), each read piece by piece — its lines, and
+/// the paragraphs of each (`\par`; 2403.16883's blank line before its addresses) — but a labelled entry's lead and a
+/// numbered `\and` entry, the class's own (`base_utilities::address_line_reading`; where a piece's tokens print no `@`,
+/// by the text it typesets: [`typeset_pieces`]). A piece the frontmatter does not read is an entry of its own, the
+/// author block's (2211.16869, 2408.10349, 2412.03107, 2212.12190). The pieces of the last labelled entry past its lead
+/// that are lines of addresses are the whole block's — an unlabelled entry after the rest, whose addresses the Link step
+/// places by spelling, author order, else the block (OD #805), never by the label they follow (2404.14949, 2511.11817)
+/// — unless the list puts addresses under its affiliations, as the API's address runs read it (affiliations.rs
+/// `place_address_runs`): one labelled entry, or a line of addresses under an earlier one.
+fn displaced_entries(arg: &Tokens, store: Option<&str>) -> Result<Vec<DisplacedEntry>> {
+  use crate::base_utilities::{
+    address_line_reading, holds_requested_marked_entries, one_address_unseparated,
+    split_top_level_lines,
+  };
+  let entries = displaced_entry_lines(arg, store)?;
+  let mut pieces: Vec<Vec<EntryPiece>> = Vec::with_capacity(entries.len());
+  for (entry, extent) in &entries {
+    let mut read = Vec::new();
+    if *extent != EntryExtent::Numbered {
+      for (line, tokens) in split_top_level_lines(entry.unlist_ref())
+        .into_iter()
+        .enumerate()
+      {
+        let paragraphs =
+          split_tokens_delimited(Tokens::new(tokens.to_vec()), vec![T_CS!("\\par").into()]);
+        for (at, (delimiter, tokens)) in paragraphs.into_iter().enumerate() {
+          let lead = *extent == EntryExtent::Labelled && line == 0 && at == 0;
+          let reading = (!lead)
+            .then(|| address_line_reading(&tokens, None))
+            .transpose()?;
+          read.push(EntryPiece {
+            line,
+            delimiter,
+            tokens,
+            reading,
+          });
+        }
+      }
+    }
+    pieces.push(read);
+  }
+  // (the pieces whose tokens print no `@`, read again by what they typeset)
+  let untyped: Vec<&Tokens> = pieces
+    .iter()
+    .flatten()
+    .filter(|piece| piece.reading == Some(AddressLineReading::NoAddress))
+    .map(|piece| &piece.tokens)
+    .collect();
+  let typeset = typeset_pieces(&untyped)?;
+  let mut typeset = typeset.into_iter();
+  for piece in pieces.iter_mut().flatten() {
+    if piece.reading == Some(AddressLineReading::NoAddress) {
+      let text = typeset.next().flatten();
+      piece.reading = Some(address_line_reading(&piece.tokens, text.as_deref())?);
+    }
+  }
+  let addresses = |piece: &EntryPiece| piece.reading == Some(AddressLineReading::Addresses);
+  // (the closing move: the last entry labelled, the list with more than one labelled entry — one holding several
+  // requested marked entries is several: 2511.02997's one line, 2102.11492's paragraphs — and no line of addresses
+  // under an earlier one, t11's per-label e-mail lines; affiliations.rs `place_address_runs`' `under_affiliations`)
+  let last = entries.len() - 1;
+  let labelled: Vec<usize> = (0..entries.len())
+    .filter(|e| entries[*e].1 == EntryExtent::Labelled)
+    .collect();
+  let closing = entries[last].1 == EntryExtent::Labelled
+    && pieces[last].iter().any(addresses)
+    && !pieces[..last]
+      .iter()
+      .zip(&entries)
+      .any(|(read, (_, extent))| *extent == EntryExtent::Labelled && read.iter().any(addresses))
+    && match labelled.as_slice() {
+      [one] => holds_requested_marked_entries(&entries[*one].0)?,
+      _ => true,
+    };
+  let mut out: Vec<DisplacedEntry> = Vec::with_capacity(entries.len() + 1);
+  let mut moved: Vec<Token> = Vec::new();
+  for (e, ((entry, extent), read)) in entries.into_iter().zip(pieces).enumerate() {
+    let closes = closing && e == last;
+    // (a lone address of a closing or unlabelled line without the separator of the list it ended,
+    // `jonk@anthropic.com,`: 2511.02997)
+    let unseparated: Vec<Option<Tokens>> = read
+      .iter()
+      .map(|piece| {
+        (addresses(piece) && (closes || extent == EntryExtent::Unlabelled))
+          .then(|| one_address_unseparated(&piece.tokens))
+          .filter(|trimmed| trimmed.unlist_ref().len() != piece.tokens.unlist_ref().len())
+      })
+      .collect();
+    let reshaped = unseparated.iter().any(Option::is_some)
+      || read.iter().any(|piece| {
+        piece.reading == Some(AddressLineReading::Unread) || (closes && addresses(piece))
+      });
+    if !reshaped {
+      out.push(DisplacedEntry { tokens: entry, block: false });
+      continue;
+    }
+    // (the entry without the pieces that leave it, its lines and paragraphs parted as they were; each unread piece an
+    // entry of the block's after it, the closing lines one entry after the rest)
+    let mut kept: Vec<Token> = Vec::new();
+    let mut blocks: Vec<DisplacedEntry> = Vec::new();
+    let mut line: Option<usize> = None;
+    for (piece, unseparated) in read.into_iter().zip(unseparated) {
+      if piece.reading == Some(AddressLineReading::Unread) {
+        blocks.push(DisplacedEntry {
+          tokens: spaces_trimmed(piece.tokens.unlist_ref()),
+          block:  true,
+        });
+        continue;
+      }
+      let address = addresses(&piece);
+      let tokens = unseparated.unwrap_or(piece.tokens);
+      if closes && address {
+        if !moved.is_empty() {
+          moved.push(T_CS!("\\\\"));
+        }
+        moved.extend(tokens.unlist());
+        continue;
+      }
+      if line == Some(piece.line) {
+        kept.extend(piece.delimiter);
+      } else if line.is_some() {
+        kept.push(T_CS!("\\\\"));
+      }
+      line = Some(piece.line);
+      kept.extend(tokens.unlist());
+    }
+    let kept = spaces_trimmed(&kept);
+    if !kept.unlist_ref().is_empty() {
+      out.push(DisplacedEntry { tokens: kept, block: false });
+    }
+    out.extend(blocks);
+  }
+  if !moved.is_empty() {
+    out.push(DisplacedEntry {
+      tokens: spaces_trimmed(&moved),
+      block:  false,
+    });
+  }
+  Ok(out)
+}
+
+/// The text each of `pieces` typesets, from one isolated speculative run of them all, each in a group of its own and a
+/// separator between them (sect05.rs `speculative_text_run`): a document macro's addresses, `\newcommand\emails{a@x,
+/// b@y}` then `\emails`, which no token of the line prints. `None` each when no run is made or kept, or its text does
+/// not part at the separators.
+fn typeset_pieces(pieces: &[&Tokens]) -> Result<Vec<Option<String>>> {
+  use crate::latex_constructs::{SpeculativeRun, speculative_text_run};
+  const SEPARATOR: &str = "LXPIECEEND";
+  if pieces.is_empty() {
+    return Ok(Vec::new());
+  }
+  let mut run: Vec<Token> = Vec::new();
+  for piece in pieces {
+    run.push(T_BEGIN!());
+    run.extend(piece.unlist_ref().iter().copied());
+    run.push(T_END!());
+    run.extend(ExplodeText!(SEPARATOR));
+  }
+  let texts = match speculative_text_run(Tokens::new(run))? {
+    SpeculativeRun::Printed(text) => {
+      let mut texts: Vec<Option<String>> =
+        text.split(SEPARATOR).map(|t| Some(t.to_string())).collect();
+      texts.pop();
+      texts
+    },
+    _ => Vec::new(),
+  };
+  Ok(if texts.len() == pieces.len() {
+    texts
+  } else {
+    vec![None; pieces.len()]
+  })
 }
 
 /// Are the entries of a displaced setter's call in doubt: one leads with a mark ([`is_a_mark`], a control-sequence symbol
 /// too: `$^\dagger$Deceased`, review rev99b2 F2) no author requests — queued, or placed by the `\maketitle` that reads
 /// them (`placed_authors_requesting`) — under names showing marks, as an in-place setter's line in doubt stays the
-/// class's ([`leads_with_unrequested_mark`])?
-fn displaced_in_doubt(entries: &[Tokens]) -> Result<bool> {
-  for entry in entries {
-    if let Some(operand) = leading_mark_operand(entry.unlist_ref())
+/// class's ([`leads_with_unrequested_mark`]), an entry of the author block's aside?
+fn displaced_in_doubt(entries: &[DisplacedEntry]) -> Result<bool> {
+  for entry in entries.iter().filter(|entry| !entry.block) {
+    if let Some(operand) = leading_mark_operand(entry.tokens.unlist_ref())
       && authors_show_marks()?
       && queued_authors_requesting(&operand)?.is_empty()
       && !placed_authors_requesting(&Tokens::new(operand.clone()).to_string())
@@ -3361,7 +3576,17 @@ fn route_and_hand_displaced() -> Result<Vec<Digested>> {
     }
   }
   use crate::latex_constructs::title_page_print_tokens;
-  let Some((printed, letters)) = sentinel_runs(&stores, &title_page_print_tokens, true, false)?
+  let frames: Vec<Option<SentinelFrame>> = stores
+    .iter()
+    .map(|store| {
+      records
+        .iter()
+        .find(|r| r.store == *store)
+        .and_then(displaced_frame)
+    })
+    .collect();
+  let Some((printed, letters)) =
+    framed_sentinel_runs(&stores, &frames, &title_page_print_tokens, true, false)?
   else {
     return Ok(Vec::new());
   };
@@ -3369,9 +3594,8 @@ fn route_and_hand_displaced() -> Result<Vec<Digested>> {
     stores
       .iter()
       .find(|t| t.with_str(|cs| cs == name))
-      .and_then(parameterless_body)
-      .as_ref()
-      .and_then(plain_value_text)
+      .and_then(crate::latex_constructs::no_argument_value)
+      .and_then(|value| plain_value_text(&Tokens::new(value)))
       .is_some()
   }) {
     // (the title-page reading's text, its run with the document's own values)
@@ -3392,6 +3616,26 @@ fn route_and_hand_displaced() -> Result<Vec<Digested>> {
   );
   route_displaced(records, &printed)?;
   hand_displaced_stores()
+}
+
+/// The class's code around a displaced call's argument in its store's value (the first of the argument's tokens in the
+/// recorded part): the sentinel runs ask whether the title page prints the argument, so a test the store itself makes
+/// stays (aaai25.sty:72 `\if T\showauthors@on#1\fi`, which `[submission]` empties). `None` when the part does not
+/// hold the argument token for token (an `\xdef` expanded it, iau.cls:1515), or the value holds it more than once
+/// (tmj.sty's `\address`, `#1` in both branches of `\ifnum\the@ShowAddrLabel`: 2009.00313): the whole value is then
+/// the sentinel's.
+fn displaced_frame(record: &DisplacedRecord) -> Option<SentinelFrame> {
+  let value = crate::latex_constructs::no_argument_value(&record.store)?;
+  let (part, arg) = (record.part.as_slice(), record.arg.unlist_ref());
+  if part.is_empty() || arg.is_empty() {
+    return None;
+  }
+  let at = value.windows(part.len()).position(|w| w == part)?;
+  let within = part.windows(arg.len()).position(|w| w == arg)?;
+  let start = at + within;
+  let (before, after) = (&value[..start], &value[start + arg.len()..]);
+  let again = |code: &[Token]| code.windows(arg.len()).any(|w| w == arg);
+  (!again(before) && !again(after)).then(|| (before.to_vec(), after.to_vec()))
 }
 
 /// Does a displaced setter's store stay the class's by the rules K11 applies to its own stores ([`store_setter_body`],
@@ -3450,6 +3694,16 @@ fn route_displaced(records: Vec<DisplacedRecord>, printed: &str) -> Result<()> {
     }
     let entries = displaced_entries(&record.arg, Some(&store))?;
     let redefined = readers.separators_redefined(&record.store, &[T_CS!("\\\\"), T_CS!("\\par")]);
+    if entries.iter().any(|entry| entry.block) {
+      Info!(
+        "frontmatter",
+        s!("\\{}", record.setter),
+        s!(
+          "\\{} holds a line printing an address the frontmatter does not read: the line is the author block's",
+          record.setter
+        )
+      );
+    }
     if displaced_in_doubt(&entries)?
       || displaced_argument_in_doubt(&record.arg, Some(&store), &redefined)?
     {
@@ -3516,7 +3770,11 @@ fn hand_displaced_stores() -> Result<Vec<Digested>> {
       _ => None,
     };
     for entry in displaced_entries(&without_labels(arg), store.as_deref())? {
-      calls.extend(contact_line_call(api, &entry)?.unlist());
+      if entry.block {
+        calls.extend(block_contact_call(api, &entry.tokens).unlist());
+      } else {
+        calls.extend(contact_line_call(api, &entry.tokens)?.unlist());
+      }
     }
     Info!(
       "frontmatter",
@@ -3530,6 +3788,21 @@ fn hand_displaced_stores() -> Result<Vec<Digested>> {
     return Ok(Vec::new());
   }
   Ok(vec![digest_store_calls(calls)?])
+}
+
+/// `head`'s call (`\lx@add@affiliation`, `\lx@add@address`) of a displaced entry's piece the frontmatter does not
+/// read ([`displaced_entries`]): a contact of the author block's creator (`label={addresses:block}`), as
+/// [`contact_line_call`] hands a line of marks it cannot cut, which the flush's Kind step does not read (`_unread`): its marks and
+/// addresses place no one (2212.12190's `\{licc.cs09, \textsuperscript{\rm 1}wwdu.cs10\}@…` read as mark 1's).
+fn block_contact_call(head: &str, piece: &Tokens) -> Tokens {
+  let mut call = mouth::tokenize_internal(TeXString::assembled(s!("{head}"))).unlist();
+  call.push(T_OTHER!("["));
+  call.extend(mouth::tokenize_internal("label={addresses:block},_unread=true").unlist());
+  call.push(T_OTHER!("]"));
+  call.push(T_BEGIN!());
+  call.extend(piece.unlist_ref().iter().copied());
+  call.push(T_END!());
+  Tokens::new(call)
 }
 
 /// Reroute every table setter the raw class `cls` defined as a store; a binding's own setter
@@ -3552,7 +3825,10 @@ fn reroute_raw_file_stores(cls: &str, package: bool) -> Result<()> {
   let mut setters = Vec::new();
   let mut toks: Vec<(&str, Vec<Token>)> = Vec::new();
   for (name, api) in STORE_SETTERS {
-    if defined_by_a_binding(name)? || (package && !defined_by_a_raw_file(name)?) {
+    if DISPLACED_ONLY_SETTERS.contains(name)
+      || defined_by_a_binding(name)?
+      || (package && !defined_by_a_raw_file(name)?)
+    {
       continue;
     }
     if let Some(label) = toks_store(name, &mut readers)? {
@@ -4119,7 +4395,9 @@ fn survey_off_table_stores(cls: &str, readers: &mut Option<ClassReaders>) -> Res
   let known = lookup_string("lx_offtable_stores");
   for cs_name in names {
     let name = &cs_name[1..];
-    if STORE_SETTERS.iter().any(|(n, _)| *n == name)
+    if STORE_SETTERS
+      .iter()
+      .any(|(n, _)| *n == name && !DISPLACED_ONLY_SETTERS.contains(n))
       || ["title", "author", "date", "thanks", "maketitle", "and"].contains(&name)
       || known.split(',').any(|n| n == name)
     {
@@ -4504,9 +4782,17 @@ fn sentinel(i: usize, kind: Sentinel) -> String {
 /// The sentinel `i` of `kind` as it is looked for in a run's lower-cased text.
 fn sentinel_found(i: usize, kind: Sentinel) -> String { sentinel(i, kind).to_lowercase() }
 
-/// `\def<store>{<sentinel i>}` for each store, the `i`-th its index; `<store>={<sentinel i>}` for a token register (the
-/// unclaimed-text net's: sig-alternate.cls:1374-1398 `\tntoks`).
-fn sentinel_definitions(stores: &[Token], kind: Sentinel) -> Vec<Token> {
+/// A store's value around the argument it holds, the class's code before and after it ([`displaced_frame`]).
+type SentinelFrame = (Vec<Token>, Vec<Token>);
+
+/// `\def<store>{<sentinel i>}` for each store, the `i`-th its index, with the store's own delimiters (`\def
+/// \affiliations_{…}`, aaai25.sty:72) and the frame `frames[i]` gives around it; `<store>={<sentinel i>}` for a token
+/// register (the unclaimed-text net's: sig-alternate.cls:1374-1398 `\tntoks`).
+fn sentinel_definitions(
+  stores: &[Token],
+  kind: Sentinel,
+  frames: &[Option<SentinelFrame>],
+) -> Vec<Token> {
   let mut defs = Vec::new();
   for (i, store) in stores.iter().enumerate() {
     if is_token_register(store) {
@@ -4515,9 +4801,13 @@ fn sentinel_definitions(stores: &[Token], kind: Sentinel) -> Vec<Token> {
     } else {
       defs.push(T_CS!("\\def"));
       defs.push(*store);
+      defs.extend(crate::latex_constructs::no_argument_delimiters(store));
     }
     defs.push(T_BEGIN!());
+    let frame = frames.get(i).and_then(Option::as_ref);
+    defs.extend(frame.iter().flat_map(|(before, _)| before.iter().copied()));
     defs.extend(mouth::tokenize_internal(TeXString::assembled(sentinel(i, kind))).unlist());
+    defs.extend(frame.iter().flat_map(|(_, after)| after.iter().copied()));
     defs.push(T_END!());
   }
   defs
@@ -4558,9 +4848,20 @@ fn sentinel_runs(
   aborted_printed_nothing: bool,
   isolated: bool,
 ) -> Result<Option<(String, String)>> {
+  framed_sentinel_runs(stores, &[], build, aborted_printed_nothing, isolated)
+}
+
+/// [`sentinel_runs`], each store's sentinel set in its frame (`frames`, by index: [`sentinel_definitions`]).
+fn framed_sentinel_runs(
+  stores: &[Token],
+  frames: &[Option<SentinelFrame>],
+  build: &dyn Fn(&[Token]) -> Tokens,
+  aborted_printed_nothing: bool,
+  isolated: bool,
+) -> Result<Option<(String, String)>> {
   use crate::latex_constructs::{SpeculativeRun, title_page_probe_run};
   let letters = match title_page_probe_run(
-    build(&sentinel_definitions(stores, Sentinel::Letters)),
+    build(&sentinel_definitions(stores, Sentinel::Letters, frames)),
     isolated,
   )? {
     SpeculativeRun::Printed(text) => text,
@@ -4576,7 +4877,7 @@ fn sentinel_runs(
     return Ok(Some((String::new(), letters)));
   }
   let digits = match title_page_probe_run(
-    build(&sentinel_definitions(stores, Sentinel::Digits)),
+    build(&sentinel_definitions(stores, Sentinel::Digits, frames)),
     isolated,
   )? {
     SpeculativeRun::Printed(text) => text,
@@ -4696,9 +4997,8 @@ fn confirmed_printed(stores: &[Token], printed: &str, letters: &str, real: &str)
       let Some(i) = stores.iter().position(|t| t.with_str(|cs| cs == *name)) else {
         return true;
       };
-      let Some(value) = parameterless_body(&stores[i])
-        .as_ref()
-        .and_then(plain_value_text)
+      let Some(value) = crate::latex_constructs::no_argument_value(&stores[i])
+        .and_then(|value| plain_value_text(&Tokens::new(value)))
         .map(|text| alphanumerics(&text))
         .filter(|text| !text.is_empty())
       else {
@@ -4807,7 +5107,7 @@ fn verify_title_page_labels() -> Result<()> {
     }
   }
   let run = title_page_probe_run(
-    title_page_print_tokens(&sentinel_definitions(&stores, Sentinel::Letters)),
+    title_page_print_tokens(&sentinel_definitions(&stores, Sentinel::Letters, &[])),
     false,
   )?;
   let text = match run {
@@ -5016,9 +5316,8 @@ pub fn before_title_page_runs() -> Result<()> {
     all
       .iter()
       .find(|t| t.with_str(|cs| cs == name))
-      .and_then(parameterless_body)
-      .as_ref()
-      .and_then(plain_value_text)
+      .and_then(crate::latex_constructs::no_argument_value)
+      .and_then(|value| plain_value_text(&Tokens::new(value)))
       .is_some()
   }) {
     let reading = crate::latex_constructs::title_page_reading::title_page_reading()?;
@@ -8097,6 +8396,11 @@ pub fn harvest_stores(at_maketitle: bool) -> Result<Vec<Digested>> {
     }
     if annotates_a_creator(name) {
       if !has_creator {
+        // (no creator carries it: its words are the title-page check's third source, as a raw setter's argument's are —
+        // naverlabseurope.cls's `\affiliations` beside its own `\authors`, 2408.05088)
+        if at_maketitle {
+          note_uncarried_store_value(value);
+        }
         continue;
       }
     } else if !creates_a_creator(name)

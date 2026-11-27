@@ -1339,8 +1339,9 @@ pub(crate) fn load() -> Result<()> {
       };
       let cs = T_CS!(with(*name, ToString::to_string));
       let Some(Stored::Expandable(d)) = lookup_meaning(&cs) else { continue };
-      // a macro that has since taken parameters is not the token list the record was taken from
-      if d.get_parameters().is_some_and(|p| !p.get_parameters().is_empty()) {
+      // a macro that has since taken an argument is not the token list the record was taken from (its delimiters, which
+      // take none, stay: `\affiliations_`)
+      if no_argument_parameter_text(&d).is_none() {
         continue;
       }
       let body: Vec<Token> = match d.get_expansion() {
@@ -3359,8 +3360,51 @@ fn record_ink(toks: &[Token], characters: bool) -> Vec<Token> {
     .collect()
 }
 
-/// Of the meanings an assignment journal saw assigned (`assigned`, each with its value before), the parameterless
-/// token-list macros (not `skip`) whose new part holds `arg` ([`record_ink`], its `characters` alone when asked): each macro's key and that part — the old
+/// The parameter text of a macro that takes no argument: none, or delimiter tokens alone (tex.web §473-476;
+/// aaai25.sty:72 `\def \affiliations_{…}`, which its `\@maketitle` calls as `\affiliations_`); `None` when it takes one.
+pub(crate) fn no_argument_parameter_text(d: &Expandable) -> Option<Vec<Token>> {
+  let Some(params) = d.get_parameters() else {
+    return Some(Vec::new());
+  };
+  let mut text = Vec::new();
+  for p in params.get_parameters() {
+    if !with(p.name, |n| n == "Match") {
+      return None;
+    }
+    text.extend(p.extra.iter().flat_map(|t| t.unlist_ref().iter().copied()));
+  }
+  Some(text)
+}
+
+/// The body of a token-list macro that takes no argument ([`no_argument_parameter_text`]), an empty one stored as `None`:
+/// the value a class's store holds.
+pub(crate) fn no_argument_body(m: Option<&Stored>) -> Option<Vec<Token>> {
+  let Some(Stored::Expandable(d)) = m else {
+    return None;
+  };
+  no_argument_parameter_text(d)?;
+  match d.get_expansion() {
+    None => Some(Vec::new()),
+    Some(ExpansionBody::Tokens(body)) => Some(body.unlist_ref().to_vec()),
+    Some(_) => None,
+  }
+}
+
+/// The value of the store `cs` ([`no_argument_body`]: a delimited `\affiliations_` too).
+pub(crate) fn no_argument_value(cs: &Token) -> Option<Vec<Token>> {
+  no_argument_body(lookup_definition_stored(cs).ok().flatten().as_ref())
+}
+
+/// The delimiters of the store `cs`, which a definition of its value repeats ([`no_argument_parameter_text`]).
+pub(crate) fn no_argument_delimiters(cs: &Token) -> Vec<Token> {
+  match lookup_definition_stored(cs) {
+    Ok(Some(Stored::Expandable(d))) => no_argument_parameter_text(&d).unwrap_or_default(),
+    _ => Vec::new(),
+  }
+}
+
+/// Of the meanings an assignment journal saw assigned (`assigned`, each with its value before), the token-list macros
+/// that take no argument ([`no_argument_body`]; not `skip`) whose new part holds `arg` ([`record_ink`], its `characters` alone when asked): each macro's key and that part — the old
 /// value's longest common prefix and suffix stay, and the middle between them is what the assignments put in (a tail
 /// appended, a head prepended, text inserted before a sentinel: `\def\tp@tmp##1\tp@end{\gdef\tp@block{##1#1\tp@end}}`),
 /// or the whole new value when the old one does not split that way. The class's own records of an argument
@@ -3376,23 +3420,6 @@ pub(crate) fn assigned_parts_holding(
   if arg.is_empty() {
     return parts;
   }
-  // a parameterless token-list macro's body (an empty one stored as `None`)
-  let value = |m: Option<&Stored>| -> Option<Vec<Token>> {
-    let Some(Stored::Expandable(d)) = m else {
-      return None;
-    };
-    if d
-      .get_parameters()
-      .is_some_and(|p| !p.get_parameters().is_empty())
-    {
-      return None;
-    }
-    match d.get_expansion() {
-      None => Some(Vec::new()),
-      Some(ExpansionBody::Tokens(body)) => Some(body.unlist_ref().to_vec()),
-      Some(_) => None,
-    }
-  };
   for (key, before) in assigned {
     let name = with(*key, ToString::to_string);
     if !name.starts_with('\\') || skip.contains(key) {
@@ -3403,10 +3430,10 @@ pub(crate) fn assigned_parts_holding(
     if same_meaning(now.as_ref(), before.as_ref()) {
       continue;
     }
-    let Some(now) = value(now.as_ref()) else {
+    let Some(now) = no_argument_body(now.as_ref()) else {
       continue;
     };
-    let part = match value(before.as_ref()) {
+    let part = match no_argument_body(before.as_ref()) {
       Some(old) if now.len() >= old.len() => {
         let prefix = now.iter().zip(&old).take_while(|(a, b)| a == b).count();
         let suffix = now
@@ -5513,6 +5540,15 @@ pub(crate) fn title_page_probe_run(tokens: Tokens, isolated: bool) -> Result<Spe
       );
       SpeculativeRun::OverBudget(read)
     },
+    Err(run) => run,
+  })
+}
+
+/// [`title_page_probe_run`] isolated, no title page's: a run over budget is no part of the check's, so it notes none.
+/// What a few lines of a displaced store typeset (frontmatter_stores.rs `typeset_pieces`).
+pub(crate) fn speculative_text_run(tokens: Tokens) -> Result<SpeculativeRun> {
+  Ok(match checks_run(tokens, true, &[(ink_text, None)])? {
+    Ok(mut texts) => SpeculativeRun::Printed(texts.swap_remove(0)),
     Err(run) => run,
   })
 }

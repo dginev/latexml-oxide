@@ -1,0 +1,35 @@
+% An AAAI `\affiliations` line led by two marks, `\textsuperscript{\rm 1},\textsuperscript{\rm 3}Univ A`
+%   (aaai25.sty:72), holds two requested marks the Cut does not cut, so it lands once at the block (`_unsplit`,
+%   frontmatter_stores.rs `contact_line_call`): no name gets it, though both marks are requested.
+% witness: 2305.06434; synthetic stand-in
+% oracle:  pdflatex 0 errors: "Ann Able1, Bob Baker2, Cy Cole3", "1,3Univ A", "2Univ B"
+% engines: rust INT081RC6 = 0 errors, both lines a logical-block; AAAILABEL = Bob "2Univ B", "1 , 3 Univ A" a nameless
+%          creator's, Ann and Cy only their mark-only notes (`<note mark="1" role="footnotemark"/>`, mark "3")
+% expect:  Ann and Cy "Univ A", Bob "Univ B"
+% status:  RED (AAAILABEL)
+% moves:   post-merge (the leading-label reader of a mark list)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{aaai25.sty}
+\ProvidesPackage{aaai25}[2025/05/08 AAAI 2025 Submission format]
+\def\showauthors@on{T}
+\DeclareOption{submission}{\gdef\showauthors@on{}}
+\ProcessOptions\relax
+\def\maketitle{\par\begingroup\def\thefootnote{\fnsymbol{footnote}}\twocolumn[\@maketitle]\@thanks\endgroup
+  \setcounter{footnote}{0}\let\maketitle\relax\let\@maketitle\relax
+  \gdef\@thanks{}\gdef\@author{}\gdef\@title{}\let\thanks\relax}
+\long\gdef\affiliations #1{ \def \affiliations_{\if T\showauthors@on#1\fi}}%
+\def\@maketitle{\def\theauthors{\if T\showauthors@on\@author\else Anonymous submission\fi}%
+  \vbox{\hsize\textwidth\linewidth\hsize\centering
+    {\LARGE\bf \@title \par}\vskip 0.1in
+    {\Large{\textbf{\theauthors\ifhmode\\\fi}}}\vskip .2em
+    {\normalsize \affiliations_\ifhmode\\\fi}\vskip .5em}}
+\end{filecontents*}
+\documentclass[letterpaper]{article}
+\usepackage{aaai25}
+\title{A Title}
+\author{Ann Able\textsuperscript{\rm 1}, Bob Baker\textsuperscript{\rm 2}, Cy Cole\textsuperscript{\rm 3}}
+\affiliations{\textsuperscript{\rm 1},\textsuperscript{\rm 3}Univ A\\ \textsuperscript{\rm 2}Univ B}
+\begin{document}
+\maketitle
+Body.
+\end{document}

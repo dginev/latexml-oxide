@@ -431,6 +431,42 @@ impl StoreReaders {
   }
 }
 
+/// The values of K11's stores that annotate a creator which `\maketitle` found no creator to carry
+/// ([`note_uncarried_store_value`]), read with the raw setters' calls ([`digest_raw_setter_calls`]). A state value, so
+/// none is left to the next document a worker converts.
+const UNCARRIED: &str = "lx_uncarried_store_values";
+
+/// A rerouted store that annotates a creator, at a `\maketitle` with none to carry it (frontmatter_stores.rs
+/// `harvest_stores`): its value is what the document gave the class's setter, which the check reads as it reads a raw
+/// setter's argument (2408.05088).
+pub fn note_uncarried_store_value(value: Tokens) {
+  let mut values = match lookup_value(UNCARRIED) {
+    Some(Stored::VecDequeStored(values)) => values,
+    _ => VecDeque::new(),
+  };
+  values.push_back(Stored::Tokens(value));
+  assign_value(
+    UNCARRIED,
+    Stored::VecDequeStored(values),
+    Some(Scope::Global),
+  );
+}
+
+/// The values [`note_uncarried_store_value`] noted, taken.
+fn take_uncarried_store_values() -> Vec<Tokens> {
+  let Some(Stored::VecDequeStored(values)) = lookup_value(UNCARRIED) else {
+    return Vec::new();
+  };
+  assign_value(UNCARRIED, Stored::None, Some(Scope::Global));
+  values
+    .into_iter()
+    .filter_map(|value| match value {
+      Stored::Tokens(value) => Some(value),
+      _ => None,
+    })
+    .collect()
+}
+
 /// The title page is about to be made (`\lx@deposit@maketitle`, `\lx@note@title@page`, a binding's `\maketitle`'s
 /// `\lx@frontmatterhere`), first here: what the document gave the raw setters so far (`state::take_store_calls`) is
 /// digested once, speculatively, each stored argument read by [`ink_word_text`], and no later call is watched
@@ -447,7 +483,10 @@ pub fn digest_raw_setter_calls() -> Result<()> {
     dropped,
     dropped_setters,
   } = take_store_calls();
-  if (calls.is_empty() && dropped == 0) || frontmatter_entry_sealed("ltx:creator", "author") {
+  let uncarried = take_uncarried_store_values();
+  if (calls.is_empty() && dropped == 0 && uncarried.is_empty())
+    || frontmatter_entry_sealed("ltx:creator", "author")
+  {
     return Ok(());
   }
   if dropped != 0 {
@@ -505,6 +544,11 @@ pub fn digest_raw_setter_calls() -> Result<()> {
         unread.push('\n');
         unread.push_str(&printed);
       }
+    }
+  }
+  for value in uncarried {
+    if let Some(printed) = argument_print(T_CS!("\\maketitle"), value)? {
+      read_arguments.push(printed);
     }
   }
   let words = wanted_words(

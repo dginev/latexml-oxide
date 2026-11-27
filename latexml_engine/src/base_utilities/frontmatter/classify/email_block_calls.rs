@@ -626,6 +626,17 @@ pub(in crate::base_utilities) fn write_out_unspaced_lists(text: &str) -> String 
 /// and a place before an address (`Berlin, Germany, foo@bar.de`) is a bare word, so
 /// either is rejected and an address is never invented.
 pub(in crate::base_utilities) fn email_addresses(line: &Tokens) -> Option<Vec<String>> {
+  let visible = printed_address_text(line);
+  let v = visible.trim();
+  if !v.contains('@') {
+    return None;
+  }
+  email_addresses_in(v)
+}
+
+/// The text a line of addresses prints, as [`email_addresses`] reads it: letters and others, a space for a space or a
+/// spacing command, the printed braces and underscores; no command's link, option or non-printing argument.
+pub(in crate::base_utilities) fn printed_address_text(line: &Tokens) -> String {
   // (a colour command's colour is no letter of the address: `\href{mailto:…}{\color{black}\texttt{xinhao.zhang},}`,
   // 2604.19440, read `blackxinhao.zhang@…`; a font's name, a scale, a skip's length neither, `\fontfamily{pcr}`,
   // 2609.25669; [`without_non_printing_arguments`])
@@ -685,10 +696,11 @@ pub(in crate::base_utilities) fn email_addresses(line: &Tokens) -> Option<Vec<St
       _ => {},
     }
   }
-  let v = visible.trim();
-  if !v.contains('@') {
-    return None;
-  }
+  visible
+}
+
+/// [`email_addresses`] of a line's printed text `v` ([`printed_address_text`], trimmed, holding an `@`).
+fn email_addresses_in(v: &str) -> Option<Vec<String>> {
   // (a list of local parts written without spaces before one domain, each at it: `ann@a.edu; dzyang,ashishbshah@fb.com`,
   // 2112.00969 — the frontmatter observer's reading too, [`write_out_unspaced_lists`])
   let written = write_out_unspaced_lists(v);

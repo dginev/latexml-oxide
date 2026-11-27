@@ -65,6 +65,22 @@ top of its group.
     every icml20xx.sty gives it ("Equal contribution First", 2502.09860). 2602.04557, 1904.07793 (the
     corresponding author's e-mail kept), 2106.09776 (OXIDIZED_DESIGN_DIVERGENCES #1063, #954). Guards
     `perfect_kernel_batchdateicml::{icml_notice_legends_are_the_marked_names_notes, icml_notice_read_by_meaning}`.
+  - **AAAI's `\affiliations` lines are the authors' affiliations.** aaai21-aaai2027's `\affiliations` redefines itself
+    as its store, `\affiliations_`, which the raw class's title page prints; its lines stayed a block under the names.
+    Each line now goes to the names whose marks request its label, an unlabelled institution to every author, as do
+    the lines of a raw file's plain `\affiliations` store its title page prints (rlj.sty: 2605.26012); under
+    `[submission]`, whose title page prints no affiliation, nothing moves. For every raw class whose title page prints
+    such a store (aaai, rstransa, iau, alta, eph; caosp's numbered `\institute` entries stay as they were): a closing
+    line of e-mails after the last label is the whole block's, not that label's — each address to the name it spells,
+    else one per author in order where the spelled ones agree, else the block's, a lone address without its list's
+    comma — unless the lines put each label's e-mails under it; a line (a document macro's text too) printing a list
+    of addresses the reader cannot read is the author block's line as it prints, the rest still the authors'; an
+    address inside a line of other words stays with its entry.
+    2501.02471, 2511.12066, 2212.00442, 2508.05165, 2404.14949, 2511.11817, 2511.02997; 2211.16869, 2212.12190,
+    2408.10349, 2412.03107 (OXIDIZED_DESIGN_DIVERGENCES #767, formerly #955). A raw class's
+    affiliation store that no author carries (naverlabseurope.cls's `\affiliations` beside its own `\authors`,
+    2408.05088) is counted in `Warning:frontmatter:unclaimed_store` instead of dropped silently. Guards
+    `perfect_kernel_batchaaailabel::aaai_affiliations_rows`, `perfect_kernel_batch108b::a_store_of_a_refused_replay_is_counted`.
   - **The MSC edition of an AMS class's or amsppt's `\subjclass` follows its codes.** The call's year, or the
     author's own `\subjclassname` (or amsppt `\subjclassyear`) that the class discards, stands when every code is in
     that edition; codes that fit one edition name it; a printed year the codes refute gives the edition current at the

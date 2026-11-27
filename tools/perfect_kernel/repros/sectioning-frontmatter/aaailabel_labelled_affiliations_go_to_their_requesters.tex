@@ -1,0 +1,38 @@
+% AAAI's `\affiliations` (aaai21-aaai2027 copies, aaai25.sty:72 `\long\gdef\affiliations #1{ \def \affiliations_{\if
+%   T\showauthors@on#1\fi}}`) redefines itself as its store, a macro delimited by `_` (catcode 8 in a .sty) that its
+%   `\@maketitle` prints as `\affiliations_`; the labelled lines are the affiliations the names' marks request
+%   (FIDELITY_CHARTER §4). The displaced setter (OD #767, formerly #955) records the store and hands each line to its
+%   requesters.
+% witness: 2501.02471, 2212.00442, 2508.05165, 2511.12066 (aaai copies); the copy a minimal stand-in
+% oracle:  pdflatex 0 errors: "A Title", "Ann Able1, Bob Baker2, Cy Cole1,2", "1Univ A", "2Univ B",
+%          "ann@a.edu, bob@b.edu"
+% engines: rust INT081RC6 = 0 errors, 0 warnings; the three lines a logical-block under the names, which carry only
+%          their marks
+% expect:  0 errors, 0 warnings; Ann Able holds <contact role="affiliation">1Univ A</contact> and ann@a.edu, Bob Baker
+%          2Univ B and bob@b.edu, Cy Cole 1Univ A then 2Univ B; no titlepage or logical-block holds "Univ"
+% status:  RED (INT081RC6) -> GREEN (AAAILABEL: perfect_kernel_batchaaailabel::aaai_affiliations_rows)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{aaai25.sty}
+\ProvidesPackage{aaai25}[2025/05/08 AAAI 2025 Submission format]
+\def\showauthors@on{T}
+\DeclareOption{submission}{\gdef\showauthors@on{}}
+\ProcessOptions\relax
+\def\maketitle{\par\begingroup\def\thefootnote{\fnsymbol{footnote}}\twocolumn[\@maketitle]\@thanks\endgroup
+  \setcounter{footnote}{0}\let\maketitle\relax\let\@maketitle\relax
+  \gdef\@thanks{}\gdef\@author{}\gdef\@title{}\let\thanks\relax}
+\long\gdef\affiliations #1{ \def \affiliations_{\if T\showauthors@on#1\fi}}%
+\def\@maketitle{\def\theauthors{\if T\showauthors@on\@author\else Anonymous submission\fi}%
+  \vbox{\hsize\textwidth\linewidth\hsize\centering
+    {\LARGE\bf \@title \par}\vskip 0.1in
+    {\Large{\textbf{\theauthors\ifhmode\\\fi}}}\vskip .2em
+    {\normalsize \affiliations_\ifhmode\\\fi}\vskip .5em}}
+\end{filecontents*}
+\documentclass[letterpaper]{article}
+\usepackage{aaai25}
+\title{A Title}
+\author{Ann Able\textsuperscript{\rm 1}, Bob Baker\textsuperscript{\rm 2}, Cy Cole\textsuperscript{\rm 1,\rm 2}}
+\affiliations{\textsuperscript{\rm 1}Univ A\\ \textsuperscript{\rm 2}Univ B\\ ann@a.edu, bob@b.edu}
+\begin{document}
+\maketitle
+Body.
+\end{document}

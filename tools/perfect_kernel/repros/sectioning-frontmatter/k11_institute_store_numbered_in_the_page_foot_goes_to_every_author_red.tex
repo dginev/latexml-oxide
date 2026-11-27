@@ -1,0 +1,42 @@
+% A raw class's pure `\institute` store (here `\let` to its `\affiliations`, as lpor2014.cls:1229-1230) numbered by
+%   `\and` with `\refstepcounter{inst}` in a box its page foot prints (lpor2014.cls:1235-1278, `\ps@firstpage`) is
+%   rerouted by K11's table (`frontmatter_stores.rs reroute_raw_file_stores`), whose numbering run reads the title page
+%   only (`lx_and_numbered_…`: none), so each `\and` entry is queued `annotate=all` (`affiliations.rs`) and every
+%   author holds every institute. It differs from repro aaailabel_class_pure_affiliations_store_stays_the_classs only
+%   by lacking that repro's synthetic `\let\@affiliations\relax` (lpor2014.cls has no such line: the real class reaches
+%   the displaced route, "record what they store: \institute", whose speculative title-page run turns it down — so the
+%   eventual page-foot `\and` numbering fix belongs to that route as well as to K11's).
+% witness: synthetic (found beside 1601.06956 and 1912.03045, lpor2014.cls)
+% oracle:  pdflatex 0 errors: "Ann Able1,2, Bob Baker2 and Cy Cole3", in the foot "1Univ A, Town", "2Univ B, City",
+%          "3Univ C, Village"
+% engines: rust INT081RC6 = 0 errors, 0 warnings, every author all three institutes; AAAILABEL fix 4 = the same
+% expect:  0 errors, 0 warnings; Ann "Univ A, Town" and "Univ B, City", Bob "Univ B, City", Cy "Univ C, Village"
+% status:  RED (INT081RC6; AAAILABEL fix 4)
+% moves:   post-merge (K11's numbering run reads the page styles' `\and` numbers, as caosp's title page: the lpor2014
+%          batch, option (a) of AAAILABEL fix 3's report)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{lpand2.cls}
+\ProvidesClass{lpand2}\LoadClass{article}
+\newcounter{inst}
+\long\def\affiliations#1{\gdef\@affiliations{#1}}
+\let\institute\affiliations
+\def\inst#1{\unskip\textsuperscript{#1}}
+\def\set@affiliations{\par\parindent=0pt\setcounter{inst}{0}\refstepcounter{inst}%
+  \def\and{\par\refstepcounter{inst}\textsuperscript{\theinst}\ignorespaces}%
+  \textsuperscript{\theinst}\ignorespaces\@affiliations}
+\def\ps@firstpage{\def\@oddhead{}\def\@oddfoot{\vbox to 0pt{\affiliationsbox\vss}}\let\@evenfoot\@oddfoot}
+\def\@maketitle{\begin{center}{\LARGE\@title\par}\vskip1em{\large\@author\par}\end{center}\vskip1em}
+\renewcommand\maketitle{\par\begingroup\@maketitle\endgroup
+  \def\affiliationsbox{\parbox[b]{\textwidth}{\small\set@affiliations}}%
+  \thispagestyle{firstpage}}
+\end{filecontents*}
+\documentclass{lpand2}
+\begin{document}
+\title{A Title}
+\author{Ann Able\inst{1,2}, Bob Baker\inst{2} and Cy Cole\inst{3}}
+\institute{Univ A, Town
+\and Univ B, City
+\and Univ C, Village}
+\maketitle
+Text.
+\end{document}

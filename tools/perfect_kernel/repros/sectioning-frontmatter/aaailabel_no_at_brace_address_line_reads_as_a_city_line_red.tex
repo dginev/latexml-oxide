@@ -1,0 +1,36 @@
+% A closing AAAI `\affiliations` line `\{ann, bob\}\@a.edu` (aaai25.sty:72) prints no `@` (latex.ltx:9422
+%   `\def\@{\spacefactor\@m{}}`): its printed text "{ann, bob}a.edu" is no address to any reader, so it goes on with
+%   the last entry as a city line does (frontmatter_stores.rs `displaced_entries`). Which of the two a no-`@` line is
+%   (an address the author mistyped, or a place) the printed text does not say.
+% witness: 2408.10349 (`\{…\}\@scut.edu.cn`); synthetic stand-in
+% oracle:  pdflatex 0 errors: "Ann Able1, Bob Baker2", "1Univ A", "2Univ B", "{ann, bob}a.edu"
+% engines: rust INT081RC6 = 0 errors, the three lines a logical-block; AAAILABEL = Bob's affiliation "2Univ B {ann,
+%          bob}a.edu"
+% expect:  the line once at the block, as printed, or the class's lines; no author's affiliation
+% status:  RED (AAAILABEL)
+% moves:   post-merge (a no-`@` address line against a city line)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{aaai25.sty}
+\ProvidesPackage{aaai25}[2025/05/08 AAAI 2025 Submission format]
+\def\showauthors@on{T}
+\DeclareOption{submission}{\gdef\showauthors@on{}}
+\ProcessOptions\relax
+\def\maketitle{\par\begingroup\def\thefootnote{\fnsymbol{footnote}}\twocolumn[\@maketitle]\@thanks\endgroup
+  \setcounter{footnote}{0}\let\maketitle\relax\let\@maketitle\relax
+  \gdef\@thanks{}\gdef\@author{}\gdef\@title{}\let\thanks\relax}
+\long\gdef\affiliations #1{ \def \affiliations_{\if T\showauthors@on#1\fi}}%
+\def\@maketitle{\def\theauthors{\if T\showauthors@on\@author\else Anonymous submission\fi}%
+  \vbox{\hsize\textwidth\linewidth\hsize\centering
+    {\LARGE\bf \@title \par}\vskip 0.1in
+    {\Large{\textbf{\theauthors\ifhmode\\\fi}}}\vskip .2em
+    {\normalsize \affiliations_\ifhmode\\\fi}\vskip .5em}}
+\end{filecontents*}
+\documentclass[letterpaper]{article}
+\usepackage{aaai25}
+\title{A Title}
+\author{Ann Able\textsuperscript{\rm 1}, Bob Baker\textsuperscript{\rm 2}}
+\affiliations{\textsuperscript{\rm 1}Univ A\\ \textsuperscript{\rm 2}Univ B\\ \{ann, bob\}\@a.edu}
+\begin{document}
+\maketitle
+Body.
+\end{document}

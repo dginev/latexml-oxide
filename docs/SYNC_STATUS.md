@@ -89,7 +89,7 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (438 items on 2026-11-26 on `int/towards_v0_8_1`: 438 open, weight 967, 35 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (438 items on 2026-11-26 on `int/towards_v0_8_1`: 438 open, weight 966, 35 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
 
 
   - ODR6 — OD ruling 12 (recorded in OD #449): `dump_reader.rs`'s "add-only" docstrings (:365, :574) corrected, then a removal trial of the skip lists against CLAUDE.md rule 2; 1
@@ -655,11 +655,17 @@ Rules that keep this file honest and mergeable:
     land in `ltx:titlepage` (5/30k separator-only: 1610.05434, 1907.08912, 2310.07906, 2601.13958, 2602.06569);
     `autart_cls.rs:171-174` `\thanks{}` takes no optional `[…]`, so `[` opens the thanks note and `footnoteinfo]…`
     spills into the same titlepage (11/30k: 1307.6041, 1611.04531, 1807.10233, 2404.08842, 2505.13064); 1
-  - AAAILABEL — (DG 2026-11-26: the aaai slot of the v0.8.1 frontmatter reopening) aaai's labelled `\affiliations`
-    lines stay an unowned title-page block while the names carry their marks (20 of 20 sampled aaai21+ papers; ≈ 95 %
-    of modern aaai). Two gates keep aaai off the displaced-setter route (OD #955): `affiliations` is not in
-    `STORE_SETTERS`, and the copies' `_`-delimited self-redefining store is skipped by `assigned_parts_holding`. In
-    progress on `pk/AAAILABEL`; the AAAI notes kept as moved (once-per-name `lx_aaai_marked@<kind>`) stay as they are; 3
+  - AAAILABEL — (landed 2026-11-26, pk/AAAILABEL, 4 rounds) aaai's labelled `\affiliations` lines are the marked authors'
+    affiliations and contacts (~95 % of modern aaai papers); the displaced-setter route's address rules mirror the API's
+    for every class: numbered (`\and`) entries get neither the doubt nor the closing move, an unread piece goes ALONE to the
+    block (`addresses:block`, `_unread`), never by bare position (DG, after an advisor study); the `affiliations` row is
+    the displaced route's only (`DISPLACED_ONLY_SETTERS`, the lpor2014 stopgap). Cost +1.85 % on aaai papers (accepted, DG).
+    Residual REDs: `aaailabel_closing_line_led_by_an_untagged_word_is_the_blocks_red` (an `Internet:`-led closing line goes
+    to the last label's carrier), `k11_institute_store_numbered_in_the_page_foot_goes_to_every_author_red` (pre-existing:
+    K11 cannot see `\and` numbers a page foot prints; the real lpor2014 shape reaches the displaced route), routed lines
+    drop their `\label`s (`p/t17`, `p/t18`), the one-left elimination row, the nested-brace title-page Warning pair
+    (2412.03107), a lone address under one label keeps its comma (`p/t20`), and the single-cutter item (the route hands
+    its list to `entry_calls` once that learns "an unread `@` line continues no entry"); 2
   - ARYMATHROW (needs a ruling) — a math `array` keeps an empty `XMRow` at every `\hline`/`\hdashline` (Perl keeps
     every inner row of a math alignment, Alignment.pm:768-769), and its `tex=` shows `\hdashline\cr`; text tables
     prune it. RED `alignment-bindings/math_array_rule_keeps_an_empty_row_red.tex` (found by the arydshln port, upstream

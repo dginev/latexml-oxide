@@ -1,0 +1,33 @@
+% AAAI's `\affiliations` with one unlabelled institution under every name (aaai25.sty:72, the store `\affiliations_`):
+%   the one institution is every author's (FIDELITY_CHARTER's one-institution reading), the e-mails placed by spelling.
+% witness: 2212.00442, 2508.05165 (aaai copies, one institution); the copy a minimal stand-in
+% oracle:  pdflatex 0 errors: "A Title", "Ann Able, Bob Baker", "Univ A", "1 Main St, Town", "ann@a.edu, bob@a.edu"
+% engines: rust INT081RC6 = 0 errors, 0 warnings; the three lines a logical-block under the names, no contact
+% expect:  0 errors, 0 warnings; Ann Able and Bob Baker each hold the affiliations "Univ A" and "1 Main St, Town" (a
+%          contact per line, the displaced route's), Ann ann@a.edu, Bob bob@a.edu; no titlepage or logical-block holds "Univ"
+% status:  RED (INT081RC6) -> GREEN (AAAILABEL: perfect_kernel_batchaaailabel::aaai_affiliations_rows)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{aaai25.sty}
+\ProvidesPackage{aaai25}[2025/05/08 AAAI 2025 Submission format]
+\def\showauthors@on{T}
+\DeclareOption{submission}{\gdef\showauthors@on{}}
+\ProcessOptions\relax
+\def\maketitle{\par\begingroup\def\thefootnote{\fnsymbol{footnote}}\twocolumn[\@maketitle]\@thanks\endgroup
+  \setcounter{footnote}{0}\let\maketitle\relax\let\@maketitle\relax
+  \gdef\@thanks{}\gdef\@author{}\gdef\@title{}\let\thanks\relax}
+\long\gdef\affiliations #1{ \def \affiliations_{\if T\showauthors@on#1\fi}}%
+\def\@maketitle{\def\theauthors{\if T\showauthors@on\@author\else Anonymous submission\fi}%
+  \vbox{\hsize\textwidth\linewidth\hsize\centering
+    {\LARGE\bf \@title \par}\vskip 0.1in
+    {\Large{\textbf{\theauthors\ifhmode\\\fi}}}\vskip .2em
+    {\normalsize \affiliations_\ifhmode\\\fi}\vskip .5em}}
+\end{filecontents*}
+\documentclass[letterpaper]{article}
+\usepackage{aaai25}
+\title{A Title}
+\author{Ann Able, Bob Baker}
+\affiliations{Univ A\\ 1 Main St, Town\\ ann@a.edu, bob@a.edu}
+\begin{document}
+\maketitle
+Body.
+\end{document}

@@ -1,0 +1,36 @@
+% An address the API leaves unread inside a labelled AAAI `\affiliations` line (`\texttt{\{first.last\}@b.edu}` after
+%   `\textsuperscript{\rm 2}Univ B`, aaai25.sty:72) is that label's line, not a continuation line: the store stays
+%   routed (frontmatter_stores.rs `displaced_entries` reads every piece but a labelled entry's lead).
+% witness: 2303.13269; synthetic stand-in
+% oracle:  pdflatex 0 errors: "Ann Able1, Bob Baker1, Cy Cole2", "1Univ A {ann, bob}@a.edu",
+%          "2Univ B {first.last}@b.edu"
+% engines: rust INT081RC6 = 0 errors, the two lines a logical-block; 842364fc86c = as expected
+% expect:  0 errors, 0 warnings; Ann "1Univ A" and ann@a.edu, Bob "1Univ A" and bob@a.edu, Cy "2Univ B
+%          {first.last}@b.edu"; no titlepage or logical-block holds "Univ"
+% status:  RED (INT081RC6) -> GREEN (842364fc86c, AAAILABEL fix 1:
+%          perfect_kernel_batchaaailabel::aaai_affiliations_rows)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{aaai25.sty}
+\ProvidesPackage{aaai25}[2025/05/08 AAAI 2025 Submission format]
+\def\showauthors@on{T}
+\DeclareOption{submission}{\gdef\showauthors@on{}}
+\ProcessOptions\relax
+\def\maketitle{\par\begingroup\def\thefootnote{\fnsymbol{footnote}}\twocolumn[\@maketitle]\@thanks\endgroup
+  \setcounter{footnote}{0}\let\maketitle\relax\let\@maketitle\relax
+  \gdef\@thanks{}\gdef\@author{}\gdef\@title{}\let\thanks\relax}
+\long\gdef\affiliations #1{ \def \affiliations_{\if T\showauthors@on#1\fi}}%
+\def\@maketitle{\def\theauthors{\if T\showauthors@on\@author\else Anonymous submission\fi}%
+  \vbox{\hsize\textwidth\linewidth\hsize\centering
+    {\LARGE\bf \@title \par}\vskip 0.1in
+    {\Large{\textbf{\theauthors\ifhmode\\\fi}}}\vskip .2em
+    {\normalsize \affiliations_\ifhmode\\\fi}\vskip .5em}}
+\end{filecontents*}
+\documentclass[letterpaper]{article}
+\usepackage{aaai25}
+\title{A Title}
+\author{Ann Able\textsuperscript{\rm 1}, Bob Baker\textsuperscript{\rm 1}, Cy Cole\textsuperscript{\rm 2}}
+\affiliations{\textsuperscript{\rm 1}Univ A \qquad \texttt{\{ann, bob\}@a.edu}\\ \textsuperscript{\rm 2}Univ B \qquad \texttt{\{first.last\}@b.edu}}
+\begin{document}
+\maketitle
+Body.
+\end{document}

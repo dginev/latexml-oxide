@@ -1,0 +1,35 @@
+% AAAI `\affiliations` lines that put each label's e-mails under it (aaai25.sty:72): a line of addresses under an
+%   earlier labelled entry shows the list puts addresses under its affiliations, so the last label's own line is that
+%   label's, its only carrier's (frontmatter_stores.rs `displaced_entries`, mirroring affiliations.rs
+%   `place_address_runs`' `under_affiliations`), not the block's closing line.
+% witness: synthetic (the reviewer's p/t11.tex)
+% oracle:  pdflatex 0 errors: "Ann Able1, Dan Dorn1, Bob Baker2", "1Univ A", "ann.able@a.edu, dan.dorn@a.edu",
+%          "2Univ B", "12345@b.edu"
+% engines: rust INT081RC6 = 0 errors, the lines a logical-block; 9e7098cc4be = 12345@b.edu the block's
+% expect:  0 errors, 0 warnings; Ann and Dan "1Univ A" with their own e-mails, Bob "2Univ B" and 12345@b.edu
+% status:  RED (9e7098cc4be) -> GREEN (AAAILABEL fix 3: perfect_kernel_batchaaailabel::aaai_affiliations_rows)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{aaai25.sty}
+\ProvidesPackage{aaai25}[2025/05/08 AAAI 2025 Submission format]
+\def\showauthors@on{T}
+\DeclareOption{submission}{\gdef\showauthors@on{}}
+\ProcessOptions\relax
+\def\maketitle{\par\begingroup\def\thefootnote{\fnsymbol{footnote}}\twocolumn[\@maketitle]\@thanks\endgroup
+  \setcounter{footnote}{0}\let\maketitle\relax\let\@maketitle\relax
+  \gdef\@thanks{}\gdef\@author{}\gdef\@title{}\let\thanks\relax}
+\long\gdef\affiliations #1{ \def \affiliations_{\if T\showauthors@on#1\fi}}%
+\def\@maketitle{\def\theauthors{\if T\showauthors@on\@author\else Anonymous submission\fi}%
+  \vbox{\hsize\textwidth\linewidth\hsize\centering
+    {\LARGE\bf \@title \par}\vskip 0.1in
+    {\Large{\textbf{\theauthors\ifhmode\\\fi}}}\vskip .2em
+    {\normalsize \affiliations_\ifhmode\\\fi}\vskip .5em}}
+\end{filecontents*}
+\documentclass[letterpaper]{article}
+\usepackage{aaai25}
+\title{A Title}
+\author{Ann Able\textsuperscript{\rm 1}, Dan Dorn\textsuperscript{\rm 1}, Bob Baker\textsuperscript{\rm 2}}
+\affiliations{\textsuperscript{\rm 1}Univ A\\ ann.able@a.edu, dan.dorn@a.edu\\ \textsuperscript{\rm 2}Univ B\\ 12345@b.edu}
+\begin{document}
+\maketitle
+Body.
+\end{document}

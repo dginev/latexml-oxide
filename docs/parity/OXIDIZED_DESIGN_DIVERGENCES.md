@@ -14319,6 +14319,58 @@ bypassed under raw loading; the class's `\@maketitle` never runs under the locke
   prints (formerly #939); a raw package's stores (formerly #940); a mark before a pure store (formerly #941); displaced
   affiliation text (formerly #955); a class-numbered `\institute` by numbers (formerly #791); neurips's
   `\@projectpage` (formerly #741); wiley-article and CSML (formerly #758).
+- *A store is a macro that takes no argument* (tex.web §473-476): no parameter text, or one of delimiters alone
+  (aaai25.sty:72 `\long\gdef\affiliations #1{ \def \affiliations_{\if T\showauthors@on#1\fi}}`, which its
+  `\@maketitle` prints as `\affiliations_`; `latex_constructs/sect05.rs no_argument_body`). The record, the take-out and
+  the sentinel keep the delimiters, and a displaced store's sentinel stands for the argument inside the store's own code
+  (`frontmatter_stores.rs displaced_frame`), so aaai's `[submission]`, whose `\showauthors@on` is empty, prints none;
+  a value holding the argument twice (tmj.sty's `\address`, `#1` in both branches of an `\ifnum`: 2009.00313) is the
+  sentinel's whole.
+  aaai's labelled lines go by the names' marks (2501.02471, 2511.12066), one unlabelled institution to every author
+  (2212.00442, 2508.05165; 2109.09904's goes to its last name only, the kernel author tail's line of addresses closing
+  the run: repro `aaailabel_author_tail_email_line_caps_the_institution_run_red`). These are the route's rules for every
+  displaced setter (`frontmatter_stores.rs displaced_entries`), mirroring the API's address runs (`affiliations.rs
+  place_address_runs`):
+  - An entry is a class's `\and`-numbered one (caosp's `\institutename`, `class_numbered_institutes`), the class's own
+    and handed whole, its pieces unread (astro-ph9805232's `Internet:` lines); or it runs from a line a printed label
+    leads; or it is the lines before any label (the whole argument when none).
+  - The other entries are read piece by piece — each line (`\\`) and each paragraph of one (`\par`), all but a labelled
+    entry's lead — on their printed text, or, where their tokens print no `@`, on the text they typeset (a document
+    macro: one isolated speculative run of the pieces, `typeset_pieces`; `insert.rs address_line_reading`).
+  - A piece whose `@` follows words that are no local parts (`A-1180 Wien (a@x)`, `Internet: a@x`, a mark's legend) is
+    an address in a line of other words: it stays with its entry, the observer's text reading's and the API Cut's, as
+    the Kind step leaves such a line (`kind_entry_addresses`; astro-ph9805051, 2610.17630).
+  - A piece printing an `@` after local parts alone that the frontmatter reads as no line of addresses (a mark in it,
+    or neither `email_addresses` nor the Kind step's `address_line_cut` reading it: `{a, b} @x`, a nested brace list) is
+    an entry of its own, a contact of the author block's creator (`label={addresses:block}`) that the flush's Kind
+    step does not read (`_unread`; 2211.16869, 2412.03107, 2408.10349, 2212.12190; DG ruling of 2026-11-26). Only in
+    a line without a mark does the frontmatter observer's text reading still give an address the name it spells
+    (2408.10349); a line holding a mark keeps every address on the block's creator, the mark placing none
+    (2212.12190). A line printing no `@`
+    is no address to any reader: `\{a,b\}\@x` prints none (latex.ltx:9422), so it goes on with its entry as a city line
+    does (RED `aaailabel_no_at_brace_address_line_reads_as_a_city_line_red`).
+  - The pieces of the last labelled entry past its lead that are lines of addresses (`[a, b]@x`, `a, b, c@x`,
+    `Emails: \{a, b\}@x`, `\{a@x, b@y\}`: 2211.08824, 2212.13819, 2501.16509, 2511.11817, 2403.16883) are one unlabelled
+    entry of the whole block after the rest, whose addresses the Link step places by spelling, else one per author
+    where every spelled one agrees with its place (OD #805's order), else the block — never the label's only author by
+    position (2404.14949, 2511.11817), a lone address without its list's `,`/`;` (2511.02997). Not where the list
+    puts addresses under its affiliations, as `place_address_runs`' `under_affiliations` reads it: one labelled entry
+    (a line of several requested marked entries is several), or a line of addresses under an earlier labelled entry —
+    then each label's line is its own. A city line there stays with its entry; an address inside a labelled line
+    stays that label's (2303.13269).
+  - The table's `affiliations` row is the displaced route's only (`store_setters.rs DISPLACED_ONLY_SETTERS`): K11's
+    in-place reroute skips it and its off-table survey reads it as off the table. A pure `\affiliations` store is the
+    creators' contacts where the title page prints it (rlj.sty:72, 2605.26012), the class's where only its page foot
+    does (lpor2014.cls:1229-1230, numbered by `\and`: 1601.06956, 1912.03045; K11's table had given every author
+    every entry there).
+  Guard `perfect_kernel_batchaaailabel::aaai_affiliations_rows`. Cost: the
+  route's two speculative title-page runs, +1.88 % `instructions:u` on 2508.01473 (best of 3, one core: 4,997,745,205
+  → 5,091,730,716), and the pieces' typeset run +0.06 % more (5,091,434,100 → 5,094,581,229); a plain article and an
+  aaai copy without `\affiliations` +0.01 % each (DG to accept).
+- *A store no creator carries*: a rerouted store that annotates a creator, at a `\maketitle` with none, is not handed
+  on; its value joins the title-page check's third source, so its words are counted as a raw setter's are
+  (`title_page_check.rs note_uncarried_store_value`; naverlabseurope.cls's `\affiliations` beside its own `\authors`,
+  2408.05088). Guard `perfect_kernel_batch108b::a_store_of_a_refused_replay_is_counted`.
 - *A labelled off-table store* (QA61, DG 2026-11-15; BM Q3.13): one the run prints right after the class's own label, in
   a line holding no other value and not glued to the class's text, is an `ltx:pubnote` named by the label even where the
   deposit or replay typesets it; they read it as empty and take the label out, from the line the label was read in
