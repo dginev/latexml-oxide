@@ -89,7 +89,7 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (436 items on 2026-11-26 on `int/towards_v0_8_1`: 436 open, weight 958, 35 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (436 items on 2026-11-26 on `int/towards_v0_8_1`: 436 open, weight 960, 35 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
 
 
   - ODR6 — OD ruling 12 (recorded in OD #449): `dump_reader.rs`'s "add-only" docstrings (:365, :574) corrected, then a removal trial of the skip lists against CLAUDE.md rule 2; 1
@@ -970,9 +970,14 @@ Rules that keep this file honest and mergeable:
     segfaults, and 0 papers worse than run 411 (DG lifted the rc3 block on it, 2026-11-24). The same wild-jump
     form hit an experimental mimalloc build on 1502.06095 on 2026-11-21, before both changes. Open leads: a kernel
     core dump under load (a single flipped bit would mean hardware), CPU boost on/off, and whether nextest's
-    256 MiB thread stacks matter. Another gate-run data point (2026-11-26, pk/BLOCKDECL fix round 1): one SIGABRT "malloc(): unaligned tcache chunk detected" in
-    `perfect_kernel_batch65r::elsarticle_layouts_set_geometry_text_width`, the first in 1,203 gate logs; 6 plain reruns, 8 under
-    `glibc.malloc.perturb=165` + `MALLOC_CHECK_=3` and the full rerun pass (log `scratch_BLOCKDECL/fix1/gates_nextest_run1.log`); 3
+    256 MiB thread stacks matter. Two glibc heap-integrity aborts followed on 2026-11-26: SIGABRT "malloc(): unaligned
+    tcache chunk detected" in `perfect_kernel_batch65r::elsarticle_layouts_set_geometry_text_width` (pk/BLOCKDECL fix
+    round 1; 6 plain reruns, 8 under `glibc.malloc.perturb=165` + `MALLOC_CHECK_=3` and the full rerun pass; log
+    `scratch_BLOCKDECL/fix1/gates_nextest_run1.log`), and SIGABRT "free(): chunks in smallbin corrupted" in
+    `perfect_kernel_batch56::byte_mouth_declare_unicode_character_defines_u8_names` (gates INT081EB on `1f8370df6d4`,
+    after `t1.fontmap` loaded). The rate: 4 crash-signal gate runs of the ~121 since 2026-11-23, 0 of the 484 before
+    (counted over `gates_nextest_*.log`, ANSI-stripped `SIGABRT|SIGSEGV|SIGBUS` lines). Next: a bisect by stress — the
+    full suite looped on a tree with rust-libxml 0.3.24's lock and without #1000 against today's, same host and load; 5
   - PATHAPI — (DG 2026-11-25, v0.8.1 only; main/v0.8.0 takes no refactor) one pathname API used everywhere, so a path
     bug is fixed in one file: helpers sized to the business needs and to Perl `Util/Pathname.pm`'s 25 operations (ours
     has 47 public functions, while ~24 `canonicalize(`, 3 `std::path::absolute`, 3 `current_dir()`, ~90 `.parent()`
