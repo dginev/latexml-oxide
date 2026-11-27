@@ -1171,12 +1171,12 @@ pub(super) fn name_continues_at_gap(name: &str) -> bool {
   }
 }
 
-/// Whether a names line's piece is a collaboration listed among the authors (`and the MAST Team`, 1609.09534; `and the
-/// VVDS team`, astro-ph0509500): "the" before a team, collaboration, consortium or group's name — no institution of the
-/// name before it; the names line reads it as their collaboration (`reads_as_collaboration`, OXIDIZED_DESIGN_DIVERGENCES
-/// #946; an author before batch 97d).
-pub(super) fn is_collaboration(text: &str) -> bool {
+/// Whether a names line's piece names a team, collaboration, consortium or group listed among the authors — after "the"
+/// (`and the MAST Team`, 1609.09534; `and the VVDS team`, astro-ph0509500) or `enumerated` (`A, B and R Core Team`) — no
+/// institution of the name before it (OXIDIZED_DESIGN_DIVERGENCES #459).
+pub(super) fn is_collaboration(text: &str, enumerated: bool) -> bool {
   collaboration_remark(text) == Some(Framing::The)
+    || (enumerated && reads_as_collaboration(text, true))
 }
 
 /// Where a remark on a name opens in a piece's text: at a bracket (`(on behalf of the H1 and ZEUS collaborations)`,
@@ -1543,8 +1543,13 @@ impl Resolver {
     // after it, with where they start)
     let mut last_covered: Vec<usize> = Vec::new();
     let mut heading: Option<(String, usize)> = None;
+    // (a list's "and", `&` or an inline `\and`, llncs's)
     let listed = |sep: Option<&Event>| {
-      sep.is_some_and(|s| matches!(&s.kind, EventKind::Sep(SepKind::Word(word)) if word.eq_ignore_ascii_case("and") || word == "&"))
+      sep.is_some_and(|s| match &s.kind {
+        EventKind::Sep(SepKind::Word(word)) => word.eq_ignore_ascii_case("and") || word == "&",
+        EventKind::Sep(SepKind::And(_)) => true,
+        _ => false,
+      })
     };
     let split_rule = |sep: Option<&Event>| match sep.map(|e| &e.kind) {
       Some(EventKind::Sep(SepKind::Comma)) => "line:names sep:comma",
@@ -1554,6 +1559,27 @@ impl Resolver {
       _ => "line:names",
     };
     let events = &line.events;
+    // (a group's name a list of people enumerates — after "and", `\and` or a list's comma, a person's name before it on
+    // the line — is an author; not inside a remark a piece before it opened on the line, `… Peters for the ATLAS, CDF, CMS and D0
+    // Collaborations` (1311.7305, hep-ex0611001, 2009.04166), nor before a place it is an institution of, `and Theory
+    // Group, CERN`, nor in a list of groups, revtex's `\collaboration{Fermilab Lattice, HPQCD, and MILC Collaborations}`
+    // (2412.18491), nor a plural joining several, `The ATLAS and CMS Collaborations` (`names_several_groups`); one name's
+    // comma keeps it that name's, `Bob Baker, \TeX{} Users Group`)
+    let enumerated = |creators: &[RCreator], made: &[usize], sep: Option<&Event>, at: usize| {
+      let is_name = |e: &&&Event| e.kind == EventKind::Name;
+      (listed(sep)
+        || (made.len() >= 2 && sep.is_some_and(|s| s.kind == EventKind::Sep(SepKind::Comma))))
+        && made.iter().any(|&c| reads_as_names(&creators[c].name))
+        && !names_several_groups(&events[at].text)
+        && !events[..at]
+          .iter()
+          .filter(is_name)
+          .any(|e| remark_start(&e.text).is_some())
+        && events[at + 1..]
+          .iter()
+          .find(is_name)
+          .is_none_or(|e| reads_as_names(&e.text))
+    };
     // (a line printing only a collaboration framed for the names before it is theirs, its words as digested: a macro, a
     // `\let` copy, a font group or its own "and" — `\author{\obo{} the KM3NeT Consortium}`, 1201.5050, segaudit col1)
     if let Some(text) = framed_collaboration(events)
@@ -1682,9 +1708,10 @@ impl Resolver {
           creator.join(NameJoin::Reversed);
           last_sep = None;
         },
-        // (a collaboration among the names, or a remark on a name naming one, is a contact on the names of the line
-        // since its last collaboration, no name and no part of one — `… and the GAPS Team`, `J.~Zapatero$^{5}$ (The
-        // MAGIC Collaboration)`, as today's reader reads it: `collaboration_split`, OXIDIZED_DESIGN_DIVERGENCES #946)
+        // (a collaboration framed among the names, or a remark on a name naming one, is a contact on the names of the
+        // line since its last collaboration, no name and no part of one — `J.~Zapatero$^{5}$ (The MAGIC Collaboration)`:
+        // `collaboration_split`, OXIDIZED_DESIGN_DIVERGENCES #459; one the line enumerates is an author, `… and the GAPS
+        // Team`, 1708.04166)
         // (a call or a column of its own speaking for one, under the names before it, too: `\author{on behalf of the KM3NeT
         // consortium}`, 1201.5726; `\author{for the IceCube collaboration}`, 1301.6619 — elsarticle, printed under them; the
         // names since the last collaboration, no name. An unframed one stays a creator, revtex's `\collaboration{The HERMES
@@ -1693,7 +1720,11 @@ impl Resolver {
           if (!made.is_empty()
             || ((speaks_for(&event.text) || frames_the_names_alone(events, &event.text))
               && !self.uncovered_creators().is_empty()))
-            && reads_as_listed_collaboration(&event.text, listed(last_sep)) =>
+            && reads_as_listed_collaboration(
+              &event.text,
+              listed(last_sep),
+              enumerated(&self.out.creators, &made, last_sep, i),
+            ) =>
         {
           let text = event
             .text
@@ -1815,7 +1846,10 @@ impl Resolver {
         EventKind::Name
           if !made.is_empty()
             && is_institution(&event.text)
-            && !is_collaboration(&event.text)
+            && !is_collaboration(
+              &event.text,
+              enumerated(&self.out.creators, &made, last_sep, i),
+            )
             && name_before_remark(&event.text).is_none()
             && !marked_name(events, i, cautious, policy) =>
         {

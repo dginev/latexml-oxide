@@ -1,0 +1,21 @@
+% mechanism: a team, group or collaboration the author line enumerates as one of its names — after a comma, "and" or
+%            "and the", or an `\and` column that is the team's name alone — is an author, as pdflatex prints it; one the
+%            line frames (a name's "for/on behalf of/representing" remark, brackets, a line of its own) stays the names'
+%            collaboration contact (DG 2026-11-27; `reads_as_listed_collaboration`, `resolver::blocks` `shared_column`,
+%            OXIDIZED_DESIGN_DIVERGENCES #459)
+% witness: an external report (the R project's citation author line); 1711.07097 (`and LHD experimental group`),
+%          1708.04166 (`and the GAPS Team`)
+% oracle:  pdflatex: 0 errors; three names "Friedrich Leisch", "Vincent Goulet", "R Core Team" (article.cls:246-247);
+%          Perl: three creators (Base_Utility `@authorsplits`), this form and the `\and` form
+% engines: rust 0.8.0-rc6: two creators, "R Core Team" a `contact role="collaboration"` on each (the `\and` form: an
+%          `affiliation` on each)
+% expect:  0 errors, 0 warnings; three creators role="author", personnames Friedrich Leisch, Vincent Goulet, R Core Team,
+%          no contact
+% status:  RED (rc6) -> GREEN (TEAMAUTH); guard `perfect_kernel_batchteamauth::an_enumerated_team_is_an_author`
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Friedrich Leisch, Vincent Goulet and R Core Team}
+\begin{document}
+\maketitle
+\end{document}

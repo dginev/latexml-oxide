@@ -809,6 +809,8 @@ mod perfect_kernel_batchst3;
 /// STRMWARN: a streamed conversion warns once per failing formula, as the eager one does (OD #1132).
 mod perfect_kernel_batchstrmwarn;
 mod perfect_kernel_batchta1;
+/// TEAMAUTH: a team the author line enumerates is an author (DG 2026-11-27, OD #459).
+mod perfect_kernel_batchteamauth;
 /// TITLESEC: a titlesec format applies only while titlesec holds the command; a later `\@startsection` definition or
 /// sectsty's load gives it back to LaTeX (OD #1143, KPE #1317).
 mod perfect_kernel_batchtitlesec;

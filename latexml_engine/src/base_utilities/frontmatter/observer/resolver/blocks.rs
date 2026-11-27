@@ -319,13 +319,18 @@ impl Resolver {
       // nucl-th0308018's `\and Bertrand BOURIQUET \address{…}`; a column of contacts alone, `\and \institute{Univ
       // B}`, is read on them. The rule is the reading's, not OmniBus's: the kernel `article` route with a document's
       // `\institute` reads the same way, revP21d)
+      // (nor a column that is a team's name alone, an author as the PDF prints it: `\and R Core Team`, DG 2026-11-27 —
+      // `The Theory Group \\ CERN, Geneva` under the names stays theirs)
       let shared_column = column_first
         && line.column > 0
         && last_named().is_some_and(|named| line.column > named)
         && self.out.creators.len() > block_creators_start
         && {
           let own = column_own_text(&line.events);
-          is_institution(&own) && !names_collaboration(&own)
+          let alone = lines.iter().filter(|l| l.column == line.column).count() == 1;
+          is_institution(&own)
+            && !names_collaboration(&own)
+            && !(alone && reads_as_collaboration(&own, true))
         };
       if shared_column {
         let every: Vec<usize> = (block_creators_start..self.out.creators.len()).collect();

@@ -1,0 +1,24 @@
+% mechanism: REVTeX's `\collaboration{…}` is one collaboration note on the authors it follows, its argument whole (DG
+%   2026-11-27, as AASTeX's `\collaboration`); our binding reads it as Perl's does, `\author{#1}`
+%   (revtex4_support_sty.rs `\collaboration{}`), so the names line splits it at its commas and "and"
+% witness: 2412.18491 (revtex4-2, ~30 `\author` calls then `\collaboration{Fermilab Lattice, HPQCD, and MILC
+%   Collaborations}`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: "Ann Able", "Bob Baker", their affiliations, "(A, B, and C
+%   Collaborations)" centred under them
+% engines: rust 0.8.0-rc6 and TEAMAUTH (unchanged: an `\author` list's enumeration is not applied to a list of groups):
+%   0 errors, 0 warnings; four creators — Ann Able (Univ A), Bob Baker (Univ B), "A" and "B", the last two each with
+%   `<contact role="collaboration">C Collaborations</contact>`
+% expect:  0 errors, 0 warnings; two creators, Ann Able (Univ A) and Bob Baker (Univ B), each with one
+%   `<contact role="collaboration">A, B, and C Collaborations</contact>`
+% status:  RED
+% moves:   post-merge (a binding change of `\collaboration`, beyond the enumeration fix)
+% preload: ar5iv.sty
+\documentclass{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able}\affiliation{Univ A}
+\author{Bob Baker}\affiliation{Univ B}
+\collaboration{A, B, and C Collaborations}
+\maketitle
+Text.
+\end{document}

@@ -52,6 +52,12 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
   - **The bundled ar5iv.css is ar5iv-css 0.9.6** (`tools/ar5iv-css.pin`): the same no-scrollbar display in a box, an
     aligned display's rows lined up in a box as outside, the title page's margin notes beside the text on very wide
     screens, and a zero-width text-mode `\vphantom`.
+  - **A team the author list names is an author.** `\author{A, B and R Core Team}`, its `\and` form and `A, B and the
+    GAPS Team` give three authors, as the PDF prints them; the team was a hover-only collaboration note on each name (the
+    `\and` form an affiliation). A team a name speaks for (`for the ATLAS Collaboration`), a bracketed line under the
+    names, AASTeX's `\collaboration` and a list of groups alone (REVTeX's `\collaboration{A, B, and C Collaborations}`)
+    keep their reading. FIDELITY_CHARTER (amended 2026-11-27),
+    OXIDIZED_DESIGN_DIVERGENCES #459; guard `perfect_kernel_batchteamauth::an_enumerated_team_is_an_author`.
 
 ### 0.8.0-rc5
 

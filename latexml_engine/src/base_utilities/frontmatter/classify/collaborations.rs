@@ -146,12 +146,32 @@ pub(in crate::base_utilities) fn collaboration_framing(
 }
 
 /// Whether a piece of a names line names a collaboration beside the names ([`reads_as_collaboration`]) the way a line
-/// lists one: framed — "the", "for", "on behalf of", brackets — or listed with "and" (`listed`). A piece the commas alone
-/// part from the names is no collaboration of theirs: revtex's `\collaboration{Fermilab Lattice, HPQCD, and MILC
-/// Collaborations}` (2412.18491, its `\author{#1}`) one collaboration, no name "Fermilab Lattice".
-pub fn reads_as_listed_collaboration(text: &str, listed: bool) -> bool {
-  reads_as_collaboration(text, listed)
-    && (listed || collaboration_core(text).1 != Framing::Unframed)
+/// lists one: framed — "the", "for", "on behalf of", brackets — or listed with "and" (`listed`). One the line
+/// enumerates as an author (`enumerated`) only framed by more than "the": `… and R Core Team`, `and the GAPS Team`
+/// (1708.04166), each of `Fermilab Lattice, HPQCD, and MILC Collaborations` (2412.18491) are authors (DG 2026-11-27,
+/// OXIDIZED_DESIGN_DIVERGENCES #459). A piece the commas alone part from
+/// the names is no collaboration of theirs.
+pub fn reads_as_listed_collaboration(text: &str, listed: bool, enumerated: bool) -> bool {
+  collaboration_framing(text, listed, false).is_some_and(|framing| {
+    framing == Framing::Framed || (!enumerated && (listed || framing != Framing::Unframed))
+  })
+}
+
+/// Whether a group's name ends with a plural collaboration or team word, several groups an "and" joins (`The ATLAS and CMS
+/// Collaborations`, 1503.07589; `the Solar Orbiter EPD and Parker Solar Probe ISIS teams`, 2408.02330): no list item of
+/// its own.
+pub fn names_several_groups(text: &str) -> bool {
+  let last = text.split_whitespace().last().map(bare_word);
+  last.is_some_and(|w| {
+    [
+      "collaborations",
+      "consortia",
+      "teams",
+      "groups",
+      "experiments",
+    ]
+    .contains(&w.as_str())
+  })
 }
 
 /// Whether a collaboration's text ends with a colon, a heading over the names after it (`Tam\'as Cs\"org\H{o}$^{4}$,
@@ -171,9 +191,9 @@ pub(in crate::base_utilities) const COLLABORATION_WORDS: &[&str] =
   &["collaboration", "collaborations", "consortium", "consortia"];
 
 /// The [`NON_NAME_WORDS`] that name a team, a group or an experiment as the last word of its name, which may as well be
-/// an institution's (`Speech Group`, `Google Brain Team`): a collaboration only where the line frames it so — after
+/// an institution's (`Speech Group`, `Google Brain Team`): a group's name only where the line frames it so — after
 /// "the", "for", "on behalf of", in brackets — or a names line lists it with "and" (`… and LHD experimental group`,
-/// 1711.07097; [`reads_as_collaboration`]).
+/// 1711.07097, an author: [`reads_as_listed_collaboration`]; [`reads_as_collaboration`]).
 pub(in crate::base_utilities) const TEAM_WORDS: &[&str] = &[
   "team",
   "teams",

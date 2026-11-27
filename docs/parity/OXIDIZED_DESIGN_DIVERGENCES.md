@@ -9579,14 +9579,20 @@ author's contact, never part of the name and never a creator.
   declarations around an alignment environment go with it (formerly #947); a one-column tabular's rows, side-by-side
   commands and a control return are lines (formerly #964).
 - *Tails*: a grade or collaboration after a name is the author's contact (`lines.rs:1163 is_collaboration`, `:2053
-  collaboration`; formerly #946, #967); an `\IEEEmembership` grade is the name's it follows (formerly #1016, #950);
+  collaboration`; formerly #946, #967) where the line frames it — a name's `for`/`on behalf of`/`representing` remark,
+  brackets, dashes, a line of its own, a remark open earlier on the line; a team, group or collaboration a list of
+  people enumerates (after a person's name and `and`, `and the`, an inline `\and` or a list's `,`, no plural joining
+  groups, no place after it; or an `\and` column that is its name alone) is an author, as article.cls:246-247 prints
+  it and Perl's `@authorsplits` reads it (`collaborations.rs reads_as_listed_collaboration`, `lines.rs is_collaboration`, `blocks.rs shared_column`; DG
+  2026-11-27, charter amendment); an `\IEEEmembership` grade is the name's it follows (formerly #1016, #950);
   IEEEtran's blocks under authblk's `\author` are read as the class reads them (formerly #987).
 
 **Witnesses** 0910.4381, 1908.10448, 2410.11607, 2403.06760, 2212.06489, 2508.03934 (gretsi's `first \textsc{last}`),
 1201.5726, 1301.6619 (collaboration). **Guards**
 `perfect_kernel_batch106c::a_collaboration_line_in_a_raw_name_block_is_the_names_contact`,
 `perfect_kernel_batch104c::a_control_return_parts_marked_entries`,
-`perfect_kernel_batchfms2a2::a_corresponding_author_list_names_each_author`. RED:
+`perfect_kernel_batchfms2a2::a_corresponding_author_list_names_each_author`,
+`perfect_kernel_batchteamauth::{an_enumerated_team_is_an_author, a_framed_collaboration_and_an_institution_column_keep_their_reading}`. RED:
 `article_mark_led_second_row_of_one_name_read_as_affiliation_red`, `aa_institute_and_inside_a_macro_group_red`.
 **Upstream.** Not offered (reads digested events). Records: [the archive](../archive/OD_FRONTMATTER_RECORDS_2026-11-15.md), under each number.
 
@@ -16907,7 +16913,7 @@ now no `name`).
 
 ### 945. → #954 (An affiliation the reading already has reaches its author: a block entry is cut by its whole span, llncs's one institute cut at its marks stays every author's, svproc's `\institute` is sv_support's (Perl: no observer, the names line split at its "and"; llncs's whole institute on the first author; svproc's per author through OmniBus's inst_support))
 
-### 946. → #459 (A collaboration or team named in the author line is a `contact role="collaboration"` on the names it covers, no creator and no part of a name (Perl: a piece of the names, welded into the last name, or a creator; aastex's `\collaboration` alone a contact))
+### 946. → #459 (A collaboration or team named in the author line is a `contact role="collaboration"` on the names it covers, no creator and no part of a name (Perl: a piece of the names, welded into the last name, or a creator; aastex's `\collaboration` alone a contact); amended DG 2026-11-27: one the line enumerates is an author)
 ### 947. → #459 (The declarations around an author block's alignment environment go with it, and spacing after its close is no part of the block; AASTeX's `\affiliation` is REVTeX's (Perl: one creator per `\author`, the block kept whole; aastex's affiliation the last author's))
 
 ### 948. → #980 (Every remaining observer-writer family is written in one batch (ijcai, inst_support, iopart, jheppub, jinstpub, jcappub, jpconf, sv_support and every binding owning `\author` with no declaration); a block line's letters are read as printed, a re-parted entry keeps today's role, a letter-spaced name's word space is no gap, an e-mail's corresponding owner is one of the authors it is printed for, a name read as an entry is never written onto an author; an elsarticle key is answered by its keys alone, and a name the re-part makes that names no person declines (Perl: the old reader's output, no observer))
