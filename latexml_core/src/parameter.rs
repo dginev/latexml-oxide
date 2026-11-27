@@ -986,17 +986,18 @@ impl Parameters {
     }
   }
 
-  /// Read and digest a constructor's arguments. Under [`KEEP_STATED_LENGTHS`], `stated` receives the tokens each
-  /// braced or bracketed typed argument states (a length's `{0.48\textwidth}`), with its index among the returned
-  /// arguments; `withheld` is set when it has such an argument and a binding withheld their tokens
-  /// ([`WITHHOLD_STATED_LENGTHS`]).
+  /// Read and digest a constructor's arguments into `args` (on an `Err`, the ones read before it). Under
+  /// [`KEEP_STATED_LENGTHS`], `stated` receives the tokens each braced or bracketed typed argument states (a length's
+  /// `{0.48\textwidth}`), with its index among the arguments; `withheld` is set when it has such an argument and a
+  /// binding withheld their tokens ([`WITHHOLD_STATED_LENGTHS`]).
   pub fn read_arguments_and_digest(
     &self,
     fordefn: &Constructor,
     stated: &mut Vec<(usize, Tokens)>,
     withheld: &mut bool,
-  ) -> Result<Vec<Option<Digested>>> {
-    let mut args = Vec::with_capacity(self.0.len());
+    args: &mut Vec<Option<Digested>>,
+  ) -> Result<()> {
+    args.reserve(self.0.len());
     // `LXML_TRACE_ARGS=\cs` prints every argument this constructor reads, as
     // reverted tokens, before it is digested — a bisect aid for "which tokens
     // did the `{}` scan swallow" questions (examdesign's version-loop
@@ -1098,7 +1099,7 @@ impl Parameters {
     }
     // (looked up only for a constructor with a length argument whose tokens were not kept)
     *withheld = keep == Some(false) && lookup_bool(WITHHOLD_STATED_LENGTHS);
-    Ok(args)
+    Ok(())
   }
 
   /// Re-read an argument already read as tokens (`{Dimension}`, `[Number]`,

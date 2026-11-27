@@ -1197,7 +1197,25 @@ pub fn digest_alignment_body(whatsit: &mut Whatsit, runs_everycr: bool) -> Resul
   let mut field_taken: Vec<u32> = Vec::new();
   let alignment_cell = alignment_stored.alignment_cell().unwrap();
   loop {
-    let (cell_opt, next, vtype, hidden) = digest_alignment_column(alignment_cell, lastwascr)?;
+    let mark = pending_list_mark();
+    let (cell_opt, next, vtype, hidden) = match digest_alignment_column(alignment_cell, lastwascr) {
+      Ok(column) => column,
+      Err(e) => {
+        // (a Fatal inside a cell: the cell takes what it digested, OD #251; its groups stay, as every frame a Fatal leaves)
+        let alignment = alignment_stored.clone();
+        let ismath = lookup_bool_sym(pin!("IN_MATH"));
+        close_pending_list_as(mark, move |boxes| {
+          let mut list = List::new(boxes);
+          list.mode = Some(if ismath { TexMode::Math } else { TexMode::Text });
+          let cell: Digested = list.into();
+          let closed = alignment.alignment_cell().is_some_and(|alignment| {
+            extract_alignment_column(alignment.borrow_mut(), cell.clone()).is_ok()
+          });
+          if closed { Vec::new() } else { vec![cell] }
+        });
+        return Err(e);
+      },
+    };
     //     Debug("Halign $alignment: BODY got CELL"
     //         . "[" . $alignment->currentRowNumber . "," . $alignment->currentColumnNumber . "]"
     //         . ToString($cell) . " ended at " . Stringify($next)) if $LaTeXML::DEBUG{halign};

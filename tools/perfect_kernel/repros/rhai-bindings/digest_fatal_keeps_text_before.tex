@@ -1,7 +1,7 @@
 % mechanism: a Fatal raised while digesting (a Rhai body's `Fatal()`, a register setter's or getter's) keeps the text
 %   digested before it: `core_interface::finish_digestion_fatal` salvages every level for every digestion Fatal but the
 %   resource and token-loop guards; Perl's `hardYankProcessing` (Common/Error.pm:336-338) keeps the innermost list, which
-%   here holds the same text (inside a footnote it differs: digest_fatal_in_a_footnote_red.tex; OD #251)
+%   here holds the same text (inside a footnote it differs: digest_fatal_in_a_footnote.tex; OD #251)
 % witness: synthetic (RHODR; the binding lxmbf.sty.rhai, lxmbf.sty.ltxml for Perl, lxmbf.sty for pdflatex); the same
 %   ending for register_getter_fatal_stops.tex and 30_script_bindings::a_rhai_fatal_is_logged_once's "macro body",
 %   "a register setter" and "a register getter" rows

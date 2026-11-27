@@ -57,7 +57,7 @@ pub fn restart_budget(max_memory_mib: u64, source: &str) -> Option<usize> {
 /// and the fuse, both in MB; the caller reruns only when the first is below
 /// the second.
 pub fn release_before_rerun() -> (u64, u64) {
-  drop(stomach::salvage_pending_box_lists(false));
+  stomach::drop_pending_box_lists();
   stomach::clear_token_stack();
   crate::heap_trim::collect_rust_heap();
   let rss_mb = latexml_core::watchdog::process_rss_kb().unwrap_or(0) / 1024;

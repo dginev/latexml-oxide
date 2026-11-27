@@ -1,0 +1,21 @@
+% mechanism: the digestion salvage closes each pending box list as the construct that opened it would
+%   (`stomach::close_pending_list_as`, OD #251): a `\thanks` inside `\author` is no frontmatter entry of its own while
+%   the name is digested, so its partial text joins the name and the creator keeps the note's place-keeper picture
+% witness: synthetic (DIGFATALCLOSE review of siblings; the binding lxmbf.sty.rhai, lxmbf.sty.ltxml, lxmbf.sty)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: the title block "T Ann¹" and the footnote "¹ Th x"
+% engines: INT081EP: 1 fatal error, W=2, a creator holding only a place_keeper picture, <p>AnnTh </p> in the body;
+%   DIGFATALCLOSE: 1 fatal error, W=1, <personname>AnnTh</personname> beside a place_keeper picture
+% expect:  1 fatal error; <creator role="author"><personname>Ann</personname><contact role="thanks">Th</contact>
+%   </creator> (no "place_keeper" text)
+% status:  RED (DIGFATALCLOSE)
+% moves:   post-merge (the frontmatter's nested-entry placement after a Fatal)
+\documentclass{article}
+\usepackage{lxmbf}
+\title{T}\author{Ann\thanks{Th \lxmbf\ x}}
+\begin{document}
+First paragraph.
+
+\maketitle
+
+Second paragraph.
+\end{document}

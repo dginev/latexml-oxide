@@ -1,0 +1,23 @@
+% mechanism: the digestion salvage closes each pending box list as the construct that opened it would
+%   (`stomach::close_pending_list_as`, OD #251); a `\caption`'s text is digested first for its list entry
+%   (`\@@toccaption`, sect09.rs), so a Fatal in it closes the list entry and the printed caption (`\lx@@caption`) is
+%   never made: the text is kept in `ltx:toccaption`, which the HTML does not show
+% witness: synthetic (DIGFATALCLOSE review of siblings; 0 of the 49 Fatal papers of its A/B; the binding
+%   lxmbf.sty.rhai, lxmbf.sty.ltxml, lxmbf.sty)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "First paragraph." the figure "X" "Figure 1: Cap tail"
+% engines: INT081EP: 1 fatal error, E=1 ("<ltx:tag> isn't allowed in <ltx:p>"), <p>X 1Cap </p> (no figure);
+%   DIGFATALCLOSE: 1 fatal error, E=0, <figure><p>X</p><toccaption>1 Cap </toccaption></figure>;
+%   DIGFATALCLOSE fix 1: the same, and W=1 counting the hidden words ("A Fatal ended a caption in its list entry, which
+%   the HTML does not show: 1 word(s): 1Cap")
+% expect:  1 fatal error, E=0; <figure>…<caption><tag>Figure 1: </tag>Cap </caption></figure>
+% status:  RED (DIGFATALCLOSE); the counted Warning is pinned by fatal_salvages_partial_document::a_digestion_fatal_closes_each_unfinished_construct
+% moves:   post-merge (the caption made from its list entry's text when only that was digested)
+\documentclass{article}
+\usepackage{lxmbf}
+\begin{document}
+First paragraph.
+
+\begin{figure}[h] \centering X \caption{Cap \lxmbf\ tail} \end{figure}
+
+Second paragraph.
+\end{document}

@@ -1,16 +1,15 @@
-% mechanism: the digestion salvage (`core_interface::finish_digestion_fatal`, `stomach::salvage_pending_box_lists`) keeps
-%   the boxes of an environment the Fatal left unfinished but not the environment: the items of an open `itemize` are
-%   built without their list, the second inside the first (schema-invalid; display math in progress likewise leaves
-%   bare `XMTok`s: 1402.0613, cond-mat9706088; an open list: 2512.12535)
+% mechanism: the digestion salvage (`core_interface::finish_digestion_fatal`, `stomach::salvage_pending_box_lists`) closes
+%   each pending box list as the construct that opened it would (`stomach::close_pending_list_as`, OD #251): an environment's captured body (`{itemize}`: the list and its items; no `\end` came,
+%   so its trailer is empty)
 % witness: synthetic (DIGFATAL A/B: 4 of the 68 salvaged papers schema-invalid, 31 jing errors; the binding
 %   lxmbf.sty.rhai, lxmbf.sty.ltxml for Perl, lxmbf.sty for pdflatex)
 % oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "First paragraph. • One. • Two three. Second paragraph.";
 %   Perl 0.8.8: 1 fatal error, a rootless `<item>` holding the second `<item>` (Perl rescues the innermost list only)
 % engines: DIGFATAL: 2 errors ("<ltx:item> isn't allowed in <ltx:document>", "… in <ltx:item>"), 1 fatal error;
 %   <p>First paragraph.</p>, then `<item>One.<item>Two </item></item>` directly in the document
-% expect:  1 fatal error; <p>First paragraph.</p> <itemize><item>One.</item><item>Two </item></itemize>
-% status:  RED (DIGFATAL)
-% moves:   post-merge (close the salvaged levels as their constructs would, or wrap them by the schema model)
+%   DIGFATALCLOSE: 1 fatal error, E=0 W=0, schema-valid
+% expect:  1 fatal error, E=0 W=0; <p>First paragraph.</p> <itemize><item>One.</item><item>Two</item></itemize>
+% status:  RED (DIGFATAL) -> GREEN (DIGFATALCLOSE; guard fatal_salvages_partial_document::a_digestion_fatal_closes_each_unfinished_construct)
 \documentclass{article}
 \usepackage{lxmbf}
 \begin{document}

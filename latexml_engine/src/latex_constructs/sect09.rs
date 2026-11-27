@@ -412,9 +412,22 @@ pub(crate) fn load() -> Result<()> {
   // too (latex.ltx:17391-17399), and without it the list of figures showed the float's number alone
   // (`\captionsetup{type=figure}` or `\def\@captype{figure}` in a minipage, the tufte margin figures; 2609.06557,
   // 32742).
-  DefConstructor!("\\@@toccaption PBoxContents", sub[document, args] {
+  DefConstructor!("\\@@toccaption PBoxContents", sub[document, args, props] {
     let body = args[0].clone();
+    // A Fatal in the caption's text, read first for this entry (`\@caption@@@`), ended it here (OD #251): the typeset
+    // caption is never made.
+    let salvaged = props.get(SALVAGED) == Some(&Stored::Bool(true));
     if caption_can_float(document, "ltx:toccaption") {
+      // (the HTML does not show the entry, LaTeXML-para-xhtml.xsl:221: its words are counted)
+      let words = body.as_ref().map(|body| ink_words(std::slice::from_ref(body))).unwrap_or_default();
+      if salvaged && !words.is_empty() {
+        let first = words.iter().take(8).map(String::as_str).collect::<Vec<_>>().join(" ");
+        let more = if words.len() > 8 { " …" } else { "" };
+        Warn!("unexpected", "caption", s!(
+          "A Fatal ended a caption in its list entry, which the HTML does not show: {} word(s): {first}{more}",
+          words.len()
+        ));
+      }
       let save = document.float_to_element("ltx:toccaption", true)?;
       document.open_element("ltx:toccaption", None, None)?;
       if let Some(ref body) = body {
@@ -425,7 +438,12 @@ pub(crate) fn load() -> Result<()> {
         document.set_node(&save);
       }
     } else if let Some(body) = body {
-      assign_value("lx@unplaced@toccaption", Stored::Digested(body), Some(Scope::Global));
+      if salvaged {
+        // (the caption it would wait for never comes: its text stays where it stands)
+        document.absorb(&body, None)?;
+      } else {
+        assign_value("lx@unplaced@toccaption", Stored::Digested(body), Some(Scope::Global));
+      }
     }
   });
 

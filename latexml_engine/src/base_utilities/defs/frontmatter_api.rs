@@ -624,8 +624,17 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     // (the title-page check's watch over a frontmatter command's entry: #953 "106t")
     let watch = begin_frontmatter_entry_digestion(Some(&content), None);
     // REPLACE only 'place_keeper'!!
+    let mark = pending_list_mark();
     let digested = digest_frontmatter_item(&tag, content);
     end_frontmatter_entry_digestion(watch, digested.as_ref().ok())?;
+    if digested.is_err() {
+      // (a Fatal inside it: the entry takes what it digested, if a salvage keeps it — OD #251)
+      let tag = tag.clone();
+      close_pending_list_as(mark, move |boxes| {
+        frontmatter_set_first_content(&tag, index, TagContent::Box(List::new(boxes).into()));
+        Vec::new()
+      });
+    }
     let digested = digested?;
     // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #803, #916; user rulings 2026-10-21, 2026-10-30): a document's note that
     // prints nothing is none, whatever its label — one whose whole content our own extraction moved out (A&A's
@@ -778,7 +787,18 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     if tag == "ltx:abstract" {
       take_abstract_ended_late();
     }
-    let body = digest_next_body(Some(end)).map(|body| [boxes, body].concat());
+    let mark = pending_list_mark();
+    let body = digest_next_body(Some(end));
+    if body.is_err() {
+      // (a Fatal inside it: the entry takes what it digested, if a salvage keeps it — OD #251 — and the document's end,
+      // which never comes, places it: its `\lx@frontmatter@fallback`, `\relax` once `\maketitle` has placed it)
+      let (tag, head) = (tag.clone(), boxes.clone());
+      close_pending_list_as(mark, move |rest| {
+        frontmatter_set_first_content(&tag, index, TagContent::Box(List::new([head, rest].concat()).into()));
+        digest(Tokens!(T_CS!("\\lx@frontmatter@fallback"))).map_or_else(|_| Vec::new(), |fallback| vec![fallback])
+      });
+    }
+    let body = body.map(|body| [boxes, body].concat());
     // An abstract opened as a command that no heading ended — the bibliography or the document's end did — holds the
     // body, as in TeX (the group or `\quotation` never ends): it keeps its first paragraph and the rest goes back to
     // the body, where it stands (sect05.rs `\lx@bibliography@ends@frontmatter`; OXIDIZED_DESIGN_DIVERGENCES #1101).

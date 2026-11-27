@@ -587,7 +587,7 @@ pub fn check_timeout() -> Result<()> {
                   st.boxing.len(),
                   st.localized_box_list
                     .iter()
-                    .map(|(v, _)| v.len())
+                    .map(|level| level.list.len())
                     .sum::<usize>(),
                 );
               }
@@ -671,6 +671,20 @@ pub(crate) struct ParagraphStart {
   in_group:        bool,
 }
 
+/// How a box list a Fatal leaves pending closes when the salvage keeps it (`salvage_pending_box_lists`, OD #251): the
+/// list's boxes in, what goes to the enclosing list out. Set by the construct that opened the list
+/// ([`close_pending_list_as`]); a list with none joins the enclosing one as it is (a body, a group).
+pub type PendingListCloser = Box<dyn FnOnce(Vec<Digested>) -> Vec<Digested>>;
+
+/// A box list suspended by [`new_local_box_list`]: the enclosing list, where its paragraph began, and how the list
+/// opened above it closes on a Fatal.
+#[derive(Default)]
+struct SuspendedList {
+  list:            Vec<Digested>,
+  paragraph_start: Option<ParagraphStart>,
+  closer:          Option<PendingListCloser>,
+}
+
 /// The Stomach is responsible for digesting tokens into boxes, lists, etc.
 #[derive(Default)]
 pub struct Stomach {
@@ -679,7 +693,7 @@ pub struct Stomach {
   /// tracks the tokens of boxing groups(?)
   pub boxing:          Vec<Token>,
   /// localized box lists for stacked digestion calls, each with its `paragraph_start`
-  localized_box_list:  Vec<(Vec<Digested>, Option<ParagraphStart>)>,
+  localized_box_list:  Vec<SuspendedList>,
   /// collects the intermediate boxes resulting from a `digest` call.
   pub box_list:        Vec<Digested>,
   /// Where the paragraph being built on `box_list` began ([`ParagraphStart`]).
@@ -2290,8 +2304,12 @@ pub fn new_local_box_list() {
     ));
   }
   std::mem::swap(&mut stomach.box_list, &mut buffer);
-  let start = stomach.paragraph_start.take();
-  stomach.localized_box_list.push((buffer, start));
+  let paragraph_start = stomach.paragraph_start.take();
+  stomach.localized_box_list.push(SuspendedList {
+    list: buffer,
+    paragraph_start,
+    closer: None,
+  });
 }
 
 /// Hard cap on box-nesting depth (the `localized_box_list` boxing stack). No
@@ -2301,9 +2319,13 @@ pub fn new_local_box_list() {
 const STOMACH_BOXING_DEPTH_CAP: usize = 100_000;
 pub fn expire_local_box_list() -> Vec<Digested> {
   let mut stomach = stomach_mut!();
-  let (mut buffer, start) = stomach.localized_box_list.pop().unwrap_or_default();
+  let SuspendedList {
+    list: mut buffer,
+    paragraph_start,
+    ..
+  } = stomach.localized_box_list.pop().unwrap_or_default();
   std::mem::swap(&mut stomach.box_list, &mut buffer);
-  stomach.paragraph_start = start;
+  stomach.paragraph_start = paragraph_start;
   buffer
 }
 
@@ -2320,10 +2342,10 @@ pub fn box_lists_mark() -> (usize, usize) {
 pub fn unwind_box_lists_to(mark: (usize, usize)) {
   let mut stomach = stomach_mut!();
   while stomach.localized_box_list.len() > mark.0
-    && let Some((parent, start)) = stomach.localized_box_list.pop()
+    && let Some(parent) = stomach.localized_box_list.pop()
   {
-    stomach.box_list = parent;
-    stomach.paragraph_start = start;
+    stomach.box_list = parent.list;
+    stomach.paragraph_start = parent.paragraph_start;
   }
   stomach.boxing.truncate(mark.1);
 }
@@ -2348,18 +2370,25 @@ pub fn unwind_box_lists_to(mark: (usize, usize)) {
 /// suspended outer ones, which is precisely "drop the offending construct, keep
 /// the document". For every other recoverable Fatal the current level is honest
 /// content and is kept.
-pub fn salvage_pending_box_lists(drop_innermost: bool) -> Vec<Digested> {
-  let mut stomach = stomach_mut!();
-  let mut acc = std::mem::take(&mut stomach.box_list);
-  stomach.paragraph_start = None;
+///
+/// Each level closes as the construct that opened it would ([`close_pending_list_as`]: a constructor's argument or
+/// body as its whatsit, an `\author` as its frontmatter entry), innermost first; a level with no closer joins its
+/// enclosing list (a body, a group). Returns the boxes and how many levels a construct closed.
+pub fn salvage_pending_box_lists(drop_innermost: bool) -> (Vec<Digested>, usize) {
+  let (mut acc, mut levels) = {
+    let mut stomach = stomach_mut!();
+    stomach.paragraph_start = None;
+    (
+      std::mem::take(&mut stomach.box_list),
+      std::mem::take(&mut stomach.localized_box_list),
+    )
+  };
   if drop_innermost {
     acc.clear();
-  }
-  // Unwind the suspended levels innermost-parent first, each time prefixing the
-  // parent's own content so the result stays in document order.
-  while let Some((mut parent, _)) = stomach.localized_box_list.pop() {
-    parent.append(&mut acc);
-    acc = parent;
+    // (the construct the runaway window was in goes with it)
+    if let Some(innermost) = levels.last_mut() {
+      innermost.closer = None;
+    }
   }
   // Refuse a salvage that is itself pathological. `drop_innermost` removes the
   // runaway level for the STOMACH box-cycle guard, where that level is the
@@ -2373,11 +2402,62 @@ pub fn salvage_pending_box_lists(drop_innermost: bool) -> Vec<Digested> {
   // it to the builder is worse than handing over nothing. Measured on
   // arXiv:2605.25400, where an unbounded salvage turned a 9.7 s fatal into a
   // 120 s wall-clock timeout that wrote a ZERO-byte file — strictly worse than
-  // the 39-byte stub it replaced.
-  if acc.len() >= STOMACH_CYCLE_ACTIVATE {
-    acc.clear();
+  // the 39-byte stub it replaced. (Counted before any closer wraps a level.)
+  if acc.len() + levels.iter().map(|level| level.list.len()).sum::<usize>()
+    >= STOMACH_CYCLE_ACTIVATE
+  {
+    return (Vec::new(), 0);
   }
-  acc
+  // Unwind the suspended levels innermost-parent first, each time closing the level above and prefixing the parent's
+  // own content, so the result stays in document order. (A closer may digest: no stomach borrow is held.)
+  let mut closed = 0;
+  while let Some(SuspendedList { list: mut parent, closer, .. }) = levels.pop() {
+    if let Some(close) = closer {
+      acc = close(acc);
+      closed += 1;
+    }
+    parent.append(&mut acc);
+    acc = parent;
+  }
+  (acc, closed)
+}
+
+/// Drop every pending box list unclosed: a run abandoned for a rerun (`streaming_restart::release_before_rerun`).
+pub fn drop_pending_box_lists() {
+  let mut stomach = stomach_mut!();
+  stomach.box_list.clear();
+  stomach.localized_box_list.clear();
+  stomach.paragraph_start = None;
+}
+
+/// The depth at which a box list opened now is suspended: the mark a construct takes before it digests, for
+/// [`close_pending_list_as`].
+pub fn pending_list_mark() -> usize { stomach!().localized_box_list.len() }
+
+/// As a Fatal leaves the construct that took `mark` ([`pending_list_mark`]): how the box list it opened there, still
+/// pending, closes if a salvage keeps it ([`salvage_pending_box_lists`]). A closer a construct inside it set on the same
+/// list (one that opened none of its own) runs first. Nothing when no list is pending at `mark`.
+pub fn close_pending_list_as(
+  mark: usize,
+  closer: impl FnOnce(Vec<Digested>) -> Vec<Digested> + 'static,
+) {
+  let mut stomach = stomach_mut!();
+  if let Some(level) = stomach.localized_box_list.get_mut(mark) {
+    level.closer = Some(match level.closer.take() {
+      Some(inner) => Box::new(move |boxes| closer(inner(boxes))),
+      None => Box::new(closer),
+    });
+  }
+}
+
+/// As a Fatal leaves a construct that took `mark` ([`pending_list_mark`]) and closes nothing of its own: the closers
+/// set inside it go, so its text joins the enclosing list as it is (an `\item`'s label, digested in its properties: a
+/// tag closed there landed in the item before it).
+pub fn clear_pending_list_closers(mark: usize) {
+  let mut stomach = stomach_mut!();
+  for level in stomach.localized_box_list.iter_mut().skip(mark) {
+    level.closer = None;
+  }
 }
 
 /// Empty the stack of tokens being invoked, after a recovered Fatal (Perl `hardYankProcessing`, Common/Error.pm:329
@@ -2855,7 +2935,7 @@ where FnR: FnOnce(&[&[Digested]]) -> R {
       .localized_box_list
       .iter()
       .rev()
-      .map(|(list, _)| list.as_slice()),
+      .map(|level| level.list.as_slice()),
   );
   caller(&levels)
 }
@@ -3228,6 +3308,10 @@ thread_local! {
   /// How many times the document ended inside open groups on this thread ([`end_inside_groups`]).
   static ENDS_INSIDE_GROUPS: Cell<u64> = const { Cell::new(0) };
 }
+
+/// The whatsit property of a construct a Fatal left unfinished, made by the salvage with what it had digested
+/// ([`close_pending_list_as`], OD #251): a binding whose element the HTML does not show counts the words it keeps there.
+pub const SALVAGED: &str = "lx@salvaged";
 
 /// The whatsit property of a construct the document ended inside of: `\end{document}` came while
 /// its arguments or body were still being digested and abandoned their groups (tex.web §1335), so

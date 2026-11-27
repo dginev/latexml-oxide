@@ -6171,10 +6171,35 @@ the pipeline Perl-shaped rather than by admitting more post-Fatal messages:
    Perl: `hardYankProcessing` rescues `@LaTeXML::LIST` (Error.pm:336-338), the
    innermost list, which `digestNextBody` and `digest` bind afresh
    (Stomach.pm:92-97, :146), so for a Fatal inside `\footnote` Perl keeps
-   `<p>Note text </p>` alone and we also keep the paragraphs before it. The levels
-   are kept, not closed: an unfinished footnote, `\author{…}`, formula or list
-   leaves its boxes in the running paragraph (`rhai-bindings/digest_fatal_in_*_red.tex`,
-   post-merge). Perl's guards and ours:
+   `<p>Note text </p>` alone and we also keep the paragraphs before it. Each
+   level closes as the construct that opened it would (DG 2026-11-26): the
+   construct, as the Fatal leaves its frame, gives the list it opened (by the
+   depth `stomach::pending_list_mark` it took) a closer
+   (`stomach::close_pending_list_as`) the salvage runs, innermost first — a
+   constructor's last argument or its body as its whatsit, marked `SALVAGED`
+   (`Constructor::digest_to_whatsit`: the note, the list, the formula; an
+   `after_digest` the Fatal ended, its whatsit as made so far; not `UNENDED`,
+   #542: no input follows a Fatal, so its element closes through its own
+   pattern and a `\par` or display inside a note leaves the note whole), an alignment's
+   cell as its cell (`tex_tables::digest_alignment_body`; no row end, whose group
+   pop would meet the cell's math frame), a frontmatter entry as its entry
+   (`\lx@add@frontmatter@now`, `\lx@add@frontmatter@until`, the latter placed by
+   the document's end fallback, `\lx@frontmatter@fallback`, which never comes);
+   a list with no closer (a body, a group) joins its enclosing list. A construct
+   that closes nothing of its own (a Fatal in its `before_digest`, an earlier
+   argument than the last, its `properties` closure, its `after_digest_body`)
+   clears the closers set inside it (`stomach::clear_pending_list_closers`), so
+   its text joins the enclosing list as it is: an `\item` digests its `[label]`
+   in its properties, where a closed tag landed in the item before it. Closers are
+   set only on the error path, so a conversion without a Fatal runs no new code
+   beyond the depth mark. Not closed yet: a constructor that digests in its
+   `properties` closure (`\lx@section`'s title) and a `\thanks` inside
+   `\author` (`rhai-bindings/digest_fatal_in_a_section_title_red.tex`,
+   `…_in_a_thanks_red.tex`); a `\caption` closes as its list entry, which
+   `\@@toccaption` digests first (`…_in_a_caption_red.tex`): the HTML does not
+   show the entry (LaTeXML-para-xhtml.xsl:221), so a `SALVAGED` one counts its
+   words in a Warning, and outside a float, where it waits for a caption that never
+   comes, it stays where it stands (`…_in_a_caption_outside_a_float_red.tex`). Perl's guards and ours:
    - Perl's `TOKEN_LIMIT` and `PUSHBACK_LIMIT` (Gullet.pm:301-306) and its wall
      clock (`timedout`, Error.pm:579), our `Timeout:{TokenLimit,PushbackLimit,Convert}`,
      and our RSS fuse (`Timeout:MemoryBudget`) are re-raised: only the completed

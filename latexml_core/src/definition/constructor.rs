@@ -387,7 +387,11 @@ impl Constructor {
       mode == crate::pin!("horizontal")
         || crate::common::arena::with(mode, |mode| mode.ends_with("vertical"))
     };
-    let mut result = self.execute_before_digest()?;
+    // (where the box lists of its arguments and body open: a Fatal inside one closes it as this whatsit, OD #251)
+    let mark = crate::stomach::pending_list_mark();
+    let mut result = self
+      .execute_before_digest()
+      .inspect_err(|_| crate::stomach::clear_pending_list_closers(mark))?;
     // After the `before` code: `\lx@finalize@document`'s is what ends the document (1611.05714: an
     // itemize left open by a `\description` used as a command).
     let ends_before = crate::stomach::ends_inside_groups();
@@ -401,17 +405,192 @@ impl Constructor {
     // (and the tokens its length arguments state, where they are kept: `parameter::KEEP_STATED_LENGTHS`)
     let mut stated: Vec<(usize, Tokens)> = Vec::new();
     let mut withheld = false;
-    let mut args: Vec<Option<Digested>> = match self.get_parameters() {
-      None => Vec::new(),
-      Some(params) => params.read_arguments_and_digest(self, &mut stated, &mut withheld)?,
-    };
-    // info!($self->tracingArgs(@args) . "\n" if $tracing && @args;
+    let mut args: Vec<Option<Digested>> = Vec::new();
     let nargs = self.get_num_args();
+    if let Some(params) = self.get_parameters()
+      && let Err(e) = params.read_arguments_and_digest(self, &mut stated, &mut withheld, &mut args)
+    {
+      // In its last argument: the whatsit takes what that argument digested (an earlier one leaves later ones unread,
+      // and its text joins as it is).
+      if args.len() + 1 == nargs {
+        let properties = Rc::clone(&self.properties);
+        let restricted_box = self.declared_mode.is_some_and(|mode| mode.restricted_box);
+        crate::stomach::close_pending_list_as(mark, move |boxes| {
+          let partial: Digested = crate::list::List::new(boxes).into();
+          let mut args = args;
+          args.push(Some(partial.clone()));
+          let parts = WhatsitParts {
+            definition,
+            args,
+            state_font,
+            ismath,
+            in_paragraph,
+            stated,
+            withheld,
+          };
+          // (its properties failed: the argument's boxes stay, in the enclosing list)
+          result.push(match parts.assemble(&properties, restricted_box) {
+            Ok(whatsit) => salvaged(whatsit).into(),
+            Err(_) => partial,
+          });
+          result
+        });
+      } else {
+        crate::stomach::clear_pending_list_closers(mark);
+      }
+      return Err(e);
+    }
+    // info!($self->tracingArgs(@args) . "\n" if $tracing && @args;
     args.truncate(nargs);
 
+    let parts = WhatsitParts {
+      definition,
+      args,
+      state_font,
+      ismath,
+      in_paragraph,
+      stated,
+      withheld,
+    };
+    // (a Fatal in its properties, which may digest, an `\item`'s label, closes no whatsit: its text joins as it is)
+    let mut whatsit = parts
+      .assemble(
+        &self.properties,
+        self.declared_mode.is_some_and(|mode| mode.restricted_box),
+      )
+      .inspect_err(|_| crate::stomach::clear_pending_list_closers(mark))?;
+
+    // Call any 'After' code.
+    let mut post = match self.execute_after_digest(&mut whatsit) {
+      Ok(post) => post,
+      Err(e) => {
+        crate::stomach::close_pending_list_as(mark, move |boxes| {
+          result.push(salvaged(whatsit).into());
+          result.extend(boxes);
+          result
+        });
+        return Err(e);
+      },
+    };
+
+    if self.capture_body {
+      // tex.web §679 `append_to_vlist`: a vertical body's interline glue follows the `\baselineskip`, `\lineskip`
+      // and `\lineskiplimit` in force inside it. The body is measured after its group closed, where an enclosing
+      // `\@array`'s zero values reign (a minipage's stacked lines lost their `\lineskip` in a table cell, arXiv
+      // 2605.19065), so they are read here, when the body opens, after its begin code (`\@parboxrestore` for a
+      // minipage). Unlike the box reader, which reads them at the box's end (base_utilities.rs
+      // `predigest_list_in_mode`), a change inside the body (`\small`, `\offinterlineskip`) is not seen: RED
+      // kernel-alignment/captured_body_interline_changed_inside. DIVERGENCES #421. Repro
+      // kernel-alignment/minipage_in_a_cell_keeps_its_lineskip.
+      use crate::common::numeric_ops::NumericOps;
+      // the body's own mode, in force now (the whatsit's `mode` property is the mode it was invoked in)
+      let interline: Vec<(&str, crate::Dimension)> = if mode_ends_with("vertical") {
+        [
+          ("baseline", "\\baselineskip"),
+          ("lineskip", "\\lineskip"),
+          ("lineskiplimit", "\\lineskiplimit"),
+        ]
+        .into_iter()
+        .filter_map(|(key, register)| {
+          lookup_register_quiet(register)
+            .map(|value| (key, crate::Dimension::new(value.value_of())))
+        })
+        .collect()
+      } else {
+        Vec::new()
+      };
+      let captured = match digest_next_body(None) {
+        Ok(captured) => captured,
+        Err(e) => {
+          // (its body so far is its body: a list's items, a formula's atoms; no `\end` came, its trailer is empty)
+          crate::stomach::close_pending_list_as(mark, move |boxes| {
+            post.extend(boxes);
+            post.push(crate::list::List::new(Vec::new()).into());
+            whatsit.set_body(post);
+            result.push(salvaged(whatsit).into());
+            result
+          });
+          return Err(e);
+        },
+      };
+      // info!(target:"constructor:digest_next_body", "\n{:?}\n----\n",captured);
+      post.extend(captured);
+
+      // token-locators: capture_body constructs (e.g. `\lx@begin@inline@math`)
+      // carry their content as #body, not positional args, so the earlier
+      // assemble_locator (over args) missed it and fell back to the gullet point.
+      // Derive the span from the digested body and union it with any positional-
+      // arg span, so the wrapper (e.g. `ltx:Math`) spans its content. §3.1.3.
+      #[cfg(feature = "token-locators")]
+      if crate::state::source_map_enabled() {
+        if let Some(body_span) = post
+          .iter()
+          .filter_map(child_span)
+          .reduce(|a, b| Locator::new_range(a, b).unwrap_or(a))
+        {
+          whatsit.locator = Some(match whatsit.locator {
+            Some(prev) if prev.from_line != 0 => {
+              Locator::new_range(prev, body_span).unwrap_or(body_span)
+            },
+            _ => body_span,
+          });
+        }
+      }
+      whatsit.set_body(std::mem::take(&mut post));
+      if let Some(Stored::Digested(body)) = whatsit.properties.get_mut("body") {
+        for (key, value) in interline {
+          body.set_property(key, Stored::Dimension(value));
+        }
+      }
+      //info!(target: "constructor:capture", "whatsit: {:?}", whatsit);
+      // info!(target: "constructor:capture", "constructor: {:?}", self.get_cs_name());
+    }
+    // The document ended inside this construct's arguments or body (`stomach::UNENDED`, OXIDIZED_DESIGN
+    // #542; 1611.05714).
+    if crate::stomach::ends_inside_groups() != ends_before {
+      whatsit
+        .properties
+        .insert(crate::stomach::UNENDED, Stored::Bool(true));
+    }
+    let post_post = self
+      .execute_after_digest_body(&mut whatsit)
+      .inspect_err(|_| crate::stomach::clear_pending_list_closers(mark))?;
+    // LaTeXML::Core::Definition::stopProfiling($profiled, 'digest') if $profiled;
+
+    // Package the result boxes
+    result.push(whatsit.into());
+    result.extend(post);
+    result.extend(post_post);
+    Ok(result)
+  }
+}
+
+/// What a constructor's whatsit is made of once its arguments are read ([`Constructor::digest_to_whatsit`]; on a Fatal
+/// in its last argument, at the salvage, OD #251).
+struct WhatsitParts {
+  definition:   Rc<dyn Definition>,
+  args:         Vec<Option<Digested>>,
+  state_font:   Option<Rc<Font>>,
+  ismath:       bool,
+  in_paragraph: bool,
+  stated:       Vec<(usize, Tokens)>,
+  withheld:     bool,
+}
+
+impl WhatsitParts {
+  fn assemble(self, properties: &PropertiesClosure, restricted_box: bool) -> Result<Whatsit> {
+    let WhatsitParts {
+      definition,
+      args,
+      state_font,
+      ismath,
+      in_paragraph,
+      stated,
+      withheld,
+    } = self;
     // Compute any extra Whatsit properties (many end up as element attributes)
 
-    let mut properties = (self.properties)(&args)?;
+    let mut properties = properties(&args)?;
     // for (key, value) in properties.iter() {
     //   if (ref $value eq 'CODE') {
     //     $properties{$key} = &$value($stomach, @args); } }
@@ -462,10 +641,7 @@ impl Constructor {
     }
     // A TeX box's constructor outside math (a declared `restricted_horizontal`): the element it opens is marked for a
     // frontmatter field's print (core `document::FIELD_BOX_PROPERTY`, OXIDIZED_DESIGN #715).
-    if self.declared_mode.is_some_and(|mode| mode.restricted_box)
-      && !ismath
-      && crate::document::field_box_marks_live()
-    {
+    if restricted_box && !ismath && crate::document::field_box_marks_live() {
       properties.insert(crate::document::FIELD_BOX_PROPERTY, Stored::Bool(true));
     }
     // $properties{level}   = $stomach->getBoxingLevel;
@@ -501,85 +677,17 @@ impl Constructor {
       whatsit.locator =
         assemble_locator(&whatsit.args).or_else(|| Some(crate::gullet::get_locator()));
     }
-
-    // Call any 'After' code.
-    let mut post = self.execute_after_digest(&mut whatsit)?;
-
-    if self.capture_body {
-      // tex.web §679 `append_to_vlist`: a vertical body's interline glue follows the `\baselineskip`, `\lineskip`
-      // and `\lineskiplimit` in force inside it. The body is measured after its group closed, where an enclosing
-      // `\@array`'s zero values reign (a minipage's stacked lines lost their `\lineskip` in a table cell, arXiv
-      // 2605.19065), so they are read here, when the body opens, after its begin code (`\@parboxrestore` for a
-      // minipage). Unlike the box reader, which reads them at the box's end (base_utilities.rs
-      // `predigest_list_in_mode`), a change inside the body (`\small`, `\offinterlineskip`) is not seen: RED
-      // kernel-alignment/captured_body_interline_changed_inside. DIVERGENCES #421. Repro
-      // kernel-alignment/minipage_in_a_cell_keeps_its_lineskip.
-      use crate::common::numeric_ops::NumericOps;
-      // the body's own mode, in force now (the whatsit's `mode` property is the mode it was invoked in)
-      let interline: Vec<(&str, crate::Dimension)> = if mode_ends_with("vertical") {
-        [
-          ("baseline", "\\baselineskip"),
-          ("lineskip", "\\lineskip"),
-          ("lineskiplimit", "\\lineskiplimit"),
-        ]
-        .into_iter()
-        .filter_map(|(key, register)| {
-          lookup_register_quiet(register)
-            .map(|value| (key, crate::Dimension::new(value.value_of())))
-        })
-        .collect()
-      } else {
-        Vec::new()
-      };
-      let captured = digest_next_body(None)?;
-      // info!(target:"constructor:digest_next_body", "\n{:?}\n----\n",captured);
-      post.extend(captured);
-
-      // token-locators: capture_body constructs (e.g. `\lx@begin@inline@math`)
-      // carry their content as #body, not positional args, so the earlier
-      // assemble_locator (over args) missed it and fell back to the gullet point.
-      // Derive the span from the digested body and union it with any positional-
-      // arg span, so the wrapper (e.g. `ltx:Math`) spans its content. §3.1.3.
-      #[cfg(feature = "token-locators")]
-      if crate::state::source_map_enabled() {
-        if let Some(body_span) = post
-          .iter()
-          .filter_map(child_span)
-          .reduce(|a, b| Locator::new_range(a, b).unwrap_or(a))
-        {
-          whatsit.locator = Some(match whatsit.locator {
-            Some(prev) if prev.from_line != 0 => {
-              Locator::new_range(prev, body_span).unwrap_or(body_span)
-            },
-            _ => body_span,
-          });
-        }
-      }
-      whatsit.set_body(std::mem::take(&mut post));
-      if let Some(Stored::Digested(body)) = whatsit.properties.get_mut("body") {
-        for (key, value) in interline {
-          body.set_property(key, Stored::Dimension(value));
-        }
-      }
-      //info!(target: "constructor:capture", "whatsit: {:?}", whatsit);
-      // info!(target: "constructor:capture", "constructor: {:?}", self.get_cs_name());
-    }
-    // The document ended inside this construct's arguments or body (`stomach::UNENDED`, OXIDIZED_DESIGN
-    // #542; 1611.05714).
-    if crate::stomach::ends_inside_groups() != ends_before {
-      whatsit
-        .properties
-        .insert(crate::stomach::UNENDED, Stored::Bool(true));
-    }
-    let post_post = self.execute_after_digest_body(&mut whatsit)?;
-    // LaTeXML::Core::Definition::stopProfiling($profiled, 'digest') if $profiled;
-
-    // Package the result boxes
-    result.push(whatsit.into());
-    result.extend(post);
-    result.extend(post_post);
-    Ok(result)
+    Ok(whatsit)
   }
+}
+
+/// A whatsit a Fatal left unfinished, made by the salvage ([`crate::stomach::SALVAGED`]). (Not `UNENDED`, OD #542: no
+/// input follows a Fatal, so its element closes through its own pattern, its note's `\par` inside it.)
+fn salvaged(mut whatsit: Whatsit) -> Whatsit {
+  whatsit
+    .properties
+    .insert(crate::stomach::SALVAGED, Stored::Bool(true));
+  whatsit
 }
 
 impl Definition for Constructor {

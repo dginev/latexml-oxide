@@ -1,0 +1,20 @@
+% mechanism: the digestion salvage closes each pending box list as the construct that opened it would
+%   (`stomach::close_pending_list_as`, OD #251): the whatsit it makes is not `UNENDED` (OD #542; no input follows a
+%   Fatal), so its element closes through its own pattern and a `\par` inside the note leaves the note whole
+% witness: synthetic (DIGFATALCLOSE review, S1; the binding lxmbf.sty.rhai, lxmbf.sty.ltxml for Perl, lxmbf.sty for pdflatex)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "First paragraph. Before1 after. Second paragraph.",
+%   footnote "1 Note one." / "Note two more."; Perl 0.8.8: 1 fatal error, <p>Note one.</p> <p>Note two </p> only
+% engines: INT081AU: 1 fatal error, W=0, <p>BeforeNote one.</p> <p>Note two </p> (fused); DIGFATALCLOSE (round 0):
+%   1 fatal error, W=0, <note>Note one.</note> then <p>Note two </p> in the body (the `\par` closed the note)
+% expect:  1 fatal error, E=0 W=0; <p>Before<note mark="1" role="footnote">…Note one. Note two </note></p>, as the
+%   note without the Fatal ("n1 n2 n3")
+% status:  RED (DIGFATALCLOSE) -> GREEN (DIGFATALCLOSE fix 1; guard fatal_salvages_partial_document::a_digestion_fatal_closes_each_unfinished_construct)
+\documentclass{article}
+\usepackage{lxmbf}
+\begin{document}
+First paragraph.
+
+Before\footnote{Note one. \par Note two \lxmbf\ more.} after.
+
+Second paragraph.
+\end{document}

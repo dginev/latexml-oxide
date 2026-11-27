@@ -3106,7 +3106,8 @@ field the `\par` was digested in) and ask the model in the constructor (`frontma
 `invoke_token` (latexml_core/src/stomach.rs) pushes each invoked token onto `token_stack` and pops it only on a normal
 exit; every `?` between push and pop leaves its entry. A `Stomach:Recursion` Fatal leaves the whole `MAXSTACK`. The
 recovery arms that keep the document (`core_interface.rs` `finish_digestion_fatal`, the streaming loop's
-resource stop, `streaming_restart::release_before_rerun`) reset the box lists (`salvage_pending_box_lists`) but kept the
+resource stop, `streaming_restart::release_before_rerun`) reset the box lists (`salvage_pending_box_lists`; the rerun's
+`drop_pending_box_lists`) but kept the
 stack, so the first digestion after them — the build's own (a frontmatter name read at insert time,
 `get_frontmatter_name`) — failed its first push with a second Fatal naming the same stack, and the build stopped early
 (2410.07647 kept 96 of int130a's 886 words in the Bundle 1 A/B; 2105.02599 0 words). Perl's `hardYankProcessing` (Common/Error.pm:329) empties

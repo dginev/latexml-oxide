@@ -9,6 +9,18 @@ top of its group.
 
 ### Unreleased
 
+  - **After a digestion Fatal, an unfinished construct is closed as its own.** The salvage of the boxes digested
+    before a Fatal spliced an unfinished construct's text into the running paragraph: a footnote's words fused with
+    the sentence, an `\author{…}` became a body paragraph, a formula became italic text, a list left rootless items
+    (schema-invalid output) and a table lost its finished rows. Each pending box list now closes as the construct that
+    opened it would: a constructor's last argument or its body as its whatsit (the note, the list, the formula, the
+    environment), an alignment's cell as its cell, a frontmatter entry as its entry, placed as the document's end would
+    place it; a construct that closes nothing of its own (an `\item` whose label the Fatal is in) leaves its text in
+    place. The run stays Fatal; a section title, a `\thanks` inside `\author` and a caption are not closed as their own
+    yet: a caption's text stays in its list entry, which the HTML does not show, counted by a Warning (REDs
+    `rhai-bindings/digest_fatal_in_a_section_title_red`, `…_in_a_thanks_red`, `…_in_a_caption_red`,
+    `…_in_a_caption_outside_a_float_red`; OXIDIZED_DESIGN_DIVERGENCES #251). Guard
+    `fatal_salvages_partial_document::a_digestion_fatal_closes_each_unfinished_construct`.
   - **KOMA-Script, versioned SIAM and dmtcs title notes print their fnsymbol marks and step the footnote counter, as the
     classes do.** A binding now answers for the class it actually serves — its own name, the request a versioned or prefix
     fallback answered with it (`siamltex1213`, `siamonline220329`), or the base a raw class file `\LoadClass`es while leaving
@@ -65,9 +77,8 @@ top of its group.
   - **A Fatal during digestion keeps the text digested before it; the run stays Fatal.** A delimited argument that
     runs off the end of the input (`Fatal:Mouth:EoF`), an unbalanced definition (`Stomach:Misdefined`), a parameter or
     group Fatal, or a binding's own `Fatal()` wrote a 39-byte document, because a `document` environment is one
-    body; the boxes of every level pending at the Fatal are now built, and the input after it stays unread. The
-    levels are kept, not closed: an unfinished footnote, `\author{…}`, formula or list leaves its text in the running
-    paragraph. The loop and resource guards are excluded: `Timeout:Recursion` and the input-level limit keep nothing
+    body; the boxes of every level pending at the Fatal are now built, and the input after it stays unread (each
+    closed as its construct would, the entry above). The loop and resource guards are excluded: `Timeout:Recursion` and the input-level limit keep nothing
     (2605.25400), the stomach's runaway guards drop the runaway level, and the resource Fatals still end the run where
     they fire (OXIDIZED_DESIGN_DIVERGENCES #251). Guards:
     `fatal_salvages_partial_document::a_digestion_fatal_keeps_the_text_before_it`,

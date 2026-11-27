@@ -1,7 +1,7 @@
-% mechanism: the digestion salvage (`core_interface::finish_digestion_fatal`, `stomach::salvage_pending_box_lists`) keeps
-%   every pending level but closes none: a Fatal inside `\author{…}` read by `\maketitle` puts the author's name in a
-%   body paragraph, and the frontmatter emitter reports a nameless author (the "close or wrap the salvaged levels"
-%   mechanism, as digest_fatal_in_an_unfinished_list_red.tex)
+% mechanism: the digestion salvage (`core_interface::finish_digestion_fatal`, `stomach::salvage_pending_box_lists`) closes
+%   each pending box list as the construct that opened it would (`stomach::close_pending_list_as`, OD #251): the name's
+%   `\lx@personname`, then the frontmatter entry `\lx@add@frontmatter@now` made for it (its store), then
+%   `\lx@frontmatterhere`, whose `after_digest` flush the Fatal ended (it places the store at the build)
 % witness: synthetic (review of DIGFATAL; the binding lxmbf.sty.rhai, lxmbf.sty.ltxml for Perl, lxmbf.sty for pdflatex)
 % oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "First paragraph." then the title block "T Ann Author
 %   <date>" and "Second."; Perl 0.8.8 (latexmlc): 1 fatal error, <title>T</title> twice, a creator holding only the
@@ -9,10 +9,10 @@
 % engines: INT081RC6: a 39-byte document, 1 fatal error, W=1 (the rehearsal's "can't read an author block");
 %   DIGFATAL: 1 fatal error, W=2 (that one and "A nameless author's ltx:picture was dropped with it: place_keeper"),
 %   <title>T</title> <p>First paragraph.</p> <p>Ann Author </p>, no ltx:creator
-% expect:  1 fatal error, W=0; <title>T</title>, <creator role="author"><personname>Ann Author</personname></creator>,
+%   DIGFATALCLOSE: 1 fatal error, W=1 (the rehearsal's, which the Fatal ends too: its own honest count), the creator kept
+% expect:  1 fatal error, E=0 W=1; <title>T</title>, <creator role="author"><personname>Ann Author</personname></creator>,
 %   <p>First paragraph.</p>; "Second." not built
-% status:  RED (DIGFATAL)
-% moves:   post-merge (close the salvaged levels as their constructs would, or wrap them by the schema model)
+% status:  RED (DIGFATAL) -> GREEN (DIGFATALCLOSE; guard fatal_salvages_partial_document::a_digestion_fatal_closes_each_unfinished_construct)
 \documentclass{article}
 \usepackage{lxmbf}
 \title{T}

@@ -1,0 +1,18 @@
+% mechanism: the digestion salvage closes each pending box list as the construct that opened it would
+%   (`stomach::close_pending_list_as`, OD #251); a construct that closes nothing of its own clears the closers set
+%   inside it (`stomach::clear_pending_list_closers`): `\item` digests its `[label]` in its properties closure, so a
+%   Fatal there leaves the label's text in the list as it stands, after the item before it
+% witness: synthetic (DIGFATALCLOSE review, B1; the binding lxmbf.sty.rhai, lxmbf.sty.ltxml for Perl, lxmbf.sty for pdflatex)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "First paragraph. • One. B c Two. Second paragraph.";
+%   Perl 0.8.8: 1 fatal error, E=0, <p>B </p> only (the innermost list)
+% engines: INT081AU: 1 fatal error, E=0 W=0, the item "One." then a paragraph "B"; DIGFATALCLOSE (round 0): 1 fatal
+%   error, the label closed as a second `<tags>` of the first item (HTML "• B One.")
+% expect:  1 fatal error, E=0 W=0; <itemize><item>…<p>One.</p>…<p>B</p></item></itemize>
+% status:  RED (DIGFATALCLOSE) -> GREEN (DIGFATALCLOSE fix 1; guard fatal_salvages_partial_document::a_digestion_fatal_closes_each_unfinished_construct)
+\documentclass{article}
+\usepackage{lxmbf}
+\begin{document}
+First paragraph.
+\begin{itemize}\item One. \item[B \lxmbf\ c] Two.\end{itemize}
+Second paragraph.
+\end{document}

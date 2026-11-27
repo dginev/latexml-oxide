@@ -1,0 +1,21 @@
+% mechanism: the digestion salvage closes each pending box list as the construct that opened it would
+%   (`stomach::close_pending_list_as`, OD #251): an abstract's body (`\lx@add@frontmatter@until`) is its frontmatter
+%   entry, and the document's end, which never comes, places it: `\lx@frontmatter@fallback`, `\relax` once
+%   `\maketitle` placed the frontmatter (an abstract alone waits for that fallback: without it its text was lost)
+% witness: synthetic (DIGFATALCLOSE; the binding lxmbf.sty.rhai, lxmbf.sty.ltxml for Perl, lxmbf.sty for pdflatex)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "First paragraph." then "Abstract" "Abs x" and "Second
+%   paragraph."; Perl 0.8.8: 1 fatal error, the innermost list only
+% engines: INT081EP: 1 fatal error, W=0, <p>Abs </p> as a body paragraph; DIGFATALCLOSE: 1 fatal error, E=0 W=0,
+%   <abstract> holding <p>Abs</p>, "First paragraph." before it as the fallback's cover block (its rule for an
+%   abstract alone)
+% expect:  1 fatal error, E=0 W=0; <abstract inlist="toc" name="Abstract"><p>Abs</p></abstract>
+% status:  GREEN (DIGFATALCLOSE; guard fatal_salvages_partial_document::a_digestion_fatal_closes_each_unfinished_construct)
+\documentclass{article}
+\usepackage{lxmbf}
+\begin{document}
+First paragraph.
+
+\begin{abstract} Abs \lxmbf\ x \end{abstract}
+
+Second paragraph.
+\end{document}

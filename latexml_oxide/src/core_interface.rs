@@ -411,13 +411,13 @@ fn finish_digestion_fatal(e: Error, boxes: &mut Vec<Digested>) -> Result<()> {
     }
   }
   if let Some(drop_innermost) = drop_innermost {
-    let salvaged = stomach::salvage_pending_box_lists(drop_innermost);
+    let (salvaged, closed) = stomach::salvage_pending_box_lists(drop_innermost);
     if !salvaged.is_empty() {
       emit_info(
         "recovery",
         "digest_internal",
         &format!(
-          "digest_internal: salvaged {} box(es) digested before the fatal",
+          "digest_internal: salvaged {} box(es) digested before the fatal, {closed} unfinished construct(s) closed",
           salvaged.len()
         ),
       );
@@ -1496,7 +1496,7 @@ impl DigestionAPI for Core {
           // healthy top-level accumulation, and the budget simply ran out.
           // Safe because everything salvaged is absorbed, spilled and freed
           // immediately below.
-          boxes.extend(stomach::salvage_pending_box_lists(false));
+          boxes.extend(stomach::salvage_pending_box_lists(false).0);
           // (and the stack of tokens being invoked, which the build's digestion pushes onto again: 2410.07647)
           stomach::clear_token_stack();
           fatal_stop = true;

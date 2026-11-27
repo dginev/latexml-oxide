@@ -1,0 +1,21 @@
+% mechanism: the digestion salvage closes each pending box list as the construct that opened it would
+%   (`stomach::close_pending_list_as`, OD #251): the cell a Fatal is in takes what it digested
+%   (`tex_tables::digest_alignment_body`), then the `{tabular}` whose alignment body the Fatal ended is closed with its
+%   rows (the constructor's `after_digest`); the cell's groups are left as every frame a Fatal leaves (no row end)
+% witness: synthetic (DIGFATALCLOSE; the binding lxmbf.sty.rhai, lxmbf.sty.ltxml for Perl, lxmbf.sty for pdflatex)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "First paragraph. Before" a table "a b / c d e / f g" "after.
+%   Second paragraph."; Perl 0.8.8: 1 fatal error, the innermost list only
+% engines: INT081EP: 1 fatal error, W=0, <p>Before d </p> (the table and its cells a, b, c lost);
+%   DIGFATALCLOSE: 1 fatal error, E=0 W=0, the table with both rows, "d" in its cell
+% expect:  1 fatal error, E=0 W=0; <p>First paragraph.</p> <p>Before <tabular>…<tr><td>a</td><td>b</td></tr>
+%   <tr><td>c</td><td>d</td></tr>…</tabular></p>
+% status:  GREEN (DIGFATALCLOSE; guard fatal_salvages_partial_document::a_digestion_fatal_closes_each_unfinished_construct)
+\documentclass{article}
+\usepackage{lxmbf}
+\begin{document}
+First paragraph.
+
+Before \begin{tabular}{ll} a & b \\ c & d \lxmbf\ e \\ f & g \end{tabular} after.
+
+Second paragraph.
+\end{document}

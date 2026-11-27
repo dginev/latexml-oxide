@@ -1,0 +1,19 @@
+% mechanism: the digestion salvage closes each pending box list as the construct that opened it would
+%   (`stomach::close_pending_list_as`, OD #251), but a constructor that digests in its `properties` closure has no
+%   closer: `\lx@section`'s title is digested there (sect04.rs), so a Fatal in a `\section` title leaves its tags and
+%   title in the body, the section never opened (a second sub-mechanism: the whatsit is not yet made)
+% witness: synthetic (DIGFATALCLOSE review of siblings; the binding lxmbf.sty.rhai, lxmbf.sty.ltxml, lxmbf.sty)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "First paragraph." "1 Sec tail" "Body. Second paragraph."
+% engines: INT081EP and DIGFATALCLOSE: 1 fatal error, E=1 ("<ltx:tag> isn't allowed in <ltx:document>"), <p>Sec </p>
+% expect:  1 fatal error, E=0; <section><tags>…</tags><title>…Sec </title></section>
+% status:  RED (DIGFATALCLOSE)
+% moves:   post-merge (a properties-phase closer, or the title digested as an argument)
+\documentclass{article}
+\usepackage{lxmbf}
+\begin{document}
+First paragraph.
+
+\section{Sec \lxmbf\ tail} Body.
+
+Second paragraph.
+\end{document}
