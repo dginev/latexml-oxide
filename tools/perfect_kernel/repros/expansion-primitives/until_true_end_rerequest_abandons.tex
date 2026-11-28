@@ -1,0 +1,22 @@
+% mechanism: a self-recursive scanner that re-requests its delimited argument at the TRUE end of all input
+%   (ifthen's `\TE@repl` `\@tempc#1\NOT#2`, ifthen.sty:62-73): the first miss follows Perl's put-back (DG
+%   2026-11-26, EOFPUTBACK: "Missing argument", the call runs on the empty argument), which hands the
+%   scanner the same tokens again; the second, identical miss (same caller, spec and input left) is TeX's
+%   runaway: the call is abandoned, "File ended while scanning use of \scan" (tex.web §338-339, §392), and
+%   the put-back is typeset. Its second `\scan`, met with less input left, is abandoned too (an Info): a
+%   loop broken there re-enters from the put-back.
+% witness: 2511.11682 (ifthen `\@tempc` Until:\NOT, 502 errors to the cap after EOFPUTBACK; 0.8.0: 2)
+% oracle:  pdflatex 2 `!` ("File ended while scanning use of \scan", Emergency stop), no PDF;
+%          Perl 101 errors "Missing argument Until:\NOT" and Fatal:too_many_errors:100, no XML
+% engines: rust=101 errors + Fatal:TooManyErrors:MaxLimit(100) (LIPICSRESTATE-rel, 2026-11-28)
+% expect:  2 errors ("Missing argument Until:\NOT at end of input", "File ended while scanning use of
+%          \scan"), 1 Info "… use of \scan again", 0 Fatal, "before x y z"
+% status:  GREEN (EOFRUNAWAY; guard perfect_kernel_batcheofrunaway::true_end_rerequest_is_abandoned)
+\documentclass{article}
+\makeatletter
+\long\def\scan#1\NOT#2{\def\@tempa{#2}\def\@tempb{\scan}%
+  \ifx\@tempa\@tempb\expandafter\@gobble\else\expandafter\scan\fi#2}
+\makeatother
+\begin{document}
+before \scan x y \scan z
+\end{document}

@@ -170,16 +170,18 @@ top of its group.
     "Missing argument Token"), and so is every other required argument (a `\label`, `\ref`, `\cite`, `\section` or
     `\mbox` argument: "Missing argument Semiverbatim", "Missing argument Undigested", "Missing argument
     HBoxArgContents"), which then runs on an empty argument as in Perl. A scanner that calls itself again
-    after each miss (an open fancyvrb `{VerbatimOut}`, l3prg's map break over an undefined prop, a macro whose other
-    arguments are undelimited) stops at the error cap, `Fatal:TooManyErrors`, keeping the text before it — except a
-    `\futurelet` peek loop (it ends in `Fatal:Timeout:Recursion`) and a scanner whose re-reads double the put-back (it
-    ends in `Fatal:Timeout:PushbackLimit`, which keeps nothing). An alignment left open to the end of the
+    after the miss (ifthen's `\ifthenelse` scanner, LaTeX's `\@for` loop, an open fancyvrb `{VerbatimOut}`, l3prg's map
+    break over an undefined prop, a macro whose other arguments are undelimited, one whose re-reads double the
+    put-back) no longer repeats the Error to the error cap: once it asks again with no less input left, the call
+    is abandoned with TeX's "File ended while scanning use of …" (later ones with an Info) and the text put back is
+    read on — except a `\futurelet` peek loop (it ends in `Fatal:Timeout:Recursion`). An alignment left open to the end of the
     input still drops its last cell's text, as the Perl original does, and a Warning now counts it ("An alignment
     still open at the end of input drops its last cell's text, N word(s): …"). Guards
     `error_boundary::perfect_kernel_error_boundary` (the `Until:`, `{}`, `Token`, `Semiverbatim`, `Undigested`,
     `HBoxArgContents` and open-alignment rows),
-    `perfect_kernel_batch48::until_miss_at_true_eof_errors_like_perl`,
-    `perfect_kernel_batch52::until_miss_at_eof_reaches_the_error_cap`.
+    `perfect_kernel_batch48::until_miss_at_true_eof_fancyvrb_loop_is_abandoned`,
+    `perfect_kernel_batch52::until_miss_at_eof_l3prg_loop_is_abandoned`,
+    `perfect_kernel_batcheofrunaway::true_end_rerequest_is_abandoned`.
   - **Four bindings no longer read a delimited argument to the end of the file (`Fatal:Mouth:EoF`).** algpseudocodex
     loads algorithmicx and its own `pseudocodex` language, as the package does, with its keywords and blocks, so a
     nested `\Call` no longer runs ifthen's `\equal` loop off the end and its commands no longer give way to

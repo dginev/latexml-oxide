@@ -1253,19 +1253,20 @@ const BOUNDARY: &[Row] = &[
   ),
   // --- every required reader that runs out at the true end errs as Perl's (Parameter.pm:93-97; EOFPUTBACK fix 1) ---
   (
-    "`{}` misses at the true end, a self-recursive scanner to the error cap (repro \
-     expansion-primitives/undelimited_true_end_recursive_scanner; pgf's `\\pgfutil@switch@@` shape)",
+    "`{}` misses at the true end, a self-recursive scanner's re-request abandoned (repro \
+     expansion-primitives/undelimited_true_end_recursive_scanner; pgf's `\\pgfutil@switch@@` shape; EOFRUNAWAY)",
     "pdflatex 3 `!` (File ended while scanning use of \\swend; Emergency stop), no PDF; Perl 101 errors (99 \
      \"Missing argument {}\", 1 Until:\\mark, 1 Until:\\stop) and Fatal:too_many_errors:100",
     include_str!(
       "../../../tools/perfect_kernel/repros/expansion-primitives/undelimited_true_end_recursive_scanner.tex"
     ),
     &[],
-    (102, 0),
+    (4, 0),
     &[
       r"Error:expected:Until: Missing argument Until:\mark at end of input",
       r"Error:expected:Until: Missing argument Until:\stop at end of input",
-      TOO_MANY_ERRORS,
+      "Error:expected:{} Missing argument {} at end of input",
+      r"Error:expected:\par File ended while scanning use of \sw",
     ],
     &[("p", "p1.1", r#"<p xml:id="p1.1">before d</p>"#)],
   ),
@@ -1397,8 +1398,6 @@ const BOUNDARY: &[Row] = &[
     )],
   ),
 ];
-
-const TOO_MANY_ERRORS: &str = "Fatal:TooManyErrors:MaxLimit(100) Too many errors (> 100)!";
 
 const UNTIL_STOP: &str = r"Error:expected:Until: Missing argument Until:\stop at end of input";
 

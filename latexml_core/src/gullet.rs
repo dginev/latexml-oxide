@@ -1,10 +1,10 @@
 use std::{
   cell::{RefCell, RefMut},
-  collections::VecDeque,
+  collections::{VecDeque, hash_map::Entry},
   sync::LazyLock,
 };
 
-use rustc_hash::FxHashSet as HashSet;
+use rustc_hash::{FxHashMap, FxHashSet as HashSet};
 
 // use std::mem;
 // use std::rc::Rc;
@@ -188,6 +188,9 @@ pub enum Runaway {
   FileEnd(Vec<Token>),
   /// A non-`\long` macro met `\par` in its argument (§392, §399 with `long_state=call`): the `\par` as read.
   Paragraph(Token),
+  /// A macro re-requested at the true end of all input an argument it missed there ([`note_missing_argument`]): the
+  /// put-back stays in the input; `first` the first such call of that macro and argument, the one reported.
+  TrueEnd { first: bool },
 }
 
 /// Restores the enclosing [`ScannerStatus`] (and `warning_index`) when it
@@ -424,6 +427,9 @@ pub struct Gullet {
   /// The tokens of a macro argument that ran off the end of a file, as read
   /// (see [`argument_runaway`]).
   runaway_argument:         Option<Runaway>,
+  /// Each required argument missed at the true end of all input, by its caller and spec: the input left at its
+  /// last miss, and whether a call was abandoned for it ([`note_missing_argument`]).
+  true_end_misses:          FxHashMap<(Option<Token>, String), (usize, bool)>,
 }
 
 thread_local! {
@@ -863,6 +869,7 @@ pub fn initialize_gullet() {
   gullet.scanner_status = ScannerStatus::Normal;
   gullet.warning_index = None;
   gullet.runaway_argument = None;
+  gullet.true_end_misses.clear();
   PAR_ENDS_ARGUMENT.with(|c| c.set(false));
 }
 
@@ -1345,6 +1352,23 @@ pub fn abandon_runaway_call(
         par
       };
       unread_expansion(Tokens!(par));
+      return Ok(());
+    },
+    // The put-back is still in the input, read on after the call (§392 drops the argument; Perl reads it on).
+    Runaway::TrueEnd { first: true } => {
+      Error!(
+        "expected",
+        "\\par",
+        s!("File ended while scanning use of {cs}")
+      );
+      return Ok(());
+    },
+    Runaway::TrueEnd { first: false } => {
+      Info!(
+        "expected",
+        "\\par",
+        s!("File ended while scanning use of {cs} again")
+      );
       return Ok(());
     },
     Runaway::FileEnd(tokens) => tokens,
@@ -3501,18 +3525,54 @@ pub fn at_end_of_all_input() -> bool {
 
 /// A required argument of `spec` whose reader ran out: at the true end of all input Perl's "Missing argument" Error
 /// (Parameter.pm:93-97), the call then running on the reader's empty value; an isolated mouth's end stays quiet.
+///
+/// A later macro call missing the same argument (same macro, same spec) with no less input left is a scanner
+/// re-requesting it from the put-back, which Perl reruns to its error cap (ifthen's `\@tempc`, `\@iforloop`, fancyvrb
+/// `\FV@Scan`): TeX's runaway, "File ended while scanning use of", the call abandoned (tex.web §338-339, §392;
+/// [`abandon_runaway_call`]) and the put-back read on. Every later call of it is abandoned too, reported once: a loop
+/// broken there re-enters from the put-back. One that consumed input is a new call, run as Perl runs it (a caption
+/// typeset after its measuring, PiCTeX's `\put`s). Witnesses 2511.11682, 2510.17429 (500 Errors to the cap).
 pub fn note_missing_argument(object: &str, spec: &str) -> Result<()> {
-  if at_end_of_all_input() {
-    let caller = get_current_token()
-      .map(|t| t.to_string())
-      .unwrap_or_default();
-    Error!(
-      "expected",
-      object,
-      s!("Missing argument {spec} at end of input"),
-      s!("while reading the arguments of {caller}")
-    );
+  if !at_end_of_all_input() {
+    return Ok(());
   }
+  let caller = get_current_token();
+  let runaway = {
+    let gullet = &mut *gullet_mut!();
+    // At the true end the input left is the pushback: the reader that ran out put back what it scanned.
+    let left = gullet.runtime.as_ref().map_or(0, |r| r.pushback.len());
+    let matching = gullet.scanner_status == ScannerStatus::Matching;
+    match gullet.true_end_misses.entry((caller, spec.to_string())) {
+      Entry::Vacant(miss) => {
+        miss.insert((left, false));
+        None
+      },
+      Entry::Occupied(mut miss) => {
+        let (last, abandoned) = *miss.get();
+        if matching && (abandoned || left >= last) {
+          miss.insert((left, true));
+          Some(Runaway::TrueEnd { first: !abandoned })
+        } else {
+          miss.insert((left, abandoned));
+          None
+        }
+      },
+    }
+  };
+  if let Some(runaway) = runaway {
+    let mut gullet = gullet_mut!();
+    if gullet.runaway_argument.is_none() {
+      gullet.runaway_argument = Some(runaway);
+    }
+    return Ok(());
+  }
+  let caller = caller.map(|t| t.to_string()).unwrap_or_default();
+  Error!(
+    "expected",
+    object,
+    s!("Missing argument {spec} at end of input"),
+    s!("while reading the arguments of {caller}")
+  );
   Ok(())
 }
 

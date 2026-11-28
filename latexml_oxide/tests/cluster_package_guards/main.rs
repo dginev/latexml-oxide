@@ -498,6 +498,9 @@ mod perfect_kernel_batchencurl;
 /// EOFBIND: four bindings whose delimited reading ran past the end of the file read as their packages do —
 /// algpseudocodex, amsppt's `\subheading`, longtable's `\longtable`/`\LT@output`, jmlr's `\addr`.
 mod perfect_kernel_batcheofbind;
+/// EOFRUNAWAY: at the true end of input a macro re-requesting an argument it missed there is abandoned, TeX's "File
+/// ended while scanning use of", where Perl's put-back reruns it to the error cap (2511.11682, 2510.17429).
+mod perfect_kernel_batcheofrunaway;
 mod perfect_kernel_batcherr2;
 mod perfect_kernel_batchf1;
 mod perfect_kernel_batchfb2a;

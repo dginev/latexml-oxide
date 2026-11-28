@@ -1,0 +1,16 @@
+% mechanism: two calls of one delimited macro that both run off the TRUE end of all input, input read
+%   between them: the second is a new call, not a re-request (less input left than at the first miss),
+%   so both follow Perl's put-back ("Missing argument", the call runs on the empty argument; DG 2026-11-26)
+%   and neither is abandoned (EOFRUNAWAY abandons only a re-request from no less input).
+% witness: 1301.5371 (a caption typeset after its measuring: abandoning the second call lost 2193 words),
+%   1404.5770 (a second `\@@@hack@caption@`)
+% oracle:  pdflatex 2 `!` ("File ended while scanning use of \x", Emergency stop), no PDF;
+%          Perl 2 errors "Missing argument Until:\stop", "before []one []two"
+% engines: rust=2 errors, "before []one []two" (LIPICSRESTATE-rel, 2026-11-28)
+% expect:  2 errors "Missing argument Until:\stop at end of input", 0 Fatal, "before []one []two"
+% status:  GREEN (EOFRUNAWAY; guard perfect_kernel_batcheofrunaway::true_end_new_call_runs_as_perl)
+\documentclass{article}
+\def\x#1\stop{[#1]}
+\begin{document}
+before \x one \x two
+\end{document}

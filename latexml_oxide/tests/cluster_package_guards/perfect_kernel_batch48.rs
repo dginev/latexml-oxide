@@ -153,10 +153,12 @@ v `w'
 
 /// A `{VerbatimOut}` left open at end of input. `\FV@Scan` re-reads one
 /// `Until:^^M` line per iteration (fancyvrb.sty:1090); at true end of all
-/// input the `Until` reader reports the miss and puts the tokens back, as Perl
-/// does (Gullet.pm:686-688, Parameter.pm:93-97; DG 2026-11-26), so the loop
-/// re-misses to the error cap: 101 `Missing argument Until:` then
-/// `Fatal:TooManyErrors`, Perl's count. RED (batch 48): the reader mapped
+/// input the `Until` reader reports the first miss and puts the tokens back, as
+/// Perl does (Gullet.pm:686-688, Parameter.pm:93-97; DG 2026-11-26), and the
+/// loop's re-request is TeX's runaway: "File ended while scanning use of
+/// \FancyVerbGetLine", the call abandoned (tex.web §338-339, §392;
+/// EOFRUNAWAY), where Perl re-misses to its cap (101 errors, too_many_errors).
+/// RED (batch 48): the reader mapped
 /// the miss to an empty line quietly, so the loop spun forever while each `\write`
 /// re-pinned the whole growing file in the never-freed interner — the
 /// buffer offset overran `u32` and the binary ABORTED (`string-interner
@@ -164,30 +166,32 @@ v `w'
 /// its open `{SideBySideExample}`; repro
 /// `expansion-primitives/until_true_end_fancyvrb_loop.tex`.
 #[test]
-fn until_miss_at_true_eof_errors_like_perl() {
+fn until_miss_at_true_eof_fancyvrb_loop_is_abandoned() {
   let (stderr, xml) = convert(
     include_str!(
       "../../../tools/perfect_kernel/repros/expansion-primitives/until_true_end_fancyvrb_loop.tex"
     ),
     true,
   );
-  // The salvaged paragraph (no ids: the conversion ended in the Fatal).
   assert!(
-    xml.contains("<para xml:id=\"p1\">\n    <p>before\n</p>"),
+    xml.contains("<para xml:id=\"p1\">\n    <p>before</p>\n  </para>"),
     "{xml}"
   );
-  let misses = stderr
+  let diagnostics: Vec<&str> = stderr
     .lines()
-    .filter(|l| l.starts_with("Error:expected:Until: Missing argument Until:"))
-    .count();
-  assert_eq!(misses, 101, "{stderr}");
+    .filter(|l| l.starts_with("Error:") || l.starts_with("Fatal:"))
+    .collect();
   assert_eq!(
-    stderr.matches("Fatal:TooManyErrors:MaxLimit(100)").count(),
-    1,
+    diagnostics,
+    [
+      "Error:expected:Until: Missing argument Until:\r at end of input",
+      r"Error:expected:\par File ended while scanning use of \FancyVerbGetLine",
+      "Error:expected:{} Missing argument {} at end of input",
+      r"Error:errmessage:\errmessage FancyVerb Error:",
+    ],
     "{stderr}"
   );
-  assert!(!stderr.contains("Fatal:Mouth:EoF"), "{stderr}");
-  assert_eq!(error_count(&stderr), 102, "{stderr}");
+  assert_eq!(error_count(&stderr), 4, "{stderr}");
   assert!(
     !stderr.contains("panicked") && !stderr.contains("precondition"),
     "{stderr}"

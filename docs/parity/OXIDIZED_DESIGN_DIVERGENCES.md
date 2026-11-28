@@ -7458,20 +7458,30 @@ reset per conversion; `\long` survives the dump.
   `\index` time); a `\scantokens` pseudo-file's end and a constructor's read at an `\input` file's end stay quiet
   too, where TeX and Perl err (REDs `expansion-primitives/required_reader_scantokens_end_silent_red.tex`,
   `required_reader_input_file_end_silent_red.tex`). A
-  self-recursive scanner re-misses to the error cap, as Perl's: fancyvrb `\FV@Scan` (fancyvrb/fancyvrb-doc), l3prg
-  `\prg_map_break:Nn` (stex/stex-doc; Perl's 37 `Until:` + 64 `{}` misses), pgf's `\pgfutil@switch@@` shape. A
-  `\futurelet` peek loop does not: its missed token comes back as `\relax`, where Perl's `unread` skips the undef
-  (RED `expansion-primitives/token_true_end_futurelet_loop_red.tex`); nor does one whose re-reads double the
-  put-back: it reaches `Fatal:Timeout:PushbackLimit`, which keeps nothing (RED
-  `expansion-primitives/until_true_end_pushback_growth_red.tex`). An alignment the run-off leaves open to the end
+  later call of a macro missing the same argument there (same macro, same spec) with no less input left is a
+  self-recursive scanner re-requesting it from the put-back, which Perl reruns to its error cap. That call is TeX's
+  runaway, "File ended while scanning use of \x", abandoned as §392 abandons it, and the put-back is read on
+  (EOFRUNAWAY; `note_missing_argument`, `Runaway::TrueEnd`, `abandon_runaway_call`). Every later call of that macro
+  for that argument is abandoned too, an Info each ("… again"): a loop broken there re-enters from the put-back with
+  less input. A later call after input was consumed is a new call and runs as Perl's (a caption typeset after its
+  measuring, 1404.5770, 1301.5371). Shapes: ifthen's `\@tempc` in a `\csname`, which reads a group and adds its
+  body each round (2511.11682: 502 errors to the cap before, 12 now; 0.8.0 2), `\@iforloop` (2510.17429: 525, 28;
+  0.8.0 19), fancyvrb `\FV@Scan` (fancyvrb/fancyvrb-doc), l3prg `\prg_map_break:Nn` (stex/stex-doc; Perl's 37
+  `Until:` + 64 `{}` misses; ours 6 + 1, then the runaway), PiCTeX's `\put` ` at ` (0811.2708: 45, 4), pgf's
+  `\pgfutil@switch@@` shape, and a scanner doubling its put-back (before: to `Fatal:Timeout:PushbackLimit`, keeping
+  nothing). The put-back's own errors stay (2510.17429's tail). A `\futurelet` peek loop is a primitive's, not a
+  call's: its missed token
+  comes back as `\relax`, where Perl's `unread` skips the undef (RED
+  `expansion-primitives/token_true_end_futurelet_loop_red.tex`). An alignment the run-off leaves open to the end
   drops its last cell's text, as Perl does; one Warning counts the words dropped (`tex_tables.rs`
   `digest_alignment_column`, `base_utilities::ink_words`; RED
   `alignment-bindings/alignment_open_at_end_of_input_drops_its_text_red.tex` for the text). This supersedes batch
   52's one report then `Fatal:Mouth:EoF`. Guards
   `error_boundary::perfect_kernel_error_boundary` (the `Until:`, `{}`, `Token`, `Semiverbatim`, `Undigested`,
   `HBoxArgContents`, isolated-end and open-alignment rows),
-  `perfect_kernel_batch48::until_miss_at_true_eof_errors_like_perl`,
-  `perfect_kernel_batch52::until_miss_at_eof_reaches_the_error_cap`.
+  `perfect_kernel_batch48::until_miss_at_true_eof_fancyvrb_loop_is_abandoned`,
+  `perfect_kernel_batch52::until_miss_at_eof_l3prg_loop_is_abandoned`,
+  `perfect_kernel_batcheofrunaway::true_end_rerequest_is_abandoned`.
 - **Measured**: error counts, messages and text equal pdflatex's on the six cases of `vfs_file_end`, the 56ix control
   and the repros `expansion-primitives/file_end_*` (before, a file on disk errred once more than pdflatex: the
   document's `}` then stray).

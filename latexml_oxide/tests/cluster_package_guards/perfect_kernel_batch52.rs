@@ -98,40 +98,46 @@ D \bazA[x] and E \bazA[x]{} and G.
 /// miss is reported, the tokens go back and the call runs on the empty
 /// argument. l3prg's self-recursive `\prg_map_break:Nn` (expl3-code.tex:
 /// 2452-2458; reached when `\prop_map_inline:cn` names an undefined prop)
-/// then re-misses to the error cap, as in Perl: 101 misses, Perl's split of
-/// 37 `Until:` and 64 `{}` (each required reader that runs out errs), and
-/// `Fatal:TooManyErrors` (pdflatex: one "File ended while scanning use of
-/// \prg_map_break:Nn" and the emergency stop). Witness: stex/stex-doc.
+/// re-misses while each round consumes input (six `Until:` misses, one
+/// `{}`), then re-requests from no less input: TeX's runaway, "File ended
+/// while scanning use of \prg_map_break:Nn" (pdflatex's one report before its
+/// emergency stop), the call abandoned and the put-back typeset (EOFRUNAWAY).
+/// Perl re-misses to its cap: 101 misses (37 `Until:`, 64 `{}`) and
+/// too_many_errors. Witness: stex/stex-doc.
 /// Repro `expansion-primitives/until_true_end_l3prg_loop.tex`.
 #[test]
-fn until_miss_at_eof_reaches_the_error_cap() {
-  let (stderr, _xml) = convert(
+fn until_miss_at_eof_l3prg_loop_is_abandoned() {
+  let (stderr, xml) = convert(
     include_str!(
       "../../../tools/perfect_kernel/repros/expansion-primitives/until_true_end_l3prg_loop.tex"
     ),
     true,
   );
-  let misses = stderr
+  let miss = r"Error:expected:Until: Missing argument Until:\prg_break_point:Nn at end of input";
+  let diagnostics: Vec<&str> = stderr
     .lines()
-    .filter(|l| {
-      l.starts_with(
-        r"Error:expected:Until: Missing argument Until:\prg_break_point:Nn at end of input",
-      )
-    })
-    .count();
-  assert_eq!(misses, 37, "{stderr}");
-  let undelimited = stderr
-    .lines()
-    .filter(|l| *l == "Error:expected:{} Missing argument {} at end of input")
-    .count();
-  assert_eq!(undelimited, 64, "{stderr}");
+    .filter(|l| l.starts_with("Error:") || l.starts_with("Fatal:"))
+    .collect();
   assert_eq!(
-    stderr.matches("Fatal:TooManyErrors:MaxLimit(100)").count(),
-    1,
+    diagnostics,
+    [
+      miss,
+      miss,
+      miss,
+      miss,
+      miss,
+      miss,
+      "Error:expected:{} Missing argument {} at end of input",
+      r"Error:expected:\par File ended while scanning use of \prg_map_break:Nn",
+    ],
     "{stderr}"
   );
-  assert!(!stderr.contains("Fatal:Mouth:EoF"), "{stderr}");
-  assert_eq!(error_count(&stderr), 102, "{stderr}");
+  assert_eq!(error_count(&stderr), 8, "{stderr}");
+  // The put-back typeset, what the loop left of `text` and `document`.
+  assert!(
+    xml.contains("<para xml:id=\"p1\">\n    <p>documentetdocument</p>\n  </para>"),
+    "{xml}"
+  );
 }
 
 /// `\input{pkg.sty}` of a package an earlier `\usepackage` already

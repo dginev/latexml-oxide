@@ -1,0 +1,19 @@
+% mechanism: LaTeX's `\@iforloop#1,#2\@@#3#4` (latex.ltx) called on a list with no comma at the TRUE end of
+%   all input: the `,` miss follows Perl's put-back (DG 2026-11-26), `#2` then finds `\@@` in the tokens put
+%   back and the body typesets `[]` and calls `\@iforloop` again on the same input; that second, identical
+%   miss is TeX's runaway: the call is abandoned, "File ended while scanning use of \@iforloop" (tex.web
+%   §338-339, §392), and the put-back is read on (its `\@@` undefined, its `\x` the empty macro).
+% witness: 2510.17429 (`\@iforloop` Until:, , 525 errors to the cap after EOFPUTBACK; 0.8.0: 19)
+% oracle:  pdflatex 2 `!` ("File ended while scanning use of \@iforloop", Emergency stop), no PDF;
+%          Perl 101 errors "Missing argument Until:," and Fatal:too_many_errors:100, no XML
+% engines: rust=101 errors + Fatal:TooManyErrors:MaxLimit(100) (LIPICSRESTATE-rel, 2026-11-28)
+% expect:  3 errors ("Missing argument Until:, at end of input", "File ended while scanning use of
+%          \@iforloop", "\@@" undefined), 0 Fatal, "before []a" then the `[]` of the put-back's `{[\x]}`
+% status:  GREEN (EOFRUNAWAY; guard perfect_kernel_batcheofrunaway::true_end_rerequest_is_abandoned)
+\documentclass{article}
+\makeatletter
+\def\go{\@iforloop a\@@\x{[\x]}}
+\makeatother
+\begin{document}
+before \go
+\end{document}

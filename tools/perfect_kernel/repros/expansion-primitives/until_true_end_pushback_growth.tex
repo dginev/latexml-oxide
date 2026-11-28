@@ -1,0 +1,22 @@
+% mechanism: a delimited argument missed at the TRUE end of all input is put back (Perl's put-back,
+%   Gullet.pm:686-688; OD #304), and a scanner whose expansion re-reads the put-back tokens and doubles
+%   them re-requests the argument: TeX's runaway, the call abandoned ("File ended while scanning use of
+%   \sc", tex.web §338-339, §392; EOFRUNAWAY) and the put-back read on, so `\mark` (a primitive) then
+%   finds no `{`. Before, each re-miss was an Error until the pushback reached its limit,
+%   `Fatal:Timeout:PushbackLimit`, a resource Fatal whose salvage keeps nothing (OD #251). The shape of two
+%   pgf papers whose put-back re-reads grew the pushback before tikz's raised error cap (1000, tikz_sty.rs).
+% witness: synthetic (EOFPUTBACK fix 2)
+% oracle:  pdflatex 3 `!` ("File ended while scanning use of \sc", Emergency stop), no PDF; Perl 0.8.8
+%          26 errors "Missing argument Until:\stop", then out of memory (8 GB), no XML
+% engines: rust=23 errors "Missing argument Until:\stop at end of input" + Fatal:Timeout:PushbackLimit,
+%          a 39-byte document (EOFPUTBACK, 2026-11-26)
+% expect:  3 errors ("Missing argument Until:\stop at end of input", "File ended while scanning use of
+%          \sc", "Expected opening '{'"), 0 Fatal, "before" and "xx" kept
+% status:  GREEN (EOFRUNAWAY; guard perfect_kernel_batcheofrunaway::true_end_rerequest_is_abandoned)
+\documentclass{article}
+\def\sc#1\stop{\dbl}
+\def\dbl#1\mark{\sc#1#1\mark}
+\begin{document}
+before
+
+\sc x\mark
