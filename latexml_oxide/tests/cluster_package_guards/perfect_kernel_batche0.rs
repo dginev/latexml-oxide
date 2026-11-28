@@ -3328,7 +3328,8 @@ const KERNEL_TOKEN_SPELLINGS: &[(&str, usize)] = &[
   // (MEMB, -1: `be_absorbed` reads its text through `arena::with`, not `get_string()`)
   ("latexml_core/src/tbox.rs", 2),
   ("latexml_core/src/telemetry.rs", 1),
-  ("latexml_core/src/token.rs", 77),
+  // (FONTIDENT, 77 -> 74: `defined_as` is `spelled_as` or its `meaning_name` spelled so, one lookup for several tests)
+  ("latexml_core/src/token.rs", 74),
   // (MEMA, 49 -> 48: `untex` writes each token's `Display` into a reused buffer, an output and not a decision)
   ("latexml_core/src/tokens.rs", 48),
   ("latexml_core/src/util/image.rs", 2),
@@ -3416,7 +3417,8 @@ const KERNEL_TOKEN_SPELLINGS: &[(&str, usize)] = &[
   ("latexml_engine/src/tex_debugging.rs", 18),
   ("latexml_engine/src/tex_file_io.rs", 4),
   // (PDFPRIM, 16 -> 12: `read_font_ident` tells `\font` and the family ranges by meaning, `defined_as`)
-  ("latexml_engine/src/tex_fonts.rs", 12),
+  // (FONTIDENT, 12 -> 11: `read_font_ident` reads the meaning once, `Token::with_meaning_name`)
+  ("latexml_engine/src/tex_fonts.rs", 11),
   ("latexml_engine/src/tex_inserts.rs", 4),
   ("latexml_engine/src/tex_job.rs", 2),
   ("latexml_engine/src/tex_logic.rs", 5),

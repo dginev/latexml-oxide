@@ -1507,37 +1507,48 @@ impl Token {
   /// `other` is is presumed to be some "constant", explicit token,
   /// such as  `T_SPACE` or `T_CS!("\\endcsname")`.
   pub fn defined_as(&self, other: &Token) -> bool {
-    let cc = self.code;
-    let occ = other.get_catcode();
-    if (cc == occ) && ((occ == Catcode::SPACE) || (self.text == other.get_sym())) {
-      return true;
+    self.spelled_as(other)
+      || self
+        .meaning_name()
+        .is_some_and(|letto| letto.spelled_as(other))
+  }
+
+  /// Whether this token is `other` itself, as `defined_as` compares: the same catcode and, but for a space, the same
+  /// text.
+  #[inline]
+  pub fn spelled_as(&self, other: &Token) -> bool {
+    self.code == other.code && (other.code == Catcode::SPACE || self.text == other.text)
+  }
+
+  /// The token this one's meaning names, as `defined_as` reads it: the control sequence of its definition, or the token
+  /// a `\let` copied. One meaning lookup; a character token that is not active names none.
+  pub fn meaning_name(&self) -> Option<Token> { self.with_meaning_name(|named, _| named) }
+
+  /// Calls `f` with `meaning_name` and the meaning itself, from one meaning lookup: for a caller that tests a token
+  /// against several primitives (`defined_as` looks the meaning up per call) or reads its definition too
+  /// (`tex_fonts::read_font_ident`). A character token that is not active has neither.
+  pub fn with_meaning_name<R>(&self, f: impl FnOnce(Option<Token>, Option<&Stored>) -> R) -> R {
+    if !matches!(self.code, Catcode::CS | Catcode::ACTIVE) {
+      return f(None, None);
     }
-    if matches!(cc, Catcode::CS | Catcode::ACTIVE) {
-      // Use the closure-based `with_meaning` — Token is `Copy`, so
-      // extracting a `Token` from the borrowed Stored is an implicit
-      // copy, not a clone. Avoids a full `Stored::clone()` per call
-      // (defined_as fires ~1% of total instructions on siunitx/
-      // physics-heavy docs).
-      let letto_opt: Option<Token> = state::with_meaning(self, |defn_opt| {
-        defn_opt.and_then(|defn| match defn {
-          Stored::Token(t) => Some(*t),
-          Stored::Expandable(inner) => Some(*inner.get_cs()),
-          Stored::Primitive(inner) => Some(*inner.get_cs()),
-          Stored::MathPrimitive(inner) => Some(*inner.get_cs()),
-          Stored::Register(inner) => Some(*inner.get_cs()),
-          Stored::Conditional(inner) => Some(*inner.get_cs()),
-          Stored::Constructor(inner) => Some(*inner.get_cs()),
-          _ => None,
-        })
+    // Use the closure-based `with_meaning` — Token is `Copy`, so
+    // extracting a `Token` from the borrowed Stored is an implicit
+    // copy, not a clone. Avoids a full `Stored::clone()` per call
+    // (defined_as fires ~1% of total instructions on siunitx/
+    // physics-heavy docs).
+    state::with_meaning(self, |defn_opt| {
+      let named = defn_opt.and_then(|defn| match defn {
+        Stored::Token(t) => Some(*t),
+        Stored::Expandable(inner) => Some(*inner.get_cs()),
+        Stored::Primitive(inner) => Some(*inner.get_cs()),
+        Stored::MathPrimitive(inner) => Some(*inner.get_cs()),
+        Stored::Register(inner) => Some(*inner.get_cs()),
+        Stored::Conditional(inner) => Some(*inner.get_cs()),
+        Stored::Constructor(inner) => Some(*inner.get_cs()),
+        _ => None,
       });
-      if let Some(letto) = letto_opt
-        && (letto.get_catcode() == occ)
-        && ((occ == Catcode::SPACE) || letto.get_sym() == other.get_sym())
-      {
-        return true;
-      }
-    }
-    false
+      f(named, defn_opt)
+    })
   }
 }
 

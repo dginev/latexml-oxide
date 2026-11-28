@@ -746,12 +746,19 @@ pub fn read_font_ident() -> Result<Token> {
       T_CS!("\\lx@default@font")
     },
   };
-  // By meaning, as tex.web's `cur_cmd`: expl3's `\tex_font:D`, `\tex_textfont:D` are `\font`, `\textfont`.
-  let font_type = if token.defined_as(&T_CS!("\\textfont")) {
+  // By meaning, as tex.web's `cur_cmd`: expl3's `\tex_font:D`, `\tex_textfont:D` are `\font`, `\textfont`. Each test
+  // is `Token::defined_as`, the token itself or the control sequence its meaning names, from ONE meaning lookup: every
+  // `FontToken` argument comes here (l3intarray's `\fontdimen` per entry; one lookup per test cost tabularray +1.1 %).
+  let (named, is_fontdef) = token.with_meaning_name(|named, defn| {
+    let is_fontdef = matches!(defn, Some(Stored::Primitive(p)) if p.font_id.is_some());
+    (named, is_fontdef)
+  });
+  let defined_as = |cs: Token| token.spelled_as(&cs) || named.is_some_and(|t| t.spelled_as(&cs));
+  let font_type = if defined_as(T_CS!("\\textfont")) {
     Some("textfont")
-  } else if token.defined_as(&T_CS!("\\scriptscriptfont")) {
+  } else if defined_as(T_CS!("\\scriptscriptfont")) {
     Some("scriptscriptfont")
-  } else if token.defined_as(&T_CS!("\\scriptfont")) {
+  } else if defined_as(T_CS!("\\scriptfont")) {
     Some("scriptfont")
   } else {
     None
@@ -765,11 +772,12 @@ pub fn read_font_ident() -> Result<Token> {
       Some(Stored::Token(t)) => *t,
       _ => token,
     }))
-  } else if token.defined_as(&T_CS!("\\font")) {
+  } else if defined_as(T_CS!("\\font")) {
     // Perl: $token = LookupValue('current_FontDef') || T_CS('\lx@default@font'),
     // the current font's identifier here (`current_font_identifier`).
     current_font_identifier()
-  } else if is_font_identifier(token) {
+  } else if defined_as(T_CS!("\\nullfont")) || is_fontdef {
+    // A `<fontdef token>` (tex.web §577 `set_font`): an identifier `\font` made, or `\nullfont`, or a `\let` of one.
     Ok(token)
   } else {
     // tex.web §577: "Missing font identifier", `back_error`, and the null font (Perl takes any token).
@@ -784,12 +792,6 @@ pub fn read_font_ident() -> Result<Token> {
     unread_one(token);
     Ok(T_CS!("\\nullfont"))
   }
-}
-
-/// A `<fontdef token>` (tex.web §577 `set_font`): an identifier `\font` made, or `\nullfont`, or a `\let` of one.
-fn is_font_identifier(token: Token) -> bool {
-  is_null_font(token)
-    || matches!(lookup_meaning(&token), Some(Stored::Primitive(p)) if p.font_id.is_some())
 }
 
 /// Whether `token` selects TeX's `null_font` (pdftex.web §1563: "invalid font identifier" for the pdfTeX font queries).
