@@ -4293,6 +4293,51 @@ pub fn theorem_list_name(thmset: &str) -> String {
     .replace('#', "hash")
 }
 
+/// thm-patch.sty:69-99: once thmtools is loaded, its patched `\newtheorem` (which `\declaretheorem` calls, thm-kv.sty
+/// :394-404) runs `\thmt@newtheorem@predefinition` before the theorem is declared, with `\thmt@envname` its name,
+/// `\thmt@thmname` its heading and `\thmt@sibling` the counter it shares, if any (`\ifthmt@hassibling`): thm-listof
+/// records the theorem for `\listoftheorems`, thm-autoref names it for `\autoref` and aliases its counter to the
+/// sibling's (thmtools_sty.rs). Called by `\newtheorem` and `\declaretheorem` only, before [`define_new_theorem`]:
+/// thmtools patches no other definer (llncs/sv `\spnewtheorem`, elsarticle's `\newproof`).
+pub fn thmt_newtheorem_predefinition(
+  thmset: &Tokens,
+  otherthmset: Option<&Tokens>,
+  typ: Option<&Tokens>,
+) -> Result<()> {
+  if !is_defined("\\thmt@newtheorem@predefinition") {
+    return Ok(());
+  }
+  let other = otherthmset
+    .map(|t| ::latexml_core::gullet::expand_as_csname_text(t.clone()).map(|e| e.to_string()))
+    .transpose()?
+    .filter(|s| !s.is_empty());
+  let mut hook = vec![T_CS!("\\def"), T_CS!("\\thmt@envname"), T_BEGIN!()];
+  hook.extend(thmset.clone().unlist());
+  hook.extend([
+    T_END!(),
+    T_CS!("\\def"),
+    T_CS!("\\thmt@thmname"),
+    T_BEGIN!(),
+  ]);
+  hook.extend(typ.cloned().map(Tokens::unlist).unwrap_or_default());
+  hook.push(T_END!());
+  if let Some(other) = other.filter(|_| is_defined("\\thmt@hassiblingtrue")) {
+    hook.extend([
+      T_CS!("\\thmt@hassiblingtrue"),
+      T_CS!("\\def"),
+      T_CS!("\\thmt@sibling"),
+      T_BEGIN!(),
+    ]);
+    hook.extend(Explode!(other));
+    hook.push(T_END!());
+  } else if is_defined("\\thmt@hassiblingfalse") {
+    hook.push(T_CS!("\\thmt@hassiblingfalse"));
+  }
+  hook.push(T_CS!("\\thmt@newtheorem@predefinition"));
+  digest(Tokens::new(hook))?;
+  Ok(())
+}
+
 pub fn define_new_theorem(
   flag: Option<Tokens>,
   thmset: Tokens,
@@ -4309,14 +4354,6 @@ pub fn define_new_theorem(
   let thmset_str = thmset.to_string();
   let classname = clean_class_name(&thmset_str);
   let listname = theorem_list_name(&thmset_str);
-  // thm-patch.sty:69-84: thmtools runs `\thmt@newtheorem@predefinition` before each theorem it declares, with
-  // `\thmt@envname` its name (thm-listof records the theorem for `\listoftheorems` there; thmtools_sty.rs).
-  if is_defined("\\thmt@newtheorem@predefinition") {
-    let mut hook = vec![T_CS!("\\def"), T_CS!("\\thmt@envname"), T_BEGIN!()];
-    hook.extend(thmset.clone().unlist());
-    hook.extend([T_END!(), T_CS!("\\thmt@newtheorem@predefinition")]);
-    digest(Tokens::new(hook))?;
-  }
   // The shared counter is a name read through `\csname`, so a macro naming it expands to that name: latex.ltx
   // :17190-17195 `\@othm` tests `\@ifundefined{c@#2}` and defines `\the#1` as `\@nameuse{the#2}`. smfthm.sty:52-56
   // `\gdef\smf@thm{smfthm}` `\newtheorem{theo}[\smf@thm]{\theoname}` (witnesses 1711.11547, 1902.02049, 2108.12000)
@@ -4343,8 +4380,21 @@ pub fn define_new_theorem(
     .unwrap_or_else(|| thmset_str.clone());
   let counter = counter.replace(' ', ".");
 
-  // If counter != thmset, record mapping
+  // If counter != thmset, record mapping: the counter as declared, which `counter_for_type` follows to the counter
+  // stepped (a shared counter's type may share one in turn).
   if counter != thmset_str {
+    // latex.ltx `\@othm` (amsthm's too): a counter with no `\c@` is "No counter defined", an Error that leaves the
+    // theorem undefined; here it is numbered by the counter that type shares, so a Warning (`\newtheorem{remark}
+    // [definition]` over `\newtheorem{definition}[equation]`, no thmtools; guard
+    // `perfect_kernel_batchcounterchain::theorem_sharing_a_counter_no_c_names_warns`).
+    let root = counter_for_type(&counter);
+    if root != counter && !is_defined(&s!("\\c@{counter}")) {
+      Warn!(
+        "undefined",
+        &counter,
+        s!("No counter '{counter}' defined; {thmset_str} is numbered by its counter '{root}'")
+      );
+    }
     AssignMapping!("counter_for_type", &thmset_str => &counter);
     DefMacro!(
       T_CS!(s!("\\the{thmset_str}")),

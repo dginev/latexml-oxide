@@ -1572,11 +1572,14 @@ pub(crate) fn load() -> Result<()> {
     if document_world {
       assign_value(&declared_key, true, Some(Scope::Global));
     }
+    let otherthmset = otherthmset.filter(|t| !t.is_empty());
+    let typ = Some(typ).filter(|t| !t.is_empty());
+    thmt_newtheorem_predefinition(&thmset, otherthmset.as_ref(), typ.as_ref())?;
     define_new_theorem(
       flag.filter(|f| !f.is_empty()),
       thmset,
-      otherthmset.filter(|t| !t.is_empty()),
-      if typ.is_empty() { None } else { Some(typ) },
+      otherthmset,
+      typ,
       reset.filter(|t| !t.is_empty()),
       None, // \newtheorem body font comes from \theoremstyle, not a per-theorem arg
     )?;

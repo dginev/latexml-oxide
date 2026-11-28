@@ -1,0 +1,20 @@
+% witness: 1809.01129 macros.sty:333-366 (`\newaliascnt{#1cnt}{remarklike}` `\newtheorem{#1}[#1cnt]{#2}`
+%          `\def\#1cntautorefname{#2}`; "Remark 7" twice where 0.8.0 numbers 11, 12)
+% oracle:  pdflatex 0 errors: "Theoremlike 1", "Remark 2", "Remark 3"; "See 1, 2, 3; 1, Remark 2, Remark 3; 3." —
+%          the remark steps `\c@remcnt`, aliascnt's `\let` of `\c@theoremlike`, and hyperref names it by `remcnt`
+% engines: rust INT081TA "Remark 2", "Remark 3" with no ids, both labels on <document> ("See 1, id1, id1")
+% expect:  0 errors, 0 warnings; ids in the root counter's `Thmtheoremlike` series; the oracle's sentence
+% status:  RED (INT081TA) -> GREEN (COUNTERCHAIN: `counter_for_type` follows the chain)
+\documentclass{article}
+\usepackage{amsthm,aliascnt}
+\usepackage{hyperref}
+\newtheorem{theoremlike}{Theoremlike}
+\newaliascnt{remcnt}{theoremlike}
+\newtheorem{remark}[remcnt]{Remark}
+\def\remcntautorefname{Remark}
+\begin{document}
+\begin{theoremlike}\label{t1} A. \end{theoremlike}
+\begin{remark}\label{r1} B. \end{remark}
+\begin{remark}\label{r2} C. \end{remark}
+See \ref{t1}, \ref{r1}, \ref{r2}; \autoref{t1}, \autoref{r1}, \autoref{r2}; \arabic{remcnt}.
+\end{document}

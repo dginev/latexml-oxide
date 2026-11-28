@@ -23228,3 +23228,29 @@ pdflatex: 1 `!` "Paragraph ended before \list was complete.", References [1] Fir
 (same host): 5 errors and 1 warning ("Missing argument Token for undef" twice, "<ltx:bibitem> isn't allowed in <ltx:p>"),
 both entries inside an `<ltx:itemize>`. Witness 1310.5566 (revtex4). Fixed in Rust (OXIDIZED_DESIGN_DIVERGENCES #1173).
 Guard `perfect_kernel_batchlistshort::list_macro_arguments_end_at_a_paragraph`.
+
+## 1349. Perl's `counter_for_type` takes one link: a theorem sharing a sibling's counter steps an undefined counter
+
+`RefStepCounter` (Package.pm:758) maps a theorem type to the counter it was declared with, once; `defineNewTheorem`
+(latex_constructs.pool.ltxml:2903-2907) records that counter, and thmtools.sty.ltxml does not alias it as thm-autoref's
+`\@counteralias` does (aliasctr.sty:54-79). A theorem sharing the counter of a theorem that shares one in turn steps a
+counter with no `\c@`. Minimal trigger:
+
+```latex
+\documentclass{article}
+\usepackage{amsthm,thmtools}
+\usepackage{hyperref}
+\declaretheorem[style=definition,sibling=equation]{definition}
+\declaretheorem[style=definition,sibling=definition]{remark}
+\begin{document}
+\begin{definition}\label{d1} A. \end{definition}
+\begin{remark}\label{r1} B. \end{remark}
+\begin{equation}x\label{e1}\end{equation}
+See \ref{d1}, \ref{r1}, \ref{e1}.
+\end{document}
+```
+
+pdflatex: 0 `!`, "Remark 2", "(3)", "See 1, 2, 3." Perl (same host): "Remark 1", "(2)", Warnings `Counter 'definition'
+was not defined`, the remark's label on `<document>`. Fixed in Rust (OXIDIZED_DESIGN_DIVERGENCES #1174): the chain is
+followed, and thmtools' sibling aliases the counter. Witnesses 2009.11843, 1809.01129. Guard
+`perfect_kernel_batchcounterchain::thmtools_sibling_of_a_sibling_shares_its_counter`.

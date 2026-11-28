@@ -26,6 +26,18 @@ top of its group.
     comments that said a no-TeX artifact runs on the no-dump branch now say it loads the embedded dump, and
     `tools/notex_smoke.sh` accepts an artifact's kpathsea backend line.
 
+  - **A theorem numbered with a theorem that shares a counter steps the shared counter, as pdflatex does.** thmtools'
+    `\declaretheorem[sibling=definition]{remark}` over `[sibling=equation]{definition}` (and a `\newtheorem{X}[Y]` after
+    thmtools, or over an aliascnt alias) stepped an undefined counter: two Warnings per theorem, "Remark 1" where
+    pdflatex prints "Remark 2", the equations behind it one short, and its label on the document (2009.11843,
+    1809.01129). Under thmtools a numbered theorem with a sibling now shares the sibling's counter as thm-autoref
+    aliases it, and `\autoref` names each theorem `\newtheorem` or `\declaretheorem` declares by its heading ("Lemma
+    2", where it printed "2"; an llncs/sv `\spnewtheorem`, which thmtools does not patch, keeps its counter's name); a theorem sharing a counter no `\c@` names (a
+    `\newtheorem` over such a type without thmtools, a thmtools sibling with no counter) is one Warning, where pdflatex
+    errs. Perl misnumbers them too (OXIDIZED_DESIGN_DIVERGENCES #1174, KNOWN_PERL_ERRORS #1349). Guards
+    `perfect_kernel_batchcounterchain::{thmtools_sibling_of_a_sibling_shares_its_counter,
+    newtheorem_over_an_aliascnt_alias_steps_its_root, theorem_sharing_a_counter_no_c_names_warns,
+    thmtools_unnumbered_theorem_takes_no_sibling, spnewtheorem_after_thmtools_is_not_patched}`.
   - **A `\bordermatrix`'s MathML lines its cells up under their column labels**: the rows below the first no longer
     carry the two empty cells its parentheses already span, which pushed every later cell one column right in a
     browser. Perl's own post skips such cells, and so loses real cells after a `\multirow` in a math array; ours keeps

@@ -1,0 +1,24 @@
+% witness: 2009.11843 (memoir; `\declaretheorem[sibling=definition]` over `[sibling=equation]{definition}`, 149+149
+%          Warnings; 9 of the 25 labels the int->main root-cause compared misnumbered against the pdflatex aux, 102 of
+%          all 119 theorem and equation `\newlabel`s in COUNTERCHAIN's full count); a `\newtheorem` after thmtools too
+% oracle:  pdflatex 0 errors: "Definition 1", "Remark 2", "Note 3", "(4)"; "See 1, 2, 3, 4; Definition 1, Remark 2,
+%          Note 3; 4, 4, 4." — thm-autoref.sty:31-44 `\@counteralias`es each sibling (aliasctr.sty:54-79), so
+%          `\c@remark` IS the equation counter, and names each theorem for `\autoref` by its heading
+% engines: Perl 3 Warnings, "Remark 1", "(2)"; rust INT081TA 7 Warnings (`Counter 'definition' was not defined`,
+%          `\c@definition is not a register`), "Remark 1", "Note 1", "(2)", the labels on <document>, "Equation 1"
+% expect:  0 errors, 0 warnings; the oracle's tags, labels on their theorems, the oracle's sentence
+% status:  RED (INT081TA) -> GREEN (COUNTERCHAIN)
+\documentclass{article}
+\usepackage{amsthm,thmtools}
+\usepackage{hyperref}
+\declaretheorem[style=definition,sibling=equation]{definition}
+\declaretheorem[style=definition,sibling=definition]{remark}
+\newtheorem{note}[remark]{Note}
+\begin{document}
+\begin{definition}\label{d1} A. \end{definition}
+\begin{remark}\label{r1} B. \end{remark}
+\begin{note}\label{n1} C. \end{note}
+\begin{equation}x\label{e1}\end{equation}
+See \ref{d1}, \ref{r1}, \ref{n1}, \ref{e1}; \autoref{d1}, \autoref{r1}, \autoref{n1}; \arabic{definition},
+\arabic{remark}, \arabic{note}.
+\end{document}

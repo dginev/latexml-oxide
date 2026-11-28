@@ -5032,7 +5032,7 @@ C:\textcolor{red}{R}
 \begin{exa}An example.\end{exa}
 \end{document}",
       ),
-      "<theorem class=\"ltx_theorem_exa\" inlist=\"thm theorem:exa\" xml:id=\"S1.Thmthm2\"><tags><tag>Example 1.2</tag><tag role=\"autoref\">\u{a0}1.2<text xml:id=\"S1.Thmthm2.1\"/></tag><tag role=\"refnum\">1.2</tag><tag role=\"typerefnum\">Example 1.2</tag></tags><title class=\"ltx_runin\"><tag><text font=\"bold\" xml:id=\"S1.Thmthm2.2\">Example 1.2</text></tag><text font=\"bold\" xml:id=\"S1.Thmthm2.3\">.</text></title><para xml:id=\"S1.Thmthm2.p1\"><p xml:id=\"S1.Thmthm2.p1.1\">An example.</p></para></theorem>",
+      "<theorem class=\"ltx_theorem_exa\" inlist=\"thm theorem:exa\" xml:id=\"S1.Thmthm2\"><tags><tag>Example 1.2</tag><tag role=\"autoref\">Example\u{a0}1.2<text xml:id=\"S1.Thmthm2.1\"/></tag><tag role=\"refnum\">1.2</tag><tag role=\"typerefnum\">Example 1.2</tag></tags><title class=\"ltx_runin\"><tag><text font=\"bold\" xml:id=\"S1.Thmthm2.2\">Example 1.2</text></tag><text font=\"bold\" xml:id=\"S1.Thmthm2.3\">.</text></title><para xml:id=\"S1.Thmthm2.p1\"><p xml:id=\"S1.Thmthm2.p1.1\">An example.</p></para></theorem>",
       0,
       "",
     ),
@@ -5104,7 +5104,7 @@ $a\coloneqq b$
 \end{document}",
       ),
       // (The note keeps its parentheses, which `thmC`'s head spec drops: the amsthm binding ignores head specs.)
-      "<theorem class=\"ltx_theorem_thmC\" inlist=\"thm theorem:thmC\" xml:id=\"S1.Thmthm1\"><tags><tag>Theorem 1.1</tag><tag role=\"autoref\">\u{a0}1.1<text xml:id=\"S1.Thmthm1.1\"/></tag><tag role=\"refnum\">1.1</tag><tag role=\"typerefnum\">Theorem 1.1</tag></tags><title class=\"ltx_runin\"><tag><text font=\"bold\" xml:id=\"S1.Thmthm1.2\">Theorem 1.1</text></tag><text font=\"bold\" xml:id=\"S1.Thmthm1.3\"> </text>(Smith)<text font=\"bold\" xml:id=\"S1.Thmthm1.4\">.</text></title><para xml:id=\"S1.Thmthm1.p1\"><p xml:id=\"S1.Thmthm1.p1.1\"><text font=\"italic\" xml:id=\"S1.Thmthm1.p1.1.1\">A theorem.</text></p></para></theorem>",
+      "<theorem class=\"ltx_theorem_thmC\" inlist=\"thm theorem:thmC\" xml:id=\"S1.Thmthm1\"><tags><tag>Theorem 1.1</tag><tag role=\"autoref\">Theorem\u{a0}1.1<text xml:id=\"S1.Thmthm1.1\"/></tag><tag role=\"refnum\">1.1</tag><tag role=\"typerefnum\">Theorem 1.1</tag></tags><title class=\"ltx_runin\"><tag><text font=\"bold\" xml:id=\"S1.Thmthm1.2\">Theorem 1.1</text></tag><text font=\"bold\" xml:id=\"S1.Thmthm1.3\"> </text>(Smith)<text font=\"bold\" xml:id=\"S1.Thmthm1.4\">.</text></title><para xml:id=\"S1.Thmthm1.p1\"><p xml:id=\"S1.Thmthm1.p1.1\"><text font=\"italic\" xml:id=\"S1.Thmthm1.p1.1.1\">A theorem.</text></p></para></theorem>",
       0,
       "",
     ),

@@ -1,0 +1,19 @@
+% witness: the pure-LaTeX shape of 2009.11843's chain: `\newtheorem{remark}[definition]` where `definition` shares
+%          `equation`'s counter, with no thmtools to alias `\c@definition`
+% oracle:  pdflatex: "! LaTeX Error: No counter 'definition' defined." (latex.ltx/amsthm `\@othm`), then
+%          "Environment remark undefined"; "Definition 1", "(2)"
+% engines: rust INT081TA 2 Warnings at the step (`Counter 'definition' was not defined`, `\c@definition is not a
+%          register`), "Remark 1"
+% expect:  0 errors, 1 warning (`No counter 'definition' defined`, the recovery semantic); "Definition 1",
+%          "Remark 2", "(3)": the remark numbered by the counter definition shares
+% status:  CONTROL (pdflatex errs) -> GREEN (COUNTERCHAIN)
+\documentclass{article}
+\usepackage{amsthm}
+\newtheorem{definition}[equation]{Definition}
+\newtheorem{remark}[definition]{Remark}
+\begin{document}
+\begin{definition}\label{d1} A. \end{definition}
+\begin{remark}\label{r1} B. \end{remark}
+\begin{equation}x\label{e1}\end{equation}
+See \ref{d1}, \ref{r1}, \ref{e1}.
+\end{document}

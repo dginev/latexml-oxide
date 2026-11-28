@@ -121,11 +121,13 @@ LoadDefinitions!({
     body.push(T_BEGIN!());
     body.extend(typ.clone().unlist());
     body.push(T_END!());
+    let typ = Some(typ).filter(|t| !t.is_empty());
+    thmt_newtheorem_predefinition(&thmset, otherthmset.as_ref(), typ.as_ref())?;
     define_new_theorem(
       flag.filter(|f| !f.is_empty()),
       thmset,
       otherthmset,
-      if typ.is_empty() { None } else { Some(typ) },
+      typ,
       reset.filter(|t| !t.is_empty()),
       Some(Tokens::new(body)),
     )?;

@@ -1,0 +1,20 @@
+% witness: 2302.09175 (svjour3 + thmtools + hyperref, `\newtheorem{prop}[theorem]{Proposition}` after thmtools);
+%          the `\spnewtheorem` line is the svjour3 shape (svjour3.cls v3.3 :832-842: `\@spothm`'s `\@spthm` steps
+%          `theorem` itself)
+% oracle:  pdflatex 0 errors (with 2302.09175's svjour3.cls copy): "Theorem 1", "Conjecture 2", "Proposition 3";
+%          "See 1, 2, 3; Theorem 1, Theorem 2, Proposition 3." — thm-patch.sty:69-99 patches `\newtheorem` alone, so
+%          `\spnewtheorem{conj}` gets no `\conjautorefname` and `\autoref` names it by `theorem`, the counter stepped
+% engines: rust COUNTERCHAIN r0 "Conjecture 2" for the `\autoref`
+% expect:  0 errors, 0 warnings; the oracle's heads and sentence
+% status:  RED (COUNTERCHAIN r0) -> GREEN (COUNTERCHAIN r1)
+\documentclass{svjour3}
+\usepackage{thmtools}
+\usepackage{hyperref}
+\spnewtheorem{conj}[theorem]{Conjecture}{\itshape}{\rmfamily}
+\newtheorem{prop}[theorem]{Proposition}
+\begin{document}
+\begin{theorem}\label{t1} A. \end{theorem}
+\begin{conj}\label{c1} B. \end{conj}
+\begin{prop}\label{p1} C. \end{prop}
+See \ref{t1}, \ref{c1}, \ref{p1}; \autoref{t1}, \autoref{c1}, \autoref{p1}.
+\end{document}

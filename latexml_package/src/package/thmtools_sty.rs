@@ -1,3 +1,5 @@
+use latexml_core::binding::counter::dialect::{counter_for_type, register_counter_alias};
+
 use crate::{engine::latex_constructs::*, prelude::*};
 
 #[rustfmt::skip]
@@ -72,6 +74,31 @@ LoadDefinitions!({
   mark_loaded("thm-kv.sty");
   mark_loaded("thm-autoref.sty");
   mark_loaded("thm-listof.sty");
+  // thm-autoref.sty:31-44, aliasctr.sty:54-79: a theorem is `\autoref`-named by its heading, and a sibling's `\c@`,
+  // `\the`, `\theH`, `\p@`, `\cl@` are aliased (OXIDIZED_DESIGN_DIVERGENCES #1174; witness 2009.11843).
+  mark_loaded("aliasctr.sty");
+  DefPrimitive!("\\lx@thmt@counteralias@register{}{}", sub[(alias, base)] {
+    register_counter_alias(&Expand!(alias).to_string(), &Expand!(base).to_string());
+  });
+  // A sibling with no `\c@` is aliasctr's `\@nocounterr` Error, and `\@othm`'s again, the theorem left undefined;
+  // here the theorem is still declared (`define_new_theorem`, which warns itself for a sibling that shares a counter),
+  // so a Warning (2107.02579: `numberlike=theo`, whose `\newcounter{theo}` is in the paper's jmlr2e.sty copy, which
+  // the binding does not read).
+  DefPrimitive!("\\lx@thmt@nocounter{}{}", sub[(alias, base)] {
+    let (alias, base) = (Expand!(alias).to_string(), Expand!(base).to_string());
+    if counter_for_type(&base) == base {
+      Warn!("undefined", &base, s!("No counter '{base}' defined; {alias} shares no counter with it"));
+    }
+  });
+  RawTeX!(r"\newif\ifthmt@hassibling
+\def\@counteralias#1#2{{\def\@@gletover##1##2{\expandafter\global\expandafter\let\csname ##1\expandafter\endcsname
+\csname ##2\endcsname}\@ifundefined{c@#2}{\@nocounterr{#2}}{\expandafter\@ifdefinable\csname c@#1\endcsname{%
+\@@gletover{c@#1}{c@#2}\@@gletover{the#1}{the#2}\@@gletover{theH#1}{theH#2}\@@gletover{p@#1}{p@#2}%
+\expandafter\global\expandafter\def\csname cl@#1\expandafter\endcsname\expandafter{\csname cl@#2\endcsname}%
+\lx@thmt@counteralias@register{#1}{#2}}}}}
+\def\thmt@autorefsetup{\expandafter\def\csname\thmt@envname autorefname\expandafter\endcsname\expandafter{\thmt@thmname}%
+\ifthmt@hassibling\@ifundefined{c@\thmt@sibling}{\lx@thmt@nocounter{\thmt@envname}{\thmt@sibling}}%
+{\@counteralias{\thmt@envname}{\thmt@sibling}}\fi}");
   // thm-autoref.sty:60-95 `\Autoref*?{label}`: `\autoref` naming a theorem by its `Refname=` (`\<env>Autorefname`), and
   // as `\autoref` does where the target's type has none (`\HyRef@Testreftype`); one defined before is kept. Its text
   // is a tag of its own (`autorefcap`, hyperref_sty `autoref_tag`), held as the autoref name's is. Witnesses
@@ -222,8 +249,11 @@ continuing\fi\ from p.\,\pageref{#1}}");
     }
     let flag = if unnumbered { Some(Tokens!()) } else { None };
 
-    // Read sibling/numberlike/sharenumber
+    // Read sibling/numberlike/sharenumber and parent/numberwithin/within: an unnumbered theorem takes neither
+    // (thm-kv.sty:394-404 `\declaretheorem@iii` declares it `*{name}{heading}`), so `[numbered=no,sibling=theorem]`
+    // shares no counter. Guard `perfect_kernel_batchcounterchain::thmtools_unnumbered_theorem_takes_no_sibling`.
     let other: Option<Tokens> = kv.as_ref()
+      .filter(|_| !unnumbered)
       .and_then(|k| {
         k.get_value("sibling")
           .or_else(|| k.get_value("numberlike"))
@@ -231,8 +261,8 @@ continuing\fi\ from p.\,\pageref{#1}}");
       })
       .map(|v| v.revert().unwrap_or_default());
 
-    // Read parent/numberwithin/within
     let within: Option<Tokens> = kv.as_ref()
+      .filter(|_| !unnumbered)
       .and_then(|k| {
         k.get_value("parent")
           .or_else(|| k.get_value("numberwithin"))
@@ -240,7 +270,12 @@ continuing\fi\ from p.\,\pageref{#1}}");
       })
       .map(|v| v.revert().unwrap_or_default());
 
-    // Handle refname / Refname
+    // thmtools' `bodyfont=` keyval is applied via \thm@bodyfont before this
+    // call, so no per-theorem override is threaded here.
+    thmt_newtheorem_predefinition(&thmset, other.as_ref(), type_tokens.as_ref())?;
+    define_new_theorem(flag, thmset, other, type_tokens, within, None)?;
+    // Handle refname / Refname: after the theorem is declared, as thm-kv.sty:386-391 reads these keys again then
+    // (`\thmt@trytwice`'s second branch), over the `\<name>autorefname` thm-autoref's setup gave it (its heading).
     if let Some(refname) = kv.as_ref().and_then(|k| k.get_value("refname")) {
       let refname_str = refname.to_string();
       let parts: Vec<&str> = refname_str.splitn(2, ',').collect();
@@ -266,10 +301,6 @@ continuing\fi\ from p.\,\pageref{#1}}");
       def_macro(T_CS!(s!("\\Cref@{name}@name@plural")), None,
         Tokens::new(ExplodeText!(plural)), None)?;
     }
-
-    // thmtools' `bodyfont=` keyval is applied via \thm@bodyfont before this
-    // call, so no per-theorem override is threaded here.
-    define_new_theorem(flag, thmset, other, type_tokens, within, None)?;
   });
 
   // \declaretheoremstyle [keyvals] {name}
@@ -323,7 +354,7 @@ continuing\fi\ from p.\,\pageref{#1}}");
 \def\thmt@allenvs{\@gobble}
 \newcommand\thmt@recordenvname{\edef\thmt@allenvs{\thmt@allenvs,\thmt@envname}}
 \newcommand\thmt@mklistcmd{\expandafter\gdef\csname thmt@contentsline@\thmt@envname\endcsname{\thmt@contentslineShow}}
-\def\thmt@newtheorem@predefinition{\thmt@mklistcmd\thmt@recordenvname}
+\def\thmt@newtheorem@predefinition{\thmt@mklistcmd\thmt@recordenvname\thmt@autorefsetup}
 \newcommand\listoftheorems[1][]{\begingroup\setlisttheoremstyle{#1}\lx@thmt@listoftheorems\endgroup}
 \newcommand\setlisttheoremstyle[1]{\kvsetkeys{thmt-listof}{#1}}
 \define@key{thmt-listof}{numwidth}{\def\thmt@listnumwidth{#1}}

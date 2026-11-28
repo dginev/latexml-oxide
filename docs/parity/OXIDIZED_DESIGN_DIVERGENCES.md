@@ -25551,3 +25551,44 @@ latex_constructs.pool.ltxml:4010-4014; left as is). In an article the call errs 
 list_family_arguments_ended_by_a_paragraph}.tex`. **Guard**
 `perfect_kernel_batchlistshort::list_macro_arguments_end_at_a_paragraph`.
 **Upstream**: Rust-only (DG 2026-11-25: no Perl patches for now).
+
+### 1174. A theorem sharing a counter that shares one steps the end of the chain; thmtools' sibling aliases the counter (COUNTERCHAIN)
+
+Related: #614 (llncs's alias counter, `register_counter_alias`), KNOWN_PERL_ERRORS #691 (the shared counter read
+through `\csname`), KNOWN_PERL_ERRORS #1349 (the Perl defect).
+**Rule**: the `counter_for_type` mapping keeps the counter a theorem was declared with (the one LaTeX's
+`\refstepcounter` is passed, which hyperref names the target by); `counter_for_type` follows the mapping to its end, the
+counter stepped and the ids taken. Under thmtools every theorem `\newtheorem` or `\declaretheorem` declares runs
+thm-autoref's setup, `\Xautorefname` the theorem's heading (`refname=` overrides it); one declared with a sibling
+counter (`\declaretheorem[sibling=…]`, numbered; a `\newtheorem{X}[Y]` after thmtools) has `\c@X`, `\theX`, `\theHX`,
+`\p@X` and `\cl@X` become `Y`'s, X recorded as an alias counter. The other definers (llncs/sv `\spnewtheorem`,
+elsarticle's `\newproof`, which thmtools does not patch) run no setup.
+**Perl behavior**: `RefStepCounter` and its kin look up one link (Package.pm:758, :859, :878); `defineNewTheorem`
+records the declared counter (latex_constructs.pool.ltxml:2903-2907); thmtools.sty.ltxml has no `\@counteralias`. So
+`\declaretheorem[sibling=definition]{remark}` over `[sibling=equation]{definition}` steps an undefined `\c@definition`:
+3 Warnings, "Remark 1" where pdflatex prints "Remark 2", the equation after it (2) for (3), the remark's label on
+`<document>`.
+**TeX source**: thm-patch.sty:69-99 redefines `\newtheorem` alone, to run `\thmt@newtheorem@predefinition` first
+(`\declaretheorem` calls it; an unnumbered one as `*{X}{heading}`, no sibling, thm-kv.sty:394-404); thm-autoref.sty:31-44 adds `\thmt@autorefsetup` to it, whose `\@counteralias{X}{Y}` (aliasctr.sty:54-79)
+`\global\let`s the five names; aliascnt's `\newaliascnt` lets the same names. latex.ltx/amsthm `\@othm` errs "No
+counter 'Y' defined" where `\c@Y` is undefined and leaves X undefined.
+**Rust behavior**: `dialect.rs` `counter_for_type` walks the mapping (at most 16 links; a cycle stops where it began).
+`thmt_newtheorem_predefinition`, which `\newtheorem` and `\declaretheorem` call before `define_new_theorem`, sets
+`\thmt@thmname`, `\ifthmt@hassibling` and `\thmt@sibling` and runs the hook; the thmtools binding
+defines `\@counteralias` (aliasctr's, its `\@addtoreset`/`\@removefromreset` patch and cleveref reset copy left out:
+LaTeXML keeps its own resets) and `\thmt@autorefsetup`, and marks aliasctr.sty loaded; its `refname=`/`Refname=` keys are
+applied after the theorem is declared (thm-kv.sty:386-391). A `\newtheorem{X}[Y]` whose Y has no `\c@` but shares a
+counter (no thmtools) is one Warning, `No counter 'Y' defined`, X numbered by the end of the chain; under thmtools a
+sibling with no `\c@` that shares no counter either is one Warning too, and X is not aliased: pdflatex's Errors
+(aliasctr's `\@nocounterr`, then `\@othm`'s) leave X undefined, the recovery here is semantic (2107.02579's
+`numberlike=theo`, whose `\newcounter{theo}` is in the paper's jmlr2e.sty copy, which the binding does not read).
+**Why**: hyperref on a format of 2024-11 or later keeps the kernel `\refstepcounter` (HYPREFSTEP), so no second lookup
+through `\H@refstepcounter` hides the defect any more; 2009.11843 (memoir, thmtools) then misnumbered 102 of its 119 theorem and equation labels
+(every such `\newlabel` in its pdflatex aux; none now), 1809.01129 (aliascnt + apxproof's `\newtheoremrep`) printed "Remark 7" twice.
+**Repros** `tools/perfect_kernel/repros/package-bindings/{thmtools_sibling_of_a_sibling_shares_its_counter,
+newtheorem_over_an_aliascnt_alias_steps_its_root,newtheorem_over_a_shared_counter_type_warns,
+thmtools_sibling_with_no_counter_warns,thmtools_unnumbered_theorem_takes_no_sibling,
+spnewtheorem_after_thmtools_is_not_patched}.tex`.
+**Guards** `perfect_kernel_batchcounterchain::{thmtools_sibling_of_a_sibling_shares_its_counter,
+newtheorem_over_an_aliascnt_alias_steps_its_root, theorem_sharing_a_counter_no_c_names_warns,
+thmtools_unnumbered_theorem_takes_no_sibling, spnewtheorem_after_thmtools_is_not_patched}`.

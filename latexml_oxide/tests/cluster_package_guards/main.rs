@@ -462,6 +462,9 @@ mod perfect_kernel_batchcmpj1;
 /// COPYROUTE: a paper's copy of a bound file read where the binding reads it, its own request for the file the real one;
 /// `\Provides…` records the requested name.
 mod perfect_kernel_batchcopyroute;
+/// COUNTERCHAIN: a theorem sharing a counter that shares one steps the end of the chain; thmtools' sibling aliases
+/// the counter and names the theorem for `\autoref`.
+mod perfect_kernel_batchcounterchain;
 mod perfect_kernel_batchcr10a;
 mod perfect_kernel_batchcr10b;
 mod perfect_kernel_batchcr10c;

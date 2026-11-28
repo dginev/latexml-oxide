@@ -1,0 +1,22 @@
+% witness: COUNTERCHAIN review probe (`\declaretheorem[numbered=no,sibling=theorem]{remark}` before and after the
+%          `theorem` it names)
+% oracle:  pdflatex 0 errors, silent: "Theorem 1.", "Remark.", "Note.", "Theorem 2."; "See 1, 2; own, shared." —
+%          thm-kv.sty:394-404 `\declaretheorem@iii` declares an unnumbered theorem `*{name}{heading}`, no sibling, so
+%          nothing aliases `\c@note`; the numbered `lemma` is `\@counteralias`ed
+% engines: rust COUNTERCHAIN r0 1 Warning (`No counter 'theorem' defined; remark shares no counter with it`),
+%          "own" for the note printed "shared"
+% expect:  0 errors, 0 warnings; the oracle's heads and sentence
+% status:  RED (COUNTERCHAIN r0) -> GREEN (COUNTERCHAIN r1)
+\documentclass{article}
+\usepackage{amsthm,thmtools}
+\declaretheorem[numbered=no,sibling=theorem]{remark}
+\declaretheorem{theorem}
+\declaretheorem[numbered=no,sibling=theorem,name=Note]{note}
+\declaretheorem[sibling=theorem]{lemma}
+\begin{document}
+\begin{theorem}\label{t1} A. \end{theorem}
+\begin{remark} B. \end{remark}
+\begin{note} C. \end{note}
+\begin{theorem}\label{t2} D. \end{theorem}
+\makeatletter See \ref{t1}, \ref{t2}; \ifx\c@note\c@theorem shared\else own\fi, \ifx\c@lemma\c@theorem shared\else own\fi.
+\end{document}

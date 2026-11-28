@@ -962,11 +962,27 @@ pub fn list_id_chain_reaches(start: &str, target: &str) -> Result<bool> {
 
 /// The counter that `\refstepcounter{<ctype>}` steps: the `counter_for_type` mapping (theorem
 /// types sharing a counter), else `<ctype>` itself.
+///
+/// The mapping holds the counter a theorem was declared with, the one LaTeX's `\refstepcounter` is passed and hyperref
+/// names the target by; that may be a type sharing a counter in turn (thmtools' `sibling=` of a `sibling=`, a
+/// `\newtheorem` over an aliascnt alias), whose `\c@` LaTeX aliases to the end of the chain (aliasctr.sty:54-79
+/// `\@counteralias`, aliascnt's `\newaliascnt`). So the chain is followed. Perl takes one link (Package.pm:758),
+/// stepping an undefined `\c@definition`: witnesses 2009.11843, 1809.01129 (KNOWN_PERL_ERRORS #1349, OXIDIZED_DESIGN
+/// #1174).
 pub fn counter_for_type(ctype: &str) -> String {
-  with_mapping("counter_for_type", ctype, |meaning| match meaning {
-    Some(Stored::String(ctr)) => arena::to_string(*ctr),
-    _ => ctype.to_string(),
-  })
+  let mut ctr = ctype.to_string();
+  // (bounded: a cycle of mappings ends where it started)
+  for _ in 0..16 {
+    let next = with_mapping("counter_for_type", &ctr, |meaning| match meaning {
+      Some(Stored::String(next)) => Some(arena::to_string(*next)),
+      _ => None,
+    });
+    match next {
+      Some(next) if next != ctr && next != ctype => ctr = next,
+      _ => break,
+    }
+  }
+  ctr
 }
 
 /// Records `alias` as an alias counter of `base`, as aliascnt.sty's `\newaliascnt{alias}{base}` makes it

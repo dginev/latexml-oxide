@@ -1,0 +1,21 @@
+% witness: 2107.02579 symbols_theorems.tex:343 (`\declaretheorem[…, numberlike=theo]{definitionT}`, whose
+%          `\newcounter{theo}` is in the paper's jmlr2e.sty copy, which the jmlr2e binding does not read)
+% oracle:  pdflatex: "! LaTeX Error: No counter 'lemma' defined." (aliasctr's `\@counteralias`, then `\@othm` on
+%          `\newtheorem{cor}[cor]`: "No counter 'cor' defined", `\cor` undefined), the same three for `foo`/`baz`
+% engines: rust COUNTERCHAIN r1 4 Errors on 2107.02579 (aliasctr's `\@nocounterr`), where INT081TA had none
+% expect:  0 errors, 2 warnings (`No counter 'lemma' defined; cor is numbered by its counter 'theorem'`, `No counter
+%          'foo' defined; baz shares no counter with it`): each theorem is still declared, the recovery semantic;
+%          "Theorem 1", "Corollary 2"
+% status:  CONTROL (pdflatex errs) -> GREEN (COUNTERCHAIN)
+\documentclass{article}
+\usepackage{amsthm}
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}[theorem]{Lemma}
+\usepackage{thmtools}
+\declaretheorem[name=Corollary,sibling=lemma]{cor}
+\declaretheorem[sibling=foo]{baz}
+\begin{document}
+\begin{theorem}\label{t1} A. \end{theorem}
+\begin{cor}\label{c1} B. \end{cor}
+See \ref{t1}, \ref{c1}.
+\end{document}
