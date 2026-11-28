@@ -1,0 +1,20 @@
+% mechanism: latex.ltx:15848 `\def\list#1#2` is not `\long`: a `\par` read as an argument ends the call, "Paragraph
+%   ended before \list was complete" (tex.web §392, §396), the `\par` put back and the call dropped. A stray `\list` and
+%   a blank line after `\begin{thebibliography}` therefore open no list, and the entries stay in the bibliography's own.
+% witness: 1310.5566 (revtex4; 41 entries nested in the stray list: 38 "<ltx:bibitem> isn't allowed in <ltx:bibblock>")
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 1 `!` "Paragraph ended before \list was complete."; References [1]
+%   First entry. [2] Second entry.
+% engines: rust INT081TA 1 Error:malformed "<ltx:bibitem> isn't allowed in <ltx:p>", the entries in an <ltx:itemize>;
+%   main (before `#2\relax`, QA14K2) 0 errors, 1 warning; Perl 0.8.8 nests the same (KNOWN_PERL_ERRORS)
+% expect:  1 Error:unexpected:\par "Paragraph ended before \list was complete", one biblist of 2 bibitems, no itemize
+% status:  RED (INT081TA) -> GREEN (LISTSHORT)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\begin{thebibliography}{9}
+\list
+
+\bibitem{a} First entry.
+\bibitem{b} Second entry.
+\end{thebibliography}
+\end{document}

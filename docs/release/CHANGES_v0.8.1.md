@@ -9,6 +9,12 @@ top of its group.
 
 ### Unreleased
 
+  - **A stray `\list` before a blank line no longer swallows the bibliography.** LaTeX's `\list`, `\usecounter` and
+    `\@mklab` are not `\long`, so a blank line read as an argument ends the call with TeX's "Paragraph ended before
+    \list was complete"; a `\list` left after `\begin{thebibliography}` opened a list that every entry nested in
+    (1310.5566). Perl nests the same way (KNOWN_PERL_ERRORS #1348). OXIDIZED_DESIGN_DIVERGENCES #1173; guard
+    `perfect_kernel_batchlistshort::list_macro_arguments_end_at_a_paragraph`.
+
   - **A `\bordermatrix`'s MathML lines its cells up under their column labels**: the rows below the first no longer
     carry the two empty cells its parentheses already span, which pushed every later cell one column right in a
     browser. Perl's own post skips such cells, and so loses real cells after a `\multirow` in a math array; ours keeps

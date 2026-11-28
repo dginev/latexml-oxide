@@ -1,0 +1,36 @@
+% mechanism: latex.ltx's list macros with arguments are not `\long` — `\list#1#2` (:15848), `\usecounter#1` (:16048),
+%   `\@mklab#1` (:15963) — so a `\par` read as an argument ends the call (tex.web §392, §396): the `\par` is put back
+%   and the call dropped, here for `\list`'s second argument, a `\list` in an enumerate item, `\usecounter` and
+%   `\@mklab`. A blank line after a list's arguments is the list's own paragraph end (control).
+% witness: synthetic (siblings of list_argument_ended_by_a_paragraph_in_a_bibliography, 1310.5566)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 4 `!`: "Paragraph ended before \list was complete." twice,
+%   "... \usecounter ...", "... \@mklab ..."; A / B / 1. C / D / E / F / G / - H / I
+% engines: rust INT081TA 1 Error:malformed (an open itemize at the enumerate's end), 2 Warnings ("\c@\par is not a
+%   register", open groups at `\end{document}`), B..I nested in two stray lists
+% expect:  4 Error:unexpected:\par "Paragraph ended before \X was complete" (\list twice, \usecounter, \@mklab), 0
+%   warnings; paragraphs A, B, the item's C and D, E, F, G; the control list's item H and I
+% status:  RED (INT081TA) -> GREEN (LISTSHORT)
+% preload: ar5iv.sty
+\documentclass{article}
+\makeatletter
+\begin{document}
+A\list{x}
+
+B
+
+\begin{enumerate}\item C\list
+
+D\end{enumerate}
+
+E\usecounter
+
+F\@mklab
+
+G
+
+\begin{list}{-}{}
+
+\item H
+
+I\end{list}
+\end{document}

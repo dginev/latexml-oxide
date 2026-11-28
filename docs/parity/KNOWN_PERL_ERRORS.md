@@ -23205,3 +23205,26 @@ pdflatex: 0 `!`, both rows printed. Perl (same host, 0 errors, 0 warnings): the 
 (and `d`, `b` in the colspan and middle-column shapes of `alignment/multirow_math_array_mathml_cells.tex`). Not
 ported: Rust's post skips no cell, and `\bordermatrix` omits its covered cells as Alignment does (OXIDIZED_DESIGN
 #1171). Guard `perfect_kernel_batchspanned::math_rowspan_covered_cells_are_omitted_once`.
+
+## 1348. Perl's `\list` reads a `\par` argument: a stray `\list` and a blank line nest the bibliography
+
+latex.ltx:15848 `\def\list#1#2` is not `\long`, so TeX stops at a `\par` argument ("Paragraph ended before \list was
+complete", tex.web §392) and drops the call; Perl's `DefMacro('\list{}{}', …)` (latex_constructs.pool.ltxml:1649)
+reads on, as every binding macro does (Expandable.pm:46 stores `isLong` and never reads it when reading arguments; only TeX_Debugging.pool.ltxml:156 reads it, to print `\long`). Minimal trigger:
+
+```latex
+\documentclass{article}
+\begin{document}
+\begin{thebibliography}{9}
+\list
+
+\bibitem{a} First entry.
+\bibitem{b} Second entry.
+\end{thebibliography}
+\end{document}
+```
+
+pdflatex: 1 `!` "Paragraph ended before \list was complete.", References [1] First entry. [2] Second entry. Perl 0.8.8
+(same host): 5 errors and 1 warning ("Missing argument Token for undef" twice, "<ltx:bibitem> isn't allowed in <ltx:p>"),
+both entries inside an `<ltx:itemize>`. Witness 1310.5566 (revtex4). Fixed in Rust (OXIDIZED_DESIGN_DIVERGENCES #1173).
+Guard `perfect_kernel_batchlistshort::list_macro_arguments_end_at_a_paragraph`.

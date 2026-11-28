@@ -377,8 +377,8 @@ pub(crate) fn load() -> Result<()> {
     }
   });
 
-  // Perl: latex_constructs.pool.ltxml L1560
-  DefMacro!("\\@mklab{}", "\\hfil #1");
+  // Perl: latex_constructs.pool.ltxml L1509. Not `\long` (latex.ltx:15963), as `\list` below.
+  DefMacro!("\\@mklab{}", "\\hfil #1", short => true);
 
   // id, but NO refnum (et.al) attributes on itemize \\item ...
   // unless the optional tag argument was given!
@@ -639,10 +639,11 @@ pub(crate) fn load() -> Result<()> {
   // it (`\lx@trivlist@setup` below reads `\@listctr`). OXIDIZED_DESIGN #254;
   // guards `perfect_kernel_batch56::{raw_halign_list_keeps_its_own_item,
   // list_setup_counter_value_survives_into_the_items}` and
-  // tests/structure/itemize.tex.
+  // tests/structure/itemize.tex. Not `\long`, as `\list` below.
   DefMacro!(
     "\\usecounter{}",
-    r"\@nmbrlisttrue\def\@listctr{#1}\setcounter{#1}\z@"
+    r"\@nmbrlisttrue\def\@listctr{#1}\setcounter{#1}\z@",
+    short => true
   );
 
   // `\@listdepth` accounting mirrors latex.ltx:15852 (`\list` … `\global
@@ -668,9 +669,13 @@ pub(crate) fn load() -> Result<()> {
   // which would mark every item's paragraphs `ltx_noindent`, tex_paragraph.rs). Perl's `\list`
   // (latex_constructs.pool.ltxml:1649) sets none, so a `width=\linewidth` graphic in a list took the text's width.
   // OXIDIZED_DESIGN_DIVERGENCES #29.
+  // `\def\list#1#2` is not `\long`: a `\par` argument ends the call, "Paragraph ended before \list was complete"
+  // (tex.web §392), so a stray `\list` and a blank line after `\begin{thebibliography}` open no list (1310.5566: every
+  // entry nested in it; Perl nests too). Guard `perfect_kernel_batchlistshort::list_macro_arguments_end_at_a_paragraph`.
   DefMacro!(
     r"\list{}{}",
-    r"\global\advance\@listdepth\@ne\lx@list@params\def\@itemlabel{#1}\let\@listctr\@empty\@nmbrlistfalse#2\relax\@trivlist\lx@list@margins"
+    r"\global\advance\@listdepth\@ne\lx@list@params\def\@itemlabel{#1}\let\@listctr\@empty\@nmbrlistfalse#2\relax\@trivlist\lx@list@margins",
+    short => true
   );
   // latex.ltx:15854-15859: `\@list<depth>`, then `\let\makelabel\@mklab`, so neither a class's `\@list<depth>` label
   // (tlp.cls `\makeRLlabel`, 1210.0368) nor an enclosing list's reaches the items; identity, as `\@mklab`'s `\hfil`

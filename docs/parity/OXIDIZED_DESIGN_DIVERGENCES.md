@@ -14880,7 +14880,8 @@ came (KNOWN_PERL_ERRORS #1014).
 `\footnote` and `\footnotetext` are such macros, handing the text to the note constructors. 79m: ams_support_sty.rs's
 `\title`, `\subjclass`, `\keywords`, `\dedicatory`, `\translator` (amsart.cls:457/551-568, amsbook.cls, amsproc.cls:
 `\renewcommand*`, `\newcommand*`, `\def`), so a `\subjclass{…` whose `}` never comes stops at the paragraph's end
-(KNOWN_PERL_ERRORS #1150; 2212.11488). No other binding is changed: a binding's macros stay `\long` unless the
+(KNOWN_PERL_ERRORS #1150; 2212.11488). LISTSHORT: the kernel's `\list`, `\usecounter` and `\@mklab`
+(latex_constructs/sect06.rs; #1173). No other binding is changed: a binding's macros stay `\long` unless the
 original's non-`\long` reading is the point. Guards `perfect_kernel_batch77v::amsppt_footnote_argument_runs_past_par`,
 `perfect_kernel_batch79m::an_unclosed_subjclass_ends_at_the_paragraph`.
 
@@ -25528,3 +25529,25 @@ still forces `@` to a letter, as Perl. `mouth.rs` `initialize` asks `@`'s catcod
 `w/@ other`, and `\usepackage{xy}` keeps Perl's `w/@ other xy.tex`.
 **Witness** coverpage/SimpleSample. **Guards** `perfect_kernel_batch61::input_from_a_package_keeps_the_catcodes`,
 `cluster_cli::log_note_nesting::definitions_note_says_at_other_only_where_it_is`.
+
+### 1173. LaTeX's `\list`, `\usecounter` and `\@mklab` are not `\long`: a `\par` argument ends the call (Perl: read on)
+
+Related: #442 (the check), #782 (`short => true`), #29 (the `\list` registers), KNOWN_PERL_ERRORS #1348.
+**TeX source**: latex.ltx:15848 `\def\list#1#2`, :16048 `\def\usecounter#1`, :15963 `\def\@mklab#1`, none `\long`: a
+`\par` read as an argument ends the call, "Paragraph ended before \list was complete" (tex.web §392, §396), the `\par`
+read again and the call dropped. The family's other macros with arguments have no macro port here: `\@item[#1]`,
+`\@bibitem#1` and `\@lbibitem[#1]#2` are the `\item`/`\bibitem` constructors' work, `\makelabel` is set per list
+(`\let\makelabel\@firstofone` in `\lx@list@params`, sect06.rs ~:686, unchanged); `\trivlist`, `\@trivlist`, `\endlist`, `\endtrivlist` and `\item` take no argument.
+**Perl behavior**: `DefMacro('\list{}{}', …)` (latex_constructs.pool.ltxml:1649) reads across the blank line; a stray
+`\list` after `\begin{thebibliography}` takes `\par` and the first entry's text as its arguments and opens a list
+every entry nests in.
+**Rust behavior**: the three ports in `latex_constructs/sect06.rs` are `short => true` (#782), so they check as TeX's
+non-`\long` macros do. Since `\list` runs its setup argument (`#2\relax`, #29), the stray call opened a real list:
+1310.5566 (revtex4) went from 2 to 40 Errors, 38 of them "<ltx:bibitem> isn't allowed in <ltx:bibblock>"; now 1 Error,
+"Paragraph ended before \list was complete", and its 41 entries in one biblist. pdflatex gives 0 there: revtex4.cls's
+`thebibliography` takes `\list` as its own argument, ours reads that argument only when braced (Perl
+latex_constructs.pool.ltxml:4010-4014; left as is). In an article the call errs in pdflatex too.
+**Repros** `tools/perfect_kernel/repros/list-structure/{list_argument_ended_by_a_paragraph_in_a_bibliography,
+list_family_arguments_ended_by_a_paragraph}.tex`. **Guard**
+`perfect_kernel_batchlistshort::list_macro_arguments_end_at_a_paragraph`.
+**Upstream**: Rust-only (DG 2026-11-25: no Perl patches for now).
