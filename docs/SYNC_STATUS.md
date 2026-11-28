@@ -94,7 +94,7 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (487 items on 2026-11-27 on `int/towards_v0_8_1`: 487 open, weight 1040, 36 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (488 items on 2026-11-28 on `int/towards_v0_8_1`: 488 open, weight 1043, 36 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
 
 
   - ODR6 — OD ruling 12 (recorded in OD #449): `dump_reader.rs`'s "add-only" docstrings (:365, :574) corrected, then a removal trial of the skip lists against CLAUDE.md rule 2; 1
@@ -1797,16 +1797,37 @@ Rules that keep this file honest and mergeable:
     caught as a cycle Fatal: the conversion now runs to the deadline and keeps nothing (0805.0686, 0808.1477, 1812.11491,
     math0609583: Paul Taylor's inline diagram macros, `\reformatmatrix`'s `\setbox…\lastbox` loop; Perl loops too, pdflatex is
     clean). (B) its window 10 → 32 reads a pgfplots table's repeated rows inside a box as a cycle (2210.07754, a false Fatal; Perl
-    and pdflatex clean) — writer CYCLEPERSIST. (C) DIGFATALCLOSE `e064b7f3dca`'s math-cell closer in `digest_alignment_body`
+    and pdflatex clean). (A) and (B) FIXED by CYCLEPERSIST: a period Fatals only once it has held (OD #538; guards
+    `perfect_kernel_batchcyclepersist::{a_runaway_counter_loop_of_boxes_is_a_cycle_fatal, a_finite_twelve_box_counter_loop_is_no_cycle,
+    a_plot_of_repeated_rows_is_no_cycle}` and the ignored RED `a_long_finite_two_box_counter_loop_is_no_cycle_red`; leftovers
+    CYCLEPERSIST-RESIDUAL). (C) DIGFATALCLOSE `e064b7f3dca`'s math-cell closer in `digest_alignment_body`
     (`tex_tables.rs` ~:1200-1218) reads `alignmentStartColumn`/`IN_MATH` at salvage time from the innermost cell's frame (Perl
     reads them at the cell's own end, `TeX_Tables.pool.ltxml:471`, `Alignment.pm:252`), and a missing column returns an empty
     success, so the cell and everything spliced into it vanish with no diagnostic (2508.07005, 1903.08357, 2512.02946, 2308.08362,
     2003.09520, 2605.27225, 2604.12070; repro `\begin{tabular}{l} outer words \begin{tabular}{lll} a & b & Beta words \lxmbf`: the
-    pre-DIGFATALCLOSE binary keeps both phrases, int neither) — writer DIGCELLCOL. Blocks INT2MAIN.
+    pre-DIGFATALCLOSE binary keeps both phrases, int neither). (C) FIXED by DIGCELLCOL: a salvaged cell reads its own
+    `Alignment::{cell_start_column, cell_in_math}`, and a cell with no column is kept (OD #251; guard rows in
+    `fatal_salvages_partial_document::a_digestion_fatal_closes_each_unfinished_construct`). Open: the block content such a cell
+    hands back inside a formula (HANDBACKBLOCK, 2508.07005, 2512.02946). Blocks INT2MAIN.
     - EOFPUTBACK (`b5719f2c5bc`, Perl's put-back) turns `Fatal:Mouth:EoF … Until:` with no content into `Error:expected:Until:`
       with the content kept (hep-th9308151, 2012.04400, math0404023, 0811.2708, 2206.12726, math0312174, 2302.01695, 2001.01619,
       1906.11114, chao-dyn9912038, math9201259, 1404.5770; 1805.11392, cond-mat9709326, 1602.06861 and 1709.05045 then reach
       TooManyErrors(100) with their text kept): a gain, recorded here so an A/B tally does not count it as worse; 5
+  - CYCLEPERSIST-RESIDUAL — (CYCLEPERSIST 2026-11-27: the stomach's box-cycle Fatal comes only after a hold — 50,000 boxes for an
+    exact repeat, 2,000,000 tokens when only register values move; OD #538; witnesses 0805.0686, 0808.1477, 1812.11491, math0609583,
+    2210.07754) five leftovers:
+    - (a) `\lastbox` after `\unhbox` of a `\lastbox`'d `\halign` row takes one box where pdflatex takes two
+      (`scratch_intfatalreg/rep4/h2.tex`: pdflatex "Count: 2", ours 1) — a sibling kernel gap, not on its own the cause of Taylor's
+      `\reformatmatrix` loop never running dry (that root is still open; Perl loops too).
+    - (b) a loop that stays in the gullet and moves a counter (`\loop\advance\n1 \ifnum\n>0 \repeat`) still runs to the deadline: the
+      same hold could apply to the gullet's guard.
+    - (c) finite repeated data longer than 50k boxes past the 50k activation point still reads as a loop
+      (`perfect_kernel_batch108b`'s fixture was doubled to 32,768 words to keep its path covered);
+    - (d) a finite EXACT repeat with a window of 11–32 boxes past ~100k boxes (a 12-box row
+      expanded 9,000 times, no counter) converts on 0.8.0 but ends in the cycle Fatal on int (CYCLEWIN's window 32) and after
+      CYCLEPERSIST — kept as a recorded bound unless a real paper shows it (round 1's control population);
+    - (e) a counter-moving runaway with a window over 10 boxes is not caught (round 1 limits the moving class to ≤ 10 so a
+      finite counter loop never Fatals where 0.8.0 converts it); it runs to the box cap or the deadline, as in 0.8.0; 3
   - EOFPUTBACK-RUNAWAY — after EOFPUTBACK, `\@tempc`/`\@iforloop` re-request their delimited argument at the end of input and the
     same `Error:expected:Until:` fires 501 times until `Fatal:TooManyErrors:MaxLimit(500) Runaway` (2511.11682, 2510.17429; both
     share an earlier `\def` between `\csname`/`\endcsname` from `\cref@{thm}{Theorem}`; 0 words on both sides). Check Perl on
