@@ -91,6 +91,11 @@ See `docs/performance/PERFORMANCE.md` for the full perf-track methodology.
 
 - **`test_with_tl2023.sh`** — run the test suite against a TeXLive 2023
   install (matching the sibling canvas-machine).
+- **`artifact_check.sh <binary> notex|tex [<sha256>|<dumps dir>]`** — which
+  format a shipped binary loads, and clean conversions on it: `notex` hides TeX
+  (the embedded dump), `tex` gives a fresh format cache (the format built for the
+  tree); both run `release_smoke.sh`. Every release leg and
+  `release-platform-check.yml` run it (docs/release/RELEASING.md).
 
 ### AI agent tools (`claude_` prefix)
 

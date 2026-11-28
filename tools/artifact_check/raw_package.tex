@@ -1,0 +1,9 @@
+% A package read from the TeX tree (xparse.sty, no LaTeXML binding of its own body): expl3 refuses a format whose L3
+% kernel is not the tree's ("Mismatched LaTeX support files", expl3.sty), so tools/artifact_check.sh's `tex` mode
+% converts it on the format built for the tree.
+\documentclass{article}
+\usepackage{xparse}
+\NewDocumentCommand{\pair}{m O{right}}{left-#1-#2}
+\begin{document}
+\pair{a} \pair{b}[c] raw-package-text
+\end{document}

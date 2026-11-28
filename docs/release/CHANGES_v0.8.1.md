@@ -15,6 +15,17 @@ top of its group.
     (1310.5566). Perl nests the same way (KNOWN_PERL_ERRORS #1348). OXIDIZED_DESIGN_DIVERGENCES #1173; guard
     `perfect_kernel_batchlistshort::list_macro_arguments_end_at_a_paragraph`.
 
+  - **Release checks name the format a shipped binary loads.** On every release leg, and in
+    `release-platform-check.yml` on a published binary, `tools/artifact_check.sh <binary> notex` hides TeX from the
+    binary and requires it to load its embedded format dump (on the release legs, the decompressed bytes matching the run's
+    `resources/dumps`; reported in `release-platform-check.yml`) and to convert `hello.tex`, `tools/notex_smoke.sh`'s article and an expl3/ltcmd/hook document
+    clean; it then runs `tools/release_smoke.sh`. The Linux legs add `tex`: the format built for the runner's TeX Live
+    into a fresh cache, then loaded by a raw-xparse document with no "Mismatched LaTeX support files" (report-only on
+    ubuntu-22.04's TeX Live 2021). The no-TeX hello's `missing_file:l3backend-pdftex` Warning is reported, not yet
+    gated (row NOTEX-L3BACKEND, pinned by `perfect_kernel_batchrelwf0::notex_dump_backend_load_warns`). The release
+    comments that said a no-TeX artifact runs on the no-dump branch now say it loads the embedded dump, and
+    `tools/notex_smoke.sh` accepts an artifact's kpathsea backend line.
+
   - **A `\bordermatrix`'s MathML lines its cells up under their column labels**: the rows below the first no longer
     carry the two empty cells its parentheses already span, which pushed every later cell one column right in a
     browser. Perl's own post skips such cells, and so loses real cells after a `\multirow` in a math array; ours keeps

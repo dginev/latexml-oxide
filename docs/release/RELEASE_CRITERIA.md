@@ -126,8 +126,12 @@ behaviour for this during parity work; document what is safe where. Open, for 1.
 cost is unaffected:
 - **Size budget** (§2): 64 MB, a runaway-growth alarm, on both Linux legs.
 - **Self-contained:** `ldd`/`otool`/`dumpbin` assert that no bundled C library stays dynamic.
-- **Embedded resources and a real conversion:** on all five legs, `tools/release_smoke.sh` converts `hello.tex` with
-  the shipped binary and `resources/` moved aside; `cluster_cli::single_binary_smoke` isolates the working directory.
+- **Embedded resources, the embedded format and a real conversion:** on all five legs, `tools/artifact_check.sh
+  <binary> notex` asserts that with no TeX reachable the shipped binary loads its embedded format dump (the decompressed
+  bytes matching `resources/dumps`) and converts hello, a small article and expl3/ltcmd/hook code clean, then runs
+  `tools/release_smoke.sh` (`hello.tex` with `resources/` moved aside, the bundled ar5iv.css); the Linux legs add the
+  `tex` mode (the format built for the runner's tree, report-only on TeX Live 2021).
+  `cluster_cli::single_binary_smoke` isolates the working directory.
 - **Version and signature:** `--version` prints the tag and commit; both macOS legs verify the ad-hoc signature.
 - **Notices:** the `notices` job runs `tools/gen_notices.sh` and `tools/audit_vendored_natives.py`; the notices ship in
   every archive, both `.deb`s (`/usr/share/doc`) and as a release asset.

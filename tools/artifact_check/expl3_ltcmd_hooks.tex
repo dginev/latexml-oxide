@@ -1,0 +1,19 @@
+% The expl3, ltcmd and hook layers of the LaTeX format, without a package: tools/artifact_check.sh converts it with
+% no TeX tree, where only the embedded format dump defines them (LATEXML_NODUMP=1 leaves 21 errors and lost text on 0.8.0-rc6).
+\documentclass{article}
+\NewDocumentCommand{\greet}{O{World} m}{Hello, #1 and #2.}
+\NewDocumentCommand{\starry}{s m}{\IfBooleanTF{#1}{starred-#2}{plain-#2}}
+\ExplSyntaxOn
+\tl_new:N \l_artifactcheck_word_tl
+\tl_set:Nn \l_artifactcheck_word_tl { expl-three-word }
+\int_new:N \l_artifactcheck_count_int
+\int_set:Nn \l_artifactcheck_count_int { 6 * 7 }
+\NewDocumentCommand{\acword}{}{ \tl_use:N \l_artifactcheck_word_tl }
+\NewExpandableDocumentCommand{\account}{}{ \int_use:N \l_artifactcheck_count_int }
+\ExplSyntaxOff
+\AddToHook{begindocument}{\gdef\hookword{hook-ran-at-begindocument}}
+\begin{document}
+\greet{Moon} \greet[Sun]{Stars} \starry*{one} \starry{two}
+
+\acword; count=\account. \hookword
+\end{document}

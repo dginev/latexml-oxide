@@ -1,11 +1,12 @@
 name: release platform check
 
-# Runs tools/render_platform_check.sh on a PUBLISHED release's macOS and
-# Windows binaries: a generated split document converted with the automatic
-# page-render fleet, serially (LATEXML_RENDER_JOBS=1), and again over the fleet
-# run's own output. The fleet is otherwise exercised only by Linux runs and CI
-# tests (SYNC_STATUS row R, RENDERPLATFORMS); run this on every release
-# candidate before the final tag (docs/release/RELEASING.md).
+# Runs tools/artifact_check.sh (no TeX: the embedded format, clean conversions,
+# tools/release_smoke.sh) and tools/render_platform_check.sh on a PUBLISHED
+# release's macOS and Windows binaries. The latter converts a generated split
+# document with the automatic page-render fleet, serially (LATEXML_RENDER_JOBS=1),
+# and again over the fleet run's own output. The fleet is otherwise exercised
+# only by Linux runs and CI tests (SYNC_STATUS row R, RENDERPLATFORMS); run this
+# on every release candidate before the final tag (docs/release/RELEASING.md).
 on:
   workflow_dispatch:
     inputs:
@@ -73,16 +74,22 @@ jobs:
           "$bin" --version
           echo "path=$bin" >> "$GITHUB_OUTPUT"
 
-      # The published binary converts with resources/ moved aside, and `--css=ar5iv.css --nodefaultresources` writes
-      # the bundled ar5iv.css beside the page (tools/release_smoke.sh, also run by every release leg before publishing).
-      # The tag's own script: an older one has no ar5iv checks (or no script), said as a notice.
-      # Not on a pull request: that checks the newest published release with the pull request's script.
-      - name: Conversion smoke and the bundled ar5iv.css
+      # The published binary, with no TeX, loads the format dump embedded in it and converts hello, an article and
+      # expl3/ltcmd/hook code clean (tools/artifact_check.sh `notex`), then converts with resources/ moved aside, and
+      # `--css=ar5iv.css --nodefaultresources` writes the bundled ar5iv.css beside the page (tools/release_smoke.sh,
+      # which artifact_check.sh runs). Every release leg runs the same before publishing. The tag's own scripts: an
+      # older tag has only release_smoke.sh, with or without its ar5iv checks, or neither, said as a notice.
+      # Not on a pull request: that checks the newest published release with the pull request's scripts.
+      - name: Artifact check, conversion smoke and the bundled ar5iv.css
         if: ${{ github.event_name != 'pull_request' }}
         env:
           TAG: ${{ steps.tag.outputs.tag }}
         run: |
           tag="$TAG"
+          if [ -f tools/artifact_check.sh ]; then
+            bash tools/artifact_check.sh "${{ steps.bin.outputs.path }}" notex; exit
+          fi
+          echo "::notice::$tag predates tools/artifact_check.sh (0.8.1): only tools/release_smoke.sh runs"
           if [ ! -f tools/release_smoke.sh ]; then
             echo "::notice::$tag predates tools/release_smoke.sh (0.8.0-rc2): the conversion smoke is skipped"; exit 0
           elif ! grep -q 'ar5iv' tools/release_smoke.sh; then

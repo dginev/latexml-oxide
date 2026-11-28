@@ -287,8 +287,8 @@ jobs:
       # the signature survived, and actually running `--version` proves the
       # binary launches on this arch end-to-end (the real Killed:9 gate — this
       # is what lets the release auto-publish, below, without a manual "download
-      # and confirm it runs" step). The step after it converts hello.tex with this
-      # binary (tools/release_smoke.sh); CI.yml's macOS test job covers the rest.
+      # and confirm it runs" step). The step after it converts with this binary
+      # (tools/artifact_check.sh); CI.yml's macOS test job covers the rest.
       # NOT notarization — ripgrep-style posture, see RELEASING.md "macOS
       # Gatekeeper & code signing".
       - name: verify code signature + launch smoke
@@ -302,11 +302,14 @@ jobs:
 
       # The shipped binary converts a document, not just launches (DG 2026-11-21:
       # rc1's macOS legs ran only `--version`). No TeX Live on this runner, so it
-      # is the no-dump branch with the embedded bindings, resources/ moved aside.
-      - name: conversion smoke (embedded resources, no TeX)
+      # loads the format dump embedded in it: tools/artifact_check.sh asserts that
+      # load, the decompressed dump's sum against resources/dumps, and clean
+      # conversions (hello, an article, expl3/ltcmd/hook code), then runs
+      # tools/release_smoke.sh (resources/ moved aside, the bundled ar5iv.css).
+      - name: conversion smoke (embedded format and resources, no TeX)
         run: |
-          bash tools/release_smoke.sh "$(find target/release-artifacts -name latexml_oxide -type f | head -1)" \
-            latexml_oxide/tests/hello/hello.tex
+          bash tools/artifact_check.sh "$(find target/release-artifacts -name latexml_oxide -type f | head -1)" \
+            notex resources/dumps
 
       - name: upload macOS artifact
         uses: actions/upload-artifact@v5
@@ -434,11 +437,14 @@ jobs:
 
       # The shipped binary converts a document, not just launches (DG 2026-11-21:
       # rc1's macOS legs ran only `--version`). No TeX Live on this runner, so it
-      # is the no-dump branch with the embedded bindings, resources/ moved aside.
-      - name: conversion smoke (embedded resources, no TeX)
+      # loads the format dump embedded in it: tools/artifact_check.sh asserts that
+      # load, the decompressed dump's sum against resources/dumps, and clean
+      # conversions (hello, an article, expl3/ltcmd/hook code), then runs
+      # tools/release_smoke.sh (resources/ moved aside, the bundled ar5iv.css).
+      - name: conversion smoke (embedded format and resources, no TeX)
         run: |
-          bash tools/release_smoke.sh "$(find target/release-artifacts -name latexml_oxide -type f | head -1)" \
-            latexml_oxide/tests/hello/hello.tex
+          bash tools/artifact_check.sh "$(find target/release-artifacts -name latexml_oxide -type f | head -1)" \
+            notex resources/dumps
 
       - name: upload macOS Intel artifact
         uses: actions/upload-artifact@v5
@@ -455,7 +461,7 @@ jobs:
   # natively), so it gets its own arm64 runner. `ubuntu-22.04-arm` ships glibc
   # 2.35 for the same broad-compatibility reason as the x86_64 leg (see header).
   # A full build+gate peer of the publishing `release` job below — same static
-  # linkage, self-contained ldd check, conversion + embedded-resource smokes,
+  # linkage, self-contained ldd check, conversion smoke + artifact checks,
   # and size budget — minus the publish (its assets are collected there).
   build-linux-arm64:
     name: Build Linux arm64 ${{ github.ref_name }}
@@ -585,10 +591,24 @@ jobs:
           fi
           echo "OK: hello.tex converts clean on arm64 ($(wc -c <"$out/hello.html") bytes, 0 errors)"
 
-      - name: embedded-resource smoke (no own-resource disk read)
+      # tools/artifact_check.sh with this machine's TeX Live hidden: the embedded
+      # format dump is loaded, its decompressed sum matches resources/dumps, hello,
+      # an article and expl3/ltcmd/hook code convert clean, and tools/release_smoke.sh
+      # passes (resources/ moved aside, the bundled ar5iv.css).
+      - name: artifact check without TeX (embedded format and resources)
         run: |
-          bash tools/release_smoke.sh "$(find target/release-artifacts -name latexml_oxide -type f | head -1)" \
-            latexml_oxide/tests/hello/hello.tex
+          bash tools/artifact_check.sh "$(find target/release-artifacts -name latexml_oxide -type f | head -1)" \
+            notex resources/dumps
+
+      # The same binary with the runner's TeX Live: the format is built for the tree
+      # into a fresh cache, and a raw expl3 package loads it. Report-only on
+      # ubuntu-22.04's TeX Live 2021 until the support floor is ruled (DG 2026-11-27).
+      - name: artifact check with TeX Live (format built for the tree)
+        continue-on-error: true
+        # Report-only: a hang here must not cancel the publish job.
+        timeout-minutes: 15
+        run: |
+          bash tools/artifact_check.sh "$(find target/release-artifacts -name latexml_oxide -type f | head -1)" tex
 
       - name: upload Linux arm64 artifacts
         uses: actions/upload-artifact@v5
@@ -745,8 +765,8 @@ jobs:
       # the runner has the VC++ redist, so even a dynamic-CRT `.exe` would launch
       # here. So we ALSO assert (via dumpbin) that the import table carries no
       # VCRUNTIME — the actual property that lets the `.exe` run on a clean
-      # Windows. The step after it converts hello.tex with this .exe (no TeX Live
-      # on this leg); windows-ci-manual-trigger.yml runs the full suite with TeX Live.
+      # Windows. The step after it converts with this .exe (tools/artifact_check.sh, no
+      # TeX on this leg); windows-ci-manual-trigger.yml runs the full suite with TeX Live.
       - name: launch smoke + self-containment guard
         shell: bash
         run: |
@@ -773,13 +793,13 @@ jobs:
           echo "OK: imports only core OS DLLs — fully static, runs on any Windows / any TeX distro"
 
       # The shipped .exe converts a document, not just launches (DG 2026-11-21:
-      # rc1's Windows leg ran only `--version`): the no-dump branch with the
-      # embedded bindings, resources/ moved aside.
-      - name: conversion smoke (embedded resources, no TeX)
+      # rc1's Windows leg ran only `--version`). No TeX on this runner, so it loads
+      # the format dump embedded in it: tools/artifact_check.sh, as on the macOS legs.
+      - name: conversion smoke (embedded format and resources, no TeX)
         shell: bash
         run: |
-          bash tools/release_smoke.sh "$(find target/release-artifacts -name '*.exe' -type f | head -1)" \
-            latexml_oxide/tests/hello/hello.tex
+          bash tools/artifact_check.sh "$(find target/release-artifacts -name '*.exe' -type f | head -1)" \
+            notex resources/dumps
 
       - name: upload Windows artifact
         uses: actions/upload-artifact@v5
@@ -1032,14 +1052,27 @@ jobs:
           fi
           echo "OK: hello.tex converts clean ($(wc -c <"$out/hello.html") bytes, 0 errors)"
 
-      # Prove the binary reads NONE of its own resources from disk: move the
-      # dev-tree resources/ aside and re-run a conversion. Dumps, XSLT, RelaxNG,
-      # and CSS must all come from the embedded tables (RELEASE_CRITERIA §7;
+      # Prove the binary reads NONE of its own resources from disk, and which format
+      # it loads: tools/artifact_check.sh hides this machine's TeX Live and the
+      # dev-tree resources/, asserts the embedded format dump's load and its
+      # decompressed sum against resources/dumps, converts hello, an article and
+      # expl3/ltcmd/hook code clean, and runs tools/release_smoke.sh (XSLT, RelaxNG
+      # and CSS from the embedded tables, the bundled ar5iv.css; RELEASE_CRITERIA §7;
       # complements tests/001_single_binary_smoke.rs, which only isolates cwd).
-      - name: embedded-resource smoke (no own-resource disk read)
+      - name: artifact check without TeX (embedded format and resources)
         run: |
-          bash tools/release_smoke.sh "$(find target/release-artifacts -name latexml_oxide -type f | head -1)" \
-            latexml_oxide/tests/hello/hello.tex
+          bash tools/artifact_check.sh "$(find target/release-artifacts -name latexml_oxide -type f | head -1)" \
+            notex resources/dumps
+
+      # The same binary with the runner's TeX Live: the format is built for the tree
+      # into a fresh cache, and a raw expl3 package loads it. Report-only on
+      # ubuntu-22.04's TeX Live 2021 until the support floor is ruled (DG 2026-11-27).
+      - name: artifact check with TeX Live (format built for the tree)
+        continue-on-error: true
+        # Report-only: a hang here must not cancel the publish job.
+        timeout-minutes: 15
+        run: |
+          bash tools/artifact_check.sh "$(find target/release-artifacts -name latexml_oxide -type f | head -1)" tex
 
       # Pull the macOS tarball (+ sidecar) built by the build-macos job into
       # the staging dir so they publish alongside the Linux artifacts.
@@ -1076,11 +1109,11 @@ jobs:
       #   * RC tag     X.Y.Z-rcN  -> a DRAFT prerelease for cross-OS testing.
       # Auto-publishing a final tag is safe because every asset is gated before
       # it gets here: each build leg verifies static linkage (ldd/otool), runs a
-      # real conversion smoke (Linux legs) or a launch smoke + code-signature
-      # check (macOS legs) or a launch smoke (Windows leg), and enforces the size
-      # budget; macOS conversion paths are additionally covered by CI.yml's macOS
-      # test job. The build stays tied to a release tag (no workflow_dispatch, no
-      # "random" builds). If a published asset is ever found broken, delete the
+      # launch smoke (and checks the code signature on macOS), enforces the size
+      # budget, and converts with the shipped binary on its embedded format with no
+      # TeX (tools/artifact_check.sh); macOS conversion paths are additionally
+      # covered by CI.yml's macOS test job. The build stays tied to a release tag
+      # (no workflow_dispatch, no "random" builds). If a published asset is ever found broken, delete the
       # Release + tag, bump the patch, and re-tag (RELEASING.md "Failure recovery").
       # Append GitHub's generated notes — every merged PR since the previous tag — below the curated RELEASE_BODY
       # summary, with the "What's Changed" list folded into a <details> block so a long list does not swamp the page

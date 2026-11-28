@@ -1,0 +1,14 @@
+% witness: row NOTEX-L3BACKEND — every 0.8.0-rc1..rc6 release binary on a machine without TeX Live (its embedded
+%          dump); latexml_oxide/tests/hello/hello.tex, the release legs' smoke document
+% oracle:  pdflatex 0 errors; Hello World!
+% engines: rust (0.8.0-rc5, `env -i PATH=/nonexistent TEXMFCNF=/nonexistent`) = 0 errors, 1 warning:
+%          Warning:missing_file:l3backend-pdftex, raised by `\begin{document}`'s `\lx@sys@load@backend`
+%          (latex_constructs/sect02.rs, RUST-ONLY) with no tree to read the .def from; with a TeX tree, or on the
+%          no-dump branch, 0 warnings (2026-11-27)
+% expect:  0 errors, 0 warnings with no TeX tree; <p>Hello World!</p>
+% status:  RED
+\documentclass{article}
+\def\world{World}
+\begin{document}
+Hello \world!
+\end{document}

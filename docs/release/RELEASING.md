@@ -193,7 +193,7 @@ What this means concretely:
 - **Linux = x86_64 + aarch64, as both a tarball and a `.deb` each.** The
   arm64 leg (`build-linux-arm64`, `ubuntu-22.04-arm`) is a full build+gate
   peer of the x86_64 `release` leg — same static linkage, `ldd`
-  self-contained check, conversion + embedded-resource smokes, and 64 MB size
+  self-contained check, conversion smoke + `tools/artifact_check.sh`, and 64 MB size
   budget — for AWS Graviton / Ampere / Raspberry Pi OS 64-bit / Apple-Silicon
   Linux VMs. `cargo deb` derives the control-file `Architecture:` from the
   native host; `make_release.sh` labels the filename `arm64` (vs `amd64`) from
@@ -615,11 +615,24 @@ settings.
    unpublished until the manual publish in "Publishing an RC for external
    download" above. This is safe because every asset is gated in-CI before publish:
    static-linkage checks (`ldd`/`otool`/`dumpbin`), the size budget, a code-signature
-   + `--version` launch smoke on both macOS legs, and on all five legs a real
-   conversion of `hello.tex` by the shipped binary with `resources/` moved aside
-   (`tools/release_smoke.sh`; with no TeX Live on the macOS and Windows runners) —
-   plus CI.yml's macOS test job covers arm64 conversion paths
-   on the same arch. If a published asset is later found broken, use *Failure
+   + `--version` launch smoke on both macOS legs, and on all five legs
+   `tools/artifact_check.sh <binary> notex resources/dumps`: with no TeX reachable
+   (`env -i`, `PATH=/nonexistent`, `TEXMFCNF=/nonexistent`, a fresh home and temp
+   dir, the dev-tree `resources/` moved aside) the shipped binary must load the
+   format dump embedded in it (`Info:latex_dump:embedded using embedded TL<Y>`, then
+   `Loaded N entries from <embedded TL<Y>>` with 0 errors), the dump it decompresses
+   must match `resources/dumps/latex.<Y>.dump.txt`, and `hello.tex`,
+   `tools/notex_smoke.sh`'s article and `tools/artifact_check/expl3_ltcmd_hooks.tex`
+   must convert with no Error or Fatal and keep their text; it then runs
+   `tools/release_smoke.sh` (`resources/` moved aside, the bundled ar5iv.css). The
+   hello Warnings are reported, not yet gated (row NOTEX-L3BACKEND). The two Linux
+   legs also run `artifact_check.sh <binary> tex`, report-only on ubuntu-22.04's TeX
+   Live 2021: with a fresh `LATEXML_FORMAT_CACHE` the first conversion builds the
+   latex format for the tree (no `Warning:dump:build_failed`) and a raw-package
+   document (`tools/artifact_check/raw_package.tex`, raw xparse.sty and expl3.sty)
+   loads it with no "Mismatched LaTeX support files". Every check prints a
+   `PASS`/`FAIL`/`NOTE` line; a `FAIL` fails the step. Plus CI.yml's macOS test job
+   covers arm64 conversion paths on the same arch. If a published asset is later found broken, use *Failure
    recovery* below. (To re-add a human review gate, set `draft: true` and
    publish manually.)
 
@@ -632,9 +645,10 @@ settings.
    After an RC is published, dispatch `release-platform-check.yml` (`gh workflow
    run release-platform-check.yml -f tag=X.Y.Z-rcN`; with no `tag` it checks the
    newest published release). On `macos-15`, `macos-15-intel` and `windows-latest`
-   it downloads the release asset, verifies its checksum and runs
-   `tools/render_platform_check.sh`. The script converts an 80-section split
-   document three ways: with the automatic fleet, serially (`LATEXML_RENDER_JOBS=1`),
+   it downloads the release asset, verifies its checksum, runs
+   `tools/artifact_check.sh <binary> notex` (the tag's own copy; a tag before it runs
+   `tools/release_smoke.sh` alone) and `tools/render_platform_check.sh`. The latter
+   converts an 80-section split document three ways: with the automatic fleet, serially (`LATEXML_RENDER_JOBS=1`),
    and with the fleet again over the first run's output, so `writer::Staged`
    renames land on existing files. It requires byte-identical sites, an engaged
    fleet, no abandoned fleet and no Error. The fleet otherwise runs only in Linux

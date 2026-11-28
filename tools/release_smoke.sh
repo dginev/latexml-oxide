@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 # release_smoke.sh <latexml_oxide binary> <hello.tex> — the conversion smoke every release leg runs on the binary it
-# ships (release.yml; DG 2026-11-21, after rc1's macOS and Windows legs ran only `--version`).
+# ships, through tools/artifact_check.sh (release.yml; DG 2026-11-21, after rc1's macOS and Windows legs ran only
+# `--version`).
 #
 # Converts <hello.tex> with the repository's resources/ moved aside, so the binary must serve its dumps, schema and
 # XSLT/CSS from memory (CLAUDE.md "Self-contained, portable binary"), and fails unless the conversion exits 0, logs
 # no Error or Fatal, and writes HTML that kept the text and carries LaTeXML's ltx_ classes. No TeX Live is needed:
-# a basic article converts on the no-dump branch with the embedded bindings (OXIDIZED_DESIGN_DIVERGENCES #1095).
+# without it a release binary converts on the format dump embedded in it (one built with no dump to embed, on the
+# no-dump branch, OXIDIZED_DESIGN_DIVERGENCES #1095); tools/artifact_check.sh asserts which format a binary loads.
 # A second run, `--css=ar5iv.css --nodefaultresources`, must write the bundled ar5iv.css (tools/ar5iv-css.pin) from the
 # binary beside the page, its banner line followed by the pinned file's exact bytes (AR5IV_CSS_SHA256), and link it as
 # the page's only stylesheet. Two more runs, `--css=ar5iv.css` and `--css=./ar5iv.css` beside a user's own ar5iv.css
