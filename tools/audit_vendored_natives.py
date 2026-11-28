@@ -228,7 +228,7 @@ AUDITED = {
         "-- e.g. MiKTeX -- not a build-time one, so it does not avoid the static "
         "link.) Attributed in THIRD-PARTY-NOTICES 3.2; static LGPL -> relink 3.5."
     ),
-    "libxml": (("0.3.21", "0.3.22", "0.3.23", "0.3.24", "0.3.25", "0.3.26", "0.3.27"),
+    "libxml": (("0.3.21", "0.3.22", "0.3.23", "0.3.24", "0.3.25", "0.3.26", "0.3.27", "0.3.28"),
         "Binds libxml2 -- (c) Daniel Veillard, MIT -- whom the crate's own 'MIT' "
         "field does not name as holder. Linked via pkg-config + rustc-link-lib "
         "rather than compiled here, and STATIC on every release leg "
@@ -259,7 +259,12 @@ AUDITED = {
         "Document::copy_node), license field 'MIT' unchanged. 0.3.26 -> 0.3.27 diffed "
         "2026-11-24 (git v0.3.26..v0.3.27 of KWARC/rust-libxml, our release): build.rs and "
         "src/wrapper.h byte-identical, no C source, Rust-only changes (the loop check of a link, "
-        "is_within, no longer walks to the top of the tree), license field 'MIT' unchanged."
+        "is_within, no longer walks to the top of the tree), license field 'MIT' unchanged. "
+        "0.3.27 -> 0.3.28 diffed 2026-11-28 (registry sources): build.rs, src/wrapper.h and "
+        "src/c_helpers.rs byte-identical, zero cc::Build, no C source, build-dependencies "
+        "unchanged; Rust-only changes (a DTD-default property removal returns Ok, an element "
+        "under an attribute refused, set_content/set_name parity, a NULL-document guard), "
+        "license field 'MIT' unchanged (the LICENSE file's copyright years only, 2021 -> 2027)."
     ),
     "libxslt": ("0.1.5",
         "Binds libxslt/libexslt -- (c) Daniel Veillard, MIT -- same shape as libxml "
