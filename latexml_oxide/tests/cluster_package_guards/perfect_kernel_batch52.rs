@@ -133,7 +133,8 @@ fn until_miss_at_eof_l3prg_loop_is_abandoned() {
     "{stderr}"
   );
   assert_eq!(error_count(&stderr), 8, "{stderr}");
-  // The put-back typeset, what the loop left of `text` and `document`.
+  // The put-back typeset: fragments of the end-of-document tokens `text` and `document` the loop left, as int's output
+  // held them before EOFRUNAWAY — not source text the abandonment kept.
   assert!(
     xml.contains("<para xml:id=\"p1\">\n    <p>documentetdocument</p>\n  </para>"),
     "{xml}"

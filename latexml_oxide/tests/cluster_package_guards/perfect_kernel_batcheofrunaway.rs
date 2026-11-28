@@ -101,3 +101,44 @@ fn true_end_new_call_runs_as_perl() {
     "{xml}"
   );
 }
+
+/// RED (row EOFRUNAWAY-RESIDUAL): an abandoned call drops the arguments it already read, uncounted —
+/// `\sc#1#2\stop{\sc#1}` ending at `before \sc{alpha} beta gamma` gives "before lpha beta gamma". Every word must be kept
+/// (or a lost one counted by a Warning). The round-1 give-back fixed this shape but read ebproof's code arguments back in.
+#[test]
+#[ignore = "RED: row EOFRUNAWAY-RESIDUAL (an abandoned call drops the arguments it read)"]
+fn true_end_abandoned_call_keeps_what_it_read_red() {
+  let (_log, xml) = convert_files_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/expansion-primitives/until_true_end_abandoned_call_gives_back_its_arguments_red.tex"
+    ),
+    &[],
+    Some("ar5iv.sty"),
+  );
+  assert!(xml.contains("before alpha beta gamma"), "{xml}");
+}
+
+/// RED (row EOFRUNAWAY-RESIDUAL): a loop that ends on its own, or a macro that redefines itself before it re-misses,
+/// is taken for a runaway: Perl and int print "XXXabc" and "[]<>abc" (OT1 "[]¡¿abc"), round 0 "Xabc" and "[]abc". The
+/// round-1 meaning key and repeat count fixed these but missed PiCTeX's `\put` (2210.08081).
+#[test]
+#[ignore = "RED: row EOFRUNAWAY-RESIDUAL (a bounded loop or a redefined macro is taken for a runaway)"]
+fn true_end_loop_that_ends_runs_as_perl_red() {
+  for (tex, paragraph) in [
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/expansion-primitives/until_true_end_bounded_loop_runs_as_perl_red.tex"
+      ),
+      "before XXXabc",
+    ),
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/expansion-primitives/until_true_end_redefined_macro_is_a_new_call_red.tex"
+      ),
+      "before []¡¿abc",
+    ),
+  ] {
+    let (_log, xml) = convert_files_with(tex, &[], Some("ar5iv.sty"));
+    assert!(xml.contains(paragraph), "{xml}");
+  }
+}

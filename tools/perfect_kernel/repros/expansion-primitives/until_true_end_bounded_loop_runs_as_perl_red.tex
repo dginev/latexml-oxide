@@ -1,0 +1,16 @@
+% mechanism: a loop that ends on its own: `\x#1\stop` calls itself while a counter is below 3, each call missing
+%   `\stop` at the TRUE end of all input from the same input; two re-requests are below the few rounds a call may
+%   re-request an argument before it is abandoned (`gullet::TRUE_END_REPEATS`, EOFRUNAWAY), so every call follows
+%   Perl's put-back ("Missing argument", the call runs on the empty argument) and the loop ends as in Perl.
+% witness: synthetic (review of EOFRUNAWAY round 0: "Xabc", 2 errors, the second call abandoned)
+% oracle:  pdflatex 2 `!` ("File ended while scanning use of \x", Emergency stop), no PDF; Perl 3 errors
+%          "Missing argument Until:\stop", "before XXXabc"
+% engines: rust=3 errors, "before XXXabc" (LIPICSRESTATE-rel); 2 errors, "before Xabc" (EOFRUNAWAY-rel,
+%          2026-11-28)
+% expect:  3 errors "Missing argument Until:\stop at end of input", 0 Fatal, "before XXXabc"
+% status:  RED (row EOFRUNAWAY-RESIDUAL: round 0 abandons it; the round-1 rules that fixed it broke real papers)
+\documentclass{article}
+\newcount\n
+\def\x#1\stop{X\advance\n 1 \ifnum\n<3 \expandafter\x\fi}
+\begin{document}
+before \x abc

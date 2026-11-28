@@ -1,0 +1,17 @@
+% mechanism: a scanner `\sc#1#2\stop{\sc#1}` re-requesting its delimited `#2` at the TRUE end of all input from
+%   no less input is abandoned after a few rounds as TeX's runaway, "File ended while scanning use of \sc"
+%   (tex.web §338-339, §392; EOFRUNAWAY); the `a` its `#1` had read goes back in front of the put-back, so
+%   every token is read on (TeX drops them with the call; Perl re-misses to its error cap).
+% witness: synthetic (review of EOFRUNAWAY round 0, which dropped the `a`: "before lpha beta gamma", no Warning)
+% oracle:  pdflatex 2 `!` ("File ended while scanning use of \sc", Emergency stop), no PDF; Perl 101 errors
+%          "Missing argument Until:\stop" and Fatal:too_many_errors:100, no XML
+% engines: rust=101 errors + Fatal:TooManyErrors (LIPICSRESTATE-rel); 2 errors, "before lpha beta gamma"
+%          (EOFRUNAWAY-rel, 2026-11-28)
+% expect:  6 errors (5 "Missing argument Until:\stop at end of input", "File ended while scanning use of \sc"),
+%          0 warnings, "before alpha beta gamma"
+% status:  RED (row EOFRUNAWAY-RESIDUAL: round 0 abandons it; the round-1 rules that fixed it broke real papers)
+%          perfect_kernel_batcheofrunaway::true_end_abandoned_call_gives_back_what_it_read)
+\documentclass{article}
+\def\sc#1#2\stop{\sc#1}
+\begin{document}
+before \sc{alpha} beta gamma

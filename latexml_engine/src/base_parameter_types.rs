@@ -327,9 +327,10 @@ LoadDefinitions!({
     // EXCEPT at the TRUE end of all input (`gullet::at_end_of_all_input`), where Perl's put-back is the outcome (DG
     // 2026-11-26): the scanned tokens are back in the input (Gullet.pm:686-688), Perl's `Missing argument` Error is
     // raised (Parameter.pm:93-97, `note_missing_argument`, as for every required reader that runs out:
-    // `read_required_arg`, the token readers) and the call runs on the empty argument. A self-recursive scanner
-    // re-misses to the error cap, as in Perl: fancyvrb `\FV@Scan` over an open `{VerbatimOut}` (fancyvrb/fancyvrb-doc),
-    // l3prg `\prg_map_break:Nn` via `\prop_map_inline:cn` on an undefined prop (stex/stex-doc). OD #304.
+    // `read_required_arg`, the token readers) and the call runs on the empty argument. A self-recursive scanner that
+    // re-requests it from the put-back is abandoned after one Error, where Perl reruns it to its error cap: fancyvrb
+    // `\FV@Scan` over an open `{VerbatimOut}` (fancyvrb/fancyvrb-doc), l3prg `\prg_map_break:Nn` via
+    // `\prop_map_inline:cn` on an undefined prop (stex/stex-doc). OD #304.
     match read_until(&until_extra[0])? {
       Some(tokens) => {
         // A delimiter ending in `{` comes only from a parameter text's closing `#{`, whose brace TeX also appends to

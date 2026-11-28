@@ -1,0 +1,14 @@
+% mechanism: a macro that redefines itself before calling itself again at the TRUE end of all input: the second
+%   call is of another meaning, a new call (EOFRUNAWAY keys a call's misses on the macro's meaning, not its
+%   name), and follows Perl's put-back ("Missing argument", the call runs on the empty argument).
+% witness: synthetic (review of EOFRUNAWAY round 0: "[]abc", the redefined `\x` abandoned by name)
+% oracle:  pdflatex 2 `!` ("File ended while scanning use of \x", Emergency stop), no PDF; Perl 2 errors
+%          "Missing argument Until:\stop", "before []<>abc" (OT1: "[]¡¿abc")
+% engines: rust=2 errors, "before []¡¿abc" (LIPICSRESTATE-rel); 2 errors, "before []abc" (EOFRUNAWAY-rel,
+%          2026-11-28)
+% expect:  2 errors "Missing argument Until:\stop at end of input", 0 Fatal, "before []¡¿abc"
+% status:  RED (row EOFRUNAWAY-RESIDUAL: round 0 abandons it; the round-1 rules that fixed it broke real papers)
+\documentclass{article}
+\def\x#1\stop{[#1]\def\x##1\stop{<##1>}\x}
+\begin{document}
+before \x abc

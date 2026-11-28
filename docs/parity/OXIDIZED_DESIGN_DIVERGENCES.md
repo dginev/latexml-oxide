@@ -7459,7 +7459,9 @@ reset per conversion; `\long` survives the dump.
   too, where TeX and Perl err (REDs `expansion-primitives/required_reader_scantokens_end_silent_red.tex`,
   `required_reader_input_file_end_silent_red.tex`). A
   later call of a macro missing the same argument there (same macro, same spec) with no less input left is a
-  self-recursive scanner re-requesting it from the put-back, which Perl reruns to its error cap. That call is TeX's
+  self-recursive scanner re-requesting it from the put-back, which Perl reruns to its error cap (a loop that ends on
+  its own or a redefined macro that re-misses is taken for one too, and the arguments an abandoned call read are
+  dropped uncounted: REDs in `perfect_kernel_batcheofrunaway`, row EOFRUNAWAY-RESIDUAL). That call is TeX's
   runaway, "File ended while scanning use of \x", abandoned as §392 abandons it, and the put-back is read on
   (EOFRUNAWAY; `note_missing_argument`, `Runaway::TrueEnd`, `abandon_runaway_call`). Every later call of that macro
   for that argument is abandoned too, an Info each ("… again"): a loop broken there re-enters from the put-back with
