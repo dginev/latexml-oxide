@@ -436,6 +436,7 @@ fn reset_consecutive_error_tracker() {
   *LAST_ERROR_KEY.borrow_mut() = None;
   CONSECUTIVE_ERROR_COUNT.set(0);
   TOO_MANY_ERRORS_LATCHED.set(false);
+  TOO_MANY_ERRORS_SPENT.set(false);
 }
 
 #[thread_local]
@@ -448,6 +449,21 @@ static TOO_MANY_ERRORS_LATCHED: std::cell::Cell<bool> = std::cell::Cell::new(fal
 pub fn latch_too_many_errors() { TOO_MANY_ERRORS_LATCHED.set(true); }
 /// Whether the too-many-errors latch is set (see `latch_too_many_errors`).
 pub fn too_many_errors_latched() -> bool { TOO_MANY_ERRORS_LATCHED.get() }
+
+#[thread_local]
+static TOO_MANY_ERRORS_SPENT: std::cell::Cell<bool> = std::cell::Cell::new(false);
+
+/// The digestion's end has taken the latched error cap's Fatal (`core_interface::finish_digestion_fatal`, OD #251): an
+/// `Error!` of the phases after it (the build of what was kept, the rewrites, the math) no longer raises it again, as
+/// Perl's `Error` returns before its cap test once a Fatal set `IGNORE_ERRORS` (Common/Error.pm:362, :372). Until then
+/// the re-raise ends a digestion that swallowed the Fatal, our stand-in for the input `hardYankProcessing` empties.
+pub fn spend_too_many_errors() {
+  if too_many_errors_latched() {
+    TOO_MANY_ERRORS_SPENT.set(true);
+  }
+}
+/// Whether the latched error cap's Fatal is spent (see `spend_too_many_errors`).
+pub fn too_many_errors_spent() -> bool { TOO_MANY_ERRORS_SPENT.get() }
 
 /// The whole diagnostic tally of this thread: the [`REPORT`] plus the gates
 /// that live beside it — the consecutive-error runaway tracker, the
@@ -462,6 +478,7 @@ pub struct DiagnosticGates {
   last_error_key:    Option<String>,
   consecutive:       usize,
   too_many_errors:   bool,
+  too_many_spent:    bool,
   last_fatal_logged: Option<String>,
 }
 
@@ -472,6 +489,7 @@ pub fn save_diagnostic_gates() -> DiagnosticGates {
     last_error_key:    LAST_ERROR_KEY.borrow().clone(),
     consecutive:       CONSECUTIVE_ERROR_COUNT.get(),
     too_many_errors:   TOO_MANY_ERRORS_LATCHED.get(),
+    too_many_spent:    TOO_MANY_ERRORS_SPENT.get(),
     last_fatal_logged: LAST_FATAL_LOGGED.with(|c| c.borrow().clone()),
   }
 }
@@ -482,6 +500,7 @@ pub fn restore_diagnostic_gates(gates: DiagnosticGates) {
   *LAST_ERROR_KEY.borrow_mut() = gates.last_error_key;
   CONSECUTIVE_ERROR_COUNT.set(gates.consecutive);
   TOO_MANY_ERRORS_LATCHED.set(gates.too_many_errors);
+  TOO_MANY_ERRORS_SPENT.set(gates.too_many_spent);
   LAST_FATAL_LOGGED.with(|c| *c.borrow_mut() = gates.last_fatal_logged);
 }
 #[macro_export]
@@ -1096,8 +1115,12 @@ macro_rules! Error {
     // An ignored record (Perl `IGNORE_ERRORS`, Error.pm L362) does nothing at
     // all — no count, no cap bookkeeping: 500 identical forward-reference
     // errors inside the degraded expl3 raw-load must not trip the consecutive
-    // cap on the first error after the scope.
-    if !$crate::common::error::is_demote_fatals() && !$crate::common::error::diagnostics_ignored() {
+    // cap on the first error after the scope. Once the digestion's end took the cap's Fatal, the phases after it
+    // raise it no more (`spend_too_many_errors`, 2203.12624: the salvage build stopped at its first dropped Error).
+    if !$crate::common::error::is_demote_fatals()
+      && !$crate::common::error::diagnostics_ignored()
+      && !$crate::common::error::too_many_errors_spent()
+    {
     // Borrow-safe read: an Error! can be raised from inside a `state_mut()`
     // scope (e.g. push_value's BUG branch, a constructor's after_digest),
     // where a plain `lookup_int` would panic "RefCell already mutably
@@ -2077,6 +2100,33 @@ mod tests {
     assert!(log.contains("(> 100)"), "{}", log.len());
     assert!(too_many_errors_latched());
     initialize_report();
+  }
+
+  /// Past the cap every `Error!` raised `Err(TooManyErrors)` again (its record dropped): the build of what a Fatal kept
+  /// stopped at its first Error (2203.12624). Once the digestion's end spent the cap, an `Error!` returns `Ok`.
+  #[test]
+  fn an_error_past_the_spent_cap_raises_nothing() {
+    let _ = crate::util::logger::init(log::LevelFilter::Warn);
+    initialize_report();
+    crate::util::logger::bind_log();
+    fn raise(i: usize) -> Result<()> {
+      Error!("unexpected", format!("\\e{i}"), "synthetic distinct error");
+      Ok(())
+    }
+    let outcomes: Vec<bool> = (0..102).map(|i| raise(i).is_err()).collect();
+    assert_eq!(
+      outcomes.iter().position(|&err| err),
+      Some(100),
+      "the 101st raises the cap"
+    );
+    assert!(outcomes[101], "the cap re-raises until it is spent");
+    spend_too_many_errors();
+    assert!(raise(102).is_ok() && raise(103).is_ok());
+    let log = crate::util::logger::flush_log();
+    assert_eq!(log.matches("Fatal:TooManyErrors").count(), 1, "{log}");
+    assert_eq!(log.matches("Error:unexpected").count(), 101, "{log}");
+    initialize_report();
+    assert!(!too_many_errors_spent());
   }
 
   #[test]

@@ -415,7 +415,13 @@ impl Constructor {
       if args.len() + 1 == nargs {
         let properties = Rc::clone(&self.properties);
         let restricted_box = self.declared_mode.is_some_and(|mode| mode.restricted_box);
-        crate::stomach::close_pending_list_as(mark, move |boxes| {
+        crate::stomach::close_pending_list_as(mark, move |mut boxes| {
+          // (a math argument keeps its leading math, the rest joins the enclosing list: `stomach::split_off_after_leading_math`)
+          let rest = if ismath {
+            crate::stomach::split_off_after_leading_math(&mut boxes)
+          } else {
+            Vec::new()
+          };
           let partial: Digested = crate::list::List::new(boxes).into();
           let mut args = args;
           args.push(Some(partial.clone()));
@@ -430,9 +436,10 @@ impl Constructor {
           };
           // (its properties failed: the argument's boxes stay, in the enclosing list)
           result.push(match parts.assemble(&properties, restricted_box) {
-            Ok(whatsit) => salvaged(whatsit).into(),
+            Ok(whatsit) => salvaged(whatsit, Some("argument")).into(),
             Err(_) => partial,
           });
+          result.extend(rest);
           result
         });
       } else {
@@ -465,7 +472,7 @@ impl Constructor {
       Ok(post) => post,
       Err(e) => {
         crate::stomach::close_pending_list_as(mark, move |boxes| {
-          result.push(salvaged(whatsit).into());
+          result.push(salvaged(whatsit, None).into());
           result.extend(boxes);
           result
         });
@@ -499,15 +506,23 @@ impl Constructor {
       } else {
         Vec::new()
       };
+      let body_in_math = lookup_bool_sym(crate::pin!("IN_MATH"));
       let captured = match digest_next_body(None) {
         Ok(captured) => captured,
         Err(e) => {
-          // (its body so far is its body: a list's items, a formula's atoms; no `\end` came, its trailer is empty)
-          crate::stomach::close_pending_list_as(mark, move |boxes| {
+          // (its body so far is its body: a list's items, a formula's atoms; no `\end` came, its trailer is empty; a
+          // math body keeps its leading math, the rest joins the enclosing list: `stomach::split_off_after_leading_math`)
+          crate::stomach::close_pending_list_as(mark, move |mut boxes| {
+            let rest = if body_in_math {
+              crate::stomach::split_off_after_leading_math(&mut boxes)
+            } else {
+              Vec::new()
+            };
             post.extend(boxes);
             post.push(crate::list::List::new(Vec::new()).into());
             whatsit.set_body(post);
-            result.push(salvaged(whatsit).into());
+            result.push(salvaged(whatsit, Some("body")).into());
+            result.extend(rest);
             result
           });
           return Err(e);
@@ -681,12 +696,19 @@ impl WhatsitParts {
   }
 }
 
-/// A whatsit a Fatal left unfinished, made by the salvage ([`crate::stomach::SALVAGED`]). (Not `UNENDED`, OD #542: no
-/// input follows a Fatal, so its element closes through its own pattern, its note's `\par` inside it.)
-fn salvaged(mut whatsit: Whatsit) -> Whatsit {
+/// A whatsit a Fatal left unfinished, made by the salvage ([`crate::stomach::SALVAGED`]), with the part its closer filled
+/// ([`crate::stomach::SALVAGED_PART`]). (Not `UNENDED`, OD #542: no input follows a Fatal, so its element closes through
+/// its own pattern, its note's `\par` inside it.)
+fn salvaged(mut whatsit: Whatsit, part: Option<&str>) -> Whatsit {
   whatsit
     .properties
     .insert(crate::stomach::SALVAGED, Stored::Bool(true));
+  if let Some(part) = part {
+    whatsit.properties.insert(
+      crate::stomach::SALVAGED_PART,
+      Stored::String(crate::common::arena::pin(part)),
+    );
+  }
   whatsit
 }
 

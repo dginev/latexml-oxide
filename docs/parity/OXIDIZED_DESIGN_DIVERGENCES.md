@@ -6185,7 +6185,30 @@ the pipeline Perl-shaped rather than by admitting more post-Fatal messages:
    pop would meet the cell's math frame), a frontmatter entry as its entry
    (`\lx@add@frontmatter@now`, `\lx@add@frontmatter@until`, the latter placed by
    the document's end fallback, `\lx@frontmatter@fallback`, which never comes);
-   a list with no closer (a body, a group) joins its enclosing list. A construct
+   a list with no closer (a body, a group) joins its enclosing list. An unfinished
+   MATH construct (the math body, a math alignment's cell, a math last argument)
+   keeps only the leading math it owns: from the first box that is not math
+   material on (Perl's `isMath`, Box.pm:81, Whatsit.pm:51, List.pm:39), the boxes
+   go back to the enclosing list in order (`stomach::split_off_after_leading_math`).
+   A construct the salvage closed among them opens again into the part its
+   closer filled, its last argument or its body (`stomach::SALVAGED_PART`), never
+   its other arguments (an option, keyvals, a width are not text: `\parbox[t]`
+   gave a "t"). The rule also drops a math construct's other visible arguments
+   (`\sqrt[3]`'s index, `\frac`'s numerator, `\overset`'s top: row R
+   FATALSALVAGE-MATHARGS, RED; the fix is to keep a math whatsit closed). A math-only one (`\lx@begin@inmath@text`'s
+   `<XMText>`) cannot be built outside its formula, and one kept closed keeps the
+   levels nested in it inside a formula (1903.08357: text constructs kept
+   closed failed its build, 0 words). A
+   stray `$` (`\pmb{$\Gamma$}`, cond-mat9807003) or an unfinished `multlined` cell
+   (2203.12624) took in the eqnarray, sections and appendices after it, where the
+   formula dropped them. A `\text`/`\mbox`/`\hbox` box in the formula is not math
+   material, so the formula splits there and the rest is kept as text
+   (`…_in_math_after_text_red.tex`, row R FATALSALVAGE-TEXTINMATH). Open (row R
+   FATALSALVAGE-HANDBACK): a handed-back box decided by its mode, not by what it
+   builds, can land where its element is not allowed (a finished in-math text as
+   a bare `<XMText>` in a `<para>`, 2203.12624; `<XMApp>`/`<XMHint>`, 1903.08357,
+   each a Malformed Error) or, a salvaged formula opened into its atoms, lose its
+   math (2205.15376, 20 formulas). A construct
    that closes nothing of its own (a Fatal in its `before_digest`, an earlier
    argument than the last, its `properties` closure, its `after_digest_body`)
    clears the closers set inside it (`stomach::clear_pending_list_closers`), so
@@ -6235,7 +6258,20 @@ the pipeline Perl-shaped rather than by admitting more post-Fatal messages:
    dump build sets, instead of restoring counters while its unconditional
    `Error:` lines had already reached the log.
 4. **`emit_error` fires `Fatal:TooManyErrors` once** (the frozen post-latch
-   count kept the crossing test true on every later call).
+   count kept the crossing test true on every later call). **The build of what
+   a Fatal kept does not raise the cap again**: past the latch every `Error!`
+   returned `Err(TooManyErrors)` (its record dropped, its `Fatal:` line deduped),
+   so the first Error of the salvage build stopped it silently ("build stopped
+   early"; 2203.12624 lost Sec. 6 on); `finish_digestion_fatal` spends the
+   latched cap (`error::spend_too_many_errors`) and the `Error!` macro skips its
+   escalation after it, as Perl's `Error` returns before its cap test once a
+   Fatal set `IGNORE_ERRORS` (Error.pm:362, :372). Until the digestion's end the
+   re-raise stays: it ends a digestion that swallowed the Fatal, our stand-in for
+   the input `hardYankProcessing` empties. A cap the build itself crosses still
+   stops it once. The LSP server's warm preamble is not cached when
+   the preamble ended in a Fatal (its salvage returns `Ok`): the document
+   converts in-process, where a forked body child would digest past the Fatal
+   with the cap latched and spent (`lsp_server/unix.rs` `run_warm`).
 5. **A worker-thread panic ends like any Fatal** (`bin/latexml_oxide.rs`):
    `Fatal:panic:caught` + the `Conversion failed` verdict + exit 1 (s107
    texproposal aborted with a bare `worker thread panicked`, visible only to
@@ -6248,7 +6284,9 @@ Warnings and zero fatal counters without a `Fatal:` line — the code defects we
 latent; the observed gaps were the continuation (jlreq family) and the panic.
 **Guards**: `perfect_kernel_batch56::a_resource_fatal_rescues_the_digested_bodies_and_reads_no_further_input`,
 `fatal_salvages_partial_document::{a_digestion_fatal_keeps_the_text_before_it,
-recoverable_fatal_keeps_the_already_digested_document, too_many_errors_keeps_the_already_digested_document}`,
+recoverable_fatal_keeps_the_already_digested_document, too_many_errors_keeps_the_already_digested_document,
+a_digestion_fatal_closes_each_unfinished_construct, a_too_many_errors_fatal_in_unfinished_math_keeps_what_follows,
+an_unfinished_math_cell_hands_back_its_text_as_text_red}` (RED, row R FATALSALVAGE-MATHTEXT),
 `common::error::tests::{fatal_macro_logs_its_line_at_the_raise_exactly_once,
 ignored_diagnostics_scope_drops_line_and_count_together,
 emit_error_fires_the_too_many_errors_fatal_once,

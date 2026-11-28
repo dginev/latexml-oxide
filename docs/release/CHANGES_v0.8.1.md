@@ -79,6 +79,14 @@ top of its group.
     `rhai-bindings/digest_fatal_in_a_section_title_red`, `…_in_a_thanks_red`, `…_in_a_caption_red`,
     `…_in_a_caption_outside_a_float_red`; OXIDIZED_DESIGN_DIVERGENCES #251). Guard
     `fatal_salvages_partial_document::a_digestion_fatal_closes_each_unfinished_construct`.
+  - **An unfinished formula closed after a Fatal keeps only its own math; what follows it is kept.** A formula left
+    open by a stray `$` or an unfinished `multlined` cell took in the eqnarray, sections and appendices after it, where
+    the formula dropped them; it now keeps the math up to the first non-math box and the rest goes back to the page in
+    order, a box the Fatal closed as the text it was digesting (never its options or keyvals). Text that was digested
+    inside the open formula still comes back as math (italic, unspaced). The build of what a `Fatal:TooManyErrors` kept no longer stops at its first (muted) Error ("build stopped
+    early"; 2203.12624, cond-mat9807003; OXIDIZED_DESIGN_DIVERGENCES #251). Guards
+    `fatal_salvages_partial_document::{a_digestion_fatal_closes_each_unfinished_construct,
+    a_too_many_errors_fatal_in_unfinished_math_keeps_what_follows}`.
   - **A sub-float nested in another steps its float's number once, as caption.sty does.** A `{subfigure}` opened
     inside a `{subfigure}`, the first sub-float of its figure, stepped the figure counter a second time, so the figure
     and every later one were numbered one too high (2502.06601, 2308.06714, 2403.16442, 2008.08136); a `{subtable}`

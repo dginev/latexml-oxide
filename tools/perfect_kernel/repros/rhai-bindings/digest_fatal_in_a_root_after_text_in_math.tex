@@ -1,0 +1,20 @@
+% mechanism: as digest_fatal_in_a_parbox_in_math.tex, for a MATH construct among the handed-back boxes: the closed
+%   `\sqrt[3]{…}` after the formula's `\text` opens again into its last argument alone (`SALVAGED_PART`, OD #251), so its
+%   index `[3]`, which pdflatex prints, is lost
+% witness: synthetic (FATALSALVAGE round 3; the binding lxmbf.sty.rhai, lxmbf.sty for pdflatex)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "First paragraph." "Before a if ∛x after."; Perl 0.8.8: no
+%   output on this Fatal
+% engines: INT081TA: the whole formula "a if ∛x" kept as one <Math>; FATALSALVAGE round 2: "<Math>a</Math> if
+%   <text fontsize="70%">3</text><text font="italic">x</text>" (the index spliced as text)
+% expect:  1 fatal error, E=0 W=0; <p>Before <Math tex="a">…</Math> if <text font="italic">x</text></p>
+% status:  RED (row R FATALSALVAGE-MATHARGS: the index is lost; round 2 spliced it as text; the guard
+%   fatal_salvages_partial_document::a_digestion_fatal_closes_each_unfinished_construct pins today's output); the
+%   formula ends at the `\text` and the root's atoms are handed back as text: row R FATALSALVAGE-TEXTINMATH
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{lxmbf}
+\begin{document}
+First paragraph.
+
+Before $a \text{ if } \sqrt[3]{x \lxmbf}$ after.
+\end{document}

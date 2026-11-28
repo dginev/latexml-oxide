@@ -2460,6 +2460,83 @@ pub fn clear_pending_list_closers(mark: usize) {
   }
 }
 
+/// Whether a box is math material: Perl's `isMath` (Box.pm:81 the box's mode, Whatsit.pm:51 its `isMath`), a list by
+/// its mode (List.pm:39) or else by its boxes. A comment, a register value, keyvals or postponed tokens have no mode.
+fn is_math_material(item: &Digested) -> bool {
+  match item.data() {
+    DigestedData::TBox(tbox) => tbox.borrow().is_math(),
+    DigestedData::Whatsit(whatsit) => whatsit.borrow().is_math(),
+    DigestedData::Alignment(alignment) => alignment.borrow().is_math(),
+    DigestedData::List(list) => {
+      let list = list.borrow();
+      match (list.properties.get("mode"), &list.mode) {
+        (Some(Stored::String(mode)), _) => arena::with(*mode, |mode| mode.ends_with("math")),
+        (_, Some(mode)) => *mode == TexMode::Math,
+        (_, None) => list.boxes.iter().all(is_math_material),
+      }
+    },
+    _ => true,
+  }
+}
+
+/// The boxes of an unfinished math list a Fatal left pending that its construct does not own (OD #251): from the first
+/// box that is not math material on, when the list leads with math. A math construct whose ender failed (a stray `$`, an
+/// `\end` against an open group) takes in the text, displays and sections after it, where the formula drops them
+/// (2203.12624, cond-mat9807003); they go back to the enclosing list, in order, as the salvage did before closers.
+pub fn split_off_after_leading_math(boxes: &mut Vec<Digested>) -> Vec<Digested> {
+  if !boxes.first().is_some_and(is_math_material) {
+    return Vec::new();
+  }
+  let owned = boxes
+    .iter()
+    .position(|item| !is_math_material(item))
+    .unwrap_or(boxes.len());
+  let mut rest = Vec::new();
+  for item in boxes.split_off(owned) {
+    unclose_salvaged(item, &mut rest);
+  }
+  rest
+}
+
+/// A construct the salvage closed inside the boxes a math construct hands back opens again into what its closer took,
+/// the last argument or the body it was digesting ([`SALVAGED_PART`]), as before closers: a math-only one
+/// (`\lx@begin@inmath@text`'s `<ltx:XMText>`) cannot be built outside its formula (2203.12624), and one kept closed keeps
+/// the levels nested in it inside a formula (1903.08357). Its other arguments (an option, keyvals, a width) are not
+/// text and go (`\parbox[t]` gave a "t"); an alignment keeps its rows (no boxes of its whatsit).
+fn unclose_salvaged(item: Digested, into: &mut Vec<Digested>) {
+  let part = match item.data() {
+    DigestedData::Whatsit(whatsit) => {
+      let whatsit = whatsit.borrow();
+      if whatsit.get_property_bool(SALVAGED) && !whatsit.properties.contains_key("alignment") {
+        match whatsit.properties.get(SALVAGED_PART) {
+          Some(Stored::String(part)) if *part == pin!("body") => {
+            BoxOps::get_body(&*whatsit).ok().flatten()
+          },
+          Some(Stored::String(part)) if *part == pin!("argument") => {
+            whatsit.args.last().cloned().flatten()
+          },
+          _ => None,
+        }
+      } else {
+        None
+      }
+    },
+    _ => None,
+  };
+  match part {
+    Some(part) => match part.data() {
+      DigestedData::List(list) => {
+        let boxes = list.borrow().boxes.clone();
+        for inner in boxes {
+          unclose_salvaged(inner, into);
+        }
+      },
+      _ => unclose_salvaged(part, into),
+    },
+    None => into.push(item),
+  }
+}
+
 /// Empty the stack of tokens being invoked, after a recovered Fatal (Perl `hardYankProcessing`, Common/Error.pm:329
 /// `$$stomach{token_stack} = []`, run for every Fatal). `invoke_token` pops its entry only on a normal exit, so every
 /// `?` exit between the push and the pop leaves one: a `Stomach:Recursion` Fatal leaves the whole `MAXSTACK` of them,
@@ -3312,6 +3389,9 @@ thread_local! {
 /// The whatsit property of a construct a Fatal left unfinished, made by the salvage with what it had digested
 /// ([`close_pending_list_as`], OD #251): a binding whose element the HTML does not show counts the words it keeps there.
 pub const SALVAGED: &str = "lx@salvaged";
+/// Which part of a [`SALVAGED`] whatsit its closer filled with the boxes digested before the Fatal: `"argument"` (its
+/// last) or `"body"`; none where its after-digest code failed (its arguments are whole).
+pub const SALVAGED_PART: &str = "lx@salvaged@part";
 
 /// The whatsit property of a construct the document ended inside of: `\end{document}` came while
 /// its arguments or body were still being digested and abandoned their groups (tex.web §1335), so

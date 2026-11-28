@@ -1,0 +1,120 @@
+% mechanism: the digestion salvage closes each pending box list as the construct that opened it would (OD #251); an
+%   unfinished MATH construct keeps only the leading math it owns (`stomach::split_off_after_leading_math`), the boxes
+%   from the first non-math one on go back to the enclosing list, in order, as the salvage did before closers
+%   (the math body closer, `Constructor::digest_to_whatsit`)
+% witness: cond-mat9807003 (revtex's `\pmb{$\Gamma$}` leaves an inline math open: the eqnarray and the text after it are
+%   digested inside it), reduced; 101 script errors make the Fatal
+% oracle:  pdflatex (TL 2025): revtex 2.09 is not in TL 2025 (`revtex.cls' not found, a harness limit); Perl 0.8.8: no
+%   output on this Fatal
+% engines: REL080RC6: 101 errors + Fatal, the <equation> and "alpha beta gamma words after." kept as running text;
+%   INT081TA: the same diagnostics, all after "variations in" lost in one <Math text="absent">, "build stopped early"
+% expect:  101 errors + Fatal:TooManyErrors, W=4; <equationgroup> with its <equation>, then <p>alpha beta gamma words
+%   after.…</p>; the build does not stop early
+% status:  RED (INT081TA) -> GREEN (FATALSALVAGE; guard fatal_salvages_partial_document::a_too_many_errors_fatal_in_unfinished_math_keeps_what_follows)
+\documentstyle[aps,prb]{revtex}
+\begin{document}
+variations in $\pmb{$\Gamma$}$,
+\begin{eqnarray} a &=& \pmb{$\alpha$}. \end{eqnarray}
+alpha beta gamma words after.
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+word x_1 here
+\end{document}

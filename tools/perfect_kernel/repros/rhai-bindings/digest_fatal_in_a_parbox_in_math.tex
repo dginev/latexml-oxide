@@ -1,0 +1,22 @@
+% mechanism: the digestion salvage's math body closer hands back the boxes after the formula's leading math
+%   (`stomach::split_off_after_leading_math`, OD #251); a construct the salvage closed among them opens again into the
+%   part its closer filled (`SALVAGED_PART`: the last argument or the body), never its other arguments: the `\mbox`'s
+%   `\parbox` gives its text, not its `[t]` and width
+% witness: synthetic (FATALSALVAGE round-2 review, scratch_rev_fs/kv/p2.tex; siblings p4 `\parbox[b]` + `\colorbox`,
+%   the keyval twin digest_fatal_in_a_keyval_box_in_math.tex; the binding lxmbf.sty.rhai, lxmbf.sty for pdflatex)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "First paragraph." "Before a + inner words after."; Perl 0.8.8:
+%   no output on this Fatal
+% engines: INT081TA: the parbox an <XMText> of the formula "a + [inner words]"; FATALSALVAGE round 2: every argument
+%   spliced as text, "<Math>a+</Math>tinner words" (an invented "t")
+% expect:  1 fatal error, E=0 W=0; <p>Before <Math tex="a+">…</Math>inner words </p>
+% status:  RED (FATALSALVAGE round 2) -> GREEN (FATALSALVAGE round 3; guard
+%   fatal_salvages_partial_document::a_digestion_fatal_closes_each_unfinished_construct); the formula ends at the box:
+%   row R FATALSALVAGE-TEXTINMATH
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{lxmbf}
+\begin{document}
+First paragraph.
+
+Before $a + \mbox{\parbox[t]{3cm}{inner words \lxmbf}}$ after.
+\end{document}

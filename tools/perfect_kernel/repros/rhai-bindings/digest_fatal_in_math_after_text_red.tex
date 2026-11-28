@@ -1,0 +1,23 @@
+% mechanism: the digestion salvage's math body closer keeps only the leading math it owns
+%   (`stomach::split_off_after_leading_math`, OD #251): Perl's `isMath` is false for the box `\text`, `\mbox` or `\hbox`
+%   makes in math (Box.pm:81, its mode is text), so the closed formula ends there and the text and the math after it
+%   are handed back as running text; no words are lost
+% witness: synthetic (FATALSALVAGE review; siblings `$a + \hbox{some words \lxmbf} c$`, `$\frac{a \mbox{ box } b
+%   \lxmbf}{c}$`; the binding lxmbf.sty.rhai, lxmbf.sty.ltxml for Perl, lxmbf.sty for pdflatex)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "First paragraph." "Before a if bc after."; Perl 0.8.8: no
+%   output on this Fatal
+% engines: INT081TA: 1 fatal error, the whole formula "a if b" kept as one <Math>; FATALSALVAGE: <Math tex="a">,
+%   <text> if </text>, <text font="italic">b</text>
+% expect:  1 fatal error, E=0 W=0; <p>Before <Math tex="a \text{ if } b">…</Math></p>
+% status:  RED (FATALSALVAGE accepts the split, no words lost; pinned by
+%   fatal_salvages_partial_document::a_digestion_fatal_closes_each_unfinished_construct)
+% moves:   row R FATALSALVAGE-TEXTINMATH (a text box inside the formula is the formula's: the split would test what owns
+%   the box, not its mode)
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{lxmbf}
+\begin{document}
+First paragraph.
+
+Before $a \text{ if } b \lxmbf c$ after.
+\end{document}

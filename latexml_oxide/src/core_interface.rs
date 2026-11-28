@@ -384,6 +384,9 @@ fn finish_digestion_fatal(e: Error, boxes: &mut Vec<Digested>) -> Result<()> {
   // The Fatal's one line and its sticky status (`log_fatal` does both; a salvage never reclassifies the verdict, user
   // policy 2026-07-28; guards `101_fatal_salvages_partial_document`, `fatal_status_is_sticky_and_returns_1`).
   e.log_fatal();
+  // (a latched error cap is this Fatal's or came before it: the build of what is kept raises it no more, where every
+  // `Error!` past the cap returned it and stopped the build at its first dropped Error, 2203.12624)
+  error::spend_too_many_errors();
   // (the tokens the failed invocations left on the stack go, as Perl's `hardYankProcessing` empties it for every
   // Fatal: left there, the next digestion — the build's — failed its first push, 2410.07647, 2105.02599)
   stomach::clear_token_stack();

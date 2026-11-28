@@ -1,0 +1,19 @@
+% mechanism: the digestion salvage closes each pending box list as the construct that opened it would (OD #251); an
+%   unfinished MATH construct keeps only the leading math it owns (`stomach::split_off_after_leading_math`), the boxes
+%   from the first non-math one on go back to the enclosing list, in order, as the salvage did before closers
+%   (the math body closer, `Constructor::digest_to_whatsit`)
+% witness: cond-mat9807003's shape (too_many_errors_in_unfinished_inline_math.tex) with a binding's Fatal (lxmbf.sty.rhai,
+%   lxmbf.sty.ltxml for Perl, lxmbf.sty for pdflatex)
+% oracle:  pdflatex (TL 2025): revtex 2.09 is not in TL 2025 (a harness limit); Perl 0.8.8: no output on this Fatal
+% engines: INT081TA: 1 fatal error, E=7 (one "<ltx:equationgroup> isn't allowed in <ltx:XMath>"), the eqnarray and the
+%   text inside an unparsed inline <Math>
+% expect:  1 fatal error, E=6 W=4; <p>variations in <Math>…</Math>,</p> <equationgroup>…</equationgroup>
+%   <p>alpha beta gamma words after. </p>
+% status:  RED (INT081TA) -> GREEN (FATALSALVAGE; guard fatal_salvages_partial_document::a_digestion_fatal_closes_each_unfinished_construct)
+\documentstyle[aps,prb]{revtex}
+\RequirePackage{lxmbf}
+\begin{document}
+variations in $\pmb{$\Gamma$}$,
+\begin{eqnarray} a &=& \pmb{$\alpha$}. \end{eqnarray}
+alpha beta gamma words after. \lxmbf
+\end{document}

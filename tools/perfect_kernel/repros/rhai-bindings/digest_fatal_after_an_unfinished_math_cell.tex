@@ -1,0 +1,26 @@
+% mechanism: the digestion salvage closes each pending box list as the construct that opened it would (OD #251); an
+%   unfinished MATH construct keeps only the leading math it owns (`stomach::split_off_after_leading_math`), the boxes
+%   from the first non-math one on go back to the enclosing list, in order, as the salvage did before closers
+%   (the math-cell closer, `tex_tables::digest_alignment_body`: `\bgroup` leaves the `multlined` cell open)
+% witness: synthetic (2203.12624's shape; the binding lxmbf.sty.rhai, lxmbf.sty.ltxml for Perl, lxmbf.sty for pdflatex)
+% oracle:  pdflatex (TL 2025, -no-shell-escape): 2 "Missing } inserted" (the stray `\bgroup`, by design); "First
+%   paragraph." "a+b / c" "Text after box here." "1 Next" "More words ."; Perl 0.8.8: no output on this Fatal
+% engines: INT081TA: 1 fatal error, E=5 (one "<ltx:section> isn't allowed in <ltx:XMath>"), the text, the box and the
+%   section inside the formula
+% expect:  1 fatal error, E=4 W=0; the <equation> "a + b \\ c Text after", <p>box here.</p>, the section "Next" with
+%   "More words"
+% status:  RED (INT081TA) -> GREEN (FATALSALVAGE; guard fatal_salvages_partial_document::a_digestion_fatal_closes_each_unfinished_construct)
+\documentclass{article}
+\usepackage{mathtools}
+\usepackage{lxmbf}
+\begin{document}
+First paragraph.
+\begin{equation}
+\begin{multlined}
+a + b \\ c \bgroup
+\end{multlined}
+\end{equation}
+Text after \mbox{box} here.
+\section{Next}
+More words \lxmbf.
+\end{document}

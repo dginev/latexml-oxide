@@ -462,6 +462,127 @@ fn a_digestion_fatal_closes_each_unfinished_construct() {
         r#"<inline-block class="ltx_minipage" vattach="middle" width="142.3pt"><p>X <tag close=" ">1</tag>Mini</p></inline-block>"#,
       ])],
     ),
+    (
+      // an unfinished MATH construct keeps the leading math it owns, the rest goes back in order (FATALSALVAGE): the
+      // body closer, after `\pmb{$\Gamma$}` left an inline math open (cond-mat9807003's shape; INT081TA kept the
+      // eqnarray and the text inside an unparsed inline formula, E=7)
+      "unfinished inline math: the formula, then the eqnarray and the text",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/rhai-bindings/digest_fatal_after_unfinished_inline_math.tex"
+      ),
+      6,
+      4,
+      &[
+        ("equation", &[
+          "<equation xml:id=\"S0.E1\"><tags><tag>(1)</tag><tag role=\"autoref\">Equation\u{a0}1</tag><tag role=\"refnum\">1</tag></tags><Math mode=\"inline\" tex=\"\\displaystyle a\" text=\"a\" xml:id=\"S0.E1.m1\"><XMath><XMTok font=\"italic\" role=\"UNKNOWN\">a</XMTok></XMath></Math><Math mode=\"inline\" tex=\"\\displaystyle=\" text=\"=\" xml:id=\"S0.E1.m2\"><XMath><XMTok meaning=\"equals\" role=\"RELOP\">=</XMTok></XMath></Math><Math mode=\"inline\" tex=\"\\displaystyle\\pmb{$\\alpha$}\" text=\"alpha\" xml:id=\"S0.E1.m3\"><XMath><XMTok font=\"bold italic\" name=\"alpha\" role=\"UNKNOWN\">α</XMTok></XMath></Math>.       </equation>",
+        ]),
+        ("p", &[
+          "<p>variations in <Math mode=\"inline\" tex=\"\\pmb{$\\Gamma$}\" text=\"Gamma\" xml:id=\"p1.m1\"><XMath><XMTok font=\"blackboard bold\" name=\"Gamma\" role=\"UNKNOWN\">Γ</XMTok></XMath></Math><text class=\"ltx_markedasmath\">,</text></p>",
+          "<p>alpha beta gamma words after. </p>",
+        ]),
+      ],
+    ),
+    (
+      // the last-argument closer: `\bgroup` leaves the `multlined` cell's argument open (INT081TA: the text and the
+      // section inside the formula, E=5)
+      "an unfinished math argument: the equation, then the text and the section",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/rhai-bindings/digest_fatal_after_an_unfinished_math_argument.tex"
+      ),
+      4,
+      0,
+      &[
+        ("equation", &[
+          "<equation><Math mode=\"display\" tex=\"\\begin{multlined}a{+b\\\\&#10;c\\end{equation}Textafter\\end{multlined}}\" text=\"multlined * T * e * x * t * a * f * t * e * r\" xml:id=\"p1.m1\"><XMath><XMApp><XMTok meaning=\"times\" role=\"MULOP\">\u{2062}</XMTok><XMArray name=\"multlined\"><XMRow><XMCell align=\"right\"><XMApp><XMTok meaning=\"plus\" role=\"ADDOP\">+</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">a</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">b</XMTok></XMApp></XMCell></XMRow><XMRow><XMCell align=\"right\"><XMTok font=\"italic\" role=\"UNKNOWN\">c</XMTok></XMCell></XMRow></XMArray><XMTok font=\"italic\" role=\"UNKNOWN\">T</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">e</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">t</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">a</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">f</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">t</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">e</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">r</XMTok></XMApp></XMath></Math></equation>",
+        ]),
+        ("p", &[
+          "<p>First paragraph.</p>",
+          "<p>box<text font=\"italic\">here</text>.</p>",
+          "<p><text font=\"italic\">Morewords</text></p>",
+        ]),
+        ("title", &[
+          "<title font=\"italic\"><tag close=\" \"><text font=\"upright\">1</text></tag>Next</title>",
+        ]),
+      ],
+    ),
+    (
+      // the math-cell closer: `\bgroup` leaves the `multlined` cell open (2203.12624's shape; INT081TA as above)
+      "an unfinished math cell: the equation, then the text and the section",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/rhai-bindings/digest_fatal_after_an_unfinished_math_cell.tex"
+      ),
+      4,
+      0,
+      &[
+        ("equation", &[
+          "<equation><Math mode=\"display\" tex=\"\\begin{multlined}\\end{multlined}\" text=\"a + b * c * &#10; * T * e * x * t * a * f * t * e * r\" xml:id=\"p1.m1\"><XMath><XMDual><XMApp><XMRef idref=\"p1.m1.1\"/><XMRef idref=\"p1.m1.2\"/><XMApp><XMTok meaning=\"times\" role=\"MULOP\">\u{2062}</XMTok><XMRef idref=\"p1.m1.3\"/><XMRef idref=\"p1.m1.4\"/><XMRef idref=\"p1.m1.5\"/><XMRef idref=\"p1.m1.6\"/><XMRef idref=\"p1.m1.7\"/><XMRef idref=\"p1.m1.8\"/><XMRef idref=\"p1.m1.9\"/><XMRef idref=\"p1.m1.10\"/><XMRef idref=\"p1.m1.11\"/><XMRef idref=\"p1.m1.12\"/><XMRef idref=\"p1.m1.13\"/><XMRef idref=\"p1.m1.14\"/></XMApp></XMApp><XMArray name=\"multlined\"><XMRow><XMCell align=\"right\"><XMApp><XMTok meaning=\"plus\" role=\"ADDOP\" xml:id=\"p1.m1.1\">+</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\" xml:id=\"p1.m1.2\">a</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\" xml:id=\"p1.m1.3\">b</XMTok></XMApp></XMCell></XMRow><XMRow><XMCell align=\"right\"><XMApp><XMTok meaning=\"times\" role=\"MULOP\">\u{2062}</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\" xml:id=\"p1.m1.4\">c</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\" xml:id=\"p1.m1.5\"></XMTok><XMTok font=\"italic\" role=\"UNKNOWN\" xml:id=\"p1.m1.6\">T</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\" xml:id=\"p1.m1.7\">e</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\" xml:id=\"p1.m1.8\">x</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\" xml:id=\"p1.m1.9\">t</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\" xml:id=\"p1.m1.10\">a</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\" xml:id=\"p1.m1.11\">f</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\" xml:id=\"p1.m1.12\">t</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\" xml:id=\"p1.m1.13\">e</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\" xml:id=\"p1.m1.14\">r</XMTok></XMApp></XMCell></XMRow></XMArray></XMDual></XMath></Math></equation>",
+        ]),
+        ("p", &[
+          "<p>First paragraph.</p>",
+          "<p>box<text font=\"italic\">here</text>.</p>",
+          "<p><text font=\"italic\">Morewords</text></p>",
+        ]),
+        ("title", &[
+          "<title font=\"italic\"><tag close=\" \"><text font=\"upright\">1</text></tag>Next</title>",
+        ]),
+      ],
+    ),
+    (
+      // RED (row R FATALSALVAGE-TEXTINMATH): Perl's `isMath` is false for the box `\text`, `\mbox` or `\hbox` makes
+      // in math (Box.pm:81), so the closed formula ends at it and the rest is handed back as text; no word is lost
+      "math after a \\text in the formula: split at the text (RED)",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/rhai-bindings/digest_fatal_in_math_after_text_red.tex"
+      ),
+      0,
+      0,
+      &[("p", &[
+        "<p>First paragraph.</p>",
+        "<p>Before <Math mode=\"inline\" tex=\"a\" text=\"a\" xml:id=\"p2.m1\"><XMath><XMTok font=\"italic\" role=\"UNKNOWN\">a</XMTok></XMath></Math> if <text font=\"italic\">b</text></p>",
+      ])],
+    ),
+    (
+      // a construct closed among the handed-back boxes opens into the part its closer filled, the `\parbox`'s text, not
+      // its `[t]` and width (round 2 spliced every argument as text: "<Math>a+</Math>tinner words"); the formula ends at
+      // the box (row R FATALSALVAGE-TEXTINMATH)
+      "a parbox in an mbox in math: its text, no option text",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/rhai-bindings/digest_fatal_in_a_parbox_in_math.tex"
+      ),
+      0,
+      0,
+      &[("p", &[
+        "<p>First paragraph.</p>",
+        "<p>Before <Math mode=\"inline\" tex=\"a+\" text=\"limit-from@(a, +)\" xml:id=\"p2.m1\"><XMath><XMApp><XMTok meaning=\"limit-from\"/><XMTok font=\"italic\" role=\"UNKNOWN\">a</XMTok><XMTok meaning=\"plus\" role=\"ADDOP\">+</XMTok></XMApp></XMath></Math>inner words </p>",
+      ])],
+    ),
+    (
+      // the same with keyvals: `\rotatebox[origin=c]{90}` (round 2: "origin=c90.0inner words")
+      "a keyval box in an mbox in math: its text, no keyval text",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/rhai-bindings/digest_fatal_in_a_keyval_box_in_math.tex"
+      ),
+      0,
+      0,
+      &[("p", &[
+        "<p>First paragraph.</p>",
+        "<p>Before <Math mode=\"inline\" tex=\"a+\" text=\"limit-from@(a, +)\" xml:id=\"p2.m1\"><XMath><XMApp><XMTok meaning=\"limit-from\"/><XMTok font=\"italic\" role=\"UNKNOWN\">a</XMTok><XMTok meaning=\"plus\" role=\"ADDOP\">+</XMTok></XMApp></XMath></Math>inner words </p>",
+      ])],
+    ),
+    (
+      // RED (row R FATALSALVAGE-MATHARGS): a math construct opens into its last argument alone, so the root's index is
+      // lost (pdflatex prints ∛x; int kept the whole formula; round 2 spliced the index as text)
+      "a root after a \\text in math: its radicand alone (RED)",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/rhai-bindings/digest_fatal_in_a_root_after_text_in_math.tex"
+      ),
+      0,
+      0,
+      &[("p", &[
+        "<p>First paragraph.</p>",
+        "<p>Before <Math mode=\"inline\" tex=\"a\" text=\"a\" xml:id=\"p2.m1\"><XMath><XMTok font=\"italic\" role=\"UNKNOWN\">a</XMTok></XMath></Math> if <text font=\"italic\">x</text></p>",
+      ])],
+    ),
   ];
   let files: &[(&str, &str)] = &[(
     "lxmbf.sty.rhai",
@@ -500,4 +621,132 @@ fn a_digestion_fatal_closes_each_unfinished_construct() {
     }
   }
   assert!(failures.is_empty(), "{}", failures.join("\n\n"));
+}
+
+type HandedBackRow<'a> = (
+  &'a str,
+  &'a str,
+  usize,
+  &'a [(&'a str, &'a [&'a str])],
+  Option<Vec<String>>,
+);
+
+/// A `TooManyErrors` Fatal inside an unfinished math construct: the construct keeps the leading math it owns and the
+/// boxes after it go back to the enclosing list (`stomach::split_off_after_leading_math`), and the build of what is kept
+/// runs to its end. Once the digestion's end took the cap's Fatal, an `Error!` of the build no longer raises it again
+/// (`error::spend_too_many_errors`; Perl's `Error` returns before its cap test after a Fatal, Common/Error.pm:362): every
+/// one returned `Err(TooManyErrors)` and the build stopped at its first dropped Error (2203.12624). (row, repro, `Warning:`
+/// lines, every element of each tag, every `<p>` where its text is right; 101 `Error:` lines, one `Fatal:`, status 3, no
+/// "build stopped early"; the text the math-cell row digested in math is RED:
+/// `an_unfinished_math_cell_hands_back_its_text_as_text_red`)
+#[test]
+fn a_too_many_errors_fatal_in_unfinished_math_keeps_what_follows() {
+  let rows: &[HandedBackRow] = &[
+    (
+      // the body closer after `\pmb{$\Gamma$}` (cond-mat9807003; INT081TA: one `<Math text="absent">`)
+      "unfinished inline math: the eqnarray and the text after it",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/loader/too_many_errors_in_unfinished_inline_math.tex"
+      ),
+      4,
+      &[("equation", &[
+        "<equation xml:id=\"S0.E1\"><tags><tag>(1)</tag><tag role=\"autoref\">Equation\u{a0}1</tag><tag role=\"refnum\">1</tag></tags><Math mode=\"inline\" tex=\"\\displaystyle a\" text=\"a\" xml:id=\"S0.E1.m1\"><XMath><XMTok font=\"italic\" role=\"UNKNOWN\">a</XMTok></XMath></Math><Math mode=\"inline\" tex=\"\\displaystyle=\" text=\"=\" xml:id=\"S0.E1.m2\"><XMath><XMTok meaning=\"equals\" role=\"RELOP\">=</XMTok></XMath></Math><Math mode=\"inline\" tex=\"\\displaystyle\\pmb{$\\alpha$}\" text=\"alpha\" xml:id=\"S0.E1.m3\"><XMath><XMTok font=\"bold italic\" name=\"alpha\" role=\"UNKNOWN\">α</XMTok></XMath></Math>.       </equation>",
+      ])],
+      // (the 101st Error, in the 95th line's `x_1`, is the Fatal: the input after it stays unread)
+      Some(vec![
+        r#"<p>variations in <Math mode="inline" tex="\pmb{$\Gamma$}" text="Gamma" xml:id="p1.m1"><XMath><XMTok font="blackboard bold" name="Gamma" role="UNKNOWN">Γ</XMTok></XMath></Math><text class="ltx_markedasmath">,</text></p>"#.to_string(),
+        format!("<p>alpha beta gamma words after. {}word x</p>", "word x_1 here ".repeat(94)),
+      ]),
+    ),
+    (
+      // the cell closer, then the build past the cap (2203.12624; INT081TA: the formula alone, "build stopped early")
+      "an unfinished math cell: the equation, the text and the section after it",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/loader/too_many_errors_after_an_unfinished_math_cell.tex"
+      ),
+      0,
+      &[
+        ("equation", &[
+          "<equation><Math mode=\"display\" tex=\"\\begin{multlined}\\end{multlined}\" text=\"a + b * c * &#10; * S * e * t * t * i * n * g\" xml:id=\"p1.m1\"><XMath><XMDual><XMApp><XMRef idref=\"p1.m1.1\"/><XMRef idref=\"p1.m1.2\"/><XMApp><XMTok meaning=\"times\" role=\"MULOP\">\u{2062}</XMTok><XMRef idref=\"p1.m1.3\"/><XMRef idref=\"p1.m1.4\"/><XMRef idref=\"p1.m1.5\"/><XMRef idref=\"p1.m1.6\"/><XMRef idref=\"p1.m1.7\"/><XMRef idref=\"p1.m1.8\"/><XMRef idref=\"p1.m1.9\"/><XMRef idref=\"p1.m1.10\"/><XMRef idref=\"p1.m1.11\"/><XMRef idref=\"p1.m1.12\"/></XMApp></XMApp><XMArray name=\"multlined\"><XMRow><XMCell align=\"right\"><XMApp><XMTok meaning=\"plus\" role=\"ADDOP\" xml:id=\"p1.m1.1\">+</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\" xml:id=\"p1.m1.2\">a</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\" xml:id=\"p1.m1.3\">b</XMTok></XMApp></XMCell></XMRow><XMRow><XMCell align=\"right\"><XMApp><XMTok meaning=\"times\" role=\"MULOP\">\u{2062}</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\" xml:id=\"p1.m1.4\">c</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\" xml:id=\"p1.m1.5\"></XMTok><XMTok font=\"italic\" role=\"UNKNOWN\" xml:id=\"p1.m1.6\">S</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\" xml:id=\"p1.m1.7\">e</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\" xml:id=\"p1.m1.8\">t</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\" xml:id=\"p1.m1.9\">t</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\" xml:id=\"p1.m1.10\">i</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\" xml:id=\"p1.m1.11\">n</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\" xml:id=\"p1.m1.12\">g</XMTok></XMApp></XMCell></XMRow></XMArray></XMDual></XMath></Math></equation>",
+        ]),
+        ("title", &[
+          "<title font=\"italic\"><tag close=\" \"><text font=\"upright\">1</text></tag>Next</title>",
+        ]),
+      ],
+      // (its text was digested in the cell's display math: RED, `an_unfinished_math_cell_hands_back_its_text_as_text_red`)
+      None,
+    ),
+  ];
+  let mut failures = Vec::new();
+  for (name, tex, want_warnings, elements, want_paras) in rows {
+    let (log, xml, status, code) = latexml::util::test::convert_with_status(tex, None);
+    let fatals: Vec<&str> = log.lines().filter(|l| l.starts_with("Fatal:")).collect();
+    let errors = log.lines().filter(|l| l.starts_with("Error:")).count();
+    let warnings = log.lines().filter(|l| l.starts_with("Warning:")).count();
+    let mut wrong = Vec::new();
+    for (tag, want) in *elements {
+      let found = latexml::util::test::xml_elements(&xml, tag, &[]);
+      let want: Vec<String> = want
+        .iter()
+        .map(|e| latexml::util::test::normalize_markup(e))
+        .collect();
+      if found != want {
+        wrong.push(format!("<{tag}>: {found:#?} (want {want:#?})"));
+      }
+    }
+    if let Some(want) = want_paras {
+      let want: Vec<String> = want
+        .iter()
+        .map(|e| latexml::util::test::normalize_markup(e))
+        .collect();
+      let found = latexml::util::test::xml_elements(&xml, "p", &[]);
+      if found != want {
+        wrong.push(format!("<p>: {found:#?} (want {want:#?})"));
+      }
+    }
+    if fatals.len() != 1
+      || !fatals[0].starts_with("Fatal:TooManyErrors:MaxLimit(100)")
+      || errors != 101
+      || warnings != *want_warnings
+      || code != 3
+      || !status.ends_with("1 fatal error")
+      || log.contains("build stopped early")
+      || !wrong.is_empty()
+    {
+      failures.push(format!(
+        "{name}: fatals {fatals:#?}, {errors} Error: lines (want 101), {warnings} Warning: lines (want \
+         {want_warnings}), status {status:?} ({code}), {}\n{xml}\n{log}",
+        wrong.join("; ")
+      ));
+    }
+  }
+  assert!(failures.is_empty(), "{}", failures.join("\n\n"));
+}
+
+/// RED (row R FATALSALVAGE-MATHTEXT): the text after an unfinished math cell was digested in the cell's display math, so
+/// the boxes handed back are math atoms and in-math text: "the text after" builds as `thetextafter` in italic, its `$q$`
+/// as a bare `<XMText>` outside any formula, and the section's lines as one formula's atoms. pdflatex reads it as text
+/// (its "Missing } inserted" closes the cell): `<p>Setting <Math>q</Math> the text after.</p>`, `<p>Words with
+/// <Math>x</Math> inline. …`. A salvage cannot digest it again; this is the right reading it should reach.
+#[test]
+#[ignore = "RED: row R FATALSALVAGE-MATHTEXT (text digested in an unfinished cell's display math)"]
+fn an_unfinished_math_cell_hands_back_its_text_as_text_red() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/loader/too_many_errors_after_an_unfinished_math_cell.tex"
+  );
+  let (_, xml, ..) = latexml::util::test::convert_with_status(tex, None);
+  let paras = latexml::util::test::xml_elements(&xml, "p", &[]);
+  let xmtext_in_math: usize = latexml::util::test::xml_elements(&xml, "Math", &[])
+    .iter()
+    .map(|math| math.matches("<XMText").count())
+    .sum();
+  let ok = paras.first().map(String::as_str) == Some("<p>First paragraph.</p>")
+    && paras.get(1).is_some_and(|p| {
+      p.starts_with("<p>Setting <Math mode=\"inline\"") && p.ends_with(" the text after.</p>")
+    })
+    && paras
+      .iter()
+      .any(|p| p.starts_with("<p>Words with <Math mode=\"inline\""))
+    && xml.matches("<XMText").count() == xmtext_in_math;
+  assert!(ok, "{paras:#?}\n{xml}");
 }

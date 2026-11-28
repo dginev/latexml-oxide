@@ -1,0 +1,134 @@
+% mechanism: the digestion salvage closes each pending box list as the construct that opened it would (OD #251); an
+%   unfinished MATH construct keeps only the leading math it owns (`stomach::split_off_after_leading_math`), the boxes
+%   from the first non-math one on go back to the enclosing list, in order, as the salvage did before closers
+%   (the math-cell closer, `tex_tables::digest_alignment_body`); a TooManyErrors Fatal after it: the build of what is
+%   kept no longer raises the spent cap at its first dropped Error (`error::spend_too_many_errors`)
+% witness: 2203.12624 (an unfinished `multlined` cell takes in Sec. 6 and the appendices; its `$…$` become finished
+%   in-math text), reduced: the cell's `\bgroup`, a `$q$` after it (the first non-math box: a finished in-math
+%   text), a section and 101 script errors
+% oracle:  pdflatex (TL 2025, -no-shell-escape): 2 "Missing } inserted" (the stray `\bgroup`, by design); Perl 0.8.8:
+%   no output on this Fatal
+% engines: REL080RC6: 101 errors + Fatal, the equation lost, the section and its text kept;
+%   INT081TA: the same diagnostics, all after "First paragraph." lost in the formula, "build stopped early";
+%   FATALSALVAGE split alone: the same stop (the build's first Error past the cap returned Err(TooManyErrors))
+% expect:  101 errors + Fatal:TooManyErrors, W=0; the <equation> "a + b \\ c Setting", then the text after it and the
+%   section "Next" with its words; the build does not stop early (the `$q$` is kept as a bare <XMText> outside its
+%   formula, schema-invalid: row R FATALSALVAGE-XMTEXT)
+% status:  RED (INT081TA) -> GREEN (FATALSALVAGE; guard fatal_salvages_partial_document::a_too_many_errors_fatal_in_unfinished_math_keeps_what_follows)
+%   for the build; its text is RED: digested in the cell's display math it comes back as math ("thetextafter" in
+%   italic, the section's lines one formula), where pdflatex reads "Setting q the text after." as text (guard
+%   fatal_salvages_partial_document::an_unfinished_math_cell_hands_back_its_text_as_text_red, row R FATALSALVAGE-MATHTEXT)
+\documentclass{article}
+\usepackage{mathtools}
+\begin{document}
+First paragraph.
+\begin{equation}
+\begin{multlined}
+a + b \\ c \bgroup
+\end{multlined}
+\end{equation}
+Setting $q$ the text after.
+\section{Next}
+Words with $x$ inline.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+Line $x_1$ here.
+\end{document}

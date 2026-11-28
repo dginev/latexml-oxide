@@ -1201,17 +1201,28 @@ pub fn digest_alignment_body(whatsit: &mut Whatsit, runs_everycr: bool) -> Resul
     let (cell_opt, next, vtype, hidden) = match digest_alignment_column(alignment_cell, lastwascr) {
       Ok(column) => column,
       Err(e) => {
-        // (a Fatal inside a cell: the cell takes what it digested, OD #251; its groups stay, as every frame a Fatal leaves)
+        // (a Fatal inside a cell: the cell takes what it digested, OD #251; its groups stay, as every frame a Fatal leaves;
+        // a math alignment's cell keeps its leading math, the rest joins the enclosing list, 2203.12624)
         let alignment = alignment_stored.clone();
         let ismath = lookup_bool_sym(pin!("IN_MATH"));
-        close_pending_list_as(mark, move |boxes| {
+        let math_cells = alignment_cell.borrow().is_math();
+        close_pending_list_as(mark, move |mut boxes| {
+          let rest = if math_cells {
+            split_off_after_leading_math(&mut boxes)
+          } else {
+            Vec::new()
+          };
           let mut list = List::new(boxes);
           list.mode = Some(if ismath { TexMode::Math } else { TexMode::Text });
           let cell: Digested = list.into();
           let closed = alignment.alignment_cell().is_some_and(|alignment| {
             extract_alignment_column(alignment.borrow_mut(), cell.clone()).is_ok()
           });
-          if closed { Vec::new() } else { vec![cell] }
+          if closed {
+            rest
+          } else {
+            std::iter::once(cell).chain(rest).collect()
+          }
         });
         return Err(e);
       },

@@ -631,6 +631,11 @@ impl Server {
       // Name the preamble source after the document path so its locators are
       // stampable user sources (and share tag 0 with the body).
       match converter.digest_content_with_provenance(&get_file_path(uri), preamble.to_string()) {
+        // (a preamble that ended in a Fatal is no warm state: its salvage returns `Ok`, and a forked body would digest
+        // past the Fatal, with its error cap latched and spent, OD #251; the whole document converts in-process)
+        Ok(_) if latexml_core::common::error::get_status_code() >= 3 => {
+          return WarmResult::Done(self.convert_in_process(uri, text));
+        },
         Ok(pre) => {
           self.warmed_preamble_log = converter.flush_log();
           self.warmed_uri = Some(uri.to_string());
