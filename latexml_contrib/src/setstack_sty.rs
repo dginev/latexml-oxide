@@ -19,6 +19,8 @@ LoadDefinitions!({
   define_amstext_text()?;
   define_ams_matrix_base()?;
   define_ams_setstack_commands()?;
+  // setstack.sty:60 `\newcommand{\substack}`: a plain macro, where amsmath.sty:1059 declares it robust.
+  DefMacro!("\\substack{}", "\\begin{subarray}{c}#1\\end{subarray}");
   // setstack.sty:120-134, its own arrows: a picture-mode `\vector` of `#2` mm, up/down or left/right by the sign `#1`.
   RawTeX!(
     r"\newcommand{\varrow}[2]{\unitlength=1mm\begin{picture}(0,6)\end{picture}\put(0,6){\vector(0,#1 3){#2}}}

@@ -766,3 +766,30 @@ fn undelimited_argument_through_a_robust_wrapper() {
     assert_element(&xml, "Math", &[&format!(r#"xml:id="p1.m{m}""#)], expected);
   }
 }
+
+/// amsmath.sty:912 and :662 declare `\cfrac` and `\MultiIntegral` robust, so `\protected@edef` keeps them as written.
+/// Red (CYCLEPERSIST): the plain-macro `\cfrac` expanded to `\let\cfrac=…` there, whose `\cfrac` expanded again
+/// without end — Fatal Timeout:PushbackLimit (KNOWN_PERL_ERRORS #1351). Repro ams-internals/cfrac_in_protected_edef.
+#[test]
+fn cfrac_is_robust_in_a_protected_edef() {
+  let (log, xml) = convert_counted(include_str!(
+    "../../../tools/perfect_kernel/repros/ams-internals/cfrac_in_protected_edef.tex"
+  ));
+  assert_eq!(
+    (error_count(&log), warning_count(&log), fatal_count(&log)),
+    (0, 0, 0),
+    "{log}"
+  );
+  let texts: Vec<&str> = xml
+    .split(" tex=\"")
+    .skip(1)
+    .map(|t| t.split('"').next().unwrap())
+    .collect();
+  assert_eq!(
+    texts,
+    [r"\cfrac{1}{1+\cfrac{1}{x}}", r"\iint_{D}f"],
+    "{xml}"
+  );
+  assert!(xml.contains("Fraction <Math"), "{xml}");
+  assert!(xml.contains("</Math> end.</p>"), "{xml}");
+}

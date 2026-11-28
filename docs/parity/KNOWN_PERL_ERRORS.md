@@ -16710,7 +16710,7 @@ guard `perfect_kernel_batchint20::graphic_name_macro_with_underscore_expands`.
 ## 951. `\slashbox`/`\backslashbox` read their arguments at an alignment cell's head, before the cell exists
 
 diagbox.sty:216-221 (and slashbox.sty:26-41) begin `\slashbox`/`\backslashbox` with a `\def`, so the look-ahead TeX
-makes at a cell's start for `\omit`/`\noalign` (tex.web §791, at the alignment count 1000000) stops there, and the
+makes at a cell's start for `\omit`/`\noalign` (tex.web §785, §791, at the alignment count 1000000) stops there, and the
 arguments are read inside the cell: in `\backslashbox{Model} & x` the second argument is the cell's v-part, the cell
 ends after the box. Perl's diagbox.sty.ltxml:152-161 makes them `DefMacro('\backslashbox[][]{}{}', …)`, expanded by
 that look-ahead, so the `&` itself is the second argument: set in the box, "Stray alignment &", the cell's content lost.
@@ -23279,3 +23279,29 @@ Perl 0.8.8 (same host), `latexmlc --format=jats`: `<body>ann@a.edu<p id="p1">Bod
 `--stylesheet=LaTeXML-tei.xsl`: `<body>ann@a.edu<p xml:id="p1">Body.</p>…`. Fixed in Rust: the notes are the JATS
 `<article-meta>/<author-notes>` (a `<fn>` each) and the TEI `<fileDesc>/<notesStmt>` (a `<note type="role">` each)
 (OXIDIZED_DESIGN_DIVERGENCES #1063). Guard `latexml_post` `integration::document_notes_are_author_notes_not_body_text`.
+
+## 1351. Perl binds amsmath's robust `\substack`, `\cfrac` and `\MultiIntegral` as plain macros
+
+amsmath.sty:1059 is `\DeclareRobustCommand{\substack}[1]{\subarray{c}#1\endsubarray}` and :912, :662 declare `\cfrac` and
+`\MultiIntegral` robust too; `amsmath.sty.ltxml:1185`, `:1115` and `:1265` define them with a plain `DefMacro`, without
+`robust => 1` (`Package.pm:1143` `defRobustCS`). At an alignment cell's head TeX expands looking for `\omit` (tex.web
+§785 `align_peek`, §791) and stops at a robust command's `\protect`; the plain macro expands there, so in an `\xymatrix`
+cell, where `\\` is `\cr` (xymatrix.tex:119-120), the subarray's `\\` ends the cell and leaves `\text`'s group open.
+Minimal trigger (pdflatex 0 errors):
+
+```latex
+\documentclass{article}\usepackage{amsmath}\usepackage[all]{xy}
+\begin{document}Before.
+$\xymatrix{ \substack{a \\ b} & c }$
+After words here.
+\end{document}
+```
+
+Perl 0.8.8 (same host): 55 errors, and "After words here." is lost from the output (ours before the fix: 51 errors).
+Under `\protected@edef` (`\protected@edef\x{$\cfrac{1}{2}$}`) the plain `\cfrac` expands to
+`\let\cfrac=\lx@inner@cfrac…`, whose `\cfrac` expands again without end (Perl 0.8.8: "Out of memory"; ours a
+PushbackLimit Fatal). Witness 2508.07005 (379 errors and a recursion Fatal at main.tex:1681). Fixed in Rust (not patched
+in Perl, DG 2026-11-25): the three are `robust => true` in `amsmath_sty.rs`; the setstack stand-in keeps
+setstack.sty:60's plain `\newcommand{\substack}`. Guards
+`perfect_kernel_batch81::an_xymatrix_cell_may_open_with_substack`,
+`perfect_kernel_batch71a::cfrac_is_robust_in_a_protected_edef`.

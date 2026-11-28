@@ -1,0 +1,17 @@
+% witness: amsmath.sty:912 `\DeclareRobustCommand{\cfrac}`, :662 `\DeclareRobustCommand{\MultiIntegral}`
+% oracle:  pdflatex 0 errors
+% engines: rust (CYCLEPERSIST) = Fatal Timeout:PushbackLimit: under `\protected@edef` our plain-macro `\cfrac`
+%          expanded to `\let\cfrac=…`, whose `\cfrac` expanded again without end; Perl the same plain macro
+%          (KNOWN_PERL_ERRORS #1351)
+% expect:  0 errors, 0 warnings; both fractions and the double integral in the paragraph
+% status:  RED (CYCLEPERSIST) -> GREEN (SUBSTACKROBUST)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath}
+\makeatletter
+\protected@edef\myfrac{$\cfrac{1}{1+\cfrac{1}{x}}$}
+\protected@edef\myint{$\MultiIntegral{2}_D f$}
+\makeatother
+\begin{document}
+Fraction \myfrac{} and integral \myint{} end.
+\end{document}

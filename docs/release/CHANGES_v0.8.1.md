@@ -9,6 +9,14 @@ top of its group.
 
 ### Unreleased
 
+  - **`\substack`, `\cfrac` and `\MultiIntegral` are robust, as amsmath declares them.** An `\xymatrix` cell opening
+    with `\substack{a \\ b}` keeps its `\\` inside the subarray: the alignment's look-ahead for `\omit` stops at the
+    command's `\protect`, where it expanded the plain macro and the `\\`, xymatrix's `\cr`, ended the cell and left a
+    group open that every later alignment nested in (2508.07005: 379 errors and a recursion Fatal). `\cfrac` in a
+    `\protected@edef` stays as written instead of expanding without end. Perl's binding uses plain macros
+    (KNOWN_PERL_ERRORS #1351). Guards `perfect_kernel_batch81::an_xymatrix_cell_may_open_with_substack`,
+    `perfect_kernel_batch71a::cfrac_is_robust_in_a_protected_edef`.
+
   - **The box-cycle guard sees loops of 11 to 32 boxes, and a period ends in a Fatal only once it has held.** A digestion
     loop whose window is 11 to 32 boxes and whose input repeats exactly (`\def\x{abcdefghijk\x}`) is now the cycle
     Fatal instead of running to the box-list cap. A period Fatals only after it has held for 50,000 boxes when its

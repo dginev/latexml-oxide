@@ -2199,9 +2199,11 @@ LoadDefinitions!({
     Stored::String(pin("display")),
     Some(Scope::Global),
   );
+  // amsmath.sty:912 declares `\cfrac` robust (KNOWN_PERL_ERRORS #1351).
   DefMacro!(
     "\\cfrac",
-    "\\lx@savecfrac@mathstyle\\let\\cfrac=\\lx@inner@cfrac\\lx@inner@cfrac"
+    "\\lx@savecfrac@mathstyle\\let\\cfrac=\\lx@inner@cfrac\\lx@inner@cfrac",
+    robust => true
   );
   DefPrimitive!("\\lx@savecfrac@mathstyle", {
     let style = lookup_font()
@@ -2252,7 +2254,7 @@ LoadDefinitions!({
   });
 
   // Section 7.4: Multiple integrals dispatch
-  // Perl: n=0→\idotsint, n=1→\int, n=2→\iint, n=3→\iiint, n≥4→\iiiint
+  // Perl: n=0→\idotsint, n=1→\int, n=2→\iint, n=3→\iiint, n≥4→\iiiint; robust as amsmath.sty:662 declares it.
   DefMacro!("\\MultiIntegral{}", sub[args] {
     let n: i32 = args[0].to_string().trim().parse().unwrap_or(1);
     match n {
@@ -2262,7 +2264,7 @@ LoadDefinitions!({
       3 => Tokens!(T_CS!("\\iiint")),
       _ => Tokens!(T_CS!("\\iiiint")),
     }
-  });
+  }, robust => true);
 
   // amsmath.sty:754-797 makes each accent a macro, `\mathaccentV{<name>}<family><slot>#5`, reading its accentee as an
   // undelimited argument: `\tilde\muu_a` with `\newcommand{\muu}{m_{\gamma'}}` accents all of `m_{\gamma'}`, and the
@@ -3705,8 +3707,10 @@ pub fn define_ams_setstack_commands() -> Result<()> {
     r###"<ltx:XMApp><ltx:XMWrap role='UNDERACCENT'>#1</ltx:XMWrap><ltx:XMArg>#2</ltx:XMArg></ltx:XMApp>"###
   );
   //======================================================================
-  // Perl: amsmath.sty.ltxml lines 1170-1175 — subarray/substack
-  DefMacro!("\\substack{}", "\\begin{subarray}{c}#1\\end{subarray}");
+  // Perl: amsmath.sty.ltxml lines 1170-1175 — subarray/substack. amsmath.sty:1059 declares `\substack` robust: at an
+  // alignment cell's head the peek for `\omit` (tex.web §785, §791) stops at its `\protect`, so an `\xymatrix` cell's
+  // `\\=\cr` stays inside the subarray (2508.07005; KNOWN_PERL_ERRORS #1351).
+  DefMacro!("\\substack{}", "\\begin{subarray}{c}#1\\end{subarray}", robust => true);
   DefMacro!(
     "\\subarray{}",
     "\\lx@ams@matrix{name=subarray,style=\\scriptsize,datameaning=list,rowsep=0pt,alignment=#1,alignment-required=true}"

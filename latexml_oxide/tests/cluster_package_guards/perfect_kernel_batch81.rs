@@ -1,7 +1,7 @@
 //! Red/green guards for batch 81b (hyperref's autoref tag runs the kernel's `\null`, whatever the author made of it).
 //! Each guard converts its repro under `tools/perfect_kernel/repros/`, asserts the diagnostics by count and the
 //! elements.
-use latexml::util::test::convert_files_with;
+use latexml::util::test::{assert_element, convert_files_with};
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
 
@@ -80,6 +80,30 @@ fn an_xymatrix_cell_may_open_with_xy() {
   );
   assert_eq!(error_count(&log), 0, "{log}");
   assert!(xml.contains("<picture"), "{xml}");
+}
+
+/// amsmath.sty:1059 declares `\substack` robust, so at an `\xymatrix` cell head the alignment's peek for `\omit`
+/// (tex.web §785, §791) stops at its `\protect` and the `\\` xymatrix lets to `\cr` (xymatrix.tex:119-120) stays inside the
+/// subarray. Red (CYCLEPERSIST): the peek expanded the plain macro, the `\\` ended the cell and every later alignment
+/// nested in the open group — 51 errors here, 379 and a recursion Fatal in 2508.07005 (KNOWN_PERL_ERRORS #1351).
+/// Repro package-bindings/xymatrix_cell_opening_with_substack.
+#[test]
+fn an_xymatrix_cell_may_open_with_substack() {
+  let (log, xml) = convert_files_with(
+    repro!("package-bindings/xymatrix_cell_opening_with_substack.tex"),
+    &[],
+    Some(PRELOAD),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_element(
+    &xml,
+    "XMArray",
+    &[r#"xml:id="p1.m1.pic1.m1.1""#],
+    r#"<XMArray rowsep="0pt" xml:id="p1.m1.pic1.m1.1"><XMRow xml:id="p1.m1.pic1.m1.1.1"><XMCell align="center" xml:id="p1.m1.pic1.m1.1.1.1"><XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok></XMCell></XMRow><XMRow xml:id="p1.m1.pic1.m1.1.2"><XMCell align="center" xml:id="p1.m1.pic1.m1.1.2.1"><XMTok font="italic" fontsize="70%" role="UNKNOWN">b</XMTok></XMCell></XMRow></XMArray>"#,
+  );
+  assert!(xml.contains(r#"tex="\textstyle{c}""#), "{xml}");
+  assert_eq!(xml.matches("<p ").count(), 1, "{xml}");
+  assert!(xml.contains("</picture>\nAfter words here.</p>"), "{xml}");
 }
 
 /// tex.web §1193 + §1064-1065 `off_save`: a math shift arriving while a group opened inside the formula is open inserts

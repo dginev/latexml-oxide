@@ -1,0 +1,17 @@
+% witness: arXiv 2508.07005 (`\xymatrix` cells opening with `\substack`; main 379 errors and a recursion Fatal at
+%          main.tex:1681); amsmath.sty:1059 `\DeclareRobustCommand{\substack}`, xymatrix.tex:119-120 `\let\\=\cr`
+% oracle:  pdflatex 0 errors
+% engines: rust (CYCLEPERSIST) = 51 errors: the cell-head peek (tex.web §785, §791) expanded `\substack`, its `\\` ended
+%          the cell inside the subarray and every later alignment nested in the open group; Perl 55 errors
+%          (KNOWN_PERL_ERRORS #1351)
+% expect:  0 errors; the subarray in the first cell, "After words here." in a paragraph
+% status:  RED (CYCLEPERSIST) -> GREEN (SUBSTACKROBUST)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage[all]{xy}
+\begin{document}
+Before.
+$\xymatrix{ \substack{a \\ b} & c }$
+After words here.
+\end{document}
