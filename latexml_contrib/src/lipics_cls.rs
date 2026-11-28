@@ -2,7 +2,10 @@
 use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
 use latexml_package::prelude::*;
 
-use crate::and_by_meaning::and_runs;
+use crate::{
+  and_by_meaning::and_runs,
+  shipped_class::{class_code_contains, shipped_copy_text},
+};
 
 LoadDefinitions!({
   // The class the binding stands in for is lipics-v2019 or later (its options list, `\opt@<class>.cls`, is defined).
@@ -110,11 +113,14 @@ LoadDefinitions!({
       .iter()
       .any(|options| options.split(',').any(|option| option.trim() == name))
   };
-  // :1015-1016: the `thm-restate` option (`\ifx\usethmrestate\relax\RequirePackage{thm-restate}\fi`) loads
-  // thm-restate, providing the `restatable` environment (witness 2211.04601, `\documentclass[...,thm-restate]
-  // {lipics-v2021}`). Only then: thm-restate loads thmtools, and a document's keytheorems refuses to load beside it
-  // (2604.22493).
-  let thm_restate = class_option("thm-restate");
+  // :1015-1016: the `thm-restate` option loads thm-restate, its `restatable` (2211.04601; then thmtools refuses keytheorems,
+  // 2604.22493) — where the paper's copy declares it (lipics-v2019 from v2.2, 2007.09340; not v2.0, 1811.04136), and
+  // without a copy as the document asks.
+  let declares_thm_restate = match shipped_copy_text("cls")? {
+    Some(text) => class_code_contains(&text, "\\DeclareOption{thm-restate}"),
+    None => true,
+  };
+  let thm_restate = declares_thm_restate && class_option("thm-restate");
   if thm_restate {
     RequirePackage!("thm-restate");
   }

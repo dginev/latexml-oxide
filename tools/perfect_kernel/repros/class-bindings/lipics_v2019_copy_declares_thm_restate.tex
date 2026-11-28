@@ -1,0 +1,44 @@
+% witness: 2007.09340 (`\documentclass[...,numberwithinsect,autoref,thm-restate]{lipics-v2019}`, its v2.2 copy)
+% oracle: pdflatex (two runs): "Theorem 1.1", "Lemma 1.2", in the appendix the restatement "Lemma 1.2" again
+% expect: 0 errors; thm-restate loaded; the restatement numbered as its original (Lemma 1.2, its refnum 1.2)
+% mechanism: lipics-v2019.cls declares `thm-restate` from v2.2 (2019/07/19) on (the copy here, cut to the option and
+%   its theorem block): the binding reads the paper's copy, loads thm-restate and keeps `{lemma}` on `theorem`'s
+%   counter; aliasing it under `autoref` gave the restatement the refnum "A.0" (2007.09340: "Lemma A.0" for 3.5).
+% status:  GREEN
+\begin{filecontents*}{lipics-v2019.cls}
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesClass{lipics-v2019}[2019/07/19 v2.2 LIPIcs articles]
+\DeclareOption{numberwithinsect}{\let\numberwithinsect\relax}
+\DeclareOption{autoref}{\let\useautoref\relax}
+\DeclareOption{thm-restate}{\let\usethmrestate\relax}
+\DeclareOption*{\PassOptionsToClass{\CurrentOption}{article}}
+\ProcessOptions
+\LoadClass{article}
+\RequirePackage{amsthm}
+\ifx\usethmrestate\relax\RequirePackage{thm-restate}\fi
+\ifx\useautoref\relax\RequirePackage{aliascnt}\fi
+\newtheorem{theorem}{Theorem}
+\ifx\numberwithinsect\relax
+  \@addtoreset{theorem}{section}
+  \expandafter\def\expandafter\thetheorem\expandafter{%
+    \expandafter\thesection\expandafter\@thmcountersep\thetheorem}
+\fi
+\ifx\useautoref\relax\ifx\usethmrestate\relax
+  \newtheorem{lemma}[theorem]{Lemma}
+\else
+  \newaliascnt{lemma}{theorem}\newtheorem{lemma}[lemma]{Lemma}\aliascntresetthe{lemma}
+\fi\else
+  \newtheorem{lemma}[theorem]{Lemma}
+\fi
+\end{filecontents*}
+\documentclass[numberwithinsect,autoref,thm-restate]{lipics-v2019}
+\begin{document}
+\section{One}
+\begin{theorem}A theorem.\end{theorem}
+\begin{restatable}{lemma}{mylemma}
+Restated body.
+\end{restatable}
+\appendix
+\section{Two}
+\mylemma*
+\end{document}

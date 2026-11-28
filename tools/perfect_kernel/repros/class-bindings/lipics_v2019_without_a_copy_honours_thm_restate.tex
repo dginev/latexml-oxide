@@ -1,0 +1,12 @@
+% witness: none (LIPICSRESTATE review, 2026-11-28: a lipics-v2019 paper that ships no class copy)
+% oracle: none (lipics-v2019.cls is not in TL; with a v2.2 copy pdflatex prints the body twice)
+% expect: 0 errors; thm-restate loaded; the restated body twice
+% mechanism: with no copy to read, the binding honours the `thm-restate` option as the document asks: the author who
+%   passes it and uses `{restatable}` compiled against a copy that declares it (v2.2 on). Ignoring it left
+%   `{restatable}` undefined (2 Errors) and the restatement lost.
+% status:  GREEN
+\documentclass[thm-restate]{lipics-v2019}
+\begin{document}
+\begin{restatable}{lemma}{mylemma}Restated body.\end{restatable}
+\mylemma*
+\end{document}

@@ -9,6 +9,14 @@ top of its group.
 
 ### Unreleased
 
+  - **The lipics binding honours `thm-restate` only where the class declares it.** lipics-v2021 declares it, and
+    lipics-v2019 from v2.2 (2019/07/19) on; v2.0 ignores it, so the binding now reads the paper's copy (without one, it
+    honours the option as the document asks): under `autoref` v2.0's theorem siblings stay aliascnt aliases of
+    `theorem`'s counter and the copy's `\aliascntresetthe{lemma}` holds (1811.04136: 9 errors on the development
+    branch, 0 in 0.8.0 and now), while a v2.2 copy keeps its restatements numbered as their originals (2007.09340).
+    Guards `perfect_kernel_batch66h::{lipics_v2019_ignores_thm_restate, lipics_v2019_copy_declares_thm_restate,
+    lipics_v2019_without_a_copy_honours_thm_restate}`.
+
   - **`\substack`, `\cfrac` and `\MultiIntegral` are robust, as amsmath declares them.** An `\xymatrix` cell opening
     with `\substack{a \\ b}` keeps its `\\` inside the subarray: the alignment's look-ahead for `\omit` stops at the
     command's `\protect`, where it expanded the plain macro and the `\\`, xymatrix's `\cr`, ended the cell and left a

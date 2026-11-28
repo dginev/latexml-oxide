@@ -1,0 +1,41 @@
+% witness: 1811.04136 (`\documentclass[...,autoref,thm-restate]{lipics-v2019}`, its own v2.0 copy: 9 Errors since COUNTERCHAIN)
+% oracle: pdflatex (the copy below, cut from 1811.04136's 2018/12/10 v2.0 to its options and theorem block): no, no;
+%   "Lemma 1", "Theorem 2"
+% expect: 0 errors; thm-restate and thmtools not loaded; `{lemma}` an alias of `theorem`'s counter (Lemma 1, Theorem 2)
+% mechanism: lipics-v2019.cls v2.0 declares no `thm-restate` option (v2.2 on does, and its copy loads thm-restate
+%   itself); the binding loaded thm-restate for any version, so `{lemma}` was no alias counter and the copy's
+%   `\aliascntresetthe{lemma}` (:802) erred. Fixed: lipics_cls.rs honours the option where the paper's copy declares it.
+% status:  GREEN
+\begin{filecontents*}{lipics-v2019.cls}
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesClass{lipics-v2019}[2018/12/10 v2.0 LIPIcs articles]
+\DeclareOption{numberwithinsect}{\let\numberwithinsect\relax}
+\DeclareOption{cleveref}{\let\usecleveref\relax}
+\DeclareOption{autoref}{\let\useautoref\relax}
+\DeclareOption*{\PassOptionsToClass{\CurrentOption}{article}}
+\ProcessOptions
+\LoadClass{article}
+\RequirePackage{amsthm}
+\ifx\useautoref\relax\RequirePackage{aliascnt}\fi
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}
+\ifx\useautoref\relax
+  \newaliascnt{lemma}{theorem}
+  \newtheorem{lemma}[lemma]{Lemma}
+  \aliascntresetthe{lemma}
+  \newcommand{\lemmaautorefname}{Lemma}
+\else
+  \newtheorem{lemma}[theorem]{Lemma}
+\fi
+\endinput
+\end{filecontents*}
+\documentclass[autoref,thm-restate]{lipics-v2019}
+\makeatletter
+\@ifpackageloaded{thm-restate}{\def\restateloaded{yes}}{\def\restateloaded{no}}
+\@ifpackageloaded{thmtools}{\def\thmtoolsloaded{yes}}{\def\thmtoolsloaded{no}}
+\makeatother
+\begin{document}
+thm-restate: \restateloaded; thmtools: \thmtoolsloaded.
+\begin{lemma}A lemma.\end{lemma}
+\begin{theorem}A theorem.\end{theorem}
+\end{document}

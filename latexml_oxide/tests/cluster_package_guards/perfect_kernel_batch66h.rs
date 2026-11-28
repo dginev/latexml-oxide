@@ -189,6 +189,68 @@ fn lipics_thm_restate_option_loads_restatable() {
   assert!(!xml.contains("See <ref"), "{xml}");
 }
 
+/// A lipics-v2019 copy that declares no `thm-restate` (v2.0) ignores it: thm-restate and thmtools stay unloaded and
+/// under `autoref` `{lemma}` is an alias counter, so the copy's `\aliascntresetthe{lemma}` (:802) holds (1811.04136: 9
+/// Errors). Lemma 1, Theorem 2, as pdflatex numbers them beside that copy.
+#[test]
+fn lipics_v2019_ignores_thm_restate() {
+  let (log, xml) = convert_counted(include_str!(
+    "../../../tools/perfect_kernel/repros/class-bindings/lipics_v2019_ignores_thm_restate.tex"
+  ));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(xml.contains("thm-restate: no; thmtools: no."), "{xml}");
+  // the lemma, whole: numbered by `theorem`'s counter, its autoref tag `\lemmaautorefname`'s
+  assert_element(
+    &xml,
+    "theorem",
+    &["xml:id=\"Thmtheorem1\""],
+    "<theorem class=\"ltx_theorem_lemma\" inlist=\"thm theorem:lemma\" xml:id=\"Thmtheorem1\"><tags><tag>Lemma \
+     1</tag><tag role=\"autoref\">Lemma\u{a0}1<text xml:id=\"Thmtheorem1.1\"/></tag><tag \
+     role=\"creftype\">Lemma</tag><tag role=\"creftypecap\">Lemma</tag><tag role=\"creftypeplural\">Lemmas</tag><tag \
+     role=\"creftypepluralcap\">Lemmas</tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Lemma \
+     1</tag></tags><title class=\"ltx_runin\"><tag><text font=\"bold\" xml:id=\"Thmtheorem1.2\">Lemma \
+     1</text></tag><text font=\"bold\" xml:id=\"Thmtheorem1.3\">.</text></title><para xml:id=\"Thmtheorem1.p1\"><p \
+     xml:id=\"Thmtheorem1.p1.1\"><text font=\"italic\" xml:id=\"Thmtheorem1.p1.1.1\">A lemma.</text></p></para></theorem>",
+  );
+  assert!(xml.contains("<tag>Theorem 2</tag>"), "{xml}");
+}
+
+/// A lipics-v2019 copy that declares `thm-restate` (v2.2 on) loads thm-restate on it, and its `{lemma}` shares
+/// `theorem`'s counter unaliased: the binding reads the paper's copy. A restatement in the appendix keeps its
+/// original's number in every tag (2007.09340: aliased, its refnum was "A.0" for 3.5).
+#[test]
+fn lipics_v2019_copy_declares_thm_restate() {
+  let (log, xml) = convert_counted(include_str!(
+    "../../../tools/perfect_kernel/repros/class-bindings/lipics_v2019_copy_declares_thm_restate.tex"
+  ));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_element(
+    &xml,
+    "theorem",
+    &["xml:id=\"A1.Thmtheoremx1\""],
+    "<theorem class=\"ltx_theorem_lemma\" inlist=\"thm theorem:lemma\" xml:id=\"A1.Thmtheoremx1\"><tags><tag>Lemma \
+     1.2</tag><tag role=\"autoref\">Lemma\u{a0}1.2<text xml:id=\"A1.Thmtheoremx1.1\"/></tag><tag \
+     role=\"creftype\">Lemma</tag><tag role=\"creftypecap\">Lemma</tag><tag role=\"creftypeplural\">Lemmas</tag><tag \
+     role=\"creftypepluralcap\">Lemmas</tag><tag role=\"refnum\">1.2</tag><tag role=\"typerefnum\">Lemma \
+     1.2</tag></tags><title class=\"ltx_runin\"><tag><text font=\"bold\" xml:id=\"A1.Thmtheoremx1.2\">Lemma \
+     1.2</text></tag><text font=\"bold\" xml:id=\"A1.Thmtheoremx1.3\">.</text></title><para \
+     xml:id=\"A1.Thmtheoremx1.p1\"><p xml:id=\"A1.Thmtheoremx1.p1.1\"><text font=\"italic\" \
+     xml:id=\"A1.Thmtheoremx1.p1.1.1\">Restated body.</text></p></para></theorem>",
+  );
+}
+
+/// With no class copy shipped, the binding honours `thm-restate` as the document asks: its `{restatable}` is defined
+/// and the restatement repeats the body (the LIPICSRESTATE review; skipping the option left `{restatable}` undefined,
+/// 2 Errors, the restatement lost).
+#[test]
+fn lipics_v2019_without_a_copy_honours_thm_restate() {
+  let (log, xml) = convert_counted(include_str!(
+    "../../../tools/perfect_kernel/repros/class-bindings/lipics_v2019_without_a_copy_honours_thm_restate.tex"
+  ));
+  assert_eq!((error_count(&log), fatal_count(&log)), (0, 0), "{log}");
+  assert_eq!(xml.matches("Restated body.").count(), 2, "{xml}");
+}
+
 /// lipics-v2021 under `autoref` without `thm-restate` gives each theorem sibling an aliascnt alias of `theorem`'s
 /// counter, so a document can number a theorem by `corollary` (2604.22493: keytheorems' `sibling=corollary`, six
 /// `No counter 'corollary'` Errors). As pdflatex numbers them: one sequence within the section.
