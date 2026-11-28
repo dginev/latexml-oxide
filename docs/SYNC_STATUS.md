@@ -94,7 +94,7 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (488 items on 2026-11-28 on `int/towards_v0_8_1`: 488 open, weight 1043, 36 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (495 items on 2026-11-28 on `int/towards_v0_8_1`: 495 open, weight 1055, 36 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
 
 
   - ODR6 — OD ruling 12 (recorded in OD #449): `dump_reader.rs`'s "add-only" docstrings (:365, :574) corrected, then a removal trial of the skip lists against CLAUDE.md rule 2; 1
@@ -1808,7 +1808,8 @@ Rules that keep this file honest and mergeable:
     pre-DIGFATALCLOSE binary keeps both phrases, int neither). (C) FIXED by DIGCELLCOL: a salvaged cell reads its own
     `Alignment::{cell_start_column, cell_in_math}`, and a cell with no column is kept (OD #251; guard rows in
     `fatal_salvages_partial_document::a_digestion_fatal_closes_each_unfinished_construct`). Open: the block content such a cell
-    hands back inside a formula (HANDBACKBLOCK, 2508.07005, 2512.02946). Blocks INT2MAIN.
+    hands back inside a formula: FIXED by HANDBACKBLOCK (leftovers FATALSALVAGE-HANDBACK-B); 2508.07005's own cause was a
+    non-robust `\substack` in an `\xymatrix` cell, FIXED by SUBSTACKROBUST (KNOWN_PERL_ERRORS #1351).
     - EOFPUTBACK (`b5719f2c5bc`, Perl's put-back) turns `Fatal:Mouth:EoF … Until:` with no content into `Error:expected:Until:`
       with the content kept (hep-th9308151, 2012.04400, math0404023, 0811.2708, 2206.12726, math0312174, 2302.01695, 2001.01619,
       1906.11114, chao-dyn9912038, math9201259, 1404.5770; 1805.11392, cond-mat9709326, 1602.06861 and 1709.05045 then reach
@@ -1828,6 +1829,59 @@ Rules that keep this file honest and mergeable:
       CYCLEPERSIST — kept as a recorded bound unless a real paper shows it (round 1's control population);
     - (e) a counter-moving runaway with a window over 10 boxes is not caught (round 1 limits the moving class to ≤ 10 so a
       finite counter loop never Fatals where 0.8.0 converts it); it runs to the box cap or the deadline, as in 0.8.0; 3
+  - FATALSALVAGE-HANDBACK-B — (HANDBACKBLOCK 2026-11-28, three rounds: in a formula a digestion Fatal leaves, a box ends a
+    paragraph only if it is a `\par` or a display — `display_math`, `\lx@begin@display@math`, an `ALIGNMENT_IS_DISPLAY` alignment —
+    or a group holding one; a finished construct stays whole with every argument; the rest follows the formula in source order, a
+    vertical list keeps its own (OD #251; guards: the HANDBACKBLOCK rows of
+    `fatal_salvages_partial_document::a_digestion_fatal_closes_each_unfinished_construct`); fixed 2512.02946 and 1903.08357 (0
+    blocks in Math, E 233 against 0.8.0's 236)) leftovers:
+    - (a) a FINISHED formula holding a display or paragraphs stays whole: cond-mat9807003 keeps 8 eqnarrays inside finished nested
+      formulas (0.8.0 lacks them entirely; prose and Errors equal), 1512.04051 4, 1601.05984 5, 1306.1933 6 `para` in
+      `inline-logical-block` (these three keep more prose than 0.8.0); minimal `$a$ and $c, words \begin{equation}x\end{equation} $
+      inside a pending construct`. Splitting at the display (a whatsit clone per part) moved nothing on cond-mat9807003.
+    - (b) an unfinished box splits at its own `\par`, which TeX ignores in a restricted box (§1094): RED
+      `a_par_in_an_unfinished_hbox_in_math_stays_in_the_formula_red` (`$b=\sqrt{\hbox{root\par words \lxmbf}}$`); not splitting it
+      moved 1306.1933's swallowed paragraphs into the formula. Proposed rule: a restricted level keeps its `\par` up to its first
+      vertical material and is split there (§1090 `head_for_vmode`, `off_save`).
+    - (c) a multline holding the Fatal loses its rows: a salvaged `\@@AmS@multline` builds nothing (its after-digest reads `#body`);
+      `\begin{multline} a\\ b \lxmbf\end{multline}` an empty formula on every binary.
+    - (d) the text a stray `$` opens before the paragraph end stays as bare text inside an aligned `<equation>`, which the HTML drops
+      (the reviewer's g1/g2: "Lead words" in the XML, 0 in the HTML; rows `:658`, `:679`, `:806` pin that shape) — carry the whole
+      between-`$` text past the formula as the `\vbox` case does.
+    - (e) known escapes, not seen as a paragraph end: algorithm2e's `\lx@algo@par`, bindings that let `\par` to `\relax`/`\save@par`.
+    - (f) judge salvage A/Bs by prose words: the A/B words column counts each math letter (2203.12624: 43,932 -> 38,869 with 0 letters
+      lost); 5
+  - SALVAGECLOSE-SILENT — a digestion Fatal's closers (`stomach.rs` `salvage_pending_box_lists`, DIGFATALCLOSE) can drop salvaged
+    content with no Warning: on 2508.07005 without SUBSTACKROBUST (an unclosed `\text` group from a non-robust `\substack` in an
+    `\xymatrix` cell, every later align nested inside it, a recursion Fatal at `main.tex:1681`) main kept 36,143 words (3,656 boxes
+    salvaged), DIGFATALCLOSE 7,585 (654 boxes, 120 constructs closed), DIGCELLCOL 32,573, HANDBACKBLOCK round 0 35,886 — and no binary
+    warns about the loss. Bisect the 120 closed constructs on the unpatched witness to the closer that discards; every dropped box must
+    be kept or counted by a Warning (root-cause `scratch_xydiag/`, 2026-11-28); 2
+  - SALVAGEINLINE — in a formula a digestion Fatal leaves, a finished `\text`, `\mbox` or `\vbox` is handed out of the formula
+    (`$a = \text{if } b \mbox{and also} c \lxmbf$` gives `[M:a=] if b and also c`) — on DIGCELLCOL and HANDBACKBLOCK alike, where main
+    writes no XML at all for these probes (HANDBACKBLOCK round-1 review, `scratch_rev_hb1/p/b1.tex`, 2026-11-28); the text is kept, the
+    formula loses it; 1
+  - SALVAGETEXATTR — a salvaged formula's `tex=` shows macro internals: `\genfrac{\left(}[2.0pt]…` drops the numerator; 1306.1933 shows
+    `\intertext@\Let@\halign{…\@lign…}` — the reversion of a construct closed by the salvage reads its expansion, not the author's
+    source (HANDBACKBLOCK round-1 review, `scratch_rev_hb1/p/d1.tex`); 1
+  - SUBSTACKROBUST-RESIDUAL — (SUBSTACKROBUST 2026-11-28: `\substack`, `\cfrac`, `\MultiIntegral` robust as amsmath.sty:1059/:912/:662
+    declare them; KNOWN_PERL_ERRORS #1351; guards `perfect_kernel_batch81::an_xymatrix_cell_may_open_with_substack`,
+    `perfect_kernel_batch71a::cfrac_is_robust_in_a_protected_edef`) two leftovers:
+    - (a) setstack loaded after amsmath: our `setstack_sty.rs:23` quietly replaces amsmath's robust `\substack` and `{subarray}`, where
+      TeX's `\newcommand` reports "Command \substack already defined" and keeps the robust form — give setstack's definitions
+      `\newcommand` semantics (define only what is still undefined); an `\xymatrix` cell opening with `\substack` then still errs (not
+      pdflatex-clean, so no RED).
+    - (b) `cfrac_is_robust_in_a_protected_edef` asserts the `tex=` list and two substrings only; an `assert_element` on the `\cfrac`
+      Math's `XMath` would guard the fraction's structure; 1
+  - SUBSTACKTEX — a `\substack{a\\b}` formula's `tex=` reverts to `\begin{subarray}{c}a\\b\end{subarray}`, not the `\substack{…}` the
+    author wrote: the subarray's own reversion is used (before and after SUBSTACKROBUST, which made `\substack`, `\cfrac` and
+    `\MultiIntegral` robust as amsmath.sty:1059/:912/:662 declare them; KNOWN_PERL_ERRORS #1351; witness 2508.07005). A reversion change
+    for every `\substack` formula — its own batch, with an A/B over `\substack` users; 1
+  - LIPICSV2024-DECL — (LIPICSRESTATE 2026-11-28: the lipics binding loads thm-restate where the paper's shipped copy declares
+    `\DeclareOption{thm-restate}` — lipics-v2019 from v2.2 (2019/07/19) on, 9 of 63 shipped copies, not v2.0 (1811.04136) — and
+    with no copy as the document asks; guards `perfect_kernel_batch66h::{lipics_v2019_ignores_thm_restate,
+    lipics_v2019_copy_declares_thm_restate, lipics_v2019_without_a_copy_honours_thm_restate}`) lipics-v2024's own option list is
+    unverified: no shipped copy in the census or CorTeX; check the first one seen; 1
   - EOFPUTBACK-RUNAWAY — after EOFPUTBACK, `\@tempc`/`\@iforloop` re-request their delimited argument at the end of input and the
     same `Error:expected:Until:` fires 501 times until `Fatal:TooManyErrors:MaxLimit(500) Runaway` (2511.11682, 2510.17429; both
     share an earlier `\def` between `\csname`/`\endcsname` from `\cref@{thm}{Theorem}`; 0 words on both sides). Check Perl on
