@@ -89,7 +89,7 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (462 items on 2026-11-27 on `int/towards_v0_8_1`: 462 open, weight 999, 36 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (487 items on 2026-11-27 on `int/towards_v0_8_1`: 487 open, weight 1040, 36 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
 
 
   - ODR6 — OD ruling 12 (recorded in OD #449): `dump_reader.rs`'s "add-only" docstrings (:365, :574) corrected, then a removal trial of the skip lists against CLAUDE.md rule 2; 1
@@ -1713,6 +1713,99 @@ Rules that keep this file honest and mergeable:
     user's non-empty destination file. Also: an empty file of a bundled name next to the `.tex` (issue 312's leftover)
     is copied over a non-empty file in a separate destination with 0 Warnings (DG 2026-11-25 left the source→destination
     copy unchanged; record, and revisit with Perl's `pathname_copy` date rule, `Pathname.pm:266`); 1
+  - COUNTERCHAIN-RESIDUAL — (COUNTERCHAIN 2026-11-27, OD #1174, KPE #1349)
+    - aliasctr's `\@addtoreset` alias-following is not ported.
+    - A paper-local jmlr2e.sty copy's `\newcounter{theo}` is not read by the binding, so `numberlike=theo` warns (2105.04240,
+      2107.02579). Options: keep the honest Warning (copy routing decides), or the binding defines `theo`.
+    - `\@ifdefinable` on an existing `\count` register passes where pdflatex errs "Command \c@lemma already defined"; minimal input
+      thmtools + aliascnt + `\newaliascnt{lemma}{theorem}\newtheorem{lemma}[lemma]{L}`. Kernel; deferred.
+    - 1809.01129's `appendixlemma` steps with a raw `\refstepcounter{lemmacnt}\label`, which lands on the section (main the same); 1
+  - FATALSALVAGE-HANDBACK — (FATALSALVAGE round 2 2026-11-27) a box the math-closer split hands back is placed by its mode, not by
+    what it builds:
+    - a bare `<XMText>` in a `<para>` (2203.12624);
+    - math-only `XMApp`/`XMHint` boxes in a `<para>` give Malformed Errors (1903.08357: E 240 vs main 236, words ≥ main);
+    - an opened salvaged formula's atoms are dropped outside math (2205.15376: −300 words vs int, +168 vs main).
+    Proposed rule (writer's (a)): keep math-only boxes inside the closed formula; open only salvaged math-only constructs, never a
+    formula. A third round needs DG's go; 2
+  - FATALSALVAGE-TEXTINMATH — (RED row of `a_digestion_fatal_closes_each_unfinished_construct`) `Before $a \text{ if } b \lxmbf c$
+    after.` splits the formula at `\text`, because Perl's `isMath` is false for `\text`/`\mbox`/`\hbox`. No words lost; 1
+  - FATALSALVAGE-SECTIONINMATH — an unfinished cell, then `\section` with no non-math box between, puts the `<section>` inside
+    `<XMath>`. Words kept, but the output is schema-invalid. Not guarded (repro `r1.tex` in the writer's scratch, to rebuild); 1
+  - FATALSALVAGE-MATHARGS — (FATALSALVAGE round 3 review, RED row "a root after a \text in math: its radicand alone (RED)"
+    in `fatal_salvages_partial_document`) a math construct among the handed-back boxes opens into its last argument alone, so
+    `\sqrt[3]`'s index, `\frac`'s numerator, `\overset`'s top and `\xrightarrow`'s below are lost with no Warning (pdflatex
+    prints them; int kept them; main writes no output there). Fix: keep a salvaged math whatsit closed (it builds as an
+    `ltx_math_unparsed` <Math>), except the `\lx@begin@inmath@text` wrapper; do not filter with `is_math_material` (true for
+    Dimension, KeyVals). Siblings to cover: `\binom`, `\stackrel`, `\underset`, `\sideset`. No corpus witness; 1
+  - FATALSALVAGE-KEYVALFATAL — (pre-existing) a Fatal inside a non-last argument's keyval value invents its value as text
+    (`\mbox{\rotatebox[origin=c\lxmbf]{90}{…}}` prints a "c"): the `clear_pending_list_closers` path (constructor.rs:444)
+    joins "its text as it is". RED; 1
+  - FATALSALVAGE-LSPGUARD — the LSP warm fork no longer caches a preamble that ended in a Fatal (`lsp_server/unix.rs`
+    `run_warm`); argued from the code, no guard (no LSP test harness); 1
+  - FMNAMELESS-RESIDUAL — (FMNAMELESS 2026-11-27, DG's ruling on Gemini FMNAMELESS.2, OD #1063, KPE #1350)
+    - Migration: the #805/#901 shared-institute line (1103.2027) and #805's orphans are still nameless creators where no route
+      declares `\lx@names@unclaimed@notes`. Making the declaration the default retires the switch (v0.8.1 row by the ruling).
+    - Tie-break: 2109.05257's `kj21.choi@` is spelled by two Chois, so it becomes an e-mail note (guard
+      `aaailabel_closing_email_line_no_name_spells_is_a_document_note`).
+    - Split line: 2511.21717's line holding two marked e-mails stays one note, though one of them spells author Ning Yang.
+    - Mis-read affiliation: 2407.14164 reads "Nina Markl" as Eddie's affiliation (catalog repro
+      `aaailabel_unrequested_label_line_is_a_document_note`).
+    - 2410.23435: a hand-typed `$^1$` answers the thanks number (RED `autart_mark_typed_after_a_name_call_red`).
+    - Guard nit: `aaai_affiliations_rows` checks each note's role and text, not its position (a line after the last creator and
+      before the abstract; a thanks after the abstract). JATS `<fn>` carries no `fn-type` (reviewed: the tag set names none of
+      these roles); 2
+  - LISTSHORT-RESIDUAL — (LISTSHORT on int 2026-11-27: `\list`, `\usecounter`, `\@mklab` not `\long`, OD #1173, KPE #1348;
+    reviewer SHIP) two inherited leftovers:
+    - (a) revtex4's `thebibliography` argument is required (revtex4.cls:5549), so in TeX a bare `\list` after
+      `\begin{thebibliography}` is consumed as it. Our kernel reads the argument only when braced (Perl
+      latex_constructs.pool.ltxml:4010-4016), so 1310.5566 keeps 1 Error where pdflatex gives 0. RED row; fix in the revtex4
+      binding or the kernel, with an A/B over classes whose argument is optional.
+    - (b) TeX's `\@item[#1]` is not `\long`, so `\item[a\par b]` errs in pdflatex, while our `\item` constructor probably reads on
+      (suspected, not run).
+    Repro `tools/perfect_kernel/repros/list-structure/list_argument_ended_by_a_paragraph_in_a_bibliography.tex` (its `t.tex`
+    revtex4 twin is in scratch_int2main_triage/r1310); 1
+  - NOTEX-L3BACKEND — (RELWF0 2026-11-27, RED `perfect_kernel_batchrelwf0::notex_dump_backend_load_warns`; DG ruling: fix it
+    and gate the no-TeX hello Warning-free before 0.8.1) with no TeX tree, a conversion on the format dump warns
+    `missing_file:l3backend-pdftex`. The `\begin{document}` handler fires `\lx@sys@load@backend` (`latex_constructs/sect02.rs`,
+    Rust-only), which reads `l3backend-pdftex.def` from a tree that isn't there. The no-dump branch and any tree give 0 Warnings;
+    every 0.8.0-rc1..rc6 binary shipped with it.
+    - Fix (a): skip the backend load when the `.def` cannot be found, the `find_file` check `expl3_sty.rs` makes before its raw
+      load. Or (b): stub the backend functions without a tree.
+    - With the fix, `tools/artifact_check.sh notex`'s hello/expl3 NOTE becomes a FAIL (TODO in the script); 1
+  - DUMPTRIM-PLAIN — (RELWF0 review) on a machine WITH a TeX tree, the embedded plain dump still serves a tree whose
+    `plain.tex` stamp matches (Debian TL 2025, likely ubuntu-22.04). DG's DUMPTRIM ruling 1: the embedded format serves only a
+    machine whose tree cannot supply it. Make PR-1's runtime change cover plain too; `artifact_check.sh tex`'s format-plain NOTE
+    becomes a FAIL then (TODO in the script); 1
+  - RELWF — the v0.8.1 release workflow (DG 2026-11-27, 5 rulings; design in the kit's ADV_RELWF081 report). PR-0 is on int
+    (`tools/artifact_check.sh notex|tex` in the five release legs and release-platform-check). Open:
+    - PR-1 runtime: embedded only without a tree; a cache temp-dir fallback for a read-only HOME; the Docker cli image on on-disk
+      dumps;
+    - PR-2 workflows: one dumps job on the CI apt tree + SHA256SUMS; the release shards on those bytes; the five TL containers as
+      a compatibility gate;
+    - PR-3: split `release` into build / verify / publish;
+    - PR-4: a PR-CI `notex-format` job;
+    - PR-5: FMTCACHEKEY/PRUNE + trigger files (language.dat, hyphen.cfg, firstaid);
+    - PR-6: RELEASING.md + the Homebrew formula's `test do`.
+    The Windows artifact check first runs at the next RC; 3
+  - INTFATALREG — two int-only defects in how a digestion Fatal is caught and salvaged (bisected 2026-11-27 with the staged INT081
+    binaries). (A) CYCLEWIN `604b59a6457`'s register-value salt hides a runaway whose counter moves, which the old 9-box window
+    caught as a cycle Fatal: the conversion now runs to the deadline and keeps nothing (0805.0686, 0808.1477, 1812.11491,
+    math0609583: Paul Taylor's inline diagram macros, `\reformatmatrix`'s `\setbox…\lastbox` loop; Perl loops too, pdflatex is
+    clean). (B) its window 10 → 32 reads a pgfplots table's repeated rows inside a box as a cycle (2210.07754, a false Fatal; Perl
+    and pdflatex clean) — writer CYCLEPERSIST. (C) DIGFATALCLOSE `e064b7f3dca`'s math-cell closer in `digest_alignment_body`
+    (`tex_tables.rs` ~:1200-1218) reads `alignmentStartColumn`/`IN_MATH` at salvage time from the innermost cell's frame (Perl
+    reads them at the cell's own end, `TeX_Tables.pool.ltxml:471`, `Alignment.pm:252`), and a missing column returns an empty
+    success, so the cell and everything spliced into it vanish with no diagnostic (2508.07005, 1903.08357, 2512.02946, 2308.08362,
+    2003.09520, 2605.27225, 2604.12070; repro `\begin{tabular}{l} outer words \begin{tabular}{lll} a & b & Beta words \lxmbf`: the
+    pre-DIGFATALCLOSE binary keeps both phrases, int neither) — writer DIGCELLCOL. Blocks INT2MAIN.
+    - EOFPUTBACK (`b5719f2c5bc`, Perl's put-back) turns `Fatal:Mouth:EoF … Until:` with no content into `Error:expected:Until:`
+      with the content kept (hep-th9308151, 2012.04400, math0404023, 0811.2708, 2206.12726, math0312174, 2302.01695, 2001.01619,
+      1906.11114, chao-dyn9912038, math9201259, 1404.5770; 1805.11392, cond-mat9709326, 1602.06861 and 1709.05045 then reach
+      TooManyErrors(100) with their text kept): a gain, recorded here so an A/B tally does not count it as worse; 5
+  - EOFPUTBACK-RUNAWAY — after EOFPUTBACK, `\@tempc`/`\@iforloop` re-request their delimited argument at the end of input and the
+    same `Error:expected:Until:` fires 501 times until `Fatal:TooManyErrors:MaxLimit(500) Runaway` (2511.11682, 2510.17429; both
+    share an earlier `\def` between `\csname`/`\endcsname` from `\cref@{thm}{Theorem}`; 0 words on both sides). Check Perl on
+    them; a put-back at the true end should fire once; 1
 
 ---
 
