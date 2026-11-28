@@ -222,6 +222,11 @@ impl CycleGuard {
     older != UNFILLED && sample(0) + w < older
   }
 
+  /// True when the newest [`Self::push`] ran the periodicity check, whatever it found: a caller tracking how long a
+  /// period holds ([`Persistence`]) learns from it that a check saw none.
+  #[inline]
+  pub fn checked(&self) -> bool { self.since == 0 && self.len > 0 }
+
   /// The backlog samples, oldest first (for the `LATEXML_DEBUG_FATAL` trace).
   pub fn backlog_trace(&self) -> Vec<usize> {
     (0..BACKLOG_SAMPLES)
@@ -278,6 +283,31 @@ impl CycleGuard {
       }
     }
     None
+  }
+}
+
+/// How long a detected period has held, on the caller's clock (boxes recorded, tokens read): from the first check
+/// that saw it, through every later check, to now. A check that sees none ends the run. The stomach's guard Fatals
+/// on a period only once it has held for a bounded stretch (OD #538), so repeated data or a counter loop that ends
+/// inside the hold is no loop; one that runs past it still reads as one.
+#[derive(Default)]
+pub struct Persistence {
+  since: Option<usize>,
+}
+
+impl Persistence {
+  /// Forget the run.
+  pub fn reset(&mut self) { self.since = None; }
+
+  /// Note a check at clock reading `now` that saw the period (`holds`) or not; how long the run has held.
+  #[inline]
+  pub fn note(&mut self, holds: bool, now: usize) -> usize {
+    if holds {
+      now.saturating_sub(*self.since.get_or_insert(now))
+    } else {
+      self.since = None;
+      0
+    }
   }
 }
 
@@ -399,6 +429,26 @@ mod tests {
       h.push(1, if i % 11 == 10 { i / 11 } else { 0 });
     }
     assert_eq!(h.input_period(11), None);
+  }
+
+  #[test]
+  fn a_period_holds_until_a_check_misses_it() {
+    let mut run = Persistence::default();
+    assert_eq!(run.note(true, 1_000), 0);
+    assert_eq!(run.note(true, 51_000), 50_000);
+    assert_eq!(run.note(false, 51_256), 0);
+    assert_eq!(run.note(true, 60_000), 0);
+    assert_eq!(run.note(true, 60_256), 256);
+  }
+
+  #[test]
+  fn a_guard_says_when_it_checked() {
+    let mut g = CycleGuard::new();
+    assert!(!g.checked());
+    for i in 1..=2 * CHECK_EVERY {
+      g.push(i as u64, 0);
+      assert_eq!(g.checked(), i % CHECK_EVERY == 0, "push {i}");
+    }
   }
 
   #[test]

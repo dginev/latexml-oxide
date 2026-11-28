@@ -1,0 +1,16 @@
+% witness: synthetic (CYCLEPERSIST review); a finite counter \loop of 12 boxes run 30,000 times, 360,000 boxes and
+%          past 2,000,000 tokens read after the box guard's activation
+% oracle:  pdflatex 0 errors, "Before." and "After."
+% engines: rust main (0.8.0, window 10) = 0 errors, "Before." and "After." (a 12-box window was out of sight);
+%          CYCLEPERSIST round 0 = Fatal:Stomach:Recursion "a window of 12 box(es) ... but for the register values read,
+%          for 2001280 tokens read", the 39-byte stub written
+% expect:  0 errors; "Before." and "After." (the moving class looks at windows of at most 10 boxes, as main did)
+% status:  RED (CYCLEPERSIST r0) -> GREEN (CYCLEPERSIST r1)
+\documentclass{article}
+\newcount\n
+\def\row{\hbox{a}\hbox{b}\hbox{c}\hbox{d}\hbox{e}\hbox{f}\hbox{g}\hbox{h}\hbox{i}\hbox{j}\hbox{k}\hbox{l}}
+\begin{document}
+Before.\par
+\loop\row\advance\n1 \ifnum\n<30000 \repeat
+After.
+\end{document}

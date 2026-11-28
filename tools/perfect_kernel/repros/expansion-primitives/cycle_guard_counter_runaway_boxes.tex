@@ -1,0 +1,16 @@
+% witness: synthetic; a runaway \loop whose counter moves (\ifnum\n>0 always holds), the shape of Paul Taylor's
+%          diagram macros' \advance\cdbfl1 \repeat (0805.0686, 0808.1477, 1812.11491, math0609583)
+% oracle:  pdflatex loops too (pages of boxes, \n overflowing at 2^31); no oracle output
+% engines: rust INT081TA = no cycle Fatal (the moving \n salts every span); `Fatal:oom:alloc_failed` under ulimit -v
+%          without --max-memory, the box-list cap at 2.67M boxes (7.6 s, 4.6 GB) with --max-memory=8192
+% expect:  Fatal:Stomach:Recursion "... repeats every 2 box(es) but for the register values read, for 2000000+ tokens
+%          read ..." in about a second; the XML written is the 39-byte stub (a salvage refuses a list past 50,000
+%          boxes, as on main)
+% status:  RED (INT081TA) -> GREEN (CYCLEPERSIST)
+\documentclass{article}
+\newcount\n
+\begin{document}
+Before.
+\loop\hbox{a}\hbox{b}\advance\n1 \ifnum\n>0 \repeat
+After.
+\end{document}

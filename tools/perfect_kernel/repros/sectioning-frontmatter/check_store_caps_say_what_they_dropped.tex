@@ -1,6 +1,7 @@
 % The third source's bounds say what they drop, in an Info: the calls past the first 512 (here 520 calls, the last
-% `\setaddr{Lunar}`), and an argument no run could read (`\longaddr`'s 16,384 words end its run in a Fatal, discarded).
-% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "A Title", "Ann Able", "Filler" 520 times, "Lunar", "Word" 16,384 times
+% `\setaddr{Lunar}`), and an argument no run could read (`\longaddr`'s 32,768 words end its run in a Fatal, discarded:
+%          the box-cycle guard's 50,000-box hold, OD #538; 16,384 words, 98k boxes, now read).
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "A Title", "Ann Able", "Filler" 520 times, "Lunar", "Word" 32,768 times
 % engines: rust int139c = 0 errors, 0 warnings; rust 108b = 1 warning naming only "filler", the rest with no record; perl = not run
 % expect:  0 errors, 1 warning (frontmatter:unclaimed_store) "filler"; an Info frontmatter:store_calls_dropped (9 later
 %          calls, of \setaddr), an Info frontmatter:unread_argument (\longaddr's, by its size and first tokens)
@@ -17,7 +18,7 @@
 \documentclass{checkstorecapssaywcls}
 \title{A Title}\author{Ann Able}
 \def\words{Word Word Word Word Word Word Word Word }
-\newcount\doubling\doubling=11
+\newcount\doubling\doubling=12
 \loop\edef\words{\words\words}\advance\doubling by -1 \ifnum\doubling>0 \repeat
 \expandafter\longaddr\expandafter{\words}
 \newcount\callsleft\callsleft=519

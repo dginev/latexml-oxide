@@ -479,6 +479,7 @@ mod perfect_kernel_batchcr8;
 /// an alpha label's non-ASCII year, a defining command's `{\cs}` argument read as tokens.
 mod perfect_kernel_batchcrash397b;
 /// `cycle_guard.rs` `MAX_WINDOW` 10 → 32: loops of period 11 to 32 end as the cycle Fatal.
+mod perfect_kernel_batchcyclepersist;
 mod perfect_kernel_batchcyclewin;
 /// INVDAG: the frontmatter invents no glyph — an unmarked note outside the creators shows its content with none, an authblk
 /// label no `\affil` explains shows on its name (OD #1063, #1064).

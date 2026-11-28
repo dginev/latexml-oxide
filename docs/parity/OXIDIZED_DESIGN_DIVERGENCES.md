@@ -11213,6 +11213,44 @@ fingerprints are cleared at each conversion (`initialize_gullet`, `cycle_guard::
 recursion printing twelve letters an item, 720,000 letters in one paragraph, is a `Fatal:Stomach:Recursion` (repro
 `cycle_guard_box_drain_period_twelve`, catalog only; nine letters Fatal at window 10 too).
 
+**A box period must hold (CYCLEPERSIST).** With the values in every span, a box loop that moves a counter was no
+period at all: Paul Taylor's 1990 diagram macros pasted inline (`\reformatrow`'s `\setbox\cdbfl=\lastbox …
+\advance\cdbfl1 \repeat`, which loops in our kernel and not in pdflatex; 0805.0686, 0808.1477, 1812.11491,
+math0609583) ran to the 180 s deadline with no output, where the window of 10 had stopped them with their content
+salvaged in 8–41 s; `\loop\hbox{a}\hbox{b}\advance\n1 \ifnum\n>0 \repeat` ran to the box-list cap (2.67M boxes, 4.6 GB at
+`--max-memory=8192`; with no `--max-memory` the cap rides this machine's RAM, so `ulimit -v` ended it as
+`Fatal:oom:alloc_failed`, no XML). And an exact repeat of finite data was a loop: 2210.07754's pgfplots table repeats
+one row, so a 13-box window repeated boxes, input and register values (a 1,000-row tail: 11k boxes) and the plot was
+lost. The stomach's guard now keeps a second span history without the values (`cycle_spans_raw`) and Fatals on a
+period only once it has held (`cycle_guard::Persistence`, counted from the first check that sees it through every later
+check, none missing): when the spans repeat with their values, for `STOMACH_CYCLE_HOLD_STUCK` = 50,000 boxes recorded
+(the activation size again: a loop that changes nothing stops near 100k boxes); when
+they repeat only without them, for `STOMACH_CYCLE_HOLD_MOVING` = 2,000,000 tokens read, and only in a window of at most
+`STOMACH_CYCLE_MOVING_MAX_WINDOW` = 10 boxes, 0.8.0's `MAX_WINDOW`. TeX has no such guard; it stops
+an unshipped list only at main memory ("TeX capacity exceeded", main_memory = 5M words), which our box cap stands in
+for; a period whose counter moves cannot say whether the loop ends, so the hold bounds the work spent before we decide.
+The window bound keeps the moving class where 0.8.0 already called every such period a loop at the activation: there
+the hold only makes the Fatal later, so no counter loop ends worse than on 0.8.0. Past 10 boxes a finite counter loop
+runs on (`\loop` over twelve `\hbox`es 30,000 times holds past the 2M tokens and ends clear; a runaway that wide runs to
+the box-list cap, as on 0.8.0), while an exact repeat keeps the window of 32 (CYCLEWIN's 11-box `\def\x` loop).
+**Accepted bound:** a finite counter loop of at most 10 boxes that runs past the hold still Fatals, as on 0.8.0, only
+later: `\loop\hbox{a}\hbox{b}\advance\n1 \ifnum\n<N \repeat` in vertical mode ends clear at N = 80,000 and Fatals from
+85,000 (0.8.0 from 25,000, the activation; pdflatex finishes it; repro `cycle_guard_counter_loop_two_boxes_long`, the
+ignored RED row).
+**Accepted bound (exact):** a finite run of exactly repeated data in a window of 11 to 32 boxes that outlasts the
+activation plus the 50,000-box hold now Fatals where 0.8.0, which looked only at windows of at most 10, converted it
+(inherited from CYCLEWIN's window of 32): a 12-box `\row`, ten to a `\rX`, with `\rX` written 900 times in vertical
+mode and no counter (108,000 boxes; pdflatex finishes it) ends in the cycle Fatal with the 39-byte stub, where 0.8.0
+keeps it all. Neither the 156-paper Fatal population nor a 200-paper control of
+long box lists (`\addplot`, `\multiput`, `\foreach`) shows it.
+It is measured in tokens because a box count cannot serve both sides: CYCLEWIN's finite letter loop reads ~3 tokens a
+box (190k tokens over its 66k-box run, clear), Taylor's loop ~150 and slows as its list grows (150k boxes took 100 s),
+`\hbox{a}\hbox{b}` ~15. Measured: the Taylor extract (`vbf07`, a 9-box window) a cycle Fatal with "Before." kept in
+8–28 s depending on the host's load (8 s and 25 s here, 16.2 s and 19 s in review; 0.8.0 6.8–18 s), the `\hbox` loop
+0.7 s, the eleven-box `\def\x` loop 0.15 s; 2210.07754's shape clear. The message names the class and the hold ("… repeats every
+2 box(es) but for the register values read, for 2003840 tokens read, …"). The gullet's guard is unchanged: an
+expansion-only loop that reads its moving counter still runs to the deadline.
+
 **Guards**: `perfect_kernel_batch65f::repeated_file_text_is_no_expansion_loop` (also: a two-token expansion loop and a
 `\scantokens` self-recursion past the floor still trip), `perfect_kernel_batch65f::self_input_stops_at_the_text_input_level_limit`,
 `perfect_kernel_batchcyclewin::{a_fifteen_token_expansion_loop_is_a_cycle_fatal, an_eleven_box_digestion_loop_is_a_cycle_fatal,
@@ -11222,7 +11260,10 @@ a_finite_counter_loop_of_boxes_is_no_cycle, a_recursion_eating_pushed_back_data_
 `cycle_guard_period_past_window`, is catalog only), `cycle_guard::tests::{detects_period_up_to_max_window,
 a_uniform_tail_does_not_hide_a_longer_period, ignores_period_over_max_window, a_moving_count_breaks_the_span_period,
 a_period_consuming_one_pushed_back_item_is_data, data_eaten_after_a_refill_is_data, a_period_with_a_level_backlog_fires,
-a_conversion_starts_with_no_folded_values}`.
+a_conversion_starts_with_no_folded_values, a_period_holds_until_a_check_misses_it, a_guard_says_when_it_checked}`;
+`perfect_kernel_batchcyclepersist::{a_runaway_counter_loop_of_boxes_is_a_cycle_fatal, a_plot_of_repeated_rows_is_no_cycle,
+a_finite_twelve_box_counter_loop_is_no_cycle}` (repros `cycle_guard_counter_runaway_boxes`, `cycle_guard_repeated_plot_rows`,
+`cycle_guard_counter_loop_twelve_boxes`; the bound's RED row `a_long_finite_two_box_counter_loop_is_no_cycle_red`).
 
 
 ### 540. Misplaced alignment commands: the first in a group is an Error, the rest of that group its cascade, Warnings (TeX: an error each; Perl: silenced by `\let`s to `\relax`)

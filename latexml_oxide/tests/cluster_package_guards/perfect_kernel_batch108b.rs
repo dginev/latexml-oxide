@@ -196,7 +196,7 @@ fn the_bounds_of_the_third_source_say_what_they_dropped() {
   assert_eq!(unread.len(), 1);
   assert!(
     unread[0].starts_with(
-      r"Info:frontmatter:unread_argument The title-page check could not read \longaddr's argument of 81920 token(s), which it leaves out: Word Word"
+      r"Info:frontmatter:unread_argument The title-page check could not read \longaddr's argument of 163840 token(s), which it leaves out: Word Word"
     ),
     "{unread:?}"
   );

@@ -1,0 +1,15 @@
+% witness: synthetic (CYCLEPERSIST review); a finite counter \loop of 2 boxes run 150,000 times in vertical mode
+% oracle:  pdflatex 0 errors, "Before." and "After."
+% engines: rust main (0.8.0) = Fatal:Stomach:Recursion "a window of 2 box(es)" at the 50,000-box activation;
+%          INT081TA = 0 errors (the moving \n salts every span); CYCLEPERSIST = the moving-class Fatal after the
+%          2,000,000-token hold, between 80,000 and 85,000 iterations
+% expect:  0 errors; "Before." and "After." -- the accepted bound of OD #538: a period of at most 10 boxes whose
+%          counter moves is a loop once it has held for 2,000,000 tokens, which a finite loop this long outlasts
+% status:  RED (main, CYCLEPERSIST; accepted bound, catalog row)
+\documentclass{article}
+\newcount\n
+\begin{document}
+Before.\par
+\loop\hbox{a}\hbox{b}\advance\n1 \ifnum\n<150000 \repeat
+After.
+\end{document}

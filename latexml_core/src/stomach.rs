@@ -710,6 +710,15 @@ pub struct Stomach {
   /// The tokens read for each recorded box ([`crate::cycle_guard::SpanHistory`]):
   /// a box period is a loop only when its input repeats too.
   cycle_spans:         crate::cycle_guard::SpanHistory,
+  /// The same spans without the register values read: a loop whose counters move repeats these (OD #538).
+  cycle_spans_raw:     crate::cycle_guard::SpanHistory,
+  /// Boxes the cycle guard has recorded this conversion, the clock `cycle_stuck` is measured on.
+  cycle_records:       usize,
+  /// How long a box period whose spans repeat with their register values has held (`STOMACH_CYCLE_HOLD_STUCK`).
+  cycle_stuck:         crate::cycle_guard::Persistence,
+  /// How long, in tokens read, a box period whose spans repeat register values aside has held
+  /// (`STOMACH_CYCLE_HOLD_MOVING`).
+  cycle_moving:        crate::cycle_guard::Persistence,
   /// Set by the guarded box appenders when a stomach guard fires; consumed
   /// and turned into a `Fatal` by `check_timeout` (the next
   /// `Result`-returning checkpoint — `push_box_list` itself returns `()` and
@@ -852,6 +861,10 @@ pub fn initialize_stomach() {
   stomach.cycle_guard.reset();
   stomach.cycle_progress = 0;
   stomach.cycle_spans.reset();
+  stomach.cycle_spans_raw.reset();
+  stomach.cycle_records = 0;
+  stomach.cycle_stuck.reset();
+  stomach.cycle_moving.reset();
   stomach.pending_cycle_fatal = None;
   set_aside_stashed_fatal();
 
@@ -2703,28 +2716,59 @@ fn cycle_guard_record(st: &mut Stomach, d: &Digested, progress: usize) {
     // window keeps its uniform-run exemption (a finite `\loop` printing one
     // letter). Excluding content-free boxes instead blinded the guard to that
     // runaway and to 2508.07407's cloud loop; mixing the span into the box
-    // fingerprint defeated the uniform-run exemption. DIVERGENCES #326. A span carries the register values read
-    // for its box, so a finite counter `\loop` printing the same letters is no cycle either (OD #538).
-    st.cycle_spans.push(
-      progress.saturating_sub(st.cycle_progress),
-      crate::cycle_guard::take_span_salt(),
-    );
+    // fingerprint defeated the uniform-run exemption. DIVERGENCES #326.
+    //
+    // A period is a loop only once it has held (OD #538): for `STOMACH_CYCLE_HOLD_STUCK` boxes when the spans repeat
+    // with the register values read for them (a finite run of repeated data shorter than the hold ends first:
+    // 2210.07754's pgfplots table repeats one row), for `STOMACH_CYCLE_HOLD_MOVING` tokens read when they repeat only
+    // without them, and then only in a window of at most `STOMACH_CYCLE_MOVING_MAX_WINDOW` boxes, where 0.8.0 called it
+    // a loop at once: a moving counter cannot tell a finite `\loop` from Paul Taylor's diagram macros'
+    // `\advance\cdbfl1 \repeat` (0805.0686, 0808.1477, 1812.11491, math0609583), so a longer finite loop is left to run.
+    let span = progress.saturating_sub(st.cycle_progress);
+    st.cycle_spans
+      .push(span, crate::cycle_guard::take_span_salt());
+    st.cycle_spans_raw.push(span, 0);
     st.cycle_progress = progress;
-    let fp = d.cycle_fingerprint();
-    if let Some(period) = st.cycle_guard.push(fp, 0)
-      && let Some(input_period) = st.cycle_spans.input_period(period)
-    {
-      st.pending_cycle_fatal = Some((
-        ErrorCategory::Recursion,
-        s!(
-          "Infinite digestion loop: a window of {} box(es) repeated {}+ times from \
-           input that repeats every {} box(es), while the box list grew past {}",
-          period,
-          crate::cycle_guard::REPEAT,
-          input_period,
-          STOMACH_CYCLE_ACTIVATE
-        ),
-      ));
+    st.cycle_records += 1;
+    let period = st.cycle_guard.push(d.cycle_fingerprint(), 0);
+    if st.cycle_guard.checked() {
+      let stuck = period.and_then(|w| st.cycle_spans.input_period(w));
+      let moving = period
+        .filter(|&w| w <= STOMACH_CYCLE_MOVING_MAX_WINDOW)
+        .and_then(|w| stuck.or_else(|| st.cycle_spans_raw.input_period(w)));
+      let now = st.cycle_records;
+      let stuck_for = st.cycle_stuck.note(stuck.is_some(), now);
+      let moving_for = st.cycle_moving.note(moving.is_some(), progress);
+      let verdict = if stuck_for >= STOMACH_CYCLE_HOLD_STUCK {
+        stuck.map(|p| (p, "", stuck_for, "boxes"))
+      } else if moving_for >= STOMACH_CYCLE_HOLD_MOVING {
+        moving.map(|p| {
+          (
+            p,
+            " but for the register values read",
+            moving_for,
+            "tokens read",
+          )
+        })
+      } else {
+        None
+      };
+      if let (Some(period), Some((input_period, moving, held, unit))) = (period, verdict) {
+        st.pending_cycle_fatal = Some((
+          ErrorCategory::Recursion,
+          s!(
+            "Infinite digestion loop: a window of {} box(es) repeated {}+ times from \
+             input that repeats every {} box(es){}, for {} {}, while the box list grew past {}",
+            period,
+            crate::cycle_guard::REPEAT,
+            input_period,
+            moving,
+            held,
+            unit,
+            STOMACH_CYCLE_ACTIVATE
+          ),
+        ));
+      }
     }
   }
 }
@@ -2885,6 +2929,21 @@ fn push_box_list_vec(args: Vec<Digested>) { extend_box_list(args) }
 /// guard inert for every ordinary conversion. (~50k boxes is already well past
 /// any sane un-flushed list yet ~30× below the 4.5 GB OOM ceiling.)
 const STOMACH_CYCLE_ACTIVATE: usize = 50_000;
+/// How long, in boxes recorded, a box period from repeating input — register values and all — must hold before it
+/// is a loop: as long again as the activation size, so a finite run of repeated data (2210.07754's pgfplots table,
+/// a thousand equal rows of 13 boxes) ends first, and a loop that changes nothing still stops near 100k boxes.
+const STOMACH_CYCLE_HOLD_STUCK: usize = STOMACH_CYCLE_ACTIVATE;
+/// How long, in tokens read, a box period from input that repeats only register values aside must hold: a counter
+/// moves, so the period cannot tell a finite `\loop` from a runaway (TeX itself stops an unshipped list only at main
+/// memory, "TeX capacity exceeded"). Measured in work, not boxes: a finite loop printing letters reads ~3 tokens a box
+/// (190k tokens for 66k boxes, `cycle_guard_counter_loop_boxes`), Taylor's `\reformatrow` ~150 and its cost grows
+/// with the list (150k boxes took 100 s), so a box count long enough for the one kept the other past the deadline.
+const STOMACH_CYCLE_HOLD_MOVING: usize = 2_000_000;
+/// The longest box window the moving class looks at: 0.8.0's `cycle_guard::MAX_WINDOW`, where every such period was
+/// a loop at once, so the hold only makes it later. Past it a finite counter loop of 12 boxes can run past both
+/// the activation and the hold (30,000 × 12 boxes) and end. A finite 2-box counter loop still Fatals past about
+/// 85,000 iterations (80,000 end clear), where 0.8.0 Fatalled it at activation, 25,000 (OD #538).
+const STOMACH_CYCLE_MOVING_MAX_WINDOW: usize = 10;
 pub fn pop_box_list() -> Option<Digested> { stomach_mut!().box_list.pop() }
 
 /// Items the list-tail primitives see through, being no node in TeX: a comment, a paragraph's closing `\par`

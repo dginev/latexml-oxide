@@ -1,0 +1,22 @@
+% witness: 2210.07754 (a pgfplots table whose tail repeats one row); the test writes rows.dat: 4,000 distinct rows,
+%          then "0.000010 0.999737" 1,000 times
+% oracle:  pdflatex 0 errors, the plot drawn
+% engines: rust INT081TA = Fatal:Stomach:Recursion "a window of 13 box(es) repeated 100+ times from input that
+%          repeats every 13 box(es)" (the repeated rows repeat boxes, input and register values: 11k boxes)
+% expect:  0 errors, 0 warnings; the plot's path kept (a period that repeats register values and all must hold for
+%          50,000 boxes before it is a loop)
+% status:  RED (INT081TA) -> GREEN (CYCLEPERSIST)
+\documentclass{article}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\begin{document}
+Before.
+\begin{minipage}{5cm}
+\begin{tikzpicture}
+\begin{axis}[xmin=0,xmax=0.3,ymin=0,ymax=1]
+\addplot table {rows.dat};
+\end{axis}
+\end{tikzpicture}
+\end{minipage}
+After.
+\end{document}

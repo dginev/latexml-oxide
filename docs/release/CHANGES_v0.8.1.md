@@ -9,6 +9,20 @@ top of its group.
 
 ### Unreleased
 
+  - **The box-cycle guard sees loops of 11 to 32 boxes, and a period ends in a Fatal only once it has held.** A digestion
+    loop whose window is 11 to 32 boxes and whose input repeats exactly (`\def\x{abcdefghijk\x}`) is now the cycle
+    Fatal instead of running to the box-list cap. A period Fatals only after it has held for 50,000 boxes when its
+    input repeats register values and all (2210.07754's pgfplots table, which repeats one row, keeps its plot), and
+    for 2,000,000 tokens read when only a moving counter differs, the latter only in a window of at most 10 boxes, as
+    before: a finite counter `\loop` past the 50,000-box activation that ends within the hold (`\loop
+    abcdefghi…\ifnum\n<6000 \repeat`) now ends clear, and Paul Taylor's inline diagram macros (0805.0686, 0808.1477,
+    1812.11491, math0609583) still stop with their content kept, a little later. A finite exact repeat of 11 to 32
+    boxes that outlasts the activation plus the 50,000-box hold now ends in the cycle Fatal where 0.8.0 converted it
+    (none in the A/B populations). OXIDIZED_DESIGN_DIVERGENCES #538; guards
+    `perfect_kernel_batchcyclewin::{an_eleven_box_digestion_loop_is_a_cycle_fatal, a_finite_counter_loop_of_boxes_is_no_cycle}`,
+    `perfect_kernel_batchcyclepersist::{a_runaway_counter_loop_of_boxes_is_a_cycle_fatal, a_plot_of_repeated_rows_is_no_cycle,
+    a_finite_twelve_box_counter_loop_is_no_cycle}`.
+
   - **A stray `\list` before a blank line no longer swallows the bibliography.** LaTeX's `\list`, `\usecounter` and
     `\@mklab` are not `\long`, so a blank line read as an argument ends the call with TeX's "Paragraph ended before
     \list was complete"; a `\list` left after `\begin{thebibliography}` opened a list that every entry nested in
