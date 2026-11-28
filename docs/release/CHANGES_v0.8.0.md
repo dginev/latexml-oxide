@@ -1675,8 +1675,9 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     `CleanLabel`/`CleanID`, `SetCounter`, `roman`/`Roman`, `UTF`, `Explode`/`ExplodeText`,
     `BeginItemize`, `Equals`, with Perl's argument forms.
   - **BREAKING: Rhai hooks take Perl's arguments, and the #716 renames** (#829). A hook
-    receives the whatsit as Perl passes it: `afterDigest: |whatsit|`, `beforeConstruct`/`afterConstruct:
-    |document, whatsit|`, a sizer `|whatsit|`, and a reversion closure `|whatsit, arg1, …|` — **a reversion
+    receives the whatsit as Perl passes it: `beforeConstruct`/`afterConstruct: |document, whatsit|`, a sizer
+    `|whatsit|`, and a reversion closure `|whatsit, arg1, …|` (an `afterDigest` hook takes `|stomach, whatsit|`, the
+    digestion-hooks entry above) — **a reversion
     written `|arg1, …|` must add the leading `whatsit`**. The whatsit has Whatsit.pm's `getArg(n)` (the
     argument as a constructor body receives it), `getProperty(key)`, `getProperties()` and `setProperty(key,
     any value)`. A constructor body receives Perl's `%props` as a trailing map (`|document, x, props|`).
