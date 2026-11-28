@@ -1,0 +1,36 @@
+% AAAI's `\affiliations` lines marked after their text (`Univ A\textsuperscript{\rm 1}`, aaai25.sty:72), which no
+%   leading label places: the lines several requested marks hold, which the Cut cannot cut, land once on the block
+%   (`frontmatter_stores.rs contact_line_call`, `_unsplit`); a line no name claims is the document's affiliation note
+%   under the names (DG 2026-11-27, OXIDIZED_DESIGN_DIVERGENCES #1063), not a nameless creator's. Its e-mail line is
+%   Ann's, the name it spells.
+% witness: 2501.02471 ("Chinese Medicine Guangdong Laboratory1 / Southern University of Science and Technology2"),
+%          2412.11379; synthetic stand-in
+% oracle:  pdflatex 0 errors: "Ann Able1, Bob Baker2, Cy Cole", "Univ A1", "Univ B2", "ann@a.edu"
+% engines: rust INT081TA = a nameless creator holding the affiliation "Univ A 1 Univ B 2"
+% expect:  0 errors, 0 warnings; ann@a.edu Ann's; one document note role=affiliation, no nameless creator
+% status:  RED (INT081TA) -> GREEN (FMNAMELESS: perfect_kernel_batchaaailabel::aaai_affiliations_rows)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{aaai25.sty}
+\ProvidesPackage{aaai25}[2025/05/08 AAAI 2025 Submission format]
+\def\showauthors@on{T}
+\DeclareOption{submission}{\gdef\showauthors@on{}}
+\ProcessOptions\relax
+\def\maketitle{\par\begingroup\def\thefootnote{\fnsymbol{footnote}}\twocolumn[\@maketitle]\@thanks\endgroup
+  \setcounter{footnote}{0}\let\maketitle\relax\let\@maketitle\relax
+  \gdef\@thanks{}\gdef\@author{}\gdef\@title{}\let\thanks\relax}
+\long\gdef\affiliations #1{ \def \affiliations_{\if T\showauthors@on#1\fi}}%
+\def\@maketitle{\def\theauthors{\if T\showauthors@on\@author\else Anonymous submission\fi}%
+  \vbox{\hsize\textwidth\linewidth\hsize\centering
+    {\LARGE\bf \@title \par}\vskip 0.1in
+    {\Large{\textbf{\theauthors\ifhmode\\\fi}}}\vskip .2em
+    {\normalsize \affiliations_\ifhmode\\\fi}\vskip .5em}}
+\end{filecontents*}
+\documentclass[letterpaper]{article}
+\usepackage{aaai25}
+\title{A Title}
+\author{Ann Able\textsuperscript{\rm 1}, Bob Baker\textsuperscript{\rm 2}, Cy Cole}
+\affiliations{Univ A\textsuperscript{\rm 1}\\ Univ B\textsuperscript{\rm 2}\\ ann@a.edu}
+\begin{document}
+\maketitle
+Body.
+\end{document}

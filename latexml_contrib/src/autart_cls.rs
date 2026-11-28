@@ -237,6 +237,9 @@ LoadDefinitions!({
     "\\if\\relax\\detokenize{#1}\\relax\\expandafter\\@firstoftwo\\else\\expandafter\\@secondoftwo\\fi\
      {\\@add@frontmatter{ltx:note}[role=thanks]}{\\lx@add@contact[label={thanks:#1},role=thanks]}{#2}"
   );
+  // A labelled note no `\thanksref` requests prints at the page foot all the same (autart.cls:925-929): the document's,
+  // as an unlabelled one is, not a nameless creator's (DG 2026-11-27; 2008.08913).
+  RawTeX!(r"\lx@names@unclaimed@notes");
   DefMacro!("\\corauthref{}", "\\textsuperscript{*#1}");
   DefMacro!(
     "\\corauth{}",

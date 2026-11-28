@@ -61,6 +61,7 @@
         <body>
           <xsl:apply-templates select="*[
                                        not(self::ltx:title or self::ltx:creator or self::ltx:date or self::ltx:abstract or self::ltx:keywords or self::ltx:classification)
+                                       and not(self::ltx:note)
                                        and not(self::ltx:acknowledgements or self::ltx:bibliography)
                                        and not(self::ltx:pubnote[@role='thanks'])
                                        and not(self::ltx:appendix)]"/>
@@ -108,6 +109,13 @@
         <publicationStmt>
           <publisher></publisher>
         </publicationStmt>
+        <!-- SURPASS (latexml-oxide OXIDIZED_DESIGN_DIVERGENCES #1063, KNOWN_PERL_ERRORS #1350): the document's own notes
+             (a thanks, an address or e-mail line of the author block) are the header's notes, not body text. -->
+        <xsl:if test="ltx:note">
+          <notesStmt>
+            <xsl:apply-templates select="ltx:note" mode="notesStmt"/>
+          </notesStmt>
+        </xsl:if>
         <sourceDesc>
           <biblStruct>
             <analytic>
@@ -490,6 +498,16 @@
       <xsl:apply-templates select="@xml:id" mode="copy-attribute"/>
       <xsl:apply-templates/>
     </div>
+  </xsl:template>
+
+  <!-- A note of the document's own, in <notesStmt>: a note of its role (TEI @type). -->
+  <xsl:template match="ltx:note" mode="notesStmt">
+    <note>
+      <xsl:if test="@role">
+        <xsl:attribute name="type"><xsl:value-of select="@role"/></xsl:attribute>
+      </xsl:if>
+      <xsl:apply-templates/>
+    </note>
   </xsl:template>
 
   <xsl:template match="ltx:note[@role='footnote']">

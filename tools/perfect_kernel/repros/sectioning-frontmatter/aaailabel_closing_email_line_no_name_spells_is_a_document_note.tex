@@ -1,0 +1,41 @@
+% AAAI's closing `\affiliations` lines of e-mails (aaai22.sty, aaai25.sty:72) are the whole block's: each address goes to
+%   the name it spells (`choi.hyunsoo`, `bhlee`, `sryoon`); with `kj21.choi` spelled by two names no order places the
+%   rest, so `tuslkkk` and `kj21.choi` are lines no name claims: the document's e-mail notes under the names (DG
+%   2026-11-27, OXIDIZED_DESIGN_DIVERGENCES #1063), not a nameless creator's contacts.
+% witness: 2109.05257 (`tuslkkk@snu.ac.kr`, `kj21.choi@snu.ac.kr`), 2110.15064, 2312.13306, 2503.12793, 2508.16571
+%          (`info@optic.inc`); synthetic stand-in
+% oracle:  pdflatex 0 errors: "Siwon Kim1 Kukjin Choi1,2 Hyun-Soo Choi3 Byunghan Lee3 Sungroh Yoon1", "1 Univ A, Korea,",
+%          "2 Lab B, Korea, 3 Univ C, Korea,", "tuslkkk@a.edu kj21.choi@a.edu choi.hyunsoo@c.edu", "bhlee@c.edu sryoon@a.edu"
+% engines: rust INT081TA = a nameless creator holding the e-mails tuslkkk@a.edu and kj21.choi@a.edu
+% expect:  0 errors, 0 warnings; the three spelled addresses their names'; two document notes role=email under the
+%          names, no nameless creator (which of the two Chois `kj21.choi` is: a SYNC row, not this guard's)
+% status:  RED (INT081TA) -> GREEN (FMNAMELESS: perfect_kernel_batchaaailabel::aaai_affiliations_rows)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{aaai25.sty}
+\ProvidesPackage{aaai25}[2025/05/08 AAAI 2025 Submission format]
+\def\showauthors@on{T}
+\DeclareOption{submission}{\gdef\showauthors@on{}}
+\ProcessOptions\relax
+\def\maketitle{\par\begingroup\def\thefootnote{\fnsymbol{footnote}}\twocolumn[\@maketitle]\@thanks\endgroup
+  \setcounter{footnote}{0}\let\maketitle\relax\let\@maketitle\relax
+  \gdef\@thanks{}\gdef\@author{}\gdef\@title{}\let\thanks\relax}
+\long\gdef\affiliations #1{ \def \affiliations_{\if T\showauthors@on#1\fi}}%
+\def\@maketitle{\def\theauthors{\if T\showauthors@on\@author\else Anonymous submission\fi}%
+  \vbox{\hsize\textwidth\linewidth\hsize\centering
+    {\LARGE\bf \@title \par}\vskip 0.1in
+    {\Large{\textbf{\theauthors\ifhmode\\\fi}}}\vskip .2em
+    {\normalsize \affiliations_\ifhmode\\\fi}\vskip .5em}}
+\end{filecontents*}
+\documentclass[letterpaper]{article}
+\usepackage{aaai25}
+\title{A Title}
+\author{Siwon Kim\textsuperscript{\rm 1} \quad Kukjin Choi\textsuperscript{\rm 1,2} \quad
+  Hyun-Soo Choi\textsuperscript{\rm 3} \quad Byunghan Lee\textsuperscript{\rm 3} \quad Sungroh Yoon\textsuperscript{\rm 1}}
+\affiliations{\textsuperscript{\rm 1} Univ A, Korea,\\ \textsuperscript{\rm 2} Lab B, Korea,
+  \textsuperscript{\rm 3} Univ C, Korea,\\
+  \texttt{tuslkkk@a.edu}\qquad \texttt{kj21.choi@a.edu}\qquad \texttt{choi.hyunsoo@c.edu}\\
+  \texttt{bhlee@c.edu}\qquad\texttt{sryoon@a.edu}}
+\begin{document}
+\maketitle
+Body.
+\end{document}

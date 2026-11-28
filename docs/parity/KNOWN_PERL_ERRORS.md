@@ -23254,3 +23254,28 @@ pdflatex: 0 `!`, "Remark 2", "(3)", "See 1, 2, 3." Perl (same host): "Remark 1",
 was not defined`, the remark's label on `<document>`. Fixed in Rust (OXIDIZED_DESIGN_DIVERGENCES #1174): the chain is
 followed, and thmtools' sibling aliases the counter. Witnesses 2009.11843, 1809.01129. Guard
 `perfect_kernel_batchcounterchain::thmtools_sibling_of_a_sibling_shares_its_counter`.
+
+## 1350. Perl's JATS and TEI stylesheets print the document's own notes as body text
+
+`LaTeXML-jats.xsl` and `LaTeXML-tei.xsl` (resources/XSLT, the `ltx:document` template) keep `ltx:creator`, the title,
+dates, abstract and keywords out of `<body>`, but not a note of the document's own (`ltx:document/ltx:note`, a
+frontmatter note: an address, an e-mail, a thanks), and no template matches a note of a role other than `footnote`, so
+its text lands bare at the head of `<body>`, before the first paragraph. Minimal trigger:
+
+```latex
+\documentclass{article}
+\makeatletter
+\title{A Title}
+\author{Ann Able}
+\ifdefined\lx@add@frontmatter \lx@add@frontmatter{ltx:note}[role=email]{ann@a.edu}\fi
+\makeatother
+\begin{document}
+\maketitle
+Body.
+\end{document}
+```
+
+Perl 0.8.8 (same host), `latexmlc --format=jats`: `<body>ann@a.edu<p id="p1">Body.</p>…`; with
+`--stylesheet=LaTeXML-tei.xsl`: `<body>ann@a.edu<p xml:id="p1">Body.</p>…`. Fixed in Rust: the notes are the JATS
+`<article-meta>/<author-notes>` (a `<fn>` each) and the TEI `<fileDesc>/<notesStmt>` (a `<note type="role">` each)
+(OXIDIZED_DESIGN_DIVERGENCES #1063). Guard `latexml_post` `integration::document_notes_are_author_notes_not_body_text`.

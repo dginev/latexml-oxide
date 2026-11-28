@@ -1,0 +1,40 @@
+% An AAAI `\affiliations` line led by a label no name requests (aaai25.sty:72) is an orphan no author takes
+%   (`relocate::relocate_annotations`); a line no name claims is the document's affiliation note under the names (DG
+%   2026-11-27, OXIDIZED_DESIGN_DIVERGENCES #1063), not a nameless creator's. Label 2 is requested by no name here
+%   because "Bob Baker, \textsuperscript{\rm 2}" after a `\\\` is read as Ann's affiliation, its mark with it — the
+%   witness's own shape, kept for the note's path; that reading is its own row (SYNC note FMNAMELESS), so no guard pins
+%   this output.
+% witness: 2407.14164 ("2University of Essex", "Nina Markl, \textsuperscript{\rm 2}\\\" read as an affiliation)
+% oracle:  pdflatex 0 errors: "Ann Able, 1 / Bob Baker, 2 / Cy Cole 1", "1 Univ A", "2 Univ B",
+%          "Correspondence: cy.cole@a.edu"
+% engines: rust INT081TA = Ann's affiliations "Bob Baker", "1Univ A"; Cy "1Univ A", cy.cole@a.edu; a nameless creator
+%          holding the affiliation "2Univ B"; FMNAMELESS = the same, "2Univ B" a document note role=affiliation
+% expect:  0 errors, 0 warnings; Bob Baker a name with "2 Univ B"; no nameless creator
+% status:  RED (FMNAMELESS: Bob Baker read as an affiliation; the note GREEN), catalog only
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{aaai25.sty}
+\ProvidesPackage{aaai25}[2025/05/08 AAAI 2025 Submission format]
+\def\showauthors@on{T}
+\DeclareOption{submission}{\gdef\showauthors@on{}}
+\ProcessOptions\relax
+\def\maketitle{\par\begingroup\def\thefootnote{\fnsymbol{footnote}}\twocolumn[\@maketitle]\@thanks\endgroup
+  \setcounter{footnote}{0}\let\maketitle\relax\let\@maketitle\relax
+  \gdef\@thanks{}\gdef\@author{}\gdef\@title{}\let\thanks\relax}
+\long\gdef\affiliations #1{ \def \affiliations_{\if T\showauthors@on#1\fi}}%
+\def\@maketitle{\def\theauthors{\if T\showauthors@on\@author\else Anonymous submission\fi}%
+  \vbox{\hsize\textwidth\linewidth\hsize\centering
+    {\LARGE\bf \@title \par}\vskip 0.1in
+    {\Large{\textbf{\theauthors\ifhmode\\\fi}}}\vskip .2em
+    {\normalsize \affiliations_\ifhmode\\\fi}\vskip .5em}}
+\end{filecontents*}
+\documentclass[letterpaper]{article}
+\usepackage{aaai25}
+\title{A Title}
+\author{Ann Able, \textsuperscript{\rm 1}\\\
+  Bob Baker, \textsuperscript{\rm 2}\\
+  Cy Cole \textsuperscript{\rm 1}\\}
+\affiliations{\textsuperscript{\rm 1}Univ A\\ \textsuperscript{\rm 2}Univ B\\ Correspondence: cy.cole@a.edu}
+\begin{document}
+\maketitle
+Body.
+\end{document}

@@ -1,0 +1,36 @@
+% An address an AAAI `\affiliations` line prints after its own label word (`email: zz@a.edu` closing label 1's line,
+%   aaai25.sty:72) that neither of the label's two names spells is the block's line; as the document's e-mail note
+%   (DG 2026-11-27, OXIDIZED_DESIGN_DIVERGENCES #1063) it keeps the label the line prints, which the block's contact
+%   had held as its name: no word lost.
+% witness: 2609.01909 (`…, Indianapolis, IN, USA, email: saychow@iu.edu`); synthetic stand-in
+% oracle:  pdflatex 0 errors: "Ann Able,1 Bob Baker,2 Cy Cole1", "1Univ A, Town, email: zz@a.edu", "2Univ B, City"
+% engines: rust INT081TA = a nameless creator holding `<contact name="email: " role="email">zz@a.edu</contact>`;
+%          FMNAMELESS's first build = the note "zz@a.edu", "email" lost (the content check's Warning)
+% expect:  0 errors, 0 warnings; Ann and Cy "1 Univ A, Town", Bob "2 Univ B, City"; one document note role=email
+%          "email: zz@a.edu", no nameless creator
+% status:  RED (FMNAMELESS first build) -> GREEN (FMNAMELESS: perfect_kernel_batchaaailabel::aaai_affiliations_rows)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{aaai25.sty}
+\ProvidesPackage{aaai25}[2025/05/08 AAAI 2025 Submission format]
+\def\showauthors@on{T}
+\DeclareOption{submission}{\gdef\showauthors@on{}}
+\ProcessOptions\relax
+\def\maketitle{\par\begingroup\def\thefootnote{\fnsymbol{footnote}}\twocolumn[\@maketitle]\@thanks\endgroup
+  \setcounter{footnote}{0}\let\maketitle\relax\let\@maketitle\relax
+  \gdef\@thanks{}\gdef\@author{}\gdef\@title{}\let\thanks\relax}
+\long\gdef\affiliations #1{ \def \affiliations_{\if T\showauthors@on#1\fi}}%
+\def\@maketitle{\def\theauthors{\if T\showauthors@on\@author\else Anonymous submission\fi}%
+  \vbox{\hsize\textwidth\linewidth\hsize\centering
+    {\LARGE\bf \@title \par}\vskip 0.1in
+    {\Large{\textbf{\theauthors\ifhmode\\\fi}}}\vskip .2em
+    {\normalsize \affiliations_\ifhmode\\\fi}\vskip .5em}}
+\end{filecontents*}
+\documentclass[letterpaper]{article}
+\usepackage{aaai25}
+\title{A Title}
+\author{Ann Able,$^{1}$ Bob Baker,$^{2}$ Cy Cole$^{1}$}
+\affiliations{$^{1}$Univ A, Town, email: zz@a.edu\\ $^{2}$Univ B, City}
+\begin{document}
+\maketitle
+Body.
+\end{document}

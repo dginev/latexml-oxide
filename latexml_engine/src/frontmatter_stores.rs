@@ -3787,6 +3787,12 @@ fn hand_displaced_stores() -> Result<Vec<Digested>> {
   if calls.is_empty() {
     return Ok(Vec::new());
   }
+  // (a line of the store no name claims is a note under the names, not a nameless creator's: DG 2026-11-27, OD #1063;
+  // 2109.05257, 2501.02471)
+  calls.splice(
+    0..0,
+    mouth::tokenize_internal(r"\lx@names@unclaimed@notes").unlist(),
+  );
   Ok(vec![digest_store_calls(calls)?])
 }
 

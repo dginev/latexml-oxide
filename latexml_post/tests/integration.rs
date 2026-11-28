@@ -1276,3 +1276,76 @@ fn a_copys_anchor_is_always_on_the_page() {
     );
   }
 }
+
+/// What `stylesheet` (`resources/XSLT/<name>`) makes of `xml`, serialized.
+fn transformed(xml: &str, stylesheet: &str) -> String {
+  let path = [
+    format!("resources/XSLT/{stylesheet}"),
+    format!("../resources/XSLT/{stylesheet}"),
+  ]
+  .into_iter()
+  .find(|p| std::path::Path::new(p).exists())
+  .expect("the stylesheet");
+  use latexml_post::xslt::XSLT;
+  let doc = PostDocument::new_from_string(xml, PostDocumentOptions::default()).expect("parse");
+  let mut xslt = XSLT::new(&path, rustc_hash::FxHashMap::default(), false, None, vec![])
+    .expect("XSLT processor");
+  xslt
+    .process(doc, vec![])
+    .expect("xslt process")
+    .into_iter()
+    .next()
+    .map(|d| d.get_document().to_string())
+    .unwrap_or_default()
+}
+
+/// The text between the first `<open…>` and its `</close>` in `out`, empty without one.
+fn element<'a>(out: &'a str, open: &str, close: &str) -> &'a str {
+  out
+    .find(open)
+    .and_then(|start| out[start..].find(close).map(|end| &out[start..start + end]))
+    .unwrap_or("")
+}
+
+/// The document's own notes (`ltx:document/ltx:note`: an author block's e-mail or affiliation line no name claims, a
+/// thanks — DG 2026-11-27, OXIDIZED_DESIGN_DIVERGENCES #1063) are the article's author notes, never body text: JATS's
+/// `<article-meta>/<author-notes>`, one `<fn>` of a paragraph each, TEI's `<fileDesc>/<notesStmt>`, one `<note>` of its
+/// role each (KNOWN_PERL_ERRORS #1349: Perl's stylesheets print them in `<body>`). Witnesses 2109.05257, 2008.08913.
+#[test]
+fn document_notes_are_author_notes_not_body_text() {
+  let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML" xml:id="Document">
+  <title>A Title</title>
+  <creator role="author"><personname>Siwon Kim</personname></creator>
+  <note role="email" xml:id="id1">tuslkkk@a.edu</note>
+  <note role="thanks" xml:id="id2">Not presented at any meeting.</note>
+  <para xml:id="p1"><p>Body.</p></para>
+</document>"#;
+  let jats = transformed(xml, "LaTeXML-jats.xsl");
+  let notes = element(&jats, "<author-notes>", "</author-notes>");
+  assert!(
+    element(&jats, "<article-meta>", "</article-meta>").contains("<author-notes>")
+      && notes.matches("<fn>").count() == 2
+      && notes.contains("tuslkkk@a.edu</p></fn>")
+      && notes.contains("Not presented at any meeting.</p></fn>"),
+    "{jats}"
+  );
+  let body = element(&jats, "<body>", "</body>");
+  assert!(
+    body.contains("Body.") && !body.contains("tuslkkk") && !body.contains("meeting"),
+    "{jats}"
+  );
+  let tei = transformed(xml, "LaTeXML-tei.xsl");
+  let notes = element(&tei, "<notesStmt>", "</notesStmt>");
+  assert!(
+    element(&tei, "<fileDesc>", "</fileDesc>").contains("<notesStmt>")
+      && notes.contains(r#"<note type="email">tuslkkk@a.edu</note>"#)
+      && notes.contains(r#"<note type="thanks">Not presented at any meeting.</note>"#),
+    "{tei}"
+  );
+  let body = element(&tei, "<body>", "</body>");
+  assert!(
+    body.contains("Body.") && !body.contains("tuslkkk") && !body.contains("meeting"),
+    "{tei}"
+  );
+}

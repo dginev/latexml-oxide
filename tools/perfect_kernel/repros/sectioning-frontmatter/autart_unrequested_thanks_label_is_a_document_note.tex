@@ -1,0 +1,27 @@
+% autart's `\thanks[label]{text}` (autart.cls:923-929) steps the footnote counter, `\label`s its note and queues it for
+%   the page foot, whether or not a `\thanksref{label}` marks it; one no `\thanksref` requests (the title's
+%   `footnoteinfo` the template's `\title{…\thanksref{footnoteinfo}}` would mark, left out) is the document's thanks
+%   note, as an unlabelled `\thanks` is (DG 2026-11-27, OXIDIZED_DESIGN_DIVERGENCES #1063), not a nameless creator's
+%   contact; two under one label are two notes.
+% witness: 2008.08913 (`\thanks[footnoteinfo]`, no `\thanksref`); 2410.23435's second is answered by a hand-typed `$^1$`
+%          (RED `autart_mark_typed_after_a_name_call_red`)
+% oracle:  pdflatex 0 errors (with 2008.08913's autart.cls): "A Title / Ann Able, Bob Baker / … / 1 This paper was not
+%          presented at any IFAC meeting. / 2 Corresponding author."
+% engines: rust INT081TA = a nameless creator holding the two thanks contacts
+% expect:  0 errors 0 Warnings; Ann and Bob their e-mails and "First University"; two document notes role=thanks after
+%          the abstract, no nameless creator
+% status:  RED (INT081TA) -> GREEN (FMNAMELESS: perfect_kernel_batchaaailabel::aaai_affiliations_rows)
+% preload: ar5iv.sty
+\documentclass{autart}
+\begin{document}
+\begin{frontmatter}
+\title{A Title}
+\thanks[footnoteinfo]{This paper was not presented at any IFAC meeting.}
+\author[a]{Ann Able}\ead{ann@example.org},
+\author[a]{Bob Baker}\ead{bob@example.org}\thanks[footnoteinfo]{Corresponding author.}
+\address[a]{First University}
+\begin{abstract}The abstract.\end{abstract}
+\end{frontmatter}
+\section{One}
+Text.
+\end{document}

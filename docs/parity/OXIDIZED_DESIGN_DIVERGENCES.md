@@ -14460,7 +14460,9 @@ bypassed under raw loading; the class's `\@maketitle` never runs under the locke
   - A piece printing an `@` after local parts alone that the frontmatter reads as no line of addresses (a mark in it,
     or neither `email_addresses` nor the Kind step's `address_line_cut` reading it: `{a, b} @x`, a nested brace list) is
     an entry of its own, a contact of the author block's creator (`label={addresses:block}`) that the flush's Kind
-    step does not read (`_unread`; 2211.16869, 2412.03107, 2408.10349, 2212.12190; DG ruling of 2026-11-26). Only in
+    step does not read (`_unread`; 2211.16869, 2412.03107, 2408.10349, 2212.12190; DG ruling of 2026-11-26); the
+    route declares the block's lines no name claims the document's notes (#1063, DG 2026-11-27: an e-mail note where
+    the line prints an `@`, 2511.21717). Only in
     a line without a mark does the frontmatter observer's text reading still give an address the name it spells
     (2408.10349); a line holding a mark keeps every address on the block's creator, the mark placing none
     (2212.12190). A line printing no `@`
@@ -20996,6 +20998,25 @@ behind it (`ltx_note_content`, shown on hovering the mark, after its "role: " la
   `\$`, `\textasciitilde`, `\{` or `\}` keeps it whole too: the label reader drops `$`, `_` (`label_key`) and braces
   (`clean_frontmatter_labels`) and reads `~` as spacing, so the symbol prints in the name and no legend answers it.
   Perl drops the notice (icml_support.sty.ltxml:52).
+- *A line no name claims* (DG 2026-11-27, FMNAMELESS): an author-block line no author's name claims is such a note of
+  the document's, not a nameless creator (`ltx:creator role="author"` without `ltx:personname`, #159's block owner).
+  Opt-in, where a route or binding declares it (`\lx@names@unclaimed@notes`, frontmatter_api.rs), and then document-wide:
+  every item of every author creator with no name becomes a note (block lines, shared link lines, unowned e-mails, the
+  #805/#901 block lines). Declared by any raw class's displaced affiliation/address store
+  (`frontmatter_stores::hand_displaced_stores`, #767: aaai's closing e-mails no name spells, 2109.05257,
+  2110.04708, 2110.15064, 2310.09430, 2312.13306, 2503.12793, 2508.07295, 2508.16571; a line of addresses the reader
+  cannot read, 2511.21717, 2412.11379; lines marked after their text, 2501.02471; a label no name requests, 2407.14164)
+  and autart's labelled `\thanks` no `\thanksref` requests (autart.cls:925-929; 2008.08913; 2410.23435's second, answered by a
+  hand-typed `$^1$`, is a reader's, RED `autart_mark_typed_after_a_name_call_red`). Before the
+  content check, `insert::unclaimed_block_notes` makes each contact of the block's own creator a note of its role,
+  content moved after the label the line prints (the contact's `name` where it is not its role's own: 2609.01909's
+  `email:`; an affiliation or address line printing an `@` under no such label is `email`), and moves each of its notes
+  as it is; the content check reads such a note as the creator's item it was (`_blockline`, `dom::read`); a line sits
+  under the names (`_zone=names`, #1074), a thanks after the run of placed frontmatter, Perl's place, as autart's
+  unlabelled `\thanks`; the creator goes once empty. Undeclared routes keep the block's creator: #805's orphans, #901's
+  shared-institute line (1103.2027), a row. JATS writes the document's notes in `<article-meta>/<author-notes>` (a
+  `<fn>` of a paragraph each, no `fn-type`), TEI in `<fileDesc>/<notesStmt>` (a `<note type="role">` each), not in
+  `<body>` (KNOWN_PERL_ERRORS #1350).
 **Witnesses.** 2602.04557 (icml2026's notice "*Equal contribution", `†` before), 2405.13379 and 2603.01467
 (Interspeech's `\address`/`\email` notes), 2506.06941 (a `\footnotetext` in the abstract under `\fnsymbol`, the counter 0:
 pdflatex prints no mark), 2402.05011 (icml's "†Project lead").
@@ -21003,7 +21024,11 @@ pdflatex prints no mark), 2402.05011 (icml's "†Project lead").
 an_unmarked_note_in_a_field_is_inline, a_date_note_and_an_abstract_thanks_invent_no_glyph,
 a_document_level_note_shows_once_where_the_pdf_prints_it, a_note_in_a_heading_keeps_perls_note,
 icml_notice_daggers_print}`, `perfect_kernel_batchdateicml::{icml_notice_legends_are_the_marked_names_notes,
-icml_notice_read_by_meaning}`. RED:
+icml_notice_read_by_meaning}`; the unclaimed lines: `perfect_kernel_batchaaailabel::aaai_affiliations_rows`
+(`aaailabel_closing_email_line_no_name_spells_is_a_document_note`,
+`aaailabel_trailing_marked_affiliation_lines_are_a_document_note`, `aaailabel_printed_email_label_stays_with_its_note`,
+`autart_unrequested_thanks_label_is_a_document_note`
+and the block's lines of #767), `latexml_post` `integration::document_notes_are_author_notes_not_body_text`. RED:
 `icml_notice_legend_of_a_mark_typed_in_the_name_red`, `icml_copy_equal_contribution_text_is_the_copys_red`,
 `icml_notice_whole_two_symbols_one_joined_mark_red` (a name's two symbols one mark `*,†`, the settle step's join).
 

@@ -88,6 +88,13 @@
           <contrib-group>
             <xsl:apply-templates select="ltx:creator[@role='author']"/>
           </contrib-group>
+          <!-- SURPASS (latexml-oxide OXIDIZED_DESIGN_DIVERGENCES #1063, KNOWN_PERL_ERRORS #1350): the document's own notes
+               (a thanks, an address or e-mail line of the author block) are author notes, not body text. -->
+          <xsl:if test="ltx:note">
+            <author-notes>
+              <xsl:apply-templates select="ltx:note" mode="author-notes"/>
+            </author-notes>
+          </xsl:if>
           <xsl:apply-templates select="ltx:date[@role='creation']"/>
           <permissions><copyright-statement>unknown</copyright-statement></permissions>
           <xsl:apply-templates select="ltx:abstract"/>
@@ -97,6 +104,7 @@
       <body>
         <xsl:apply-templates select="*[
                                      not(self::ltx:title or self::ltx:creator or self::ltx:date or self::ltx:abstract or self::ltx:keywords)
+                                     and not(self::ltx:note)
                                      and not(self::ltx:acknowledgements or self::ltx:bibliography)
                                      and not(self::ltx:pubnote[@role='thanks'])
                                      and not(self::ltx:appendix)]"/>
@@ -469,6 +477,14 @@
       <xsl:apply-templates select="@xml:id" mode="copy-attribute"/>
       <xsl:apply-templates/>
     </p>
+  </xsl:template>
+
+  <!-- A note of the document's own, in <author-notes>: a footnote, its text a paragraph (no fn-type: the Publishing tag
+       set lists its values, which name none of the notes' roles). -->
+  <xsl:template match="ltx:note" mode="author-notes">
+    <fn>
+      <xsl:call-template name="require_p"/>
+    </fn>
   </xsl:template>
 
   <xsl:template match="ltx:note[@role='footnote']">

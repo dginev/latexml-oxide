@@ -15,7 +15,10 @@
 //! and per-label lines stay their labels'; a class's `\and`-numbered entries are read as before (astro-ph9805232), a
 //! class's own pure `\affiliations` store that only its page foot prints stays the class's (1601.06956, 1912.03045); an
 //! address in a line of other words stays with its entry (astro-ph9805051, an rstransa-shaped `Internet:` line); the
-//! store's take-out when empty, never set or set after `\maketitle`.
+//! store's take-out when empty, never set or set after `\maketitle`. The block's lines no name claims are the document's
+//! notes, not a nameless creator's contacts (FMNAMELESS, DG 2026-11-27, OD #1063: `Row::notes`), an `@` line under no
+//! label of its own an e-mail note (2109.05257, 2501.02471, 2511.21717), and autart's `\thanks[label]` no `\thanksref`
+//! requests a thanks note (2008.08913).
 use latexml::util::test::convert_with;
 
 use super::{
@@ -40,6 +43,9 @@ struct Row {
   warnings: usize,
   /// Each creator: its name, then each contact as `role=text`, in order.
   creators: &'static [&'static [&'static str]],
+  /// Each note of the document's own (`ltx:document/ltx:note`) as `role=text`, in order: a line no name claims is one,
+  /// not a nameless creator's contact (DG 2026-11-27, OD #1063).
+  notes:    &'static [&'static str],
   /// The text of each `<p>` of the class's lines its title page's `logical-block` keeps, in order; with none, no
   /// `logical-block` and no "Univ" outside the creators.
   block:    &'static [&'static str],
@@ -55,6 +61,7 @@ const ROWS: &[Row] = &[
       &["Bob Baker", "affiliation=2 Univ B", "email=bob@b.edu"],
       &["Cy Cole", "affiliation=1 Univ A", "affiliation=2 Univ B"],
     ],
+    notes:    &[],
     block:    &[],
   },
   Row {
@@ -75,6 +82,7 @@ const ROWS: &[Row] = &[
         "email=bob@a.edu",
       ],
     ],
+    notes:    &[],
     block:    &[],
   },
   // (pdflatex prints "Anonymous submission" and no affiliation: the stored lines are counted, no author's)
@@ -83,6 +91,7 @@ const ROWS: &[Row] = &[
     tex:      repro!("aaailabel_submission_affiliations_stay_unprinted"),
     warnings: 1,
     creators: &[&["Ann Able", "mark=1"], &["Bob Baker", "mark=2"]],
+    notes:    &[],
     block:    &[],
   },
   // (red on 842364fc86c: Cy Cole "2Univ B ann, bob @a.edu", Ann and Bob no e-mail; fix 1-2 kept the class's lines,
@@ -95,8 +104,8 @@ const ROWS: &[Row] = &[
       &["Ann Able", "affiliation=1 Univ A"],
       &["Bob Baker", "affiliation=1 Univ A"],
       &["Cy Cole", "affiliation=2 Univ B"],
-      &["affiliation=ann, bob @a.edu, cy@b.edu"],
     ],
+    notes:    &["email=ann, bob @a.edu, cy@b.edu"],
     block:    &[],
   },
   // (red on 842364fc86c: cy@a.edu a nameless creator's beside every author's "Univ A, Town"; fix 1-2 kept the class's
@@ -109,8 +118,8 @@ const ROWS: &[Row] = &[
       &["Ann Able", "affiliation=Univ A, Town"],
       &["Bob Baker", "affiliation=Univ A, Town"],
       &["Cy Cole", "mark=1", "affiliation=Univ A, Town"],
-      &["affiliation={ann, 1 cy}@a.edu, bob@b.edu"],
     ],
+    notes:    &["email={ann, 1 cy}@a.edu, bob@b.edu"],
     block:    &[],
   },
   // (red on the fix's first candidate, `line_is_email_list` alone: the three lines the class's block again; fix 2: the
@@ -124,8 +133,8 @@ const ROWS: &[Row] = &[
       &["Ann Able", "affiliation=1 Univ A", "email=ann@a.edu"],
       &["Bob Baker", "affiliation=1 Univ A", "email=bob@a.edu"],
       &["Cy Cole", "affiliation=2 Univ B"],
-      &["email=cy@b.edu"],
     ],
+    notes:    &["email=cy@b.edu"],
     block:    &[],
   },
   Row {
@@ -137,6 +146,7 @@ const ROWS: &[Row] = &[
       &["Bob Baker", "affiliation=1 Univ A", "email=bob@a.edu"],
       &["Cy Cole", "affiliation=2 Univ B {first.last}@b.edu"],
     ],
+    notes:    &[],
     block:    &[],
   },
   // (red on 66558570ce3: 12345@b.edu Bob Baker's, label 2's only author; spelled by no one, two addresses for three
@@ -149,8 +159,8 @@ const ROWS: &[Row] = &[
       &["Ann Able", "affiliation=1 Univ A", "email=ann.able@a.edu"],
       &["Dan Dorn", "affiliation=1 Univ A"],
       &["Bob Baker", "affiliation=2 Univ B"],
-      &["email=12345@b.edu"],
     ],
+    notes:    &["email=12345@b.edu"],
     block:    &[],
   },
   // (red on 66558570ce3: 12345@b.edu Dan Dorn's, label 2's only author)
@@ -162,8 +172,8 @@ const ROWS: &[Row] = &[
       &["Ann Able", "affiliation=1 Univ A", "email=ann.able@a.edu"],
       &["Dan Dorn", "affiliation=2 Univ B"],
       &["Bob Baker", "affiliation=1 Univ A"],
-      &["email=12345@b.edu"],
     ],
+    notes:    &["email=12345@b.edu"],
     block:    &[],
   },
   Row {
@@ -175,6 +185,7 @@ const ROWS: &[Row] = &[
       "affiliation=2 Univ B Springfield, USA",
       "email=bob@b.edu",
     ]],
+    notes:    &[],
     block:    &[],
   },
   // (red on 66558570ce3: Ann's affiliation "1 Univ A ann, bob @a.edu"; fix 2 the class's lines, fix 3 the block's line)
@@ -182,11 +193,11 @@ const ROWS: &[Row] = &[
     repro:    "aaailabel_unread_address_paragraph_of_a_labelled_line_is_the_blocks",
     tex:      repro!("aaailabel_unread_address_paragraph_of_a_labelled_line_is_the_blocks"),
     warnings: 0,
-    creators: &[
-      &["Ann Able", "affiliation=1 Univ A"],
-      &["Bob Baker", "affiliation=2 Univ B"],
-      &["affiliation=ann, bob @a.edu"],
-    ],
+    creators: &[&["Ann Able", "affiliation=1 Univ A"], &[
+      "Bob Baker",
+      "affiliation=2 Univ B",
+    ]],
+    notes:    &["email=ann, bob @a.edu"],
     block:    &[],
   },
   // (red on 66558570ce3: "ann, bob @a.edu" an affiliation of both authors; fix 2 the class's lines, fix 3 the block's)
@@ -194,11 +205,11 @@ const ROWS: &[Row] = &[
     repro:    "aaailabel_unread_address_lead_line_is_the_blocks",
     tex:      repro!("aaailabel_unread_address_lead_line_is_the_blocks"),
     warnings: 0,
-    creators: &[
-      &["Ann Able", "affiliation=1 Univ A"],
-      &["Bob Baker", "affiliation=2 Univ B"],
-      &["affiliation=ann, bob @a.edu"],
-    ],
+    creators: &[&["Ann Able", "affiliation=1 Univ A"], &[
+      "Bob Baker",
+      "affiliation=2 Univ B",
+    ]],
+    notes:    &["email=ann, bob @a.edu"],
     block:    &[],
   },
   // (red on 66558570ce3: "ann, bob @a.edu Univ A" an affiliation of both authors; fix 2 the class's lines, fix 3 the
@@ -207,11 +218,11 @@ const ROWS: &[Row] = &[
     repro:    "aaailabel_unread_address_line_of_an_unlabelled_store_is_the_blocks",
     tex:      repro!("aaailabel_unread_address_line_of_an_unlabelled_store_is_the_blocks"),
     warnings: 0,
-    creators: &[
-      &["Ann Able", "affiliation=Univ A"],
-      &["Bob Baker", "affiliation=Univ A"],
-      &["affiliation=ann, bob @a.edu"],
-    ],
+    creators: &[&["Ann Able", "affiliation=Univ A"], &[
+      "Bob Baker",
+      "affiliation=Univ A",
+    ]],
+    notes:    &["email=ann, bob @a.edu"],
     block:    &[],
   },
   // (red on 66558570ce3: 12345@b.edu Bob Baker's)
@@ -223,8 +234,8 @@ const ROWS: &[Row] = &[
       &["Ann Able", "affiliation=1 Univ A", "email=ann.able@a.edu"],
       &["Dan Dorn", "affiliation=1 Univ A"],
       &["Bob Baker", "affiliation=2 Univ B"],
-      &["email=12345@b.edu"],
     ],
+    notes:    &["email=12345@b.edu"],
     block:    &[],
   },
   // (red on 66558570ce3: Bob's affiliation "2 Univ B ann, bob @a.edu"; fix 2 the class's lines, fix 3 the block's)
@@ -232,11 +243,11 @@ const ROWS: &[Row] = &[
     repro:    "aaailabel_unread_address_macro_line_is_the_blocks",
     tex:      repro!("aaailabel_unread_address_macro_line_is_the_blocks"),
     warnings: 0,
-    creators: &[
-      &["Ann Able", "affiliation=1 Univ A"],
-      &["Bob Baker", "affiliation=2 Univ B"],
-      &["affiliation=ann, bob @a.edu"],
-    ],
+    creators: &[&["Ann Able", "affiliation=1 Univ A"], &[
+      "Bob Baker",
+      "affiliation=2 Univ B",
+    ]],
+    notes:    &["email=ann, bob @a.edu"],
     block:    &[],
   },
   // (red on 9e7098cc4be: 12345@b.edu the block's; a line of addresses under label 1 puts each label's under it)
@@ -249,6 +260,7 @@ const ROWS: &[Row] = &[
       &["Dan Dorn", "affiliation=1 Univ A", "email=dan.dorn@a.edu"],
       &["Bob Baker", "affiliation=2 Univ B", "email=12345@b.edu"],
     ],
+    notes:    &[],
     block:    &[],
   },
   // (red on this round's first build: 12345@b.edu the block's; the entry's marked paragraphs are several entries,
@@ -262,6 +274,7 @@ const ROWS: &[Row] = &[
       &["Bob Baker", "affiliation=2 Univ B", "email=12345@b.edu"],
       &["Cy Cole", "affiliation=2 Univ B", "email=cy.cole@b.edu"],
     ],
+    notes:    &[],
     block:    &[],
   },
   // (red on 9e7098cc4be: Ann's e-mail "ann@a.edu,", 2511.02997's `jonk@anthropic.com,`)
@@ -273,6 +286,7 @@ const ROWS: &[Row] = &[
       "Bob Baker",
       "affiliation=2 Univ B",
     ]],
+    notes:    &[],
     block:    &[],
   },
   // (9e7098cc4be: the class's lines; the `\}\@b.edu` group digested in the block's contact with no Error, 2408.10349)
@@ -284,8 +298,8 @@ const ROWS: &[Row] = &[
       &["Ann Able", "affiliation=1 Univ A", "email=ann@a.edu"],
       &["Bob Baker", "affiliation=1 Univ A", "email=bob@a.edu"],
       &["Cy Cole", "affiliation=2 Univ B"],
-      &["affiliation={cy, dan}b.edu"],
     ],
+    notes:    &["affiliation={cy, dan}b.edu"],
     block:    &[],
   },
   // (red on 9e7098cc4be: no contact, the class's lines; a class's numbered `\and` entries are not read, astro-ph9805232)
@@ -310,6 +324,7 @@ const ROWS: &[Row] = &[
         "email=cy@b.edu",
       ],
     ],
+    notes:    &[],
     block:    &[],
   },
   // (red on 88ae94d60c5: every author all three institutes, K11's table route; INT081RC6's output, its loss counted)
@@ -320,6 +335,7 @@ const ROWS: &[Row] = &[
     creators: &[&["Ann Able", "mark=1,2"], &["Bob Baker", "mark=2"], &[
       "Cy Cole", "mark=3",
     ]],
+    notes:    &[],
     block:    &[],
   },
   // (red on 9e7098cc4be: 12345@b.edu the block's; no closing move for a class's numbered entries)
@@ -335,6 +351,7 @@ const ROWS: &[Row] = &[
         "email=12345@b.edu",
       ],
     ],
+    notes:    &[],
     block:    &[],
   },
   // (red on 9e7098cc4be: cy@b.edu the block's)
@@ -347,6 +364,7 @@ const ROWS: &[Row] = &[
       &["Bob Baker", "affiliation=2 Univ B, City", "email=bob@b.edu"],
       &["Cy Cole", "affiliation=2 Univ B, City", "email=cy@b.edu"],
     ],
+    notes:    &[],
     block:    &[],
   },
   // (red on 9e7098cc4be: no contact, the class's lines; an address in a line of other words stays with its entry, as
@@ -359,6 +377,7 @@ const ROWS: &[Row] = &[
       &["Ann Able", "address=1 Univ A, Town", "email=ann@a.edu"],
       &["Bob Baker", "address=2 Univ B, City Internet"],
     ],
+    notes:    &[],
     block:    &[],
   },
   // (red on this round's first build: "A-1180 Wien" the block's; astro-ph9805051, astro-ph9805033, astro-ph9805076)
@@ -374,6 +393,7 @@ const ROWS: &[Row] = &[
       ],
       &["Bob Baker", "affiliation=Univ A, Town, A-1180 Wien"],
     ],
+    notes:    &[],
     block:    &[],
   },
   Row {
@@ -381,6 +401,7 @@ const ROWS: &[Row] = &[
     tex:      repro!("aaailabel_empty_affiliations_print_nothing"),
     warnings: 0,
     creators: &[&["Ann Able", "mark=1"], &["Bob Baker", "mark=2"]],
+    notes:    &[],
     block:    &[],
   },
   Row {
@@ -388,6 +409,7 @@ const ROWS: &[Row] = &[
     tex:      repro!("aaailabel_affiliations_never_set_print_nothing"),
     warnings: 0,
     creators: &[&["Ann Able", "mark=1"], &["Bob Baker", "mark=2"]],
+    notes:    &[],
     block:    &[],
   },
   Row {
@@ -395,12 +417,88 @@ const ROWS: &[Row] = &[
     tex:      repro!("aaailabel_affiliations_after_maketitle_print_nothing"),
     warnings: 0,
     creators: &[&["Ann Able", "mark=1"], &["Bob Baker", "mark=2"]],
+    notes:    &[],
+    block:    &[],
+  },
+  // (FMNAMELESS, red on INT081TA: tuslkkk@a.edu and kj21.choi@a.edu a nameless creator's; 2109.05257)
+  Row {
+    repro:    "aaailabel_closing_email_line_no_name_spells_is_a_document_note",
+    tex:      repro!("aaailabel_closing_email_line_no_name_spells_is_a_document_note"),
+    warnings: 0,
+    creators: &[
+      &["Siwon Kim", "affiliation=1 Univ A, Korea,"],
+      &[
+        "Kukjin Choi",
+        "affiliation=1 Univ A, Korea,",
+        "affiliation=2 Lab B, Korea",
+      ],
+      &[
+        "Hyun-Soo Choi",
+        "affiliation=3 Univ C, Korea",
+        "email=choi.hyunsoo@c.edu",
+      ],
+      &[
+        "Byunghan Lee",
+        "affiliation=3 Univ C, Korea",
+        "email=bhlee@c.edu",
+      ],
+      &[
+        "Sungroh Yoon",
+        "affiliation=1 Univ A, Korea,",
+        "email=sryoon@a.edu",
+      ],
+    ],
+    notes:    &["email=tuslkkk@a.edu", "email=kj21.choi@a.edu"],
+    block:    &[],
+  },
+  // (FMNAMELESS, red on INT081TA: "Univ A1Univ B2" a nameless creator's; 2501.02471, 2412.11379)
+  Row {
+    repro:    "aaailabel_trailing_marked_affiliation_lines_are_a_document_note",
+    tex:      repro!("aaailabel_trailing_marked_affiliation_lines_are_a_document_note"),
+    warnings: 0,
+    creators: &[
+      &["Ann Able", "mark=1", "email=ann@a.edu"],
+      &["Bob Baker", "mark=2"],
+      &["Cy Cole"],
+    ],
+    notes:    &["affiliation=Univ A 1 Univ B 2"],
+    block:    &[],
+  },
+  // (FMNAMELESS, red on INT081TA: zz@a.edu a nameless creator's, its label its name; red on this batch's first build: the
+  // note "zz@a.edu", the printed "email:" lost, the content check's Warning; 2609.01909)
+  Row {
+    repro:    "aaailabel_printed_email_label_stays_with_its_note",
+    tex:      repro!("aaailabel_printed_email_label_stays_with_its_note"),
+    warnings: 0,
+    creators: &[
+      &["Ann Able", "affiliation=1 Univ A, Town"],
+      &["Bob Baker", "affiliation=2 Univ B, City"],
+      &["Cy Cole", "affiliation=1 Univ A, Town"],
+    ],
+    notes:    &["email=email: zz@a.edu"],
+    block:    &[],
+  },
+  // (FMNAMELESS, red on INT081TA: both thanks a nameless creator's; autart.cls:923-929, 2008.08913)
+  Row {
+    repro:    "autart_unrequested_thanks_label_is_a_document_note",
+    tex:      repro!("autart_unrequested_thanks_label_is_a_document_note"),
+    warnings: 0,
+    creators: &[&["Ann Able", "email=ann@example.org"], &[
+      "Bob Baker",
+      "email=bob@example.org",
+    ]],
+    notes:    &[
+      "address=First University",
+      "thanks=This paper was not presented at any IFAC meeting.",
+      "thanks=Corresponding author.",
+    ],
     block:    &[],
   },
 ];
 
-/// Each row converts clean with its Warnings, its creators whole, and no "Univ" outside them (no title-page block left)
-/// unless the class's lines stay its block, each line's text in order (`Row::block`).
+/// Each row converts clean with its Warnings, its creators whole, the document's own notes in order (`Row::notes`), and
+/// no "Univ" outside them (no title-page block left) unless the class's lines stay its block, each line's text in order
+/// (`Row::block`).
 #[test]
 fn aaai_affiliations_rows() {
   let mut wrong = Vec::new();
@@ -412,6 +510,24 @@ fn aaai_affiliations_rows() {
     let mut rest = xml.clone();
     while let Some(start) = rest.find("<creator ") {
       let end = start + rest[start..].find("</creator>").expect("closed creator");
+      rest.replace_range(start..end, "");
+    }
+    // (the document's own notes, in order, taken out: the creators were, so each one left is the document's)
+    let mut notes = Vec::new();
+    while let Some(start) = rest.find("<note ") {
+      let open = start + rest[start..].find('>').expect("closed tag");
+      let end = if rest[..open].ends_with('/') {
+        open + 1
+      } else {
+        open + rest[open..].find("</note>").expect("closed note") + "</note>".len()
+      };
+      let role = rest[start..open]
+        .split("role=\"")
+        .nth(1)
+        .and_then(|r| r.split('"').next())
+        .unwrap_or_default()
+        .to_string();
+      notes.push(format!("{role}={}", text(&rest[start..end])));
       rest.replace_range(start..end, "");
     }
     let want: Vec<Vec<String>> = row
@@ -434,9 +550,14 @@ fn aaai_affiliations_rows() {
       [] => paragraphs.is_empty() && !rest.contains("Univ"),
       lines => paragraphs == lines,
     };
-    if counts != (0, row.warnings) || unclaimed != row.warnings || found != want || !block {
+    if counts != (0, row.warnings)
+      || unclaimed != row.warnings
+      || found != want
+      || notes != row.notes
+      || !block
+    {
       wrong.push(format!(
-        "{}: E/W {counts:?} (unclaimed {unclaimed}), creators {found:?}, block {paragraphs:?}\n{xml}\n{log}",
+        "{}: E/W {counts:?} (unclaimed {unclaimed}), creators {found:?}, notes {notes:?}, block {paragraphs:?}\n{xml}\n{log}",
         row.repro
       ));
     }

@@ -439,6 +439,28 @@ pub(super) fn read(document: &mut Document) -> Front {
       front.creators.push(creator);
     }
   }
+  // (an item of the block's own creator made a note of the document's, read as the item it was there, each its own
+  // holder: `insert::unclaimed_block_notes`, OD #1063)
+  for node in document.findnodes(&s!("//ltx:note[@{BLOCK_LINE}]"), None) {
+    let role = node.get_attribute(BLOCK_LINE).unwrap_or_default();
+    let kind = if role == "note" {
+      Kind::Note
+    } else {
+      Kind::of_contact(&role)
+    };
+    let text = words_without_marks(&node);
+    front.nameless.push(Creator {
+      node:  node.clone(),
+      name:  String::new(),
+      items: vec![Item {
+        kind,
+        key: norm(&text),
+        text,
+        node,
+        movable: true,
+      }],
+    });
+  }
   for node in document.findnodes("//ltx:pubnote", None) {
     let key = norm(&text_without_marks(&node));
     if !key.is_empty() {

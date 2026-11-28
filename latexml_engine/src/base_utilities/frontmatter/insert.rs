@@ -3,7 +3,10 @@
 use super::*;
 use crate::{
   base_utilities::defs::{
-    frontmatter_api::{CORRESPONDING, LABEL_PRINTS, LEGEND_ENTRY, PRINTED_LABEL, STOPGAP_ENTRY},
+    frontmatter_api::{
+      CORRESPONDING, LABEL_PRINTS, LEGEND_ENTRY, PRINTED_LABEL, STOPGAP_ENTRY,
+      UNCLAIMED_BLOCK_LINES,
+    },
     frontmatter_fields::TITLE_NOTE_VALUES,
   },
   latex_constructs::{FOOTNOTE_GIVEN, FOOTNOTE_VALUE, title_numbers_faithful},
@@ -162,10 +165,119 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
   keep_unclaimed_net_notes(document)?;
   // (the name alone: every mark printed on a name is its note's, its contact's or a mark-only note after it, DG 2026-11-16)
   keep_personnames_pure(document)?;
+  // (the block's lines no name claims as the document's notes, where a route or binding declares them so: OD #1063)
+  unclaimed_block_notes(document, &all_keys)?;
   // (a note its binding declares printed under the names, there, before the abstract: OD #1074)
   place_block_notes(document, &all_keys)?;
   // (the content invariant on the placed output, under the emitter's `=2`: every printed word placed once or counted, OD #980)
   check_placed_content(document);
+  Ok(())
+}
+
+/// The internal attribute of a note [`unclaimed_block_notes`] made of an item of the block's own creator: the role the
+/// item had there (`note` for a note), by which the content check reads it as that creator's item (`emitter::dom::read`).
+/// Dropped at output, as every `_` attribute is.
+pub(in crate::base_utilities) const BLOCK_LINE: &str = "_blockline";
+
+/// Where a route declared `\lx@names@unclaimed@notes`, every item of an author creator with no name becomes a document
+/// note of its role (OD #1063; witnesses 2109.05257, 2501.02471, 2008.08913; undeclared: 1103.2027).
+fn unclaimed_block_notes(document: &mut Document, keys: &[String]) -> Result<()> {
+  if !lookup_bool(UNCLAIMED_BLOCK_LINES)
+    || document
+      .findnode("//ltx:creator[@role='author'][ltx:personname]", None)
+      .is_none()
+  {
+    return Ok(());
+  }
+  // (the block's lines, under the names; its thanks, at the page foot, where Perl places a note: after the frontmatter)
+  let (mut under_names, mut at_foot): (Vec<Node>, Vec<Node>) = (Vec::new(), Vec::new());
+  for creator in document.findnodes("//ltx:creator[@role='author'][not(ltx:personname)]", None) {
+    let Some(parent) = creator.get_parent() else {
+      continue;
+    };
+    for mut child in element_nodes(&creator) {
+      match child.get_name().as_str() {
+        "note" => document.set_attribute(&mut child, BLOCK_LINE, "note")?,
+        "contact" => {
+          let held = child.get_attribute("role").unwrap_or_default();
+          // (the label the line prints, which its contact's name showed — 2609.01909's `email:` —, else the role's own
+          // name, which no line prints)
+          let own = get_frontmatter_name(None, "ltx:contact", &held)?;
+          let printed = child
+            .get_attribute("name")
+            .filter(|name| !name.trim().is_empty() && Some(name) != own.as_ref());
+          let role = if CUT_ROLES.contains(&held.as_str())
+            && printed.is_none()
+            && child.get_content().contains('@')
+          {
+            s!("email")
+          } else {
+            held.clone()
+          };
+          let saved = document.get_node().clone();
+          document.set_node(&parent);
+          let mut attributes = HashMap::default();
+          attributes.insert("role".to_string(), role);
+          let mut note = document.open_element("ltx:note", Some(attributes), None)?;
+          document.close_element("ltx:note")?;
+          document.set_node(&saved);
+          document.set_attribute(&mut note, BLOCK_LINE, &held)?;
+          // (the call it was, which the content check reads the placed entries by: `retold_words`)
+          if let Some(label) = child.get_attribute("_label") {
+            document.set_attribute(&mut note, "_label", &label)?;
+          }
+          if let Some(label) = printed {
+            note.append_text(&label)?;
+          }
+          while let Some(mut node) = child.get_first_child() {
+            node.unlink();
+            note.add_child(&mut node)?;
+          }
+          document.remove_node(child);
+          child = note;
+        },
+        _ => continue,
+      }
+      let thanks = child.get_attribute("role").as_deref() == Some("thanks");
+      if !thanks {
+        document.set_attribute(&mut child, "_zone", "names")?;
+      }
+      child.unlink();
+      if thanks {
+        at_foot.push(child);
+      } else {
+        under_names.push(child);
+      }
+    }
+    if element_nodes(&creator).is_empty() {
+      document.remove_node(creator);
+    }
+  }
+  let Some(mut tail) = document.findnodes("//ltx:creator", None).pop() else {
+    return Ok(());
+  };
+  for mut note in under_names {
+    tail.add_next_sibling(&mut note)?;
+    tail = note;
+  }
+  let mut next = tail.get_next_sibling();
+  while let Some(node) = next {
+    next = node.get_next_sibling();
+    if node.get_type() != Some(NodeType::ElementNode) {
+      continue;
+    }
+    // (the run of placed frontmatter, a title page's block among it: 2008.08913's `{frontmatter}` before its abstract)
+    if !with(document::get_node_qname(&node), |q| {
+      q == "ltx:note" || q == "ltx:titlepage" || keys.iter().any(|k| k == q)
+    }) {
+      break;
+    }
+    tail = node;
+  }
+  for mut note in at_foot {
+    tail.add_next_sibling(&mut note)?;
+    tail = note;
+  }
   Ok(())
 }
 

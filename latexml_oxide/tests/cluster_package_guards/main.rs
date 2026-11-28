@@ -419,7 +419,7 @@ mod perfect_kernel_batch98d;
 mod perfect_kernel_batch98e;
 mod perfect_kernel_batch99b;
 /// AAAILABEL: aaai's `\affiliations` store, a macro delimited by `_`, on the displaced-setter route; OD #767 (formerly
-/// #955).
+/// #955). FMNAMELESS: a line no name claims is the document's note (OD #1063).
 mod perfect_kernel_batchaaailabel;
 mod perfect_kernel_batchabsfix;
 mod perfect_kernel_batchabsname;

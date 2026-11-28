@@ -46,6 +46,11 @@ pub(in crate::base_utilities) const PRINTED_LABEL: &str = "_printedlabel";
 pub(in crate::base_utilities) const MARK_SHOWN_WITH_NAMES_STATE: &str =
   "lx_affiliation_mark_shown_with_names";
 
+/// The State value true once a route or binding declared (`\lx@names@unclaimed@notes`) that the author block's lines no
+/// name claims are the document's notes, not a nameless creator's contacts (`insert::unclaimed_block_notes`).
+pub(in crate::base_utilities) const UNCLAIMED_BLOCK_LINES: &str =
+  "lx_frontmatter_unclaimed_block_lines";
+
 /// The contact roles the frontmatter API's Cut reads ([`cut_marked_contact`]): the ones a printed list of entries is
 /// labelled by marks in (an affiliation, an alternate one, an address).
 pub(in crate::base_utilities) const CUT_ROLES: [&str; 3] =
@@ -514,6 +519,12 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     "\\lx@names@note{}",
     "\\lx@add@frontmatter{ltx:note}[role=#1,_zone=names]"
   );
+  // Rust-only (OD #1063, DG 2026-11-27): `\lx@names@unclaimed@notes`, a route or binding's word that the author block's
+  // lines no name claims, which the block's own creator holds, are the document's notes: `insert::unclaimed_block_notes`.
+  DefPrimitive!("\\lx@names@unclaimed@notes", sub[()] {
+    assign_value(UNCLAIMED_BLOCK_LINES, Stored::Bool(true), Some(Scope::Global));
+    Ok(Vec::new())
+  });
 
   // Beyond-Perl best-practice API (OXIDIZED_DESIGN #51): open an *empty*
   // frontmatter container element as a deliberate anchor for later annotations

@@ -202,6 +202,15 @@ top of its group.
     affiliation store that no author carries (naverlabseurope.cls's `\affiliations` beside its own `\authors`,
     2408.05088) is counted in `Warning:frontmatter:unclaimed_store` instead of dropped silently. Guards
     `perfect_kernel_batchaaailabel::aaai_affiliations_rows`, `perfect_kernel_batch108b::a_store_of_a_refused_replay_is_counted`.
+  - **A line of the author block no name claims is a note of the document, not a nameless author.** AAAI's closing
+    e-mail lines no name spells (2109.05257, 2508.16571), its lines of addresses
+    the reader cannot read (2511.21717), its affiliations marked after their text (2501.02471) and autart's
+    `\thanks[footnoteinfo]` no `\thanksref` marks (2008.08913) were the contacts of an author with no name;
+    each is now an `ltx:note` of the document's of its role, a line under the names (an e-mail line where it prints an
+    `@` under no label of its own, not an "Affiliation:"), a thanks where an unlabelled `\thanks` sits. JATS and TEI
+    write the document's notes as the article's author notes (`<author-notes>`, `<notesStmt>`), no longer as body text
+    (OXIDIZED_DESIGN_DIVERGENCES #1063, #767; KNOWN_PERL_ERRORS #1350). Guards
+    `perfect_kernel_batchaaailabel::aaai_affiliations_rows`, `integration::document_notes_are_author_notes_not_body_text`.
   - **The MSC edition of an AMS class's or amsppt's `\subjclass` follows its codes.** The call's year, or the
     author's own `\subjclassname` (or amsppt `\subjclassyear`) that the class discards, stands when every code is in
     that edition; codes that fit one edition name it; a printed year the codes refute gives the edition current at the

@@ -1070,6 +1070,9 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
     "const _blockcreator base_utilities/defs/frontmatter_api.rs",
     1,
   ),
+  // (FMNAMELESS, OD #1063: a note made of an item of the block's own creator keeps the role the item had there, by which
+  // the content check reads it as that creator's item; an attribute the insert-time pass sets, no call's key)
+  ("const _blockline base_utilities/frontmatter/insert.rs", 1),
   (
     "const _command_form base_utilities/frontmatter/queue_digest.rs",
     1,
@@ -2665,6 +2668,10 @@ const PASSES_AFTER_THE_EMITTER: &[(&str, PassMay)] = &[
   // (the name alone: a name's marks to its notes' `mark`, consumed by its contacts, or mark-only notes after it — the
   // creator's own items, no owner moved; PURE)
   ("keep_personnames_pure", PassMay::ChangeText),
+  // (FMNAMELESS, OD #1063: an item of the block's own creator, which holds no person's, made the document's note of its
+  // kind — an affiliation line printing an `@` an e-mail line —, where a route or binding declares it; no person's item
+  // moves, DG 2026-11-27)
+  ("unclaimed_block_notes", PassMay::ChangeKind),
   // (a note its binding declares printed under the names, moved there, before the abstract: still no creator's;
   // BLOCKPLACE, OD #1074)
   ("place_block_notes", PassMay::Place),
