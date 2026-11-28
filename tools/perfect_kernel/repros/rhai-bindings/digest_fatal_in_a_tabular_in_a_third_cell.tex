@@ -1,0 +1,18 @@
+% mechanism: a salvaged alignment cell takes its column from its own alignment (`Alignment::cell_start_column`), not
+%   from the frames the Fatal left, which are the innermost cell's (`tex_tables::extract_alignment_column`, OD #251)
+% witness: 2508.07005, 1903.08357, 2512.02946 (DIGCELLCOL; the binding lxmbf.sty.rhai)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "First paragraph. Before" a table "keep1 keep2 outer" whose
+%   third cell holds a table "Beta words", "after. Second paragraph."; Perl 0.8.8: 1 fatal error, the innermost list only
+% engines: INT081TR: keep1 and keep2 lost; INT081DC: "outer" and the inner tabular in a `td colspan="2"` over keep1
+%   (the outer cell read the inner cell's start column 0)
+% expect:  1 fatal error, E=0 W=0; three cells keep1 | keep2 | outer + the inner tabular's "Beta words"
+% status:  GREEN (DIGCELLCOL; guard fatal_salvages_partial_document::a_digestion_fatal_closes_each_unfinished_construct)
+\documentclass{article}
+\usepackage{lxmbf}
+\begin{document}
+First paragraph.
+
+Before \begin{tabular}{lll} keep1 & keep2 & outer \begin{tabular}{l} Beta words \lxmbf\end{tabular}\end{tabular} after.
+
+Second paragraph.
+\end{document}

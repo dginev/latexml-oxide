@@ -74,7 +74,8 @@ top of its group.
     opened it would: a constructor's last argument or its body as its whatsit (the note, the list, the formula, the
     environment), an alignment's cell as its cell, a frontmatter entry as its entry, placed as the document's end would
     place it; a construct that closes nothing of its own (an `\item` whose label the Fatal is in) leaves its text in
-    place. The run stays Fatal; a section title, a `\thanks` inside `\author` and a caption are not closed as their own
+    place. A cell of a table that holds the unfinished table keeps its own column and mode. The run stays Fatal; a
+    section title, a `\thanks` inside `\author` and a caption are not closed as their own
     yet: a caption's text stays in its list entry, which the HTML does not show, counted by a Warning (REDs
     `rhai-bindings/digest_fatal_in_a_section_title_red`, `…_in_a_thanks_red`, `…_in_a_caption_red`,
     `…_in_a_caption_outside_a_float_red`; OXIDIZED_DESIGN_DIVERGENCES #251). Guard

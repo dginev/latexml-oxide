@@ -6182,7 +6182,13 @@ the pipeline Perl-shaped rather than by admitting more post-Fatal messages:
    #542: no input follows a Fatal, so its element closes through its own
    pattern and a `\par` or display inside a note leaves the note whole), an alignment's
    cell as its cell (`tex_tables::digest_alignment_body`; no row end, whose group
-   pop would meet the cell's math frame), a frontmatter entry as its entry
+   pop would meet the cell's math frame; the cell's `alignmentStartColumn` and
+   `IN_MATH` are the ones its frame held at its start, kept on its alignment
+   (`Alignment::{cell_start_column, cell_in_math}`), not the frames the Fatal
+   left, which are the innermost cell's: Perl reads both at the cell's own end,
+   in its frame, TeX_Tables.pool.ltxml:470-471, Alignment.pm:252; a cell with no
+   column goes back to the enclosing list, never dropped; 2508.07005, 1903.08357,
+   2512.02946, 2308.08362, 2003.09520), a frontmatter entry as its entry
    (`\lx@add@frontmatter@now`, `\lx@add@frontmatter@until`, the latter placed by
    the document's end fallback, `\lx@frontmatter@fallback`, which never comes);
    a list with no closer (a body, a group) joins its enclosing list. An unfinished

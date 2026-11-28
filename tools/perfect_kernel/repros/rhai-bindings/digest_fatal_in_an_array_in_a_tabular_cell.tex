@@ -1,0 +1,18 @@
+% mechanism: a salvaged alignment cell takes its mode from its own alignment, not from the frames the Fatal left: a
+%   text cell around an inner math `array` stays text (`tex_tables::digest_alignment_body`'s closer, OD #251)
+% witness: synthetic sibling of digest_fatal_in_a_tabular_in_a_tabular_cell.tex (DIGCELLCOL)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "First paragraph. Before" a table "outer words" + a formula
+%   array "a b", "after. Second paragraph."
+% engines: FATALSALVAGE: 1 fatal error, the tabular, its cell and the formula dropped (the cell read the array
+%   cell's start column 1)
+% expect:  1 fatal error; "outer words" as text in the tabular's cell, the array's cells a | b in a formula
+% status:  GREEN (DIGCELLCOL; guard fatal_salvages_partial_document::a_digestion_fatal_closes_each_unfinished_construct)
+\documentclass{article}
+\usepackage{lxmbf}
+\begin{document}
+First paragraph.
+
+Before \begin{tabular}{l} outer words $\begin{array}{ll} a & b \lxmbf\end{array}$\end{tabular} after.
+
+Second paragraph.
+\end{document}

@@ -139,6 +139,10 @@ pub struct Alignment {
   /// True for \halign templates
   pub is_halign:     bool,
   current_column:    usize,
+  /// The open cell's `alignmentStartColumn` and `IN_MATH` as its frame holds them, which a cell's end reads there
+  /// (TeX_Tables.pool.ltxml:470-471): kept for a cell a Fatal leaves, whose frame is no longer the innermost (OD #251).
+  cell_start_column: usize,
+  cell_in_math:      bool,
   current_row:       Option<usize>,
   reversion:         Option<Tokens>,
   content_reversion: Option<Tokens>,
@@ -198,6 +202,8 @@ impl Alignment {
       open_column: config.open_column,
       close_column: config.close_column,
       current_column: 0,
+      cell_start_column: 0,
+      cell_in_math: false,
       is_math: config.is_math,
       in_row: false,
       in_column: false,
@@ -407,6 +413,10 @@ impl Alignment {
   }
 
   pub fn current_column_number(&self) -> usize { self.current_column }
+  /// The open cell's `alignmentStartColumn`, as its `start_column` bound it.
+  pub fn cell_start_column(&self) -> usize { self.cell_start_column }
+  /// The open cell's `IN_MATH`, as its frame holds it (a formula in the cell is a group nested in it).
+  pub fn cell_in_math(&self) -> bool { self.cell_in_math }
 
   /// Set a property on the current row (for attributes like backgroundcolor from \rowcolor)
   pub fn set_row_property(&mut self, key: &str, value: String) {
@@ -573,6 +583,8 @@ impl Alignment {
     bgroup(); // Grouping around CELL!
     // Note: a VERY round-about way of tracking the column spanning!
     assign_value("alignmentStartColumn", self.current_column_number(), None);
+    self.cell_start_column = self.current_column_number();
+    self.cell_in_math = lookup_bool("IN_MATH");
     // Propagate `?` so a TooManyErrors Fatal (e.g. from a runaway
     // `&` storm in a malformed alignment, paper 1112.6246) actually
     // aborts rather than getting silently swallowed by `let _ =`.

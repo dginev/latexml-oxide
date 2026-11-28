@@ -1202,10 +1202,14 @@ pub fn digest_alignment_body(whatsit: &mut Whatsit, runs_everycr: bool) -> Resul
       Ok(column) => column,
       Err(e) => {
         // (a Fatal inside a cell: the cell takes what it digested, OD #251; its groups stay, as every frame a Fatal leaves;
-        // a math alignment's cell keeps its leading math, the rest joins the enclosing list, 2203.12624)
+        // a math alignment's cell keeps its leading math, the rest joins the enclosing list, 2203.12624). The frames
+        // left are the innermost cell's, so the cell's column and mode are the ones its alignment kept from the cell's
+        // frame; a cell with no column is handed back, never dropped (2508.07005, 1903.08357)
         let alignment = alignment_stored.clone();
-        let ismath = lookup_bool_sym(pin!("IN_MATH"));
-        let math_cells = alignment_cell.borrow().is_math();
+        let (math_cells, in_math) = {
+          let alignment = alignment_cell.borrow();
+          (alignment.is_math(), alignment.cell_in_math())
+        };
         close_pending_list_as(mark, move |mut boxes| {
           let rest = if math_cells {
             split_off_after_leading_math(&mut boxes)
@@ -1213,10 +1217,17 @@ pub fn digest_alignment_body(whatsit: &mut Whatsit, runs_everycr: bool) -> Resul
             Vec::new()
           };
           let mut list = List::new(boxes);
-          list.mode = Some(if ismath { TexMode::Math } else { TexMode::Text });
+          list.mode = Some(if in_math {
+            TexMode::Math
+          } else {
+            TexMode::Text
+          });
           let cell: Digested = list.into();
           let closed = alignment.alignment_cell().is_some_and(|alignment| {
-            extract_alignment_column(alignment.borrow_mut(), cell.clone()).is_ok()
+            matches!(
+              extract_alignment_column(alignment.borrow_mut(), cell.clone(), true),
+              Ok(Some(_))
+            )
           });
           if closed {
             rest
@@ -1238,7 +1249,7 @@ pub fn digest_alignment_body(whatsit: &mut Whatsit, runs_everycr: bool) -> Resul
       creversion.extend(
         trim_column_template(alignment_cell.borrow_mut(), c_revert(cell.clone())?).unlist(),
       );
-      extract_alignment_column(alignment_cell.borrow_mut(), cell)?;
+      extract_alignment_column(alignment_cell.borrow_mut(), cell, false)?;
     } else {
       // Debug("Halign $alignment: BODY DONE!") if $LaTeXML::DEBUG{halign};
       break;
@@ -1764,26 +1775,33 @@ fn rule_border_color(rule: &Digested) -> Option<String> {
   }
 }
 
+/// Perl's `extractAlignmentColumn` (TeX_Tables.pool.ltxml:466): `None` where the cell has no column to go in. A cell
+/// a Fatal left (`salvaged`) reads its start column and math-ness from its alignment, not from the frames the Fatal
+/// left, which are the innermost cell's (OD #251; 2508.07005, 1903.08357, 2512.02946, 2308.08362, 2003.09520).
 pub fn extract_alignment_column(
   mut alignment: RefMut<Alignment>,
   in_box: Digested,
-) -> Result<Digested> {
+  salvaged: bool,
+) -> Result<Option<Digested>> {
   let mut boxes = VecDeque::new();
   boxes.extend(in_box.unlist());
-  let is_math = lookup_bool_sym(pin!("IN_MATH"));
   //Note: $n0,$n1 is a VERY round-about way of tracking the column spanning!
-  let n0 = lookup_int("alignmentStartColumn") as usize + 1;
+  let (is_math, n0) = if salvaged {
+    (alignment.cell_in_math(), alignment.cell_start_column() + 1)
+  } else {
+    (
+      lookup_bool_sym(pin!("IN_MATH")),
+      lookup_int("alignmentStartColumn") as usize + 1,
+    )
+  };
   let n1 = alignment.current_column_number();
 
   // --- Read phase: extract values from colspec, then drop the borrow ---
   let (initial_align, tabskip_clone, is_omitted, has_before_fill, has_after_fill, old_border);
   let after_fill_defeated;
   {
-    let colspec = match alignment.get_column(n0) {
-      Some(c) => c,
-      None => {
-        return Ok(Digested::default());
-      },
+    let Some(colspec) = alignment.get_column(n0) else {
+      return Ok(None);
     };
     initial_align = colspec.align.clone().unwrap_or(Align::Left);
     tabskip_clone = colspec.tabskip;
@@ -2022,7 +2040,7 @@ pub fn extract_alignment_column(
       c.skipped = true;
     }
   }
-  Ok(digested_out)
+  Ok(Some(digested_out))
 }
 
 // #######

@@ -276,7 +276,8 @@ type ClosedRow<'a> = (
 /// OD #251): a constructor's last argument or its body as its whatsit, an alignment's cell as its cell, a frontmatter
 /// entry as its entry (placed by the document's end fallback). One row per closer: the constructor's argument (a
 /// footnote), its body (a list; inline and display math), the frontmatter's `@now` entry under `\lx@frontmatterhere`'s
-/// unfinished flush (an author), its `@until` entry (an abstract alone), the alignment cell (a tabular). A construct that
+/// unfinished flush (an author), its `@until` entry (an abstract alone), the alignment cell (a tabular; nested, each
+/// cell in its own column and mode: text in text, in a third column, around math, in math). A construct that
 /// closes nothing of its own clears the closers inside it (an item's label); a closed whatsit is not `UNENDED` (a note's
 /// `\par` and display); a caption's list entry counts the words the HTML hides, or keeps them in place outside a float.
 /// A Fatal outside any construct keeps the text as it was: `a_digestion_fatal_keeps_the_text_before_it`'s rows. (row,
@@ -386,6 +387,61 @@ fn a_digestion_fatal_closes_each_unfinished_construct() {
           r#"<p>Before <tabular vattach="middle"><tbody><tr><td align="left">a</td><td align="left">b</td></tr><tr><td align="left">c</td><td align="left">d</td></tr></tbody></tabular></p>"#,
         ]),
       ],
+    ),
+    (
+      // a salvaged cell's column is the one its frame held (`Alignment::cell_start_column`), not the innermost
+      // cell's whose frames the Fatal left (DIGCELLCOL; 2508.07005, 1903.08357): FATALSALVAGE read column 3 for the
+      // `{l}` cell, found none and dropped the cell with both tables
+      "a tabular in a tabular cell: both tables, every word",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/rhai-bindings/digest_fatal_in_a_tabular_in_a_tabular_cell.tex"
+      ),
+      0,
+      0,
+      &[("p", &[
+        r#"<p>First paragraph.</p>"#,
+        "<p>Before <tabular vattach=\"middle\"><tbody><tr><td align=\"left\">outer words <tabular vattach=\"middle\"><tr><td align=\"left\">a</td><td align=\"left\">b</td><td align=\"left\">Beta words</td></tr></tabular></td></tr></tbody></tabular></p>",
+      ])],
+    ),
+    (
+      // ... and the third cell stays the third (FATALSALVAGE: "outer" in a `colspan="2"` over keep1; 2512.02946)
+      "a tabular in a third cell: three cells",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/rhai-bindings/digest_fatal_in_a_tabular_in_a_third_cell.tex"
+      ),
+      0,
+      0,
+      &[("p", &[
+        r#"<p>First paragraph.</p>"#,
+        "<p>Before <tabular vattach=\"middle\"><tbody><tr><td align=\"left\">keep1</td><td align=\"left\">keep2</td><td align=\"left\">outer <tabular vattach=\"middle\"><tr><td align=\"left\">Beta words</td></tr></tabular></td></tr></tbody></tabular></p>",
+      ])],
+    ),
+    (
+      // its mode too, its alignment's: a text cell around a math `array` stays text (FATALSALVAGE dropped the cell)
+      "an array in a tabular cell: a text cell around the formula",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/rhai-bindings/digest_fatal_in_an_array_in_a_tabular_cell.tex"
+      ),
+      0,
+      0,
+      &[("p", &[
+        r#"<p>First paragraph.</p>"#,
+        "<p>Before <tabular vattach=\"middle\"><tbody><tr><td align=\"left\">outer words <Math mode=\"inline\" tex=\"\\begin{array}[]{ll}\\end{array}\" text=\"Array[[a, b]]\" xml:id=\"p2.m1\"><XMath><XMArray role=\"ARRAY\" vattach=\"middle\"><XMRow><XMCell align=\"left\"><XMTok font=\"italic\" role=\"UNKNOWN\">a</XMTok></XMCell><XMCell align=\"left\"><XMTok font=\"italic\" role=\"UNKNOWN\">b</XMTok></XMCell></XMRow></XMArray></XMath></Math></td></tr></tbody></tabular></p>",
+      ])],
+    ),
+    (
+      // a math `array`'s cell around a text `\mbox` keeps its leading math and the box goes back after the formula
+      // (row R FATALSALVAGE-TEXTINMATH); FATALSALVAGE lost "x" and the formula
+      "a tabular in an array cell: the formula, then the table",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/rhai-bindings/digest_fatal_in_a_tabular_in_an_array_cell.tex"
+      ),
+      0,
+      0,
+      &[("p", &[
+        r#"<p>First paragraph.</p>"#,
+        "<p>Before <Math mode=\"inline\" tex=\"\\begin{array}[]{ll}\\end{array}\" text=\"Array[[x, ]]\" xml:id=\"p2.m1\"><XMath><XMArray role=\"ARRAY\" vattach=\"middle\"><XMRow><XMCell align=\"left\"><XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok></XMCell><XMCell/></XMRow></XMArray></XMath></Math><tabular vattach=\"middle\"><tbody><tr><td align=\"left\">y words</td></tr></tbody></tabular></p>",
+      ])],
     ),
     (
       // a construct closing nothing of its own clears the closers inside it: `\item`'s label, digested in its

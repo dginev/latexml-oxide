@@ -1,0 +1,18 @@
+% mechanism: a salvaged alignment cell takes its column and mode from its own alignment: a math `array` cell around
+%   an inner text `tabular` (`tex_tables::digest_alignment_body`'s closer, OD #251)
+% witness: synthetic sibling of digest_fatal_in_a_tabular_in_a_tabular_cell.tex (DIGCELLCOL)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "First paragraph. Before" a formula "x" then a box holding
+%   a table "y words", "after. Second paragraph."
+% engines: FATALSALVAGE: 1 fatal error, "x" and the formula dropped, the inner tabular kept
+% expect:  1 fatal error, E=0 W=0; the formula x | (empty), then the tabular "y words" (the `\mbox` is not math
+%   material: the formula ends at it, row R FATALSALVAGE-TEXTINMATH)
+% status:  GREEN (DIGCELLCOL; guard fatal_salvages_partial_document::a_digestion_fatal_closes_each_unfinished_construct)
+\documentclass{article}
+\usepackage{lxmbf}
+\begin{document}
+First paragraph.
+
+Before $\begin{array}{ll} x & \mbox{\begin{tabular}{l} y words \lxmbf\end{tabular}}\end{array}$ after.
+
+Second paragraph.
+\end{document}
