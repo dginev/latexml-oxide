@@ -1522,6 +1522,7 @@ impl Token {
 
   /// The token this one's meaning names, as `defined_as` reads it: the control sequence of its definition, or the token
   /// a `\let` copied. One meaning lookup; a character token that is not active names none.
+  #[inline]
   pub fn meaning_name(&self) -> Option<Token> { self.with_meaning_name(|named, _| named) }
 
   /// Calls `f` with `meaning_name` and the meaning itself, from one meaning lookup: for a caller that tests a token

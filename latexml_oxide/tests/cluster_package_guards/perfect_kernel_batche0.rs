@@ -3417,7 +3417,8 @@ const KERNEL_TOKEN_SPELLINGS: &[(&str, usize)] = &[
   ("latexml_engine/src/tex_debugging.rs", 18),
   ("latexml_engine/src/tex_file_io.rs", 4),
   // (PDFPRIM, 16 -> 12: `read_font_ident` tells `\font` and the family ranges by meaning, `defined_as`)
-  // (FONTIDENT, 12 -> 11: `read_font_ident` reads the meaning once, `Token::with_meaning_name`)
+  // (FONTIDENT, 12 -> 11: `read_font_ident` reads the meaning once, `Token::with_meaning_name`, which the `meaning(`
+  // pattern does not match where the `lookup_meaning(` it replaces did; no spelling read went)
   ("latexml_engine/src/tex_fonts.rs", 11),
   ("latexml_engine/src/tex_inserts.rs", 4),
   ("latexml_engine/src/tex_job.rs", 2),
