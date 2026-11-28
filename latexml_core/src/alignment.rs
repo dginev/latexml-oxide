@@ -49,6 +49,13 @@ use crate::{
   tokens::Tokens,
 };
 
+/// The alignment property of an alignment that is a display by itself in TeX, `$$\halign…$$`: amsmath's align and
+/// gather families (amsmath.sty `\start@align`, `\start@gather`), latex.ltx's `eqnarray` and IEEEtrantools'
+/// `IEEEeqnarray` (IEEEtrantools.sty:2013). Not cases.sty's `numcases`, whose `\halign` is inside a `\vbox`
+/// (cases.sty:73-75). amsmath's `multline` is a display too but is not marked: its material is kept in the formula
+/// (TeX: "Improper \halign inside $$'s"), the safe direction. Set by the bindings (`latexml_engine::tex_tables`).
+pub const ALIGNMENT_IS_DISPLAY: &str = "display";
+
 /// The colour of the horizontal rule being drawn, as colortbl's `\CT@arc@` gives it (colortbl.sty:166-192): set by
 /// the binding in the rule's group, taken by [`Alignment::add_line`].
 pub const RULE_COLOR: &str = "lx@alignment@rule@color";

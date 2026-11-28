@@ -1,0 +1,15 @@
+% mechanism: a vertical box keeps its display (a `\parbox` holds paragraphs and displays), and an inline note stays
+%   in its formula: neither ends the paragraph of the formula a Fatal leaves (`stomach::ends_paragraph`, OD #251)
+% witness: synthetic (HANDBACKBLOCK round 1, the independent review's inline-must-stay shapes; the binding
+%   lxmbf.sty.rhai, lxmbf.sty for pdflatex)
+% oracle:  pdflatex (TL 2025, -no-shell-escape): 0 errors; prints "Before", the box's display x = 1 (1), "+ y" with
+%   footnote 1 "Note words", "after."
+% expect:  1 fatal error, E=0 W=0; one formula holding the `\parbox` with its equation and the footnote
+% status:  GREEN (guard fatal_salvages_partial_document::a_digestion_fatal_closes_each_unfinished_construct)
+\documentclass{article}
+\usepackage{lxmbf}
+\begin{document}
+First paragraph.
+
+Before $\parbox{4cm}{\begin{equation}x=1\end{equation}} + y\footnote{Note words.} \lxmbf$ after.
+\end{document}

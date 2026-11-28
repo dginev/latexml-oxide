@@ -1,0 +1,24 @@
+% mechanism: a list in a formula that cannot hold paragraphs (a math list, a box's horizontal list) closes over what
+%   precedes its first paragraph end; that and the rest are carried past every level of the formula and follow it
+%   (`stomach::salvage_pending_box_lists`, `split_off_vertical_material`, OD #251): a stray `$` in an `align` cell opens
+%   in-math text (`\lx@dollar@in@mathmode`), which swallows the section and paragraphs after it
+% witness: synthetic, 2508.07005's shape (its `\xymatrix` entries' `$` in `align`; HANDBACKBLOCK; the binding
+%   lxmbf.sty.rhai, lxmbf.sty for pdflatex)
+% oracle:  pdflatex (TL 2025, -no-shell-escape): invalid by construction, as the witness (44 errors from the stray `$`);
+%   it prints "First paragraph." "Swallowed" "Section words. Second words." "a = bLead words"
+% engines: DIGCELLCOL: the section and both paragraphs inside the formula's <XMText>, again in its <MathBranch>
+% expect:  1 fatal error, E=0 W=0; the equation "a = b" with "Lead words", then the section "Swallowed" with its two
+%   paragraphs, outside <Math>, each word once
+% status:  RED (DIGCELLCOL) -> GREEN (HANDBACKBLOCK; guard fatal_salvages_partial_document::a_digestion_fatal_closes_each_unfinished_construct)
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{lxmbf}
+\begin{document}
+First paragraph.
+\begin{align}
+a &= b $Lead words
+\section{Swallowed}
+Section words.\endgraf
+Second words. \lxmbf
+\end{align}
+\end{document}

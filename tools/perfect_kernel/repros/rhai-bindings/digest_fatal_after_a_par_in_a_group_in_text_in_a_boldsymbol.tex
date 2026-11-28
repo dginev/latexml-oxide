@@ -1,0 +1,18 @@
+% mechanism: a group ends the paragraph when a box in it does (`stomach::ends_paragraph`, OD #251), in the text a
+%   `$` opens in an inline formula's `\boldsymbol` (`\lx@math@in@hbox`) as in an `align` cell
+% witness: synthetic (the inline twin of HANDBACKBLOCK round 1 review probe g1; the binding lxmbf.sty.rhai, lxmbf.sty
+%   for pdflatex)
+% oracle:  pdflatex (TL 2025, -no-shell-escape): 0 errors; prints "Before a = x Lead words Group wordsMore words Tail
+%   words y + c after." (`\endgraf`: `\boldsymbol` is not `\long`)
+% engines: HANDBACKBLOCK round 1: the same as ours
+% expect:  1 fatal error, E=0 W=0; the formula "a = \boldsymbol{x}", then "Lead words Group words" and "More words
+%   Tail words" as text, each word once
+% status:  GREEN (HANDBACKBLOCK r2; guard fatal_salvages_partial_document::a_digestion_fatal_closes_each_unfinished_construct)
+\documentclass{article}
+\usepackage{amsmath,amsbsy}
+\usepackage{lxmbf}
+\begin{document}
+First paragraph.
+
+Before $a = \boldsymbol{x $ Lead words {\bfseries Group words\endgraf More words} Tail words \lxmbf $ y} + c$ after.
+\end{document}

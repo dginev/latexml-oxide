@@ -38,13 +38,9 @@ fn omit_cell_is_text(alignment: &Alignment) -> bool {
 /// `\halign` in TeX.
 pub const ALIGNMENT_WITHOUT_HALIGN: &str = "without_halign";
 
-/// The alignment property of an alignment that is a display by itself in TeX, `$$\halign…$$`: amsmath's align and
-/// gather families (amsmath.sty `\start@align`, `\start@gather`), latex.ltx's `eqnarray` and IEEEtrantools'
-/// `IEEEeqnarray` (IEEEtrantools.sty:2013). Material a document's `\halign` macro typesets before the primitive is an
-/// error there (`run_halign_redefinition_prelude`). Not cases.sty's `numcases`, whose `\halign` is inside a `\vbox`
-/// (cases.sty:73-75). amsmath's `multline` is a display too but is not marked: its material is kept in the formula
-/// (TeX: "Improper \halign inside $$'s"), the safe direction.
-pub const ALIGNMENT_IS_DISPLAY: &str = "display";
+/// Material a document's `\halign` macro typesets before the primitive is an error in a display alignment
+/// (`run_halign_redefinition_prelude`).
+pub use latexml_core::alignment::ALIGNMENT_IS_DISPLAY;
 
 /// Whether `token` means the `\halign` primitive, under whatever name a package saved it (cryptocode.sty:950
 /// `\let\@pc@halign\halign`): a constructor declared `halign_primitive`, the primitive itself or a binding's stand-in
@@ -1210,7 +1206,7 @@ pub fn digest_alignment_body(whatsit: &mut Whatsit, runs_everycr: bool) -> Resul
           let alignment = alignment_cell.borrow();
           (alignment.is_math(), alignment.cell_in_math())
         };
-        close_pending_list_as(mark, move |mut boxes| {
+        close_pending_list_as(mark, math_cells || in_math, move |mut boxes| {
           let rest = if math_cells {
             split_off_after_leading_math(&mut boxes)
           } else {

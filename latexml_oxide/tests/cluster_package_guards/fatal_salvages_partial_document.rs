@@ -277,7 +277,11 @@ type ClosedRow<'a> = (
 /// entry as its entry (placed by the document's end fallback). One row per closer: the constructor's argument (a
 /// footnote), its body (a list; inline and display math), the frontmatter's `@now` entry under `\lx@frontmatterhere`'s
 /// unfinished flush (an author), its `@until` entry (an abstract alone), the alignment cell (a tabular; nested, each
-/// cell in its own column and mode: text in text, in a third column, around math, in math). A construct that
+/// cell in its own column and mode: text in text, in a third column, around math, in math). A list in a formula that
+/// cannot hold paragraphs hands its first paragraph end and what follows it on past the formula (a stray `$`'s text in
+/// an `align` cell: a section, a list, a group's `\par`, also in a `\boldsymbol`; a display, an eqnarray, no paragraph
+/// end before them), a finished construct's own `\par` ends none (a box in a fraction, in an `\overset`), and a
+/// vertical list in a formula keeps its own (a `p` cell, a `\parbox`'s display). A construct that
 /// closes nothing of its own clears the closers inside it (an item's label); a closed whatsit is not `UNENDED` (a note's
 /// `\par` and display); a caption's list entry counts the words the HTML hides, or keeps them in place outside a float.
 /// A Fatal outside any construct keeps the text as it was: `a_digestion_fatal_keeps_the_text_before_it`'s rows. (row,
@@ -417,7 +421,8 @@ fn a_digestion_fatal_closes_each_unfinished_construct() {
       ])],
     ),
     (
-      // its mode too, its alignment's: a text cell around a math `array` stays text (FATALSALVAGE dropped the cell)
+      // its mode too, the cell's own `IN_MATH` at its `start_column`: a text cell around a math `array` stays text
+      // (FATALSALVAGE dropped the cell)
       "an array in a tabular cell: a text cell around the formula",
       include_str!(
         "../../../tools/perfect_kernel/repros/rhai-bindings/digest_fatal_in_an_array_in_a_tabular_cell.tex"
@@ -639,6 +644,183 @@ fn a_digestion_fatal_closes_each_unfinished_construct() {
         "<p>Before <Math mode=\"inline\" tex=\"a\" text=\"a\" xml:id=\"p2.m1\"><XMath><XMTok font=\"italic\" role=\"UNKNOWN\">a</XMTok></XMath></Math> if <text font=\"italic\">x</text></p>",
       ])],
     ),
+    (
+      // a list in a formula that cannot hold paragraphs hands its first paragraph end and the rest on past the formula
+      // (HANDBACKBLOCK): DIGCELLCOL kept the section in the formula's <XMText>, again in its <MathBranch> (2508.07005)
+      "a stray dollar's text in an align cell: the section follows the equation",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/rhai-bindings/digest_fatal_after_a_stray_dollar_in_a_math_cell_swallows_a_section.tex"
+      ),
+      0,
+      0,
+      &[
+        ("equation", &[
+          "<equation><Math mode=\"inline\" tex=\"\\displaystyle a\" text=\"a\" xml:id=\"S0.EGx1.m1\"><XMath><XMTok font=\"italic\" role=\"UNKNOWN\">a</XMTok></XMath></Math><Math mode=\"inline\" tex=\"\\displaystyle=b\" text=\"absent = b\" xml:id=\"S0.EGx1.m2\"><XMath><XMApp><XMTok meaning=\"equals\" role=\"RELOP\">=</XMTok><XMTok meaning=\"absent\"/><XMTok font=\"italic\" role=\"UNKNOWN\">b</XMTok></XMApp></XMath></Math>Lead words      </equation>",
+        ]),
+        ("section", &[
+          "<section inlist=\"toc\" xml:id=\"S1\"><tags><tag>1</tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">§1</tag></tags><title><tag close=\" \">1</tag>Swallowed</title><para xml:id=\"S1.p1\"><p>Section words.</p></para><para xml:id=\"S1.p2\"><p>Second words. </p></para></section>",
+        ]),
+        ("Math", &[
+          "<Math mode=\"inline\" tex=\"\\displaystyle a\" text=\"a\" xml:id=\"S0.EGx1.m1\"><XMath><XMTok font=\"italic\" role=\"UNKNOWN\">a</XMTok></XMath></Math>",
+          "<Math mode=\"inline\" tex=\"\\displaystyle=b\" text=\"absent = b\" xml:id=\"S0.EGx1.m2\"><XMath><XMApp><XMTok meaning=\"equals\" role=\"RELOP\">=</XMTok><XMTok meaning=\"absent\"/><XMTok font=\"italic\" role=\"UNKNOWN\">b</XMTok></XMApp></XMath></Math>",
+        ]),
+      ],
+    ),
+    (
+      // the same with a list, and the text after it, in source order; the list keeps its paragraphs (2512.02946)
+      "a stray dollar's text in an align cell: the list follows the equation",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/rhai-bindings/digest_fatal_after_a_stray_dollar_in_a_math_cell_swallows_a_list.tex"
+      ),
+      0,
+      0,
+      &[
+        ("equation", &[
+          "<equation><Math mode=\"inline\" tex=\"\\displaystyle a\" text=\"a\" xml:id=\"S0.EGx1.m1\"><XMath><XMTok font=\"italic\" role=\"UNKNOWN\">a</XMTok></XMath></Math><Math mode=\"inline\" tex=\"\\displaystyle=b\" text=\"absent = b\" xml:id=\"S0.EGx1.m2\"><XMath><XMApp><XMTok meaning=\"equals\" role=\"RELOP\">=</XMTok><XMTok meaning=\"absent\"/><XMTok font=\"italic\" role=\"UNKNOWN\">b</XMTok></XMApp></XMath></Math>Lead words      </equation>",
+        ]),
+        ("itemize", &[
+          "<itemize xml:id=\"S0.I1\"><item xml:id=\"S0.I1.i1\"><tags><tag>•</tag><tag role=\"typerefnum\">1st item</tag></tags><para xml:id=\"S0.I1.i1.p1\"><p>Item one words.</p></para></item><item xml:id=\"S0.I1.i2\"><tags><tag>•</tag><tag role=\"typerefnum\">2nd item</tag></tags><para xml:id=\"S0.I1.i2.p1\"><p>Item two words.</p></para></item></itemize>",
+        ]),
+        ("p", &[
+          "<p>First paragraph.</p>",
+          "<p>Item one words.</p>",
+          "<p>Item two words.</p>",
+          "<p>Tail words. </p>",
+        ]),
+      ],
+    ),
+    (
+      // a vertical list in a formula keeps its own paragraphs: the `p` cell's list stays in the table the `\mbox` hands
+      // back after the formula (`lx@salvaged@vertical`)
+      "a list in a p cell in an mbox in math: the list stays in its cell",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/rhai-bindings/digest_fatal_in_a_list_in_a_p_cell_in_math.tex"
+      ),
+      0,
+      0,
+      &[("p", &[
+        "<p>First paragraph.</p>",
+        "<p>Before <Math mode=\"inline\" tex=\"b=\" text=\"b = absent\" xml:id=\"p2.m1\"><XMath><XMApp><XMTok meaning=\"equals\" role=\"RELOP\">=</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">b</XMTok><XMTok meaning=\"absent\"/></XMApp></XMath></Math><tabular vattach=\"middle\"><tbody><tr><td align=\"left\" vattach=\"top\"><inline-block vattach=\"top\" width=\"142.3pt\"><p>Cell words</p><itemize xml:id=\"S0.I1\"><item xml:id=\"S0.I1.i1\"><tags><tag>•</tag><tag role=\"typerefnum\">1st item</tag></tags><para xml:id=\"S0.I1.i1.p1\"><p>Item one words.</p></para></item><item xml:id=\"S0.I1.i2\"><tags><tag>•</tag><tag role=\"typerefnum\">2nd item</tag></tags><para xml:id=\"S0.I1.i2.p1\"><p>Item two words.</p></para></item></itemize></inline-block></td></tr></tbody></tabular></p>",
+        "<p>Cell words</p>",
+        "<p>Item one words.</p>",
+        "<p>Item two words.</p>",
+      ])],
+    ),
+    (
+      // a finished construct's own `\par` ends no paragraph (tex.web §1094): the fraction stays whole, every word in it
+      // (HANDBACKBLOCK round 0 opened it into its last argument: "num words" lost, "den + c" as text)
+      "a par in a box in a fraction: the whole formula",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/rhai-bindings/digest_fatal_after_a_par_in_a_box_in_a_fraction.tex"
+      ),
+      0,
+      0,
+      &[("p", &[
+        "<p>First paragraph.</p>",
+        "<p>Before <Math mode=\"inline\" tex=\"b=\\frac{\\mbox{num\\par words}}{den}+c\" text=\"b = [numwords] / (d * e * n) + c\" xml:id=\"p2.m1\"><XMath><XMApp><XMTok meaning=\"equals\" role=\"RELOP\">=</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">b</XMTok><XMApp><XMTok meaning=\"plus\" role=\"ADDOP\">+</XMTok><XMApp><XMTok mathstyle=\"text\" meaning=\"divide\" role=\"FRACOP\"/><XMText><text fontsize=\"70%\">numwords</text></XMText><XMApp><XMTok meaning=\"times\" role=\"MULOP\">\u{2062}</XMTok><XMTok font=\"italic\" fontsize=\"70%\" role=\"UNKNOWN\">d</XMTok><XMTok font=\"italic\" fontsize=\"70%\" role=\"UNKNOWN\">e</XMTok><XMTok font=\"italic\" fontsize=\"70%\" role=\"UNKNOWN\">n</XMTok></XMApp></XMApp><XMTok font=\"italic\" role=\"UNKNOWN\">c</XMTok></XMApp></XMApp></XMath></Math></p>",
+      ])],
+    ),
+    (
+      // ... in an `\overset`, an `\underbrace`'s script or a text box either (round 0 lost "over top")
+      "a par in boxes in math constructs: each construct whole",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/rhai-bindings/digest_fatal_after_a_par_in_boxes_in_math_constructs.tex"
+      ),
+      0,
+      0,
+      &[("p", &[
+        "<p>First paragraph.</p>",
+        "<p>Before <Math mode=\"inline\" tex=\"b=\\overset{\\mbox{over\\par top}}{x}+\\underbrace{y}_{\\makebox{under\\par note}}+\" text=\"b = [overtop]@(x) + limit-from@((underbrace@(y)) _ [undernote], +)\" xml:id=\"p2.m1\"><XMath><XMApp><XMTok meaning=\"equals\" role=\"RELOP\">=</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">b</XMTok><XMApp><XMTok meaning=\"plus\" role=\"ADDOP\">+</XMTok><XMApp><XMText role=\"OVERACCENT\"><text fontsize=\"70%\">overtop</text></XMText><XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok></XMApp><XMApp><XMTok meaning=\"limit-from\"/><XMApp><XMTok role=\"SUBSCRIPTOP\" scriptpos=\"mid1\"/><XMApp scriptpos=\"mid\"><XMTok name=\"underbrace\" role=\"UNDERACCENT\" stretchy=\"true\">⏟</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">y</XMTok></XMApp><XMText><text fontsize=\"70%\">undernote</text></XMText></XMApp><XMTok meaning=\"plus\" role=\"ADDOP\">+</XMTok></XMApp></XMApp></XMApp></XMath></Math><text cssstyle=\"padding:3.0pt\" framecolor=\"#000000\" framed=\"rectangle\">boxedwords</text></p>",
+      ])],
+    ),
+    (
+      // a display ends the paragraph (tex.web §1145), no paragraph end before it: it follows the formula with the rest
+      // (round 0: the equation in <XMath>, E=1; 1512.04051, 1903.08357)
+      "a display in unfinished inline math: the displays follow the formula",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/rhai-bindings/digest_fatal_after_a_display_in_unfinished_inline_math.tex"
+      ),
+      0,
+      0,
+      &[
+        ("p", &[
+          "<p>First paragraph.</p>",
+          "<p>Before <Math mode=\"inline\" tex=\"a=b\" text=\"a = b\" xml:id=\"p2.m1\"><XMath><XMApp><XMTok meaning=\"equals\" role=\"RELOP\">=</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">a</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">b</XMTok></XMApp></XMath></Math> and <Math mode=\"inline\" tex=\"c,Leadwords\" text=\"list@(c, L * e * a * d * w * o * r * d * s)\" xml:id=\"p2.m2\"><XMath><XMDual><XMApp><XMTok meaning=\"list\"/><XMRef idref=\"p2.m2.1\"/><XMRef idref=\"p2.m2.2\"/></XMApp><XMWrap><XMTok font=\"italic\" role=\"UNKNOWN\" xml:id=\"p2.m2.1\">c</XMTok><XMTok role=\"PUNCT\">,</XMTok><XMApp xml:id=\"p2.m2.2\"><XMTok meaning=\"times\" role=\"MULOP\">\u{2062}</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">L</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">e</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">a</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">d</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">w</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">o</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">r</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">d</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">s</XMTok></XMApp></XMWrap></XMDual></XMath></Math></p>",
+          "<p><text font=\"italic\">Midwords</text></p>",
+          "<p><text font=\"italic\">Tailwords</text></p>",
+        ]),
+        ("equation", &[
+          "<equation xml:id=\"S0.E1\"><tags><tag>(1)</tag><tag role=\"refnum\">1</tag></tags><Math mode=\"display\" tex=\"x=1\" text=\"x = 1\" xml:id=\"S0.E1.m1\"><XMath><XMApp><XMTok meaning=\"equals\" role=\"RELOP\">=</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok><XMTok meaning=\"1\" role=\"NUMBER\">1</XMTok></XMApp></XMath></Math></equation>",
+          "<equation xml:id=\"S0.E2\"><tags><tag>(2)</tag><tag role=\"refnum\">2</tag></tags><MathFork><Math tex=\"\\displaystyle y=2\" text=\"y = 2\" xml:id=\"S0.E2.m4\"><XMath><XMApp><XMTok meaning=\"equals\" role=\"RELOP\">=</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">y</XMTok><XMTok meaning=\"2\" role=\"NUMBER\">2</XMTok></XMApp></XMath></Math><MathBranch><tr><td align=\"right\"><Math mode=\"inline\" tex=\"\\displaystyle y\" text=\"y\" xml:id=\"S0.E2.m1\"><XMath><XMTok font=\"italic\" role=\"UNKNOWN\">y</XMTok></XMath></Math></td><td align=\"center\"><Math mode=\"inline\" tex=\"\\displaystyle=\" text=\"=\" xml:id=\"S0.E2.m2\"><XMath><XMTok meaning=\"equals\" role=\"RELOP\">=</XMTok></XMath></Math></td><td align=\"left\"><Math mode=\"inline\" tex=\"\\displaystyle 2\" text=\"2\" xml:id=\"S0.E2.m3\"><XMath><XMTok meaning=\"2\" role=\"NUMBER\">2</XMTok></XMath></Math></td></tr></MathBranch></MathFork></equation>",
+        ]),
+      ],
+    ),
+    (
+      // ... a display alignment too (latex.ltx's `eqnarray` is `$$\halign`; cond-mat9807003)
+      "a display alignment in unfinished inline math: the eqnarray follows the formula",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/rhai-bindings/digest_fatal_after_a_display_alignment_in_unfinished_inline_math.tex"
+      ),
+      0,
+      0,
+      &[
+        ("p", &[
+          "<p>First paragraph.</p>",
+          "<p>Before <Math mode=\"inline\" tex=\"a=b\" text=\"a = b\" xml:id=\"p2.m1\"><XMath><XMApp><XMTok meaning=\"equals\" role=\"RELOP\">=</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">a</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">b</XMTok></XMApp></XMath></Math> and <Math mode=\"inline\" tex=\"c,Leadwords\" text=\"list@(c, L * e * a * d * w * o * r * d * s)\" xml:id=\"p2.m2\"><XMath><XMDual><XMApp><XMTok meaning=\"list\"/><XMRef idref=\"p2.m2.1\"/><XMRef idref=\"p2.m2.2\"/></XMApp><XMWrap><XMTok font=\"italic\" role=\"UNKNOWN\" xml:id=\"p2.m2.1\">c</XMTok><XMTok role=\"PUNCT\">,</XMTok><XMApp xml:id=\"p2.m2.2\"><XMTok meaning=\"times\" role=\"MULOP\">\u{2062}</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">L</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">e</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">a</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">d</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">w</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">o</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">r</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">d</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">s</XMTok></XMApp></XMWrap></XMDual></XMath></Math></p>",
+          "<p><text font=\"italic\">Tailwords</text></p>",
+        ]),
+        ("equationgroup", &[
+          "<equationgroup class=\"ltx_eqn_eqnarray\" xml:id=\"S0.EGx1\"><equation xml:id=\"S0.E1\"><tags><tag>(1)</tag><tag role=\"refnum\">1</tag></tags><MathFork><Math tex=\"\\displaystyle y=2\" text=\"y = 2\" xml:id=\"S0.E1.m4\"><XMath><XMApp><XMTok meaning=\"equals\" role=\"RELOP\">=</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">y</XMTok><XMTok meaning=\"2\" role=\"NUMBER\">2</XMTok></XMApp></XMath></Math><MathBranch><tr><td align=\"right\"><Math mode=\"inline\" tex=\"\\displaystyle y\" text=\"y\" xml:id=\"S0.E1.m1\"><XMath><XMTok font=\"italic\" role=\"UNKNOWN\">y</XMTok></XMath></Math></td><td align=\"center\"><Math mode=\"inline\" tex=\"\\displaystyle=\" text=\"=\" xml:id=\"S0.E1.m2\"><XMath><XMTok meaning=\"equals\" role=\"RELOP\">=</XMTok></XMath></Math></td><td align=\"left\"><Math mode=\"inline\" tex=\"\\displaystyle 2\" text=\"2\" xml:id=\"S0.E1.m3\"><XMath><XMTok meaning=\"2\" role=\"NUMBER\">2</XMTok></XMath></Math></td></tr></MathBranch></MathFork></equation></equationgroup>",
+        ]),
+      ],
+    ),
+    (
+      // a vertical box keeps its display, and an inline note stays in its formula
+      "a display in a parbox in math: the formula keeps both",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/rhai-bindings/digest_fatal_after_a_display_in_a_parbox_in_math.tex"
+      ),
+      0,
+      0,
+      &[("p", &[
+        "<p>First paragraph.</p>",
+        "<p>Before <Math mode=\"inline\" tex=\"\\parbox{113.81102pt}{\\begin{equation}x=1\\end{equation}}+y\" text=\"[(1)1=x1] + y\" xml:id=\"p2.m1\"><XMath><XMApp><XMTok meaning=\"plus\" role=\"ADDOP\">+</XMTok><XMText class=\"ltx_parbox\" vattach=\"middle\" width=\"113.8pt\"><equation xml:id=\"p2.m1.1\"><tags><tag>(1)</tag><tag role=\"refnum\">1</tag></tags><Math mode=\"display\" tex=\"x=1\" text=\"x = 1\" xml:id=\"S0.E1.m1\"><XMath><XMApp><XMTok meaning=\"equals\" role=\"RELOP\">=</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok><XMTok meaning=\"1\" role=\"NUMBER\">1</XMTok></XMApp></XMath></Math></equation></XMText><XMTok font=\"italic\" role=\"UNKNOWN\">y</XMTok></XMApp></XMath></Math><note mark=\"1\" role=\"footnote\" xml:id=\"footnote1\"><tags><tag>1</tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">footnote 1</tag></tags>Note words.</note></p>",
+      ])],
+    ),
+    (
+      // a group ends the paragraph when a box in it does: the stray `$`'s text hands its group's `\par` on past the
+      // equation (HANDBACKBLOCK round 1: every word in the equation twice, its `Math` and its `MathBranch`)
+      "a par in a group after a stray dollar in a math cell: the rest follows the equation",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/rhai-bindings/digest_fatal_after_a_par_in_a_group_after_a_stray_dollar_in_a_math_cell.tex"
+      ),
+      0,
+      0,
+      &[
+        ("p", &[
+          "<p>First paragraph.</p>",
+          "<p><text font=\"bold\">Group words</text></p>",
+          "<p><text font=\"bold\">More words</text> Tail words </p>",
+        ]),
+        ("equation", &[
+          "<equation><Math mode=\"inline\" tex=\"\\displaystyle a\" text=\"a\" xml:id=\"S0.EGx1.m1\"><XMath><XMTok font=\"italic\" role=\"UNKNOWN\">a</XMTok></XMath></Math><Math mode=\"inline\" tex=\"\\displaystyle=b\" text=\"absent = b\" xml:id=\"S0.EGx1.m2\"><XMath><XMApp><XMTok meaning=\"equals\" role=\"RELOP\">=</XMTok><XMTok meaning=\"absent\"/><XMTok font=\"italic\" role=\"UNKNOWN\">b</XMTok></XMApp></XMath></Math>Lead words      </equation>",
+        ]),
+      ],
+    ),
+    (
+      // ... in the text a `$` opens in an inline formula's `\boldsymbol` too (`\lx@math@in@hbox`)
+      "a par in a group in text in a boldsymbol: the rest follows the formula",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/rhai-bindings/digest_fatal_after_a_par_in_a_group_in_text_in_a_boldsymbol.tex"
+      ),
+      0,
+      0,
+      &[("p", &[
+        "<p>First paragraph.</p>",
+        "<p>Before <Math mode=\"inline\" tex=\"a=\\boldsymbol{x}\" text=\"a = x\" xml:id=\"p2.m1\"><XMath><XMApp><XMTok meaning=\"equals\" role=\"RELOP\">=</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">a</XMTok><XMTok font=\"bold italic\" role=\"UNKNOWN\">x</XMTok></XMApp></XMath></Math> Lead words <text font=\"bold\">Group words</text></p>",
+        "<p><text font=\"bold\">More words</text> Tail words </p>",
+      ])],
+    ),
   ];
   let files: &[(&str, &str)] = &[(
     "lxmbf.sty.rhai",
@@ -805,4 +987,31 @@ fn an_unfinished_math_cell_hands_back_its_text_as_text_red() {
       .any(|p| p.starts_with("<p>Words with <Math mode=\"inline\""))
     && xml.matches("<XMText").count() == xmtext_in_math;
   assert!(ok, "{paras:#?}\n{xml}");
+}
+
+/// RED (row R FATALSALVAGE-HANDBACK-B): an unfinished restricted-mode box splits at its own `\par`, which TeX ignores
+/// (§1094; pdflatex "b = √rootwords + c"); not splitting it moved 1306.1933's swallowed paragraphs into the formula.
+#[test]
+#[ignore = "RED: row R FATALSALVAGE-HANDBACK-B (a restricted box's own par splits its formula)"]
+fn a_par_in_an_unfinished_hbox_in_math_stays_in_the_formula_red() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/rhai-bindings/digest_fatal_after_a_par_in_an_hbox_in_a_root.tex"
+  );
+  let files: &[(&str, &str)] = &[(
+    "lxmbf.sty.rhai",
+    include_str!("../../../tools/perfect_kernel/repros/rhai-bindings/lxmbf.sty.rhai"),
+  )];
+  let (_, xml, ..) = latexml::util::test::convert_files_with_status(tex, files, None);
+  let want: Vec<String> = [
+    "<p>First paragraph.</p>",
+    "<p>Before <Math mode=\"inline\" tex=\"b=\\sqrt{\\hbox{root\\par words }}\" text=\"b = square-root@([rootwords ])\" xml:id=\"p2.m1\"><XMath><XMApp><XMTok meaning=\"equals\" role=\"RELOP\">=</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">b</XMTok><XMApp><XMTok meaning=\"square-root\"/><XMText>rootwords </XMText></XMApp></XMApp></XMath></Math></p>",
+  ]
+  .iter()
+  .map(|p| latexml::util::test::normalize_markup(p))
+  .collect();
+  assert_eq!(
+    latexml::util::test::xml_elements(&xml, "p", &[]),
+    want,
+    "{xml}"
+  );
 }

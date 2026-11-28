@@ -415,7 +415,7 @@ impl Constructor {
       if args.len() + 1 == nargs {
         let properties = Rc::clone(&self.properties);
         let restricted_box = self.declared_mode.is_some_and(|mode| mode.restricted_box);
-        crate::stomach::close_pending_list_as(mark, move |mut boxes| {
+        crate::stomach::close_pending_list_as(mark, ismath, move |mut boxes| {
           // (a math argument keeps its leading math, the rest joins the enclosing list: `stomach::split_off_after_leading_math`)
           let rest = if ismath {
             crate::stomach::split_off_after_leading_math(&mut boxes)
@@ -471,7 +471,7 @@ impl Constructor {
     let mut post = match self.execute_after_digest(&mut whatsit) {
       Ok(post) => post,
       Err(e) => {
-        crate::stomach::close_pending_list_as(mark, move |boxes| {
+        crate::stomach::close_pending_list_as(mark, ismath, move |boxes| {
           result.push(salvaged(whatsit, None).into());
           result.extend(boxes);
           result
@@ -512,7 +512,7 @@ impl Constructor {
         Err(e) => {
           // (its body so far is its body: a list's items, a formula's atoms; no `\end` came, its trailer is empty; a
           // math body keeps its leading math, the rest joins the enclosing list: `stomach::split_off_after_leading_math`)
-          crate::stomach::close_pending_list_as(mark, move |mut boxes| {
+          crate::stomach::close_pending_list_as(mark, ismath || body_in_math, move |mut boxes| {
             let rest = if body_in_math {
               crate::stomach::split_off_after_leading_math(&mut boxes)
             } else {

@@ -1,0 +1,19 @@
+% mechanism: a group (a list neither math nor vertical) ends the paragraph when a box in it does
+%   (`stomach::ends_paragraph`, OD #251): the text a stray `$` opens in an `align` cell hands its group's `\par` and
+%   what follows on past the formula
+% witness: synthetic (HANDBACKBLOCK round 1 review probe g1; the binding lxmbf.sty.rhai, lxmbf.sty for pdflatex)
+% oracle:  pdflatex (TL 2025, -no-shell-escape): invalid by construction (11 errors from the stray `$`); it prints
+%   "First paragraph." "More words Tail words"
+% engines: HANDBACKBLOCK round 1: every word in the equation twice (its `Math` and its `MathBranch`), DIGCELLCOL's
+%   defect
+% expect:  1 fatal error, E=0 W=0; the equation "a = b" with "Lead words", then "Group words" and "More words Tail
+%   words" after it, each word once
+% status:  RED (HANDBACKBLOCK r1) -> GREEN (HANDBACKBLOCK r2; guard fatal_salvages_partial_document::a_digestion_fatal_closes_each_unfinished_construct)
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{lxmbf}
+\begin{document}
+First paragraph.
+
+\begin{align} a &= b $ Lead words {\bfseries Group words\par More words} Tail words \lxmbf \end{align}
+\end{document}

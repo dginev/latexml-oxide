@@ -3320,7 +3320,11 @@ const KERNEL_TOKEN_SPELLINGS: &[(&str, usize)] = &[
   // (SETCOPYb +1: `frozen_setter_parts` knows the copy's own wrapper token, `\lx@setter@as@copied`, so that
   // `\let\author\orig@author` restores the setter unwrapped; the call parser is shared, `setter_call_name`; review B1)
   ("latexml_core/src/state.rs", 173),
-  ("latexml_core/src/stomach.rs", 84),
+  // (HANDBACKBLOCK, 84 -> 85: a salvaged box is a paragraph end by the definition that built it, `\lx@normal@par`, as
+  // `is_list_tail_transparent` reads it; no token is read)
+  // (HANDBACKBLOCK round 1, 85 -> 86: the text a `$` opened in math is known the same way, by its definition,
+  // `\lx@begin@inmath@text`, `stomach::is_math_shift_text`; no token is read)
+  ("latexml_core/src/stomach.rs", 86),
   // (MEMB, -1: `be_absorbed` reads its text through `arena::with`, not `get_string()`)
   ("latexml_core/src/tbox.rs", 2),
   ("latexml_core/src/telemetry.rs", 1),

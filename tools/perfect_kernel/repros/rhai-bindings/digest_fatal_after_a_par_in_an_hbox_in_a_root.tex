@@ -1,0 +1,17 @@
+% mechanism: an unfinished part digested in restricted horizontal mode should keep its `\par`, which TeX ignores
+%   there (tex.web §1094-1096: `end_graf` acts in horizontal mode only), and the formula stay whole
+%   (`stomach::salvage_pending_box_lists`, OD #251); not splitting such a level kept 1306.1933's swallowed paragraphs
+%   in its formula (TeX ends the box at vertical material, §1090 `head_for_vmode`)
+% witness: synthetic (HANDBACKBLOCK round 1 review probe a6; the binding lxmbf.sty.rhai, lxmbf.sty for pdflatex)
+% oracle:  pdflatex (TL 2025, -no-shell-escape): 0 errors; prints "Before b = √rootwords + c after."
+% engines: HANDBACKBLOCK round 1 and 2: `\sqrt{\hbox{root}}`, then "words" in a paragraph of its own; DIGCELLCOL whole
+% expect:  1 fatal error, E=0 W=0; one formula `b=\sqrt{\hbox{root\par words }}` holding "rootwords"
+% status:  RED (HANDBACKBLOCK r2; ignored guard fatal_salvages_partial_document::a_par_in_an_unfinished_hbox_in_math_stays_in_the_formula_red, row R FATALSALVAGE-HANDBACK-B)
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{lxmbf}
+\begin{document}
+First paragraph.
+
+Before $b = \sqrt{\hbox{root\par words \lxmbf}} + c$ after.
+\end{document}

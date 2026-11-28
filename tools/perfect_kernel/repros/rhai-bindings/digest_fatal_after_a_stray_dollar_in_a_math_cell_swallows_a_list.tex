@@ -1,0 +1,24 @@
+% mechanism: as digest_fatal_after_a_stray_dollar_in_a_math_cell_swallows_a_section.tex, with a list: the in-math text
+%   cut at its first paragraph end, the `itemize` and the text after it follow the formula in source order; the list's
+%   body keeps its own paragraphs (`stomach::ends_paragraph`: a vertical list's paragraphs are its own)
+% witness: synthetic, 2512.02946's shape (its `\item`s in <XMText>; HANDBACKBLOCK)
+% oracle:  pdflatex (TL 2025, -no-shell-escape): invalid by construction (49 errors from the stray `$`); it prints
+%   "a = bLead words Item one words. Item two words. Tail words."
+% engines: DIGCELLCOL: the itemize and "Tail words." inside the formula's <XMText>, again in its <MathBranch>
+% expect:  1 fatal error, E=0 W=0; the equation "a = b" with "Lead words", then the itemize (two items) and "Tail
+%   words." outside <Math>
+% status:  RED (DIGCELLCOL) -> GREEN (HANDBACKBLOCK; guard fatal_salvages_partial_document::a_digestion_fatal_closes_each_unfinished_construct)
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{lxmbf}
+\begin{document}
+First paragraph.
+\begin{align}
+a &= b $Lead words
+\begin{itemize}
+\item Item one words.
+\item Item two words.
+\end{itemize}
+Tail words. \lxmbf
+\end{align}
+\end{document}

@@ -641,7 +641,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     if digested.is_err() {
       // (a Fatal inside it: the entry takes what it digested, if a salvage keeps it — OD #251)
       let tag = tag.clone();
-      close_pending_list_as(mark, move |boxes| {
+      close_pending_list_as(mark, false, move |boxes| {
         frontmatter_set_first_content(&tag, index, TagContent::Box(List::new(boxes).into()));
         Vec::new()
       });
@@ -804,7 +804,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
       // (a Fatal inside it: the entry takes what it digested, if a salvage keeps it — OD #251 — and the document's end,
       // which never comes, places it: its `\lx@frontmatter@fallback`, `\relax` once `\maketitle` has placed it)
       let (tag, head) = (tag.clone(), boxes.clone());
-      close_pending_list_as(mark, move |rest| {
+      close_pending_list_as(mark, false, move |rest| {
         frontmatter_set_first_content(&tag, index, TagContent::Box(List::new([head, rest].concat()).into()));
         digest(Tokens!(T_CS!("\\lx@frontmatter@fallback"))).map_or_else(|_| Vec::new(), |fallback| vec![fallback])
       });

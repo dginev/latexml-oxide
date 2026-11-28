@@ -104,7 +104,11 @@ top of its group.
     opened it would: a constructor's last argument or its body as its whatsit (the note, the list, the formula, the
     environment), an alignment's cell as its cell, a frontmatter entry as its entry, placed as the document's end would
     place it; a construct that closes nothing of its own (an `\item` whose label the Fatal is in) leaves its text in
-    place. A cell of a table that holds the unfinished table keeps its own column and mode. The run stays Fatal; a
+    place. A cell of a table that holds the unfinished table keeps its own column and mode, and a cell with no column
+    is kept. Sections, paragraphs, lists and displays that an unfinished construct inside a formula took in follow the
+    formula in the text, in source order; a finished construct in it stays whole, every argument kept (a finished formula
+    holding a display or paragraphs, and an unfinished box's own `\par`, are not split yet: RED
+    `a_par_in_an_unfinished_hbox_in_math_stays_in_the_formula_red`). The run stays Fatal; a
     section title, a `\thanks` inside `\author` and a caption are not closed as their own
     yet: a caption's text stays in its list entry, which the HTML does not show, counted by a Warning (REDs
     `rhai-bindings/digest_fatal_in_a_section_title_red`, `…_in_a_thanks_red`, `…_in_a_caption_red`,

@@ -1,5 +1,6 @@
-% mechanism: a salvaged alignment cell takes its mode from its own alignment, not from the frames the Fatal left: a
-%   text cell around an inner math `array` stays text (`tex_tables::digest_alignment_body`'s closer, OD #251)
+% mechanism: a salvaged alignment cell takes its mode from its own frame (the cell's `IN_MATH` at `start_column`,
+%   alignment.rs:587), not from the frames the Fatal left: a text cell around an inner math `array` stays text
+%   (`tex_tables::digest_alignment_body`'s closer, OD #251)
 % witness: synthetic sibling of digest_fatal_in_a_tabular_in_a_tabular_cell.tex (DIGCELLCOL)
 % oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "First paragraph. Before" a table "outer words" + a formula
 %   array "a b", "after. Second paragraph."

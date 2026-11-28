@@ -1,0 +1,22 @@
+% mechanism: a display ends the paragraph (tex.web §1145: `$$` breaks it; latex.ltx's `{equation}` is `$$`), so a
+%   display a formula took in follows the formula with the rest, a paragraph end before it or not
+%   (`stomach::ends_paragraph`, `is_display`, OD #251)
+% witness: synthetic, the shape of 1512.04051, 1903.08357, 1601.05984 (an unclosed `$` reads text and an
+%   `{equation}` as math; HANDBACKBLOCK round 1; the binding lxmbf.sty.rhai, lxmbf.sty for pdflatex)
+% oracle:  pdflatex (TL 2025, -no-shell-escape): invalid by construction (6 errors from the unclosed `$`); it prints
+%   "Before a = b and c, Leadwords", both displays, "Mid words" and "Tail words"
+% engines: HANDBACKBLOCK round 0: the equation inside the formula's <XMath>, E=1
+% expect:  1 fatal error, E=0 W=0; the formula "c, Leadwords", then the equation, "Midwords", the eqnarray and
+%   "Tailwords", outside <Math>, each word once
+% status:  RED (HANDBACKBLOCK r0) -> GREEN (HANDBACKBLOCK r1; guard fatal_salvages_partial_document::a_digestion_fatal_closes_each_unfinished_construct)
+\documentclass{article}
+\usepackage{lxmbf}
+\begin{document}
+First paragraph.
+
+Before $a = b$ and $c, Lead words
+\begin{equation} x = 1 \end{equation}
+Mid words
+\begin{eqnarray} y &=& 2 \end{eqnarray}
+Tail words \lxmbf$ after.
+\end{document}

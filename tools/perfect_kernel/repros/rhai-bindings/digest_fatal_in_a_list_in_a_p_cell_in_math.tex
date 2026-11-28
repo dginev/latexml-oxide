@@ -1,0 +1,21 @@
+% mechanism: a vertical list in a formula keeps its own paragraphs (`stomach::ends_paragraph`: a `p` cell's
+%   `VBoxContents`, digested in a vertical mode, marks its salvaged whatsit `lx@salvaged@vertical`): the `\mbox` around
+%   the table goes back after the formula whole (`split_off_after_leading_math`), its list in its cell
+% witness: synthetic sibling of digest_fatal_after_a_stray_dollar_in_a_math_cell_swallows_a_list.tex (HANDBACKBLOCK)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "First paragraph." "Before b = " the cell "Cell words", the
+%   items "Item one words." "Item two words." "after."
+% engines: an earlier HANDBACKBLOCK draft opened the box and the cell and spilled the list as text
+% expect:  1 fatal error, E=0 W=0; the formula "b =", then the tabular, its cell holding "Cell words" and the itemize
+% status:  GREEN (HANDBACKBLOCK; guard fatal_salvages_partial_document::a_digestion_fatal_closes_each_unfinished_construct)
+\documentclass{article}
+\usepackage{lxmbf}
+\begin{document}
+First paragraph.
+
+Before $b = \mbox{\begin{tabular}{p{5cm}}Cell words
+\begin{itemize}
+\item Item one words.
+\item Item two words. \lxmbf
+\end{itemize}
+\end{tabular}}$ after.
+\end{document}

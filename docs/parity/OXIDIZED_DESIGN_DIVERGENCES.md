@@ -6186,7 +6186,10 @@ the pipeline Perl-shaped rather than by admitting more post-Fatal messages:
    `IN_MATH` are the ones its frame held at its start, kept on its alignment
    (`Alignment::{cell_start_column, cell_in_math}`), not the frames the Fatal
    left, which are the innermost cell's: Perl reads both at the cell's own end,
-   in its frame, TeX_Tables.pool.ltxml:470-471, Alignment.pm:252; a cell with no
+   in its frame, TeX_Tables.pool.ltxml:470-471, Alignment.pm:252; the start value
+   differs from that end-of-cell read only for a cell that leaves its math open
+   (a stray `$`) and for a nested alignment's `\noalign` pseudo-cell, whose frames
+   are popped before its extract; a cell with no
    column goes back to the enclosing list, never dropped; 2508.07005, 1903.08357,
    2512.02946, 2308.08362, 2003.09520), a frontmatter entry as its entry
    (`\lx@add@frontmatter@now`, `\lx@add@frontmatter@until`, the latter placed by
@@ -6209,19 +6212,61 @@ the pipeline Perl-shaped rather than by admitting more post-Fatal messages:
    (2203.12624) took in the eqnarray, sections and appendices after it, where the
    formula dropped them. A `\text`/`\mbox`/`\hbox` box in the formula is not math
    material, so the formula splits there and the rest is kept as text
-   (`…_in_math_after_text_red.tex`, row R FATALSALVAGE-TEXTINMATH). Open (row R
-   FATALSALVAGE-HANDBACK): a handed-back box decided by its mode, not by what it
+   (`…_in_math_after_text_red.tex`, row R FATALSALVAGE-TEXTINMATH). **A formula
+   holds no paragraphs** (tex.web §1094: a `\par` in a box is ignored; §1047: in
+   math it ends the formula), so a list in a formula that cannot hold them (a math
+   list, a box's horizontal list; the mode its list opened in, kept on the level)
+   swallowed the text after an unfinished construct: it closes over what precedes
+   its first box that ends the paragraph in TeX, and that and the rest are carried
+   past every level of the formula and follow it, in source order
+   (`stomach::split_off_vertical_material`; a level is in a formula when its
+   closer's construct is in math or digests math, `close_pending_list_as`'s
+   `in_formula`). A box ends the paragraph (`stomach::ends_paragraph`) when it is a
+   `\par` (which each LaTeX block and each `\item` after the first begins with), a
+   display (§1145: `$$` breaks the paragraph; a definition declared
+   `display_math`, `\lx@begin@display@math`, an alignment marked
+   `alignment::ALIGNMENT_IS_DISPLAY`: 1903.08357, 1512.04051), or holds one: a group
+   (`{\bfseries a\par b}`), a salvaged construct's unfinished part, the text
+   between two math shifts (`\lx@begin@inmath@text`, in a math alignment cell or
+   an `\lx@math@in@hbox` frame), a construct outside math wrapping a display. That
+   text is restricted horizontal in TeX as well, where §1094 ignores its `\par`;
+   reading a stray `$` as the author's paragraphs, which follow the formula as
+   text, is this salvage's choice (2512.02946's items). A finished box's own
+   `\par`s are its own (§1094), so a finished math construct is never opened:
+   `\frac{\mbox{a\par b}}{c}` stays whole. Carried on, the
+   between-shifts text and a salvaged math construct open into every argument in
+   order, then the body; nothing is discarded. A vertical list in a formula keeps
+   its own paragraphs and displays (a `\parbox`, a `p` cell, a note: a salvaged
+   part digested in a vertical mode marked `lx@salvaged@vertical`). Moving a block
+   out after its formula is this salvage's choice, not Perl's: Perl's `Math`,
+   `XMath` and `XMWrap` do not autoclose, so it logs `Error:malformed` and keeps
+   the block in place. Before, a stray
+   `$`'s in-math text (2508.07005's `\xymatrix` entries in `align`, 2512.02946)
+   kept the sections, theorems, proofs and items after it inside `<XMText>`, again
+   in the `<MathBranch>` (Malformed Errors, `self_referential_alignment`). Open
+   (row R FATALSALVAGE-HANDBACK): a handed-back box decided by its mode, not by what it
    builds, can land where its element is not allowed (a finished in-math text as
    a bare `<XMText>` in a `<para>`, 2203.12624; `<XMApp>`/`<XMHint>`, 1903.08357,
    each a Malformed Error) or, a salvaged formula opened into its atoms, lose its
-   math (2205.15376, 20 formulas). A construct
+   math (2205.15376, 20 formulas); a FINISHED formula that swallowed paragraphs or
+   a display (2508.07005's section 4; cond-mat9807003's `eqnarray`s, 8 in nested
+   formulas, where round 0 opened the formula into its atoms; 1512.04051 4,
+   1601.05984 5) stays in its formula; an unfinished box in a formula splits at a
+   `\par` of its own, which TeX ignores (§1094; `\sqrt{\hbox{root\par words …}}`,
+   RED `a_par_in_an_unfinished_hbox_in_math_stays_in_the_formula_red`; not
+   splitting a restricted horizontal level kept 1306.1933's swallowed paragraphs
+   and equation in its formula: TeX ends such a box at vertical material, §1090
+   `head_for_vmode`); a
+   multline holding the Fatal loses its rows (`\begin{multline}`: an empty formula;
+   AmSTeX's `$$\multline`: nothing, `\@@AmS@multline`'s `#body` being set by its
+   after-digest code, which a salvage does not run). A construct
    that closes nothing of its own (a Fatal in its `before_digest`, an earlier
    argument than the last, its `properties` closure, its `after_digest_body`)
    clears the closers set inside it (`stomach::clear_pending_list_closers`), so
    its text joins the enclosing list as it is: an `\item` digests its `[label]`
    in its properties, where a closed tag landed in the item before it. Closers are
    set only on the error path, so a conversion without a Fatal runs no new code
-   beyond the depth mark. Not closed yet: a constructor that digests in its
+   beyond the depth mark and each list's opening mode. Not closed yet: a constructor that digests in its
    `properties` closure (`\lx@section`'s title) and a `\thanks` inside
    `\author` (`rhai-bindings/digest_fatal_in_a_section_title_red.tex`,
    `…_in_a_thanks_red.tex`); a `\caption` closes as its list entry, which

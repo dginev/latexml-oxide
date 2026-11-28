@@ -1,0 +1,18 @@
+% mechanism: a finished construct's own `\par` ends no paragraph (tex.web §1094: ignored in a box), in a math
+%   construct (`\overset`, `\underbrace`'s script) or a text box (`\makebox`, `\fbox`) in a formula a Fatal leaves; the
+%   construct stays whole (`stomach::ends_paragraph`, OD #251)
+% witness: synthetic (HANDBACKBLOCK round 1, the siblings of review probe f1; the binding lxmbf.sty.rhai, lxmbf.sty
+%   for pdflatex)
+% oracle:  pdflatex (TL 2025, -no-shell-escape): 0 errors; prints "overtop", "b = x + y + boxedwords", "undernote"
+% engines: HANDBACKBLOCK round 0: `\overset` opened into its last argument, "over top" lost
+% expect:  1 fatal error, E=0 W=0; the formula "b = \overset{…}{x} + \underbrace{y}_{…} +", then the framed
+%   "boxedwords" after it (a text box, as FATALSALVAGE hands one back), every word once
+% status:  RED (HANDBACKBLOCK r0) -> GREEN (HANDBACKBLOCK r1; guard fatal_salvages_partial_document::a_digestion_fatal_closes_each_unfinished_construct)
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{lxmbf}
+\begin{document}
+First paragraph.
+
+Before $b = \overset{\mbox{over\par top}}{x} + \underbrace{y}_{\makebox{under\par note}} + \fbox{boxed\par words} \lxmbf$ after.
+\end{document}

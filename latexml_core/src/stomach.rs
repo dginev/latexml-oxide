@@ -683,6 +683,10 @@ struct SuspendedList {
   list:            Vec<Digested>,
   paragraph_start: Option<ParagraphStart>,
   closer:          Option<PendingListCloser>,
+  /// The list opened above lies in a formula: its closer's construct is in math or digests math.
+  in_formula:      bool,
+  /// The list opened above was opened in a vertical mode, which can hold paragraphs.
+  vertical:        bool,
 }
 
 /// The Stomach is responsible for digesting tokens into boxes, lists, etc.
@@ -2322,6 +2326,8 @@ pub fn new_local_box_list() {
     list: buffer,
     paragraph_start,
     closer: None,
+    in_formula: false,
+    vertical: mode_ends_with("vertical"),
   });
 }
 
@@ -2401,6 +2407,7 @@ pub fn salvage_pending_box_lists(drop_innermost: bool) -> (Vec<Digested>, usize)
     // (the construct the runaway window was in goes with it)
     if let Some(innermost) = levels.last_mut() {
       innermost.closer = None;
+      innermost.in_formula = false;
     }
   }
   // Refuse a salvage that is itself pathological. `drop_innermost` removes the
@@ -2422,17 +2429,221 @@ pub fn salvage_pending_box_lists(drop_innermost: bool) -> (Vec<Digested>, usize)
     return (Vec::new(), 0);
   }
   // Unwind the suspended levels innermost-parent first, each time closing the level above and prefixing the parent's
-  // own content, so the result stays in document order. (A closer may digest: no stomach borrow is held.)
+  // own content, so the result stays in document order. (A closer may digest: no stomach borrow is held.) A list in a
+  // formula that cannot hold paragraphs closes over what precedes its first paragraph end; that and the rest are
+  // carried past every level of the formula and follow it ([`split_off_vertical_material`]).
+  let outermost_formula = levels.iter().position(|level| level.in_formula);
+  let mut carried = Vec::new();
   let mut closed = 0;
-  while let Some(SuspendedList { list: mut parent, closer, .. }) = levels.pop() {
+  while let Some(SuspendedList {
+    list: mut parent,
+    closer,
+    vertical,
+    ..
+  }) = levels.pop()
+  {
+    if outermost_formula.is_some_and(|outermost| levels.len() >= outermost) && !vertical {
+      let mut rest = split_off_vertical_material(&mut acc);
+      rest.append(&mut carried);
+      carried = rest;
+    }
     if let Some(close) = closer {
       acc = close(acc);
       closed += 1;
+      if vertical {
+        for item in &acc {
+          if let DigestedData::Whatsit(whatsit) = item.data()
+            && whatsit.borrow().get_property_bool(SALVAGED)
+          {
+            whatsit.borrow_mut().set_property(SALVAGED_VERTICAL, true);
+          }
+        }
+      }
     }
     parent.append(&mut acc);
+    if outermost_formula == Some(levels.len()) {
+      parent.append(&mut carried);
+    }
     acc = parent;
   }
   (acc, closed)
+}
+
+/// The boxes a list in a formula hands on from its first box that ends the paragraph in TeX ([`ends_paragraph`]): a
+/// formula holds no paragraphs (tex.web §1094: a `\par` in a box is ignored; §1047: in math it ends the formula), so
+/// the list swallowed the text after an unfinished construct (2508.07005's `\xymatrix` in `align`, 2512.02946). A
+/// salvaged math construct among them opens into what it digested ([`open_for_text`]).
+fn split_off_vertical_material(boxes: &mut Vec<Digested>) -> Vec<Digested> {
+  let Some(at) = boxes.iter().position(ends_paragraph) else {
+    return Vec::new();
+  };
+  let mut rest = Vec::new();
+  for item in boxes.split_off(at) {
+    open_for_text(item, &mut rest);
+  }
+  rest
+}
+
+/// Whether a box ends the paragraph: a non-noop `\lx@normal@par`, a display, or a group, unfinished part or text
+/// between two math shifts holding one; a finished box's own `\par`s are its own (OD #251).
+fn ends_paragraph(item: &Digested) -> bool {
+  if let DigestedData::List(list) = item.data()
+    && !is_math_material(item)
+    && !is_vertical_list(&list.borrow())
+    && list.borrow().boxes.iter().any(ends_paragraph)
+  {
+    return true;
+  }
+  if let DigestedData::Whatsit(whatsit) = item.data() {
+    let whatsit = whatsit.borrow();
+    // (the box is a paragraph end by what built it, as `is_list_tail_transparent` reads it)
+    if whatsit.get_definition().get_cs_name() == "\\lx@normal@par" {
+      return !whatsit.get_property_bool("noop");
+    }
+    let part = if is_math_shift_text(&whatsit) {
+      BoxOps::get_body(&*whatsit).ok().flatten()
+    } else if whatsit.get_property_bool(SALVAGED) && !keeps_its_paragraphs(&whatsit) {
+      match whatsit.properties.get(SALVAGED_PART) {
+        Some(Stored::String(part)) if *part == pin!("body") => {
+          BoxOps::get_body(&*whatsit).ok().flatten()
+        },
+        Some(Stored::String(part)) if *part == pin!("argument") => {
+          whatsit.args.last().cloned().flatten()
+        },
+        _ => None,
+      }
+    } else {
+      None
+    };
+    if part.is_some_and(|part| match part.data() {
+      DigestedData::List(list) => list.borrow().boxes.iter().any(ends_paragraph),
+      _ => ends_paragraph(&part),
+    }) {
+      return true;
+    }
+  }
+  holds_display(item)
+}
+
+/// Whether a box is a display or holds one outside math (or in the text between two math shifts) and outside a
+/// vertical list. A display interrupts the paragraph in TeX (tex.web §1145, `line_break(display_widow_penalty)`):
+/// latex.ltx's displays and its and amsmath's display alignments are `$$` ([`is_display`]); a construct outside math
+/// may wrap one (`\@@eqnarray`'s argument).
+fn holds_display(item: &Digested) -> bool {
+  match item.data() {
+    DigestedData::Whatsit(whatsit) => {
+      let whatsit = whatsit.borrow();
+      is_display(&whatsit)
+        || ((!whatsit.is_math() || is_math_shift_text(&whatsit))
+          && !keeps_its_paragraphs(&whatsit)
+          && (whatsit.args.iter().flatten().any(holds_display)
+            || BoxOps::get_body(&*whatsit)
+              .ok()
+              .flatten()
+              .is_some_and(|body| holds_display(&body))))
+    },
+    DigestedData::Alignment(alignment) => is_display_alignment(alignment),
+    DigestedData::List(list) => {
+      !is_math_material(item) && {
+        let list = list.borrow();
+        !is_vertical_list(&list) && list.boxes.iter().any(holds_display)
+      }
+    },
+    _ => false,
+  }
+}
+
+/// Whether a list was digested in a vertical mode: its paragraphs are its own.
+fn is_vertical_list(list: &List) -> bool {
+  matches!(list.properties.get("mode"), Some(Stored::String(mode))
+    if arena::with(*mode, |mode| mode.ends_with("vertical")))
+}
+
+/// Whether a whatsit is a display: its definition begins display math (`{equation}`, `{displaymath}`), it began
+/// display math outside math (`\lx@begin@display@math`, which begins its mode in its own code), or its alignment is a
+/// display by itself ([`crate::alignment::ALIGNMENT_IS_DISPLAY`]: `eqnarray`, `align`). Not an inline math alignment
+/// (`aligned`, `cases`, `array`).
+fn is_display(whatsit: &crate::whatsit::Whatsit) -> bool {
+  let display_math = pin!("display_math");
+  whatsit
+    .get_definition()
+    .declared_mode()
+    .and_then(|declared| declared.mode)
+    .is_some_and(|mode| mode == display_math)
+    || (!whatsit.is_math()
+      && matches!(whatsit.properties.get("mode"), Some(Stored::String(mode)) if *mode == display_math))
+    || matches!(whatsit.properties.get("alignment"), Some(Stored::Digested(alignment))
+      if alignment.alignment_cell().is_some_and(is_display_alignment))
+}
+
+fn is_display_alignment(alignment: &RefCell<crate::alignment::Alignment>) -> bool {
+  matches!(
+    alignment
+      .borrow()
+      .get_property(crate::alignment::ALIGNMENT_IS_DISPLAY)
+      .as_deref(),
+    Some(Stored::Bool(true))
+  )
+}
+
+/// Whether a whatsit is the text a `$` opened in math (`\lx@begin@inmath@text`, alias `$`), in a math alignment cell or
+/// an `\lx@math@in@hbox` frame: restricted horizontal in TeX too, which ignores its `\par` (§1094), but the salvage reads
+/// a stray `$` as the author's paragraphs, which follow the formula as text (2512.02946's items).
+fn is_math_shift_text(whatsit: &crate::whatsit::Whatsit) -> bool {
+  whatsit.get_definition().get_cs_name() == "\\lx@begin@inmath@text"
+}
+
+/// Whether a whatsit's paragraphs are its own: it was digested in a vertical mode, as declared (a `\parbox`) or as the
+/// salvage found its unfinished part ([`SALVAGED_VERTICAL`]).
+fn keeps_its_paragraphs(whatsit: &crate::whatsit::Whatsit) -> bool {
+  whatsit.get_property_bool(SALVAGED_VERTICAL)
+    || whatsit
+      .get_definition()
+      .declared_mode()
+      .and_then(|declared| declared.mode)
+      .is_some_and(|mode| arena::with(mode, |mode| mode.ends_with("vertical")))
+}
+
+/// A box handed on out of a formula into text: the text between two math shifts opens into its body, and a salvaged
+/// math construct that ends the paragraph into every argument, in order, then its body (an `<ltx:XMText>` cannot be
+/// built outside its formula); any other box as one the salvage closed does ([`unclose_salvaged`]). A finished math
+/// construct never ends the paragraph: it stays whole.
+fn open_for_text(item: Digested, into: &mut Vec<Digested>) {
+  let parts: Option<Vec<Digested>> = match item.data() {
+    DigestedData::Whatsit(whatsit) => {
+      let whatsit = whatsit.borrow();
+      (is_math_shift_text(&whatsit)
+        || (is_math_material(&item)
+          && whatsit.get_property_bool(SALVAGED)
+          && ends_paragraph(&item)))
+      .then(|| {
+        whatsit
+          .args
+          .iter()
+          .flatten()
+          .cloned()
+          .chain(BoxOps::get_body(&*whatsit).ok().flatten())
+          .collect()
+      })
+    },
+    _ => None,
+  };
+  match parts {
+    Some(parts) => {
+      for part in parts {
+        match part.data() {
+          DigestedData::List(list) => {
+            let boxes = list.borrow().boxes.clone();
+            for inner in boxes {
+              open_for_text(inner, into);
+            }
+          },
+          _ => open_for_text(part, into),
+        }
+      }
+    },
+    None => unclose_salvaged(item, into),
+  }
 }
 
 /// Drop every pending box list unclosed: a run abandoned for a rerun (`streaming_restart::release_before_rerun`).
@@ -2452,10 +2663,12 @@ pub fn pending_list_mark() -> usize { stomach!().localized_box_list.len() }
 /// list (one that opened none of its own) runs first. Nothing when no list is pending at `mark`.
 pub fn close_pending_list_as(
   mark: usize,
+  in_formula: bool,
   closer: impl FnOnce(Vec<Digested>) -> Vec<Digested> + 'static,
 ) {
   let mut stomach = stomach_mut!();
   if let Some(level) = stomach.localized_box_list.get_mut(mark) {
+    level.in_formula |= in_formula;
     level.closer = Some(match level.closer.take() {
       Some(inner) => Box::new(move |boxes| closer(inner(boxes))),
       None => Box::new(closer),
@@ -2470,6 +2683,7 @@ pub fn clear_pending_list_closers(mark: usize) {
   let mut stomach = stomach_mut!();
   for level in stomach.localized_box_list.iter_mut().skip(mark) {
     level.closer = None;
+    level.in_formula = false;
   }
 }
 
@@ -3451,6 +3665,8 @@ pub const SALVAGED: &str = "lx@salvaged";
 /// Which part of a [`SALVAGED`] whatsit its closer filled with the boxes digested before the Fatal: `"argument"` (its
 /// last) or `"body"`; none where its after-digest code failed (its arguments are whole).
 pub const SALVAGED_PART: &str = "lx@salvaged@part";
+/// A [`SALVAGED`] whatsit whose part was digested in a vertical mode: its paragraphs are its own ([`ends_paragraph`]).
+const SALVAGED_VERTICAL: &str = "lx@salvaged@vertical";
 
 /// The whatsit property of a construct the document ended inside of: `\end{document}` came while
 /// its arguments or body were still being digested and abandoned their groups (tex.web §1335), so
