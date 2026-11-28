@@ -71,10 +71,12 @@ Rules that keep this file honest and mergeable:
   code plus issue 972's Grow in the base LaTeXML.css, the bundled ar5iv-css 0.9.6, the documentation pass (#1020),
   #1026 (issue 1024: the log's `w/@ other` only where `@` is not a letter) and #1028 (a team the author list names is
   an author). It is tag `c3dd8c339fa`, published as a prerelease on 2026-11-28 UTC (release run 46081631197, 17
-  assets; platform check 46088182639). 0.8.0 then promotes rc6, reusing its build inputs (DG 2026-11-26: a change
-  after an RC takes a new RC). Before it: the rc1 → rc5 health A/B of the published binaries (10,536
-  arXiv papers, 1991–2026) found no content regression and fewer Errors, and the 2605 rerun on rc5 (run 417) matched
-  rc4's run 415 on all 30,079 papers.
+  assets; platform check 46088182639). **0.8.0** promotes rc6 with no code change (#1030; DG 2026-11-26: a change
+  after an RC takes a new RC): tag `b954c9e5162`, published as the latest release on 2026-11-28 UTC (release run
+  46096516087, 17 assets, rc6's toolchain and `Cargo.lock` reused; platform check 46100713000); the rc1–rc6 Release
+  entries are removed, their tags kept. Before it: the rc1 → rc5 health A/B of the published binaries (10,536
+  arXiv papers, 1991–2026) found no content regression and fewer Errors; the 2605 rerun on rc5 (run 417) matched
+  rc4's run 415 on all 30,079 papers, and the fleet rebuilt on rc6 then matched run 417 on all 30,079 (run 418).
   rc2 was re-issued on the large-document perf work (DG 2026-11-21): #970 (STRMWARN,
   CORELEAK, POSTPERF, CHAPLINKS, ALLOCTRIM, BIGSPLIT, mimalloc 2.3.2) and SERSTREAM (the core result serialized to
   disk; issue 777's whole book converts, 1,549 s on main 4a5aae128b2 against lualatex's 3,523 s for two passes). Main stays the release line until 0.8.0
